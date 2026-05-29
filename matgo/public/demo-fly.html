@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>맞고 fly 애니메이션 데모</title>
+  <link rel="stylesheet" href="style.css?v=3" />
+  <style>
+    /* 데모 전용 레이아웃 (게임 UI와 무관) */
+    body { padding: 20px 28px; }
+    .demo-title { font-size: 22px; color: #f5deb3; margin-bottom: 8px; }
+    .demo-sub   { font-size: 13px; color: #a0a0c0; margin-bottom: 28px; }
+    .demo-area  {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .demo-zone {
+      background: #16162a;
+      border: 1.5px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 18px;
+      min-height: 220px;
+    }
+    .demo-zone-label {
+      font-size: 12px;
+      color: #a0a0c0;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    .demo-cards { display: flex; gap: 8px; flex-wrap: wrap; }
+    .demo-reset {
+      display: block;
+      margin: 24px auto 0;
+      background: #b08040;
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .demo-reset:hover { background: #c89050; }
+    .arrow-hint {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: #ffd166;
+      font-size: 16px;
+      margin: -10px 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-title">맞고 fly 애니메이션 데모</div>
+  <div class="demo-sub">손패 카드(왼쪽)를 클릭하면 바닥(오른쪽)의 같은 월 카드 위치로 날아가서 붙는다. 친구 게임과 무관 — ws 미사용.</div>
+
+  <div class="demo-area">
+    <div class="demo-zone">
+      <div class="demo-zone-label">내 손패 (클릭하세요)</div>
+      <div class="demo-cards" id="hand"></div>
+    </div>
+
+    <div class="demo-zone">
+      <div class="demo-zone-label">바닥</div>
+      <div class="demo-cards" id="floor"></div>
+    </div>
+
+    <div class="arrow-hint">← 손패 카드 클릭 시 같은 월 짝 카드로 날아감 →</div>
+  </div>
+
+  <button class="demo-reset" id="btn-reset">초기화 (다시 카드 채우기)</button>
+
+  <script>
+    // 데모용 카드 데이터 (matgo cards.js와 동일 명명)
+    const HAND_CARDS = [
+      { id: 'm01_gwang',          month: 1,  type: 'gwang', name: '1월 송학 광',     img: 'assets/cards-svg/Hwatu_January_gwang.svg' },
+      { id: 'm03_gwang',          month: 3,  type: 'gwang', name: '3월 벚꽃 광',     img: 'assets/cards-svg/Hwatu_March_gwang.svg' },
+      { id: 'm06_kkeut',          month: 6,  type: 'kkeut', name: '6월 모란 끗',     img: 'assets/cards-svg/Hwatu_June_yul.svg' },
+      { id: 'm09_pi_ssangpi',     month: 9,  type: 'pi', subtype: 'ssangpi', name: '9월 술잔 (쌍피)', img: 'assets/cards-svg/Hwatu_September_yul_ssang_pi.svg' },
+      { id: 'm12_gwang_bigwang',  month: 12, type: 'gwang', subtype: 'bigwang', name: '12월 비광',  img: 'assets/cards-svg/Hwatu_December_gwang.svg' },
+    ];
+    const FLOOR_CARDS = [
+      { id: 'm01_pi_a',  month: 1,  type: 'pi',    name: '1월 송학 피',  img: 'assets/cards-svg/Hwatu_January_pi_1.svg' },
+      { id: 'm03_tti',   month: 3,  type: 'tti',   subtype: 'hong', name: '3월 벚꽃 홍단', img: 'assets/cards-svg/Hwatu_March_tti.svg' },
+      { id: 'm06_tti',   month: 6,  type: 'tti',   subtype: 'cheong', name: '6월 모란 청단', img: 'assets/cards-svg/Hwatu_June_tti.svg' },
+      { id: 'm09_kkeut', month: 9,  type: 'kkeut', name: '9월 술잔 끗', img: 'assets/cards-svg/Hwatu_September_yul_ssang_pi.svg' },
+      { id: 'm12_tti',   month: 12, type: 'tti',   subtype: 'bi', name: '12월 비띠', img: 'assets/cards-svg/Hwatu_December_tti.svg' },
+    ];
+
+    const handEl  = document.getElementById('hand');
+    const floorEl = document.getElementById('floor');
+    const btnReset = document.getElementById('btn-reset');
+
+    /**
+     * 카드 DOM 만들기 (matgo client.js의 makeCardEl 단순 버전).
+     */
+    function makeCard(card) {
+      const el = document.createElement('div');
+      el.className = 'card ' + card.type + (card.subtype ? ' ' + card.subtype : '');
+      el.dataset.cardId = card.id;
+
+      const img = document.createElement('img');
+      img.className = 'card-img';
+      img.src = card.img;
+      img.alt = card.name;
+      img.draggable = false;
+      el.appendChild(img);
+
+      const mt = document.createElement('span');
+      mt.className = 'month-tag';
+      mt.textContent = `${card.month}월`;
+      el.appendChild(mt);
+
+      const tb = document.createElement('span');
+      tb.className = 'type-badge type-' + card.type;
+      tb.textContent = card.type === 'gwang' ? (card.subtype === 'bigwang' ? '비광' : '광')
+                     : card.type === 'kkeut' ? (card.subtype === 'godori' ? '고도리' : '끗')
+                     : card.type === 'tti'   ? (card.subtype === 'hong' ? '홍단' : card.subtype === 'cheong' ? '청단' : card.subtype === 'cho' ? '초단' : '비단')
+                     : (card.subtype === 'ssangpi' ? '쌍피' : '피');
+      el.appendChild(tb);
+      return el;
+    }
+
+    /**
+     * fly 애니메이션 (matgo client.js의 startFlyFromHand + resolvePendingFlies 로직 압축).
+     * @param {HTMLElement} srcEl 시작 위치 카드
+     * @param {HTMLElement} dstEl 도착 위치 카드
+     */
+    function flyCard(srcEl, dstEl) {
+      const srcRect = srcEl.getBoundingClientRect();
+      const clone = srcEl.cloneNode(true);
+      clone.classList.add('flying-card');
+      clone.classList.remove('clickable'); // .card.clickable의 transition 0.12s가 끼지 않도록 제거
+      clone.style.transition = 'none';
+      clone.style.left   = `${srcRect.left}px`;
+      clone.style.top    = `${srcRect.top}px`;
+      clone.style.width  = `${srcRect.width}px`;
+      clone.style.height = `${srcRect.height}px`;
+      document.body.appendChild(clone);
+      void clone.offsetHeight; // 강제 reflow
+
+      srcEl.style.visibility = 'hidden';
+
+      // double RAF로 transition 발동 보장
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const dstRect = dstEl.getBoundingClientRect();
+          clone.style.transition = ''; // CSS .flying-card transition 사용
+          void clone.offsetHeight;
+          clone.style.left   = `${dstRect.left}px`;
+          clone.style.top    = `${dstRect.top}px`;
+          clone.style.width  = `${dstRect.width}px`;
+          clone.style.height = `${dstRect.height}px`;
+          dstEl.style.visibility = 'hidden';
+          setTimeout(() => {
+            // 도착: 원본 다시 보임 + 짝 카드 글로우 + 클론 제거
+            srcEl.remove();
+            dstEl.style.visibility = '';
+            dstEl.classList.add('anim-match-glow');
+            clone.remove();
+            setTimeout(() => dstEl.classList.remove('anim-match-glow'), 1500);
+          }, 2720);
+        });
+      });
+    }
+
+    /**
+     * 손패 카드 클릭 → 바닥의 같은 월 카드 찾아서 fly.
+     */
+    function onHandClick(handCard, handEl) {
+      const dstEl = floorEl.querySelector(`[data-card-id^="m${String(handCard.month).padStart(2,'0')}_"]`);
+      if (!dstEl) {
+        alert('바닥에 같은 월 카드가 없다. 데모: 1/3/6/9/12월만 짝 있음.');
+        return;
+      }
+      flyCard(handEl, dstEl);
+    }
+
+    /**
+     * 카드 렌더링 + 클릭 핸들러.
+     */
+    function render() {
+      handEl.innerHTML  = '';
+      floorEl.innerHTML = '';
+      HAND_CARDS.forEach((c) => {
+        const el = makeCard(c);
+        el.classList.add('clickable');
+        el.addEventListener('click', () => onHandClick(c, el));
+        handEl.appendChild(el);
+      });
+      FLOOR_CARDS.forEach((c) => {
+        const el = makeCard(c);
+        floorEl.appendChild(el);
+      });
+    }
+
+    btnReset.addEventListener('click', render);
+    render();
+  </script>
+</body>
+</html>

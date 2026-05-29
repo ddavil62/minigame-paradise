@@ -1,0 +1,343 @@
+/**
+ * 코드네임 듀엣 클라이언트 스타일.
+ * 다크 테마: 배경 #1a1a2e, 카드는 베이지 #f5deb3.
+ */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background: #1a1a2e;
+  color: #e6e6f0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 상단바 ───────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #16162a;
+  border-bottom: 2px solid #2a2a4a;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #f5deb3;
+}
+
+.you-tag {
+  padding: 4px 12px;
+  background: #2a2a4a;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #a0a0c0;
+}
+
+.topbar-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.stat {
+  background: #2a2a4a;
+  padding: 6px 14px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 90px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #a0a0c0;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+.turn-stat .stat-value {
+  color: #ffd166;
+}
+
+/* "다음 토큰 수 + 새 게임" 컨트롤 */
+.new-game-stat .next-tokens-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 2px;
+}
+.new-game-stat input[type="number"] {
+  width: 52px;
+  padding: 4px 6px;
+  background: #1a1a2e;
+  border: 1.5px solid #3a3a5a;
+  color: #fff;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+}
+.new-game-stat button {
+  background: #b08040;
+  color: #fff;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+.new-game-stat button:hover { background: #c89050; }
+
+/* ── 보드 ─────────────────────────────────────────────────────── */
+.board-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 10px;
+  max-width: 1000px;
+  width: 100%;
+  aspect-ratio: 5 / 3.2;
+}
+
+.card {
+  background: #f5deb3;
+  color: #222;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(14px, 1.6vw, 22px);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  border: 3px solid transparent;
+  transition: transform 0.08s, box-shadow 0.15s;
+  box-shadow: 0 2px 0 #c8b285;
+  text-align: center;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.card:hover:not(.revealed):not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+.card.disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+/* 내 시점 키 카드 표시 (모서리 작은 점) — 자기만 보임 */
+.card .my-indicator {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.35);
+}
+.card .my-indicator.green    { background: #4caf50; }
+.card .my-indicator.neutral  { background: #b0a070; }
+.card .my-indicator.assassin { background: #1a1a1a; }
+
+/* 공개된 카드 색상 */
+.card.revealed.green {
+  background: #4caf50;
+  color: #fff;
+  box-shadow: 0 2px 0 #2e7d32;
+}
+.card.revealed.neutral {
+  background: #b0a070;
+  color: #fff;
+  box-shadow: 0 2px 0 #807050;
+}
+.card.revealed.assassin {
+  background: #1a1a1a;
+  color: #ff6b6b;
+  box-shadow: 0 2px 0 #000;
+  border-color: #ff3838;
+}
+
+/* 추측 가능 상태일 때 카드 강조 */
+.card.guessable {
+  border-color: #ffd166;
+  animation: glow 1.8s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 2px 0 #c8b285, 0 0 0 0 rgba(255,209,102,0.4); }
+  50%      { box-shadow: 0 2px 0 #c8b285, 0 0 0 6px rgba(255,209,102,0.0); }
+}
+
+/* ── 단서 패널 ────────────────────────────────────────────────── */
+.clue-panel {
+  background: #16162a;
+  padding: 16px 24px;
+  border-top: 2px solid #2a2a4a;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.clue-display {
+  font-size: 18px;
+  color: #ffd166;
+  text-align: center;
+  min-height: 28px;
+}
+
+.clue-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.clue-input input[type="text"] {
+  background: #2a2a4a;
+  border: 1.5px solid #3a3a5a;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 16px;
+  min-width: 240px;
+}
+
+.clue-input input[type="number"] {
+  background: #2a2a4a;
+  border: 1.5px solid #3a3a5a;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  width: 70px;
+  text-align: center;
+}
+
+.clue-input button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+.clue-input button:hover:not(:disabled) {
+  background: #5dbf60;
+}
+.clue-input button:disabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+}
+
+#btn-pass {
+  background: #b08040;
+}
+#btn-pass:hover:not(:disabled) {
+  background: #c89050;
+}
+
+/* ── 모달 ─────────────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+
+.modal-inner {
+  background: #2a2a4a;
+  padding: 36px 48px;
+  border-radius: 12px;
+  text-align: center;
+  border: 2px solid #f5deb3;
+  min-width: 340px;
+}
+
+.modal-inner h2 {
+  margin: 0 0 12px;
+  font-size: 32px;
+  color: #ffd166;
+}
+
+.modal-inner p {
+  margin: 0 0 24px;
+  font-size: 16px;
+  color: #e6e6f0;
+}
+
+.modal-inner button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.modal-inner button:hover { background: #5dbf60; }
+
+.modal.lost h2 { color: #ff6b6b; }
+.modal.won  h2 { color: #4caf50; }
+
+/* ── 토스트 ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  border: 1px solid #ff6b6b;
+  z-index: 50;
+  transition: opacity 0.3s;
+}
+.toast.hidden { opacity: 0; pointer-events: none; }

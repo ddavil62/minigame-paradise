@@ -1,0 +1,31 @@
+{
+  "name": "yutnori",
+  "version": "0.1.0",
+  "description": "LAN 1:1 한국 전통 윷놀이 (서버 권위형)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "yutnori",
+    "korean",
+    "boardgame",
+    "lan",
+    "multiplayer",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}

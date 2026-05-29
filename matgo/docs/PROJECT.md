@@ -1,0 +1,166 @@
+# 맞고 (Matgo) — LAN 1:1 대전 기획서
+
+> 최종 업데이트: 2026-05-28
+
+## 프로젝트 개요
+
+같은 LAN에 접속한 두 PC가 브라우저로 즐기는 2인 고스톱(맞고). Node.js + WebSocket 기반의 권위적 서버(룰 100% 서버 판정), 클라이언트는 렌더링·입력 송신만 담당. 한국 고스톱 담요 톤의 UI(2026-05-28부터 v8 시안 적용).
+
+## 기술 스택
+
+| 항목 | 기술 |
+|------|------|
+| 런타임 | Node.js 18+ |
+| 통신 | WebSocket (`ws`) |
+| 클라이언트 | 바닐라 JS + HTML + CSS (프레임워크 없음) |
+| 테스트 | Playwright (1280×800 Chromium 비주얼 리그레션) |
+| 정적 자산 | SVG 화투 48장 (`public/assets/cards-svg/`) + PNG 폴백 (`public/assets/cards/`) |
+
+## 아키텍처
+
+### 디렉토리 구조
+
+```
+matgo/
+├── server.js        # WebSocket 서버 + 방 매칭 + heartbeat
+├── game.js          # 게임 상태/페이즈/룰 흐름 (권위적)
+├── cards.js         # 화투 48장 정의 + 셔플
+├── score.js         # 점수·고/박/배수 계산
+├── bot.js           # 단일 클라이언트 테스트용 봇
+├── smoke-test.js    # 비-Playwright 라운드트립 스모크
+├── public/
+│   ├── index.html   # 3×3 grid DOM (v8 시안 이식)
+│   ├── style.css    # 펠트 톤 + 변수 시스템 + 카드/모달/토스트
+│   ├── client.js    # WebSocket 라우터·렌더·입력 송신
+│   └── assets/
+│       ├── cards/       # PNG 폴백
+│       └── cards-svg/   # SVG 메인 자산
+├── tests/           # Playwright 스펙 (v8-qa.spec.js, v8-visual.spec.js)
+└── docs/            # 본 폴더
+```
+
+### 핵심 모듈
+
+| 모듈 | 파일 | 역할 |
+|---|---|---|
+| 서버 | `server.js` | WebSocket 수락, 방(2인) 매칭, heartbeat 30s, 좀비 슬롯 청소 |
+| 게임 상태기 | `game.js` | 페이즈 전이(`awaiting_play` / `awaiting_floor_choice` / `awaiting_go_stop` / `awaiting_kkeut_choice`), 룰 검증, STATE 브로드캐스트 |
+| 카드 | `cards.js` | 48장 카드 정의 + 셔플 + 손/바닥/덱 분배 |
+| 점수 | `score.js` | 광·끗·띠·피 카운트, 고도리/단/박/고 배수, 흔들기 ×2 |
+| 봇 | `bot.js` | 자동 입력으로 단일 클라이언트 라운드트립 검증 |
+| 클라이언트 | `public/client.js` | STATE 수신 → DOM 갱신, 카드 클릭 → 송신, fly 애니메이션 보간 |
+
+## UI 디자인 (v8 톤)
+
+### 디자인 토큰 (`:root` CSS 변수)
+
+| 카테고리 | 변수 | 값 | 용도 |
+|---|---|---|---|
+| 배경 | `--bg-deep` | `#061a12` | 페이지 최외곽 |
+| 배경 | `--bg-base` | `#0d2a1c` | 본문 베이스 |
+| 배경 | `--bg-panel` | `#143828` | 메타 패널·모달 본체 |
+| 배경 | `--bg-card` | `#1a4634` | 카드 안쪽 |
+| 펠트 | `--felt-mid` | `#1f5238` | 바닥 담요 톤 |
+| 펠트 | `--felt-edge` | `#0c2a18` | vignette 가장자리 |
+| 골드 | `--gold` | `#d4af37` | 메인 액센트 |
+| 골드 | `--gold-soft` | `#f5deb3` | 타이틀 텍스트 |
+| 골드 | `--gold-hi` | `#ffd166` | 강조 점수·하이라이트 |
+| 적색 | `--red-hot` | `#ff6b6b` | 폭탄·경고 |
+| 적색 | `--red-deep` | `#b01818` | 고 버튼 |
+| 그린 | `--green-go` | `#74e89c` | 진행 OK 표시 |
+
+### 레이아웃 (1280×800 단일 화면 fit)
+
+`<main class="play-area">`는 3×3 CSS Grid:
+
+- `grid-template-columns: 6.5fr 3.5fr 270px`
+- `grid-template-rows: minmax(0,1fr) minmax(0,2fr) minmax(0,1fr)`
+- `gap: 8px`, `padding: 8px 12px`
+
+| Row | Col1 (먹은 패) | Col2 (손패) | Col3 (프로필/메타) |
+|-----|----|----|----|
+| 1 | `opp-captured-zone` | `opp-hand-zone` | `opp-profile-zone` |
+| 2 | `floor-zone` (col span 2) | (위 셀이 점유) | `meta-panel` |
+| 3 | `my-captured-zone` | `my-hand-zone` | `my-profile-zone` |
+
+하단 고정 `section.action-panel` (50px) — 흔들기/폭탄 패널 호스트. **고/스톱 버튼은 floor 중앙의 `#go-stop-overlay` (132×68 대형 버튼)로 이전**됐다.
+
+### 카드
+
+- 기본 크기 60×85px, `border-radius: 6px`, **회전 없음** (이전 ±5도 임의 회전 제거)
+- `.card .month-tag { display: none }` — 월 표시 숨김 (이미지에 이미 포함)
+- `.card .dual-badge { display: none }` — 쌍피/끗 dual 배지 숨김
+- `.card.hybrid-9` (9월 술잔) — `outline: 1.5px dashed var(--gold-hi)` 점선만 유지
+- 손패 hover: `transform: translateY(-6px) + gold glow`
+
+### 손패 컨테이너 (`#opp-hand-cards`, `#my-hand-cards`)
+
+5×2 grid slot (`max-width: 320px`, 가운데 정렬). 빈 슬롯 점 표시 없음.
+
+### 먹은 패 컨테이너 (`opp-captured-zone`, `my-captured-zone`)
+
+내부 2×3 grid (`grid-template-columns: 4fr 6fr 10fr`):
+- 좌상단: `.captured-summary` (광/끗/띠/피 카운트 4줄)
+- 광·끗·띠·피 4그룹 각각 `.captured-group > .card-stack` (카드를 음수 margin으로 fan 표시)
+- 임계 도달 시 `.scored` 클래스 토글 → 골드 글로우
+
+## 바닥 카드 배치 (허니콤 12슬롯)
+
+`client.js`의 `FLOOR_SLOTS` 상수가 덱(중앙) 기준 12개 절대좌표 슬롯을 정의한다.
+
+- 내층 6슬롯: 반경 `R = 150px`, 정육각형 꼭짓점 6개
+- 외층 6슬롯: 반경 `2R`, 정육각형 꼭짓점 6개
+- `h = R · √3 / 2`로 6각형 세로 보간
+
+`applyFloorSlot(el, idx)` 함수가 `el.style.left/top`을 `calc(50% + dx) / calc(50% + dy)`로 설정. `idx % FLOOR_SLOTS.length`로 모듈러 인덱싱(13장 이상 발생 시 슬롯 재사용, 실제 게임 범위 8~12장이라 항상 1대1).
+
+`renderFloor`는 매 STATE 수신마다 floor-cards를 다시 그리되 `.deck-card` / `.floor-mission` / `#go-stop-overlay` 3개 영구 자식은 보존한다.
+
+## 게임 진입점 (변경 없음)
+
+| 카테고리 | 식별자 | 위치 |
+|---|---|---|
+| 메시지 핸들러 | `JOINED` / `GAME_START` / `ROUND_START` / `STATE` / `ROUND_END` / `OPPONENT_LEFT` / `ERROR` | `client.js handleMessage` |
+| 송신 함수 | `sendPlay` / `sendChooseFloor` / `sendGoStop` / `sendShake` / `sendBomb` / `sendNewRound` / `sendNewGame` / `sendPerPoint` / `sendKkeutChoice` | `client.js` |
+| 버튼 ID | `#btn-go` / `#btn-stop` / `#btn-shake` / `#btn-shake-no` / `#btn-bomb` / `#btn-new-round` / `#btn-new-game` / `#btn-new-round-modal` / `#btn-kkeut-choice-kkeut` / `#btn-kkeut-choice-ssangpi` | `index.html` |
+| 모달 | `#round-modal` / `#kkeut-modal` / `#toast` | `index.html` |
+
+## 기능 목록
+
+| 기능 | 설명 | 상태 |
+|------|------|------|
+| LAN 1:1 매칭 | 두 PC가 같은 서버에 접속 시 자동 방 매칭 | 완료 |
+| 자동 재접속 | 1→2→4→8초 backoff 재시도 | 완료 |
+| Heartbeat | 30초 ping/pong, 좀비 슬롯 자동 청소 | 완료 |
+| 기본 룰 | 손패 매칭, 더미 뒤집기, 페어/스윕/뻑/쪽/따닥 | 완료 |
+| 특수 룰 | 흔들기(×2), 폭탄, 광박/피박/멍박/고박 | 완료 |
+| 9월 술잔 선택 | 끗/쌍피 모달 선택 | 완료 |
+| 고/스톱 결정 | 7점 도달 시 floor 중앙 대형 overlay 표시 | 완료 |
+| 라운드 결과 모달 | 승자·점수·이동금액·고박 사유 표시 | 완료 |
+| 점당 설정 | 메타 패널 input으로 변경 (기본 100원) | 완료 |
+| v8 UI 테마 | 한국 고스톱 담요 톤 + 3×3 grid + 허니콤 바닥 | 완료 (2026-05-28) |
+| fly 애니메이션 | 손패 → 바닥/captured 흡수 보간 | 완료 |
+| 모바일/반응형 | 의도적 미지원 (1280×800 단일 화면 fit 정책) | 미지원 |
+
+## 알려진 제약사항
+
+- **단일 해상도 정책**: 1280×800 데스크톱 Chromium 외 뷰포트는 미지원. `@media` 쿼리 없음.
+- **단일 클라이언트 매칭 한계**: 1명만 접속 시 "방이 가득 찼다" 토스트가 정적 캡처에 잡힐 수 있으나 production 시각에는 영향 없음.
+- **흔들기는 라운드 시작 시점만 검사**: 라운드 도중 손패에 같은 월 3장이 생기는 경우 흔들기 미지원 (단순화).
+- **고박 단순화**: "고 부른 측이 결국 패배 시 점수 ×2"로만 처리. 첫뻑/첫쪽 가산 변형 룰 미적용.
+- **`bot.js`**: 개발/테스트 전용. 실제 매치메이킹에 봇이 들어가지 않음.
+
+## 향후 계획
+
+- 라이브 2인 매칭 상태에서 ROUND_END / 9월 술잔 모달 / fly 애니메이션을 실제로 트리거한 시각 캡처 추가 (현재 QA가 정적 분석으로 보완 중)
+- 카드 hover/클릭 사운드 추가 (현재 무음)
+- 라운드 누적 통계 (라운드 수·평균 점수·박 발생률) 표시
+- 모바일 폼팩터 대응 (정책 변경 시)
+
+## 변경 이력
+
+상세 변경 이력은 `CHANGELOG.md` 참조.
+
+| 날짜 | 변경 |
+|---|---|
+| 2026-05-28 | v8 UI 시안 이식 — 한국 고스톱 담요 톤, 3×3 grid, 허니콤 바닥 배치, 고/스톱 floor overlay |

@@ -1,0 +1,33 @@
+# 의존성
+node_modules/
+
+# 게임별 node_modules (각 게임이 자체 의존성 보유)
+*/node_modules/
+
+# 테스트 산출물
+tests/screenshots/
+tests/results/
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# 빌드/캐시
+dist/
+.cache/
+.tmp/
+
+# OS/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# 로그
+*.log
+npm-debug.log*
+
+# 시크릿
+.env
+.env.local
+secrets/

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>코드네임 듀엣 - LAN 1:1 협력</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="title">CODENAMES DUET</span>
+      <span class="you-tag" id="you-tag">접속 중...</span>
+    </div>
+    <div class="topbar-stats">
+      <div class="stat">
+        <span class="stat-label">미션 토큰</span>
+        <span class="stat-value" id="tokens">9</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">내 시점 그린</span>
+        <span class="stat-value" id="my-green">0 / 9</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">상대 시점 그린</span>
+        <span class="stat-value" id="op-green">0 / 9</span>
+      </div>
+      <div class="stat turn-stat">
+        <span class="stat-label">상태</span>
+        <span class="stat-value" id="turn-status">대기 중</span>
+      </div>
+      <div class="stat new-game-stat">
+        <span class="stat-label">다음 토큰 수</span>
+        <div class="next-tokens-row">
+          <input type="number" id="next-tokens" min="1" max="15" value="9" />
+          <button id="btn-restart" title="현재 게임을 종료하고 새 게임을 시작한다">새 게임</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="board-wrap">
+    <div id="board" class="board"></div>
+  </main>
+
+  <section class="clue-panel">
+    <div id="clue-display" class="clue-display">단서를 기다리는 중...</div>
+    <div class="clue-input">
+      <input type="text" id="clue-word" placeholder="단서 단어" maxlength="20" />
+      <input type="number" id="clue-number" min="1" max="9" value="2" />
+      <button id="btn-clue">단서 전송</button>
+      <button id="btn-pass">패스</button>
+    </div>
+  </section>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2 id="modal-title">결과</h2>
+      <p id="modal-message"></p>
+      <button id="btn-new-game">새 게임 시작</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="client.js"></script>
+</body>
+</html>

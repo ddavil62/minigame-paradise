@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tetris Battle - LAN 1:1 대전</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="game-header">
+    <h1>TETRIS BATTLE</h1>
+    <div class="status-bar">
+      <span id="player-label">접속 중...</span>
+      <span class="status-divider">|</span>
+      <span id="status-msg">서버 연결 중</span>
+      <span class="status-divider">|</span>
+      <span>상대: <span id="opponent-status">-</span></span>
+    </div>
+  </header>
+
+  <main class="game-main">
+    <!-- 좌측: 내 보드 영역 -->
+    <section class="player-area me">
+      <!-- 좌측 사이드: HOLD + 점수 + 아이템 슬롯 -->
+      <aside class="side-panel">
+        <div class="panel-block">
+          <div class="panel-label">HOLD</div>
+          <canvas id="hold-canvas"></canvas>
+        </div>
+        <div class="panel-block stats">
+          <div class="stat">
+            <div class="stat-label">SCORE</div>
+            <div class="stat-value" id="score">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">LEVEL</div>
+            <div class="stat-value" id="level">1</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">LINES</div>
+            <div class="stat-value" id="lines">0</div>
+          </div>
+        </div>
+        <!-- Phase 2 아이템 슬롯 자리 -->
+        <div class="panel-block items-block">
+          <div class="panel-label">ITEMS</div>
+          <div class="item-slots">
+            <div class="item-slot" data-slot="0">Z</div>
+            <div class="item-slot" data-slot="1">X</div>
+            <div class="item-slot" data-slot="2">C</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 메인 보드 -->
+      <div class="board-wrap">
+        <canvas id="board-canvas"></canvas>
+        <div id="combo" class="combo-indicator"></div>
+        <!-- Phase 2: 다크 오버레이 (시야 가림 효과) -->
+        <div id="dark-overlay" class="dark-overlay"></div>
+        <!-- Phase 2: 프리즈 배지 -->
+        <div id="freeze-badge" class="freeze-badge">FROZEN</div>
+      </div>
+
+      <!-- 우측 사이드: NEXT -->
+      <aside class="side-panel narrow">
+        <div class="panel-block">
+          <div class="panel-label">NEXT</div>
+          <canvas id="next-canvas"></canvas>
+        </div>
+      </aside>
+    </section>
+
+    <!-- 중앙: VS + 카운트다운 + 결과 -->
+    <section class="center-area">
+      <div class="vs-label">VS</div>
+      <div id="countdown" class="countdown hidden">3</div>
+      <!--
+        Phase 4 C-2: 친구 PC 접속 안내 영역. 대기 화면(JOIN ~ READY 클릭 전)에만 표시.
+        서버 JOINED 응답의 hostUrl을 그대로 노출하여 친구가 직접 IP 타이핑할 필요 없음.
+        게임 시작(onStart) 시 .hidden 부착 → 게임 중 안 보임.
+      -->
+      <div id="invite-panel" class="invite-panel hidden">
+        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
+        <div class="invite-url-row">
+          <code id="invite-url" class="invite-url">http://...</code>
+          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
+        </div>
+        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      </div>
+      <button id="ready-btn" class="primary-btn">준비</button>
+    </section>
+
+    <!-- 우측: 상대방 미니맵 -->
+    <section class="player-area opponent">
+      <div class="opponent-label">상대방</div>
+      <div class="board-wrap minimap">
+        <canvas id="opponent-canvas"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <!-- 결과 오버레이 -->
+  <div id="result-overlay" class="result-overlay hidden">
+    <div class="result-card">
+      <div id="result-text" class="result-text">결과</div>
+      <!-- 재대결 버튼: result-card 내부에 배치하여 오버레이(z-index:100) 위에서 클릭 가능하도록 함 (AD3 HIGH-1 수정) -->
+      <button id="rematch-btn" class="primary-btn rematch-btn hidden">재대결</button>
+      <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
+    </div>
+  </div>
+
+  <footer class="game-footer">
+    <span>키: ←→ 이동 | ↑ 회전 | Ctrl 반회전 | ↓ 소프트드롭 | Space 하드드롭 | Shift 홀드 | Z/X/C 아이템</span>
+  </footer>
+
+  <!-- Phase 4 C-2: 토스트 메시지 (주소 복사 성공 등). JS가 .show 클래스로 토글. -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

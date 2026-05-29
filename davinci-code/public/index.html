@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>다빈치 코드 - LAN 1:1 대전</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="title">DA VINCI CODE</span>
+      <span class="you-tag" id="you-tag">접속 중...</span>
+    </div>
+    <div class="topbar-stats">
+      <div class="stat">
+        <span class="stat-label">덱</span>
+        <span class="stat-value" id="deck-count">-</span>
+      </div>
+      <div class="stat turn-stat">
+        <span class="stat-label">상태</span>
+        <span class="stat-value" id="turn-status">대기 중</span>
+      </div>
+      <div class="stat new-game-stat">
+        <span class="stat-label">&nbsp;</span>
+        <button id="btn-restart" title="새 게임 시작">새 게임</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="play-area">
+    <!-- 상대 손 -->
+    <section class="hand opp-hand">
+      <div class="hand-label">상대 카드</div>
+      <div id="opp-cards" class="cards"></div>
+    </section>
+
+    <!-- 중앙: 덱 + 뽑은 카드 + 최근 결과 -->
+    <section class="center-area">
+      <div class="deck-zone">
+        <div class="deck-card" id="deck-card">
+          <span class="deck-count-big" id="deck-count-big">-</span>
+          <span class="deck-label">덱</span>
+        </div>
+        <div class="pending-zone" id="pending-zone">
+          <div class="pending-label">뽑은 카드</div>
+          <div class="pending-card empty" id="pending-card">없음</div>
+        </div>
+      </div>
+      <div id="last-guess" class="last-guess"></div>
+    </section>
+
+    <!-- 자기 손 -->
+    <section class="hand my-hand">
+      <div class="hand-label">내 카드</div>
+      <div id="my-cards" class="cards"></div>
+    </section>
+  </main>
+
+  <!-- 입력 패널 -->
+  <section class="action-panel">
+    <div id="action-display" class="action-display">접속 대기 중...</div>
+
+    <!-- 추측 입력 (awaiting_guess 상태) -->
+    <div id="guess-panel" class="guess-panel hidden">
+      <span class="panel-text">선택한 슬롯: <span id="selected-slot">없음</span></span>
+      <input type="number" id="guess-value" min="0" max="11" placeholder="0~11" />
+      <button id="btn-guess">추측</button>
+    </div>
+
+    <!-- 계속/멈춤 (awaiting_continue_decision 상태) -->
+    <div id="continue-panel" class="continue-panel hidden">
+      <span class="panel-text">정답! 계속 추측하시겠습니까?</span>
+      <button id="btn-continue">계속 추측</button>
+      <button id="btn-stop">멈춤</button>
+    </div>
+
+    <!-- 자기 카드 공개 (awaiting_self_reveal 상태) -->
+    <div id="self-reveal-panel" class="self-reveal-panel hidden">
+      <span class="panel-text">덱이 비어 추측에 실패했다. 자기 카드 중 하나를 골라 공개해야 한다.</span>
+    </div>
+  </section>
+
+  <!-- 결과 모달 -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2 id="modal-title">결과</h2>
+      <p id="modal-message"></p>
+      <button id="btn-new-game">새 게임 시작</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="client.js"></script>
+</body>
+</html>

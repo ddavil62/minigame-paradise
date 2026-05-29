@@ -1,0 +1,84 @@
+<!--
+  ui.js의 renderBoard를 직접 호출해서 J 피스(파랑)와 그 고스트가 어떻게 보이는지 확인.
+  MED-2 회귀 시각 확인.
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Board Render Preview</title>
+  <link rel="stylesheet" href="../public/css/style.css" />
+</head>
+<body>
+  <header class="game-header">
+    <h1>TETRIS BATTLE</h1>
+    <div class="status-bar">
+      <span>고스트 알파 검증 (J 피스)</span>
+    </div>
+  </header>
+
+  <main class="game-main">
+    <section class="player-area me">
+      <aside class="side-panel">
+        <div class="panel-block">
+          <div class="panel-label">HOLD</div>
+          <canvas id="hold-canvas" width="72" height="72"></canvas>
+        </div>
+        <div class="panel-block stats">
+          <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value">0</div></div>
+          <div class="stat"><div class="stat-label">LEVEL</div><div class="stat-value">1</div></div>
+          <div class="stat"><div class="stat-label">LINES</div><div class="stat-value">0</div></div>
+        </div>
+        <div class="panel-block items-block">
+          <div class="panel-label">ITEMS</div>
+          <div class="item-slots">
+            <div class="item-slot">Z</div>
+            <div class="item-slot">X</div>
+            <div class="item-slot">C</div>
+          </div>
+        </div>
+      </aside>
+      <div class="board-wrap">
+        <canvas id="board-canvas" width="300" height="600"></canvas>
+      </div>
+      <aside class="side-panel narrow">
+        <div class="panel-block">
+          <div class="panel-label">NEXT</div>
+          <canvas id="next-canvas" width="72" height="216"></canvas>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module">
+    import { createEmptyGrid, getGhostY, BOARD_HEIGHT, BOARD_WIDTH } from '../public/js/board.js';
+    import { createPiece, COLOR_HEX, PIECES, PIECE_COLORS } from '../public/js/tetromino.js';
+    import { createUI } from '../public/js/ui.js';
+
+    const els = {
+      boardCanvas: document.getElementById('board-canvas'),
+      nextCanvas: document.getElementById('next-canvas'),
+      holdCanvas: document.getElementById('hold-canvas'),
+      opponentCanvas: null,
+      scoreEl: document.querySelector('.stats .stat:nth-child(1) .stat-value'),
+      levelEl: document.querySelector('.stats .stat:nth-child(2) .stat-value'),
+      linesEl: document.querySelector('.stats .stat:nth-child(3) .stat-value'),
+      comboEl: null,
+      statusEl: null,
+      resultOverlay: null,
+      resultText: null,
+    };
+    const ui = createUI(els);
+
+    // 빈 보드에 J 피스 스폰
+    const grid = createEmptyGrid();
+    // J 피스를 보드 상단에 배치 (스폰 위치)
+    const jPiece = createPiece('J');
+    jPiece.y = 3; // 상단에서 약간 내려옴
+    const ghostY = getGhostY(grid, jPiece);
+    ui.renderBoard(grid, jPiece, ghostY);
+    ui.renderNext(['I', 'O', 'T']);
+    ui.renderHold('L');
+  </script>
+</body>
+</html>

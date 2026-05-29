@@ -1,0 +1,26 @@
+{
+  "name": "tetris-battle",
+  "version": "0.1.0",
+  "description": "LAN 1:1 대전 테트리스 배틀 (한게임 테트리스 스타일)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "tetris",
+    "lan",
+    "multiplayer",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

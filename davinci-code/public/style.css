@@ -1,0 +1,435 @@
+/**
+ * 다빈치 코드 클라이언트 스타일.
+ * 다크 테마 (배경 #1a1a2e), 코드네임 듀엣과 톤 통일.
+ */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background: #1a1a2e;
+  color: #e6e6f0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 상단바 ───────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #16162a;
+  border-bottom: 2px solid #2a2a4a;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #f5deb3;
+}
+
+.you-tag {
+  padding: 4px 12px;
+  background: #2a2a4a;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #a0a0c0;
+}
+
+.topbar-stats {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.stat {
+  background: #2a2a4a;
+  padding: 6px 14px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #a0a0c0;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+.turn-stat .stat-value {
+  color: #ffd166;
+}
+
+.new-game-stat button {
+  background: #b08040;
+  color: #fff;
+  border: none;
+  padding: 5px 14px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+.new-game-stat button:hover { background: #c89050; }
+
+/* ── 메인 플레이 영역 ─────────────────────────────────────────── */
+.play-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  align-items: center;
+}
+
+.hand {
+  width: 100%;
+  max-width: 1000px;
+  background: #16162a;
+  border-radius: 10px;
+  padding: 14px 18px;
+  border: 1.5px solid #2a2a4a;
+}
+
+.hand-label {
+  font-size: 12px;
+  color: #a0a0c0;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.cards {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 96px;
+  align-items: center;
+}
+
+/* ── 카드 ─────────────────────────────────────────────────────── */
+.card {
+  width: 64px;
+  height: 90px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: default;
+  user-select: none;
+  position: relative;
+  border: 3px solid transparent;
+  transition: transform 0.1s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.card.black {
+  background: #1a1a1a;
+  color: #fff;
+  box-shadow: 0 2px 0 #000;
+}
+.card.white {
+  background: #f0f0f0;
+  color: #222;
+  box-shadow: 0 2px 0 #c8c8c8;
+}
+
+/* 미공개 상대 카드는 "?" 표시 */
+.card.hidden-value {
+  color: rgba(255,255,255,0.4);
+}
+.card.white.hidden-value {
+  color: rgba(34,34,34,0.4);
+}
+
+/* 클릭 가능한 카드 (상대 미공개 카드 or 자기 미공개 카드 in self-reveal) */
+.card.clickable {
+  cursor: pointer;
+}
+.card.clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(255,209,102,0.3);
+}
+
+/* 선택된 카드 (추측 대상 슬롯) */
+.card.selected {
+  border-color: #ffd166;
+  box-shadow: 0 0 0 3px rgba(255,209,102,0.4);
+  transform: translateY(-3px);
+}
+
+/* 공개된 카드 */
+.card.revealed {
+  opacity: 0.85;
+  border-color: #ffd166;
+}
+
+/* 자기 카드는 항상 약간 다른 외곽 */
+.my-hand .card {
+  outline: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── 중앙: 덱 + pendingDrawn ───────────────────────────────── */
+.center-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 110px;
+}
+
+.deck-zone {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.deck-card {
+  width: 70px;
+  height: 96px;
+  background: linear-gradient(135deg, #2a2a4a 0%, #16162a 100%);
+  border: 2px solid #f5deb3;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.deck-count-big {
+  font-size: 28px;
+  font-weight: bold;
+  color: #f5deb3;
+}
+.deck-label {
+  font-size: 10px;
+  color: #a0a0c0;
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+.pending-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.pending-label {
+  font-size: 11px;
+  color: #a0a0c0;
+  letter-spacing: 2px;
+}
+
+.pending-card {
+  width: 64px;
+  height: 90px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  border: 2.5px dashed #3a3a5a;
+}
+
+.pending-card.empty {
+  font-size: 12px;
+  color: #5a5a7a;
+  border-style: dashed;
+}
+
+.pending-card.black {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #ffd166;
+  border-style: solid;
+}
+.pending-card.white {
+  background: #f0f0f0;
+  color: #222;
+  border-color: #ffd166;
+  border-style: solid;
+}
+.pending-card.hidden-value {
+  color: rgba(255,255,255,0.4);
+}
+.pending-card.white.hidden-value {
+  color: rgba(34,34,34,0.4);
+}
+
+.last-guess {
+  font-size: 14px;
+  color: #a0a0c0;
+  min-height: 20px;
+  margin-top: 4px;
+}
+
+.last-guess.correct { color: #4caf50; }
+.last-guess.wrong   { color: #ff6b6b; }
+
+/* ── 액션 패널 ────────────────────────────────────────────────── */
+.action-panel {
+  background: #16162a;
+  padding: 16px 24px;
+  border-top: 2px solid #2a2a4a;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-display {
+  font-size: 17px;
+  color: #ffd166;
+  text-align: center;
+  min-height: 24px;
+}
+
+.guess-panel, .continue-panel, .self-reveal-panel {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.guess-panel.hidden, .continue-panel.hidden, .self-reveal-panel.hidden {
+  display: none;
+}
+
+.panel-text {
+  color: #e6e6f0;
+  font-size: 15px;
+}
+
+#selected-slot {
+  color: #ffd166;
+  font-weight: bold;
+}
+
+.guess-panel input[type="number"] {
+  background: #2a2a4a;
+  border: 1.5px solid #3a3a5a;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  width: 86px;
+  text-align: center;
+}
+
+.action-panel button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+.action-panel button:hover:not(:disabled) {
+  background: #5dbf60;
+}
+.action-panel button:disabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+}
+
+#btn-stop {
+  background: #b08040;
+}
+#btn-stop:hover:not(:disabled) {
+  background: #c89050;
+}
+
+/* ── 모달 ─────────────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+
+.modal-inner {
+  background: #2a2a4a;
+  padding: 36px 48px;
+  border-radius: 12px;
+  text-align: center;
+  border: 2px solid #f5deb3;
+  min-width: 340px;
+}
+
+.modal-inner h2 {
+  margin: 0 0 12px;
+  font-size: 32px;
+  color: #ffd166;
+}
+
+.modal-inner p {
+  margin: 0 0 24px;
+  font-size: 16px;
+  color: #e6e6f0;
+}
+
+.modal-inner button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.modal-inner button:hover { background: #5dbf60; }
+
+.modal.lost h2 { color: #ff6b6b; }
+.modal.won  h2 { color: #4caf50; }
+
+/* ── 토스트 ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  border: 1px solid #ff6b6b;
+  z-index: 50;
+  transition: opacity 0.3s;
+}
+.toast.hidden { opacity: 0; pointer-events: none; }

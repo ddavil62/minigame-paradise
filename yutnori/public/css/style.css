@@ -1,0 +1,581 @@
+/**
+ * Yutnori — 전체 스타일.
+ * 색상은 한지/먹/주황을 기반으로 한 전통 한국 보드게임 톤.
+ */
+
+:root {
+  --bg: #1a1410;
+  --bg-soft: #2a1f18;
+  --panel-bg: rgba(60, 45, 30, 0.85);
+  --panel-border: #6a4a2a;
+  --text: #f3e2b2;
+  --text-dim: #c2a878;
+  --accent: #e08a3c;
+  --p1: #e74c3c;
+  --p2: #3498db;
+  --win: #2ecc71;
+  --lose: #e74c3c;
+  --yut-do: #d4a574;
+  --yut-gae: #b88c5a;
+  --yut-geol: #c97f3f;
+  --yut-yut: #e08a3c;
+  --yut-mo: #e74c3c;
+  --yut-backdo: #ff5555;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Malgun Gothic', 'AppleGothic', 'Noto Sans KR', sans-serif;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 헤더 ───────────────────────────────────────────────────────── */
+.game-header {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: var(--bg-soft);
+}
+
+.game-header h1 {
+  font-size: 22px;
+  letter-spacing: 6px;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(224, 138, 60, 0.4);
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.status-divider {
+  opacity: 0.35;
+}
+
+#turn-label {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+/* ── 메인 ──────────────────────────────────────────────────────── */
+.game-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px;
+  min-height: 0;
+}
+
+/* ── 사이드 패널 ───────────────────────────────────────────────── */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.panel-block {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.panel-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.panel-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 6px;
+}
+
+.panel-sub span {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.panel-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  text-align: center;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+/* ── 보드 영역 ─────────────────────────────────────────────────── */
+.board-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+#board-canvas {
+  display: block;
+  background: #f4e9c8;
+  border: 4px solid var(--panel-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  max-width: 100%;
+  max-height: calc(100vh - 180px);
+}
+
+/* ── 윷가락 캔버스 + 결과 ───────────────────────────────────── */
+#yut-canvas {
+  display: block;
+  margin: 0 auto 6px;
+  background: #0a0a0f;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.yut-result {
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 6px;
+  color: var(--text-dim);
+  margin: 4px 0 8px;
+  min-height: 36px;
+  opacity: 0.6;
+  transition: opacity 0.25s, transform 0.25s;
+  transform: scale(0.9);
+}
+
+.yut-result.active {
+  opacity: 1;
+  transform: scale(1.1);
+  text-shadow: 0 0 12px rgba(224, 138, 60, 0.8);
+}
+
+.yut-result.yut-do { color: var(--yut-do); }
+.yut-result.yut-gae { color: var(--yut-gae); }
+.yut-result.yut-geol { color: var(--yut-geol); }
+.yut-result.yut-yut { color: var(--yut-yut); }
+.yut-result.yut-mo { color: var(--yut-mo); }
+.yut-result.yut-backdo {
+  color: var(--yut-backdo);
+  text-shadow: 0 0 14px rgba(255, 85, 85, 0.7);
+}
+
+/* 백도 칩: 빨간 강조 + 좌측 마이너스 기호 효과 */
+.result-chip.yut-backdo {
+  background: var(--yut-backdo);
+  color: #1a1410;
+  border-color: var(--yut-backdo);
+  box-shadow: 0 0 10px rgba(255, 85, 85, 0.5);
+}
+.result-chip.yut-backdo.selected {
+  background: #fff;
+  color: var(--yut-backdo);
+  border-color: var(--yut-backdo);
+}
+
+/* ── 결과 큐 (칩) ─────────────────────────────────────────────── */
+.result-queue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.queue-empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  opacity: 0.5;
+  align-self: center;
+}
+
+.result-chip {
+  padding: 4px 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  font-family: inherit;
+  letter-spacing: 2px;
+}
+
+.result-chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(224, 138, 60, 0.4);
+}
+
+.result-chip.selected {
+  background: var(--accent);
+  color: #1a1410;
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(224, 138, 60, 0.6);
+}
+
+.result-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── 말 상태 표시 ─────────────────────────────────────────────── */
+.piece-status {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.piece-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--p1);
+  border: 2px solid rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.piece-dot.done {
+  opacity: 0.35;
+  filter: grayscale(60%);
+}
+
+.piece-status.opponent .piece-dot {
+  background: var(--p2);
+}
+
+/* ── 룰 리스트 ────────────────────────────────────────────────── */
+.rules-list {
+  list-style: none;
+  padding-left: 0;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.rules-list li {
+  padding: 2px 0;
+  border-bottom: 1px dashed rgba(106, 74, 42, 0.3);
+}
+
+.rules-list li:last-child {
+  border-bottom: none;
+}
+
+.last-throw {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text);
+  padding: 6px 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+/* ── 버튼 ─────────────────────────────────────────────────────── */
+.primary-btn {
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #1a1410;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.1s, box-shadow 0.1s;
+  width: 100%;
+}
+
+.primary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(224, 138, 60, 0.4);
+}
+
+.primary-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ready-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  padding: 14px 32px;
+  font-size: 18px;
+  z-index: 30;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+.ready-btn.hidden {
+  display: none;
+}
+
+/* ── 초대 패널 ────────────────────────────────────────────────── */
+.invite-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 14, 8, 0.92);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  z-index: 20;
+  width: 92%;
+  max-width: 480px;
+}
+
+.invite-panel.hidden {
+  display: none;
+}
+
+.invite-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.invite-url-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.invite-url {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--accent);
+  font-family: 'Consolas', monospace;
+  font-size: 13px;
+  user-select: all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-btn {
+  padding: 6px 12px;
+  background: var(--panel-border);
+  color: var(--text);
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.copy-btn:hover { background: var(--accent); color: #1a1410; }
+.copy-btn.copied { background: var(--win); color: #1a1410; }
+
+.invite-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  text-align: center;
+  opacity: 0.75;
+}
+
+/* ── 카운트다운 ───────────────────────────────────────────────── */
+.countdown {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 96px;
+  font-weight: bold;
+  color: var(--accent);
+  text-shadow: 0 0 32px rgba(224, 138, 60, 0.8);
+  z-index: 25;
+  pointer-events: none;
+}
+
+.countdown.hidden { display: none; }
+.countdown.go { color: var(--win); font-size: 64px; }
+
+@keyframes count-pulse {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.2; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.0); opacity: 0.95; }
+}
+
+.countdown.pulse { animation: count-pulse 0.55s ease-out; }
+
+/* ── 분기 모달 ────────────────────────────────────────────────── */
+.branch-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.branch-modal.hidden { display: none; }
+
+.branch-card {
+  background: var(--bg-soft);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+}
+
+.branch-title {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.branch-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── 결과 오버레이 ────────────────────────────────────────────── */
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.result-overlay.hidden { display: none; }
+
+.result-card {
+  background: var(--bg-soft);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 32px 48px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+}
+
+.result-text {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--accent);
+  margin-bottom: 16px;
+  letter-spacing: 2px;
+}
+
+.result-overlay.win .result-text { color: var(--win); text-shadow: 0 0 16px rgba(46, 204, 113, 0.7); }
+.result-overlay.lose .result-text { color: var(--lose); }
+
+.rematch-btn {
+  margin: 8px 0;
+  width: 100%;
+  padding: 12px 24px;
+  font-size: 16px;
+}
+
+.rematch-btn.hidden { display: none; }
+
+.result-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+/* ── 푸터 ─────────────────────────────────────────────────────── */
+.game-footer {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  border-top: 1px solid var(--panel-border);
+  background: var(--bg-soft);
+  flex-shrink: 0;
+}
+
+/* ── 토스트 ───────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 10px 18px;
+  background: rgba(20, 14, 8, 0.95);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 200;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.success { border-color: var(--win); color: var(--win); }
+.toast.error { border-color: var(--lose); color: var(--lose); }
+
+/* ── 반응형: 좁은 화면 ────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .side-panel { width: 180px; }
+  #board-canvas { max-height: calc(100vh - 200px); }
+}
+
+@media (max-width: 900px) {
+  .game-main { flex-direction: column; padding: 8px; gap: 8px; }
+  .side-panel { flex-direction: row; width: 100%; gap: 8px; flex-wrap: wrap; }
+  .panel-block { flex: 1 1 30%; min-width: 140px; }
+  #board-canvas { max-height: 60vh; }
+}

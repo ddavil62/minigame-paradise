@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>맞고 - LAN 1:1 대전</title>
+  <link rel="stylesheet" href="style.css?v=8" />
+</head>
+<body>
+  <main class="play-area">
+
+    <!-- row 1 col 1: 상대 먹은 패 -->
+    <section class="captured-zone opp-captured-zone" id="opp-captured-zone">
+      <div class="captured-summary">
+        <div class="cs-row" data-type="gwang">광 0</div>
+        <div class="cs-row" data-type="kkeut">끗 0</div>
+        <div class="cs-row" data-type="tti">띠 0</div>
+        <div class="cs-row" data-type="pi">피 0</div>
+      </div>
+      <div class="captured-group" data-type="gwang"><div class="card-stack"></div></div>
+      <div class="captured-group" data-type="kkeut"><div class="card-stack"></div></div>
+      <div class="captured-group" data-type="tti"><div class="card-stack"></div></div>
+      <div class="captured-group" data-type="pi"><div class="card-stack"></div></div>
+    </section>
+
+    <!-- row 1 col 2: 상대 손 -->
+    <section class="hand-zone opp-hand-zone">
+      <div class="hand-zone-label">상대 손 (<span id="opp-hand-count">0</span>장)</div>
+      <div id="opp-hand-cards" class="hand-cards"></div>
+    </section>
+
+    <!-- row 1 col 3: 상대 프로필 -->
+    <section class="profile-zone opp-profile-zone" id="opp-profile-zone">
+      <div class="profile-name">상대 (P2)</div>
+      <div class="profile-money" id="opp-money">-</div>
+      <div class="profile-score" id="opp-score">0</div>
+      <div class="profile-extra"><span id="opp-extra">손 0장</span></div>
+      <div class="profile-badge-row" id="opp-badges"></div>
+    </section>
+
+    <!-- row 2 col 1-2: 바닥 (펠트) -->
+    <section class="floor-zone" id="floor-zone">
+      <div id="floor-cards" class="floor-cards">
+        <div class="floor-mission" id="floor-mission">
+          <span id="banner-status">대기 중</span>
+          <span class="fm-multiplier" id="banner-multiplier"></span>
+        </div>
+        <div class="deck-card" id="deck-card">
+          <span class="deck-count-big" id="deck-count-big">-</span>
+          <span class="deck-label">더미</span>
+        </div>
+        <!-- 고/스톱 오버레이 (awaiting_go_stop 상태에서 floor 중앙에 등장) -->
+        <div id="go-stop-overlay" class="go-stop-overlay hidden">
+          <button id="btn-go" class="big-go">고</button>
+          <button id="btn-stop" class="big-stop">스톱</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- row 2 col 3: 메타 패널 (헤더 흡수) -->
+    <section class="meta-panel">
+      <div class="mp-title">맞고</div>
+      <div class="mp-you" id="you-tag">접속 중...</div>
+      <div class="mp-row">
+        <label for="per-point">점당</label>
+        <input type="number" id="per-point" value="100" min="1" />
+      </div>
+      <button id="btn-new-round">새 라운드</button>
+      <button id="btn-new-game">새 게임</button>
+    </section>
+
+    <!-- row 3 col 1: 내 먹은 패 -->
+    <section class="captured-zone my-captured-zone" id="my-captured-zone">
+      <div class="captured-summary">
+        <div class="cs-row" data-type="gwang">광 0</div>
+        <div class="cs-row" data-type="kkeut">끗 0</div>
+        <div class="cs-row" data-type="tti">띠 0</div>
+        <div class="cs-row" data-type="pi">피 0</div>
+      </div>
+      <div class="captured-group" data-type="gwang"><div class="card-stack"></div></div>
+      <div class="captured-group" data-type="kkeut"><div class="card-stack"></div></div>
+      <div class="captured-group" data-type="tti"><div class="card-stack"></div></div>
+      <div class="captured-group" data-type="pi"><div class="card-stack"></div></div>
+    </section>
+
+    <!-- row 3 col 2: 내 손 -->
+    <section class="hand-zone my-hand-zone">
+      <div class="hand-zone-label">내 손 (<span id="my-hand-count">0</span>장)</div>
+      <div id="my-hand-cards" class="hand-cards"></div>
+    </section>
+
+    <!-- row 3 col 3: 내 프로필 -->
+    <section class="profile-zone my-profile-zone" id="my-profile-zone">
+      <div class="profile-name">나 (P1)</div>
+      <div class="profile-money" id="my-money">-</div>
+      <div class="profile-score" id="my-score">0</div>
+      <div class="profile-extra"><span id="my-extra">손 0장</span></div>
+      <div class="profile-badge-row" id="my-badges"></div>
+    </section>
+  </main>
+
+  <!-- 입력 패널 (하단 고정) -->
+  <section class="action-panel">
+    <div id="action-display" class="action-display">접속 대기 중...</div>
+
+    <!-- 폭탄 -->
+    <div id="bomb-panel" class="action-buttons hidden">
+      <span class="panel-text">폭탄 가능 월: <span id="bomb-months"></span></span>
+      <button id="btn-bomb" class="action-btn bomb-btn">폭탄 투하</button>
+    </div>
+  </section>
+
+  <!-- 라운드 결과 모달 -->
+  <div id="round-modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2 id="round-modal-title">라운드 결과</h2>
+      <div id="round-modal-body"></div>
+      <button id="btn-new-round-modal">새 라운드</button>
+    </div>
+  </div>
+
+  <!-- 9월 술잔 끗/쌍피 선택 모달 -->
+  <!-- 바닥 선택 모달 (같은 월 카드 2장 이상 매칭 시 1장 선택) -->
+  <div id="floor-choice-modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2>바닥 카드 선택</h2>
+      <p><b id="floor-choice-month">N월</b> 카드 중 가져갈 한 장을 선택해라.</p>
+      <div id="floor-choice-cards" class="floor-choice-cards"></div>
+    </div>
+  </div>
+
+  <!-- 흔들기 결정 모달 (라운드 시작 시 같은 월 3장 보유) -->
+  <div id="shake-modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2>흔들기</h2>
+      <p><b id="shake-month-text">같은 월</b> 카드 3장을 받았다 — 흔들겠는가?</p>
+      <p class="modal-hint">흔들면 라운드 점수 ×2. 단 패배 시 손해도 ×2 (보수적이면 일반).</p>
+      <div class="modal-actions">
+        <button id="btn-shake" class="primary">흔들기 (×2)</button>
+        <button id="btn-shake-no" class="secondary">일반</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kkeut-modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2>9월 술잔</h2>
+      <p>이 카드를 <b>끗</b>으로 쓸지 <b>쌍피</b>로 쓸지 선택해라.</p>
+      <p class="modal-hint">한국 표준 룰: 9월 술잔은 양쪽 중 자기에게 유리한 쪽으로 카운트.</p>
+      <div class="modal-actions">
+        <button id="btn-kkeut-choice-kkeut" class="primary">끗으로 카운트</button>
+        <button id="btn-kkeut-choice-ssangpi" class="secondary">쌍피로 카운트</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="client.js?v=9"></script>
+</body>
+</html>

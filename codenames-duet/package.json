@@ -1,0 +1,26 @@
+{
+  "name": "codenames-duet",
+  "version": "0.1.0",
+  "description": "LAN 1:1 협력 코드네임 듀엣 (Codenames Duet)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "codenames",
+    "duet",
+    "lan",
+    "coop",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

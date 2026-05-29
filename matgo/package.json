@@ -1,0 +1,29 @@
+{
+  "name": "matgo",
+  "version": "0.1.0",
+  "description": "LAN 1:1 맞고 (2인 고스톱)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "matgo",
+    "go-stop",
+    "hwatu",
+    "lan",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}

@@ -1,0 +1,423 @@
+/**
+ * @fileoverview 미니게임 천국 런처 스타일.
+ *   1280x800 데스크톱 고정 레이아웃, 한국 레트로 보드게임 톤.
+ *   - 어두운 우드/네이비 배경 + 황금/크림 액센트
+ *   - CSS Grid 5열 카드 그리드
+ *   - hover 시 부드러운 스케일/그림자 강조
+ */
+
+/* ── 리셋 & 베이스 ─────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  color: #f5e9c9;
+  /* 어두운 보드게임 테이블 톤 (네이비 + 우드 그라데이션) */
+  background:
+    radial-gradient(ellipse at top, #2a3a5c 0%, #15213a 45%, #0b1322 100%);
+  background-attachment: fixed;
+  display: flex;
+  flex-direction: column;
+  letter-spacing: 0.01em;
+}
+
+/* ── 헤더 (히어로) ─────────────────────────────────────────── */
+.hero {
+  padding: 48px 24px 32px;
+  text-align: center;
+  border-bottom: 1px solid rgba(245, 233, 201, 0.08);
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  color: #ffd97a;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(255, 200, 60, 0.18);
+}
+
+.hero-sub {
+  margin: 12px 0 0;
+  font-size: 18px;
+  color: rgba(245, 233, 201, 0.72);
+  font-weight: 500;
+}
+
+/* ── 컨테이너 ────────────────────────────────────────────── */
+.container {
+  flex: 1 0 auto;
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 24px 32px;
+}
+
+/* ── 게임 카드 그리드 (1280 기준 5열) ───────────────────────── */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+}
+
+/* ── 게임 카드 ────────────────────────────────────────────── */
+.game-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1f2c47 0%, #1a2541 100%);
+  border: 1px solid rgba(245, 233, 201, 0.1);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    border-color 180ms ease-out;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.game-card:hover,
+.game-card:focus-visible {
+  transform: translateY(-4px) scale(1.025);
+  border-color: rgba(255, 217, 122, 0.4);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 217, 122, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+/* 상단 컬러 띠 — 각 게임 고유색 */
+.game-card-stripe {
+  height: 6px;
+  width: 100%;
+  background: var(--game-color, #888);
+}
+
+.game-card-body {
+  padding: 22px 18px 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.game-card-emoji {
+  font-size: 56px;
+  line-height: 1;
+  margin-bottom: 14px;
+  text-align: center;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.game-card-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffd97a;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.game-card-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(245, 233, 201, 0.7);
+  text-align: center;
+  flex: 1;
+  min-height: 56px;
+}
+
+.game-card-port {
+  margin-top: 12px;
+  font-size: 11px;
+  color: rgba(245, 233, 201, 0.42);
+  text-align: center;
+  font-family: 'Consolas', 'Menlo', monospace;
+  letter-spacing: 0.05em;
+}
+
+.game-card-play {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--game-color, #555);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: filter 150ms ease-out, transform 150ms ease-out;
+  font-family: inherit;
+}
+
+.game-card-play:hover,
+.game-card-play:focus-visible {
+  filter: brightness(1.18) saturate(1.1);
+  outline: none;
+}
+
+.game-card-play:active {
+  transform: scale(0.97);
+}
+
+/* ── 로딩/에러 메시지 ─────────────────────────────────────── */
+.grid-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(245, 233, 201, 0.5);
+  font-size: 15px;
+}
+
+/* ── 푸터 ────────────────────────────────────────────────── */
+.site-footer {
+  padding: 20px 24px 28px;
+  text-align: center;
+  color: rgba(245, 233, 201, 0.42);
+  font-size: 13px;
+  border-top: 1px solid rgba(245, 233, 201, 0.06);
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+/* ── 로비/종목 선택 view 토글 유틸 ─────────────────────────── */
+.view {
+  display: flex;
+  flex-direction: column;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ── 로비 화면 ────────────────────────────────────────────── */
+.lobby-view {
+  align-items: stretch;
+  min-height: calc(100vh - 80px);
+}
+
+.lobby-body {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 24px 48px;
+}
+
+.player-count {
+  font-size: 120px;
+  font-weight: 900;
+  color: #ffd97a;
+  line-height: 1;
+  text-shadow:
+    0 6px 0 rgba(0, 0, 0, 0.32),
+    0 12px 32px rgba(255, 200, 60, 0.28);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-role {
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(245, 233, 201, 0.78);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 4px 16px;
+  border: 1px solid rgba(245, 233, 201, 0.22);
+  border-radius: 999px;
+  background: rgba(245, 233, 201, 0.04);
+}
+
+.lobby-hint {
+  font-size: 16px;
+  color: rgba(245, 233, 201, 0.66);
+  margin: 0;
+  text-align: center;
+  max-width: 560px;
+}
+
+.start-btn {
+  margin-top: 12px;
+  padding: 18px 80px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffd97a 0%, #f5a623 100%);
+  color: #0b1322;
+  cursor: pointer;
+  transition: filter 160ms ease-out, transform 160ms ease-out, box-shadow 160ms ease-out;
+  font-family: inherit;
+  box-shadow:
+    0 6px 16px rgba(245, 166, 35, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.start-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow:
+    0 10px 24px rgba(245, 166, 35, 0.44),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.start-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.start-btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+.guest-waiting {
+  font-size: 15px;
+  color: rgba(245, 233, 201, 0.5);
+  margin: 4px 0 0;
+  text-align: center;
+  font-style: italic;
+}
+
+.lobby-status {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(245, 233, 201, 0.4);
+  text-align: center;
+  min-height: 18px;
+}
+
+/* ── 종목 선택 화면 ──────────────────────────────────────── */
+.game-select-view {
+  align-items: stretch;
+  min-height: calc(100vh - 80px);
+}
+
+.game-select-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 36px 24px 12px;
+  border-bottom: 1px solid rgba(245, 233, 201, 0.08);
+}
+
+.game-select-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffd97a;
+  letter-spacing: 0.04em;
+}
+
+.mode-badge {
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(255, 217, 122, 0.16);
+  color: #ffd97a;
+  border: 1px solid rgba(255, 217, 122, 0.36);
+  letter-spacing: 0.06em;
+}
+
+.mode-badge.mode-human {
+  background: rgba(93, 173, 226, 0.18);
+  color: #8fcdf2;
+  border-color: rgba(93, 173, 226, 0.4);
+}
+
+.host-pick-hint,
+.guest-pick-hint {
+  text-align: center;
+  font-size: 15px;
+  color: rgba(245, 233, 201, 0.7);
+  margin: 0 0 18px;
+}
+
+.guest-pick-hint {
+  font-style: italic;
+  color: rgba(245, 233, 201, 0.55);
+}
+
+/* ── 게스트 모드: 카드 비활성 + 오버레이 ─────────────────── */
+.game-select-view.guest-mode .game-card {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.game-select-view.guest-mode .game-card::after {
+  content: '호스트가 선택 중...';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255, 233, 180, 0.92);
+  background: rgba(11, 19, 34, 0.62);
+  border-radius: 14px;
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.game-select-view.guest-mode .game-card:hover {
+  transform: none;
+  border-color: rgba(245, 233, 201, 0.1);
+}
+
+/* ── 봇 미지원 카드 (AI 모드에서만 적용) ───────────────── */
+.game-select-view.ai-mode .game-card.no-bot {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.6);
+}
+
+.game-select-view.ai-mode .game-card.no-bot::after {
+  content: 'AI 봇 미지원';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #1a1106;
+  background: #ffd97a;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── FULL(정원 초과) 안내 ──────────────────────────────── */
+.lobby-status.full {
+  color: #ff7e7e;
+  font-weight: 600;
+}

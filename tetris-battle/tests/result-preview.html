@@ -1,0 +1,83 @@
+<!--
+  AD3 HIGH-1 회귀 시각 확인용 임시 페이지.
+  실제 index.html을 그대로 사용하되, 페이지 로드 후 즉시 result-overlay를 표시하도록 스크립트로 강제한다.
+  Chrome headless로 캡처하여 재대결 버튼이 result-card 내부에 표시되는지 확인.
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Result Preview</title>
+  <link rel="stylesheet" href="../public/css/style.css" />
+</head>
+<body>
+  <header class="game-header">
+    <h1>TETRIS BATTLE</h1>
+    <div class="status-bar">
+      <span id="player-label">나 (P1)</span>
+      <span class="status-divider">|</span>
+      <span id="status-msg">결과 표시 테스트</span>
+      <span class="status-divider">|</span>
+      <span>상대: <span id="opponent-status">대기 중</span></span>
+    </div>
+  </header>
+
+  <main class="game-main">
+    <section class="player-area me">
+      <aside class="side-panel">
+        <div class="panel-block">
+          <div class="panel-label">HOLD</div>
+          <canvas id="hold-canvas" width="72" height="72"></canvas>
+        </div>
+        <div class="panel-block stats">
+          <div class="stat"><div class="stat-label">SCORE</div><div class="stat-value">12,300</div></div>
+          <div class="stat"><div class="stat-label">LEVEL</div><div class="stat-value">3</div></div>
+          <div class="stat"><div class="stat-label">LINES</div><div class="stat-value">24</div></div>
+        </div>
+        <div class="panel-block items-block">
+          <div class="panel-label">ITEMS</div>
+          <div class="item-slots">
+            <div class="item-slot">Z</div>
+            <div class="item-slot">X</div>
+            <div class="item-slot">C</div>
+          </div>
+        </div>
+      </aside>
+      <div class="board-wrap">
+        <canvas id="board-canvas" width="300" height="600" style="background: #1a1a2e;"></canvas>
+        <div id="combo" class="combo-indicator active">3 COMBO</div>
+      </div>
+      <aside class="side-panel narrow">
+        <div class="panel-block">
+          <div class="panel-label">NEXT</div>
+          <canvas id="next-canvas" width="72" height="216"></canvas>
+        </div>
+      </aside>
+    </section>
+
+    <section class="center-area">
+      <div class="vs-label">VS</div>
+    </section>
+
+    <section class="player-area opponent">
+      <div class="opponent-label">상대방</div>
+      <div class="board-wrap minimap">
+        <canvas id="opponent-canvas" width="120" height="240" style="background: #1a1a2e;"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <!-- result-overlay 즉시 표시 -->
+  <div id="result-overlay" class="result-overlay lose">
+    <div class="result-card">
+      <div id="result-text" class="result-text">패배...</div>
+      <button id="rematch-btn" class="primary-btn rematch-btn">재대결</button>
+      <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
+    </div>
+  </div>
+
+  <footer class="game-footer">
+    <span>키: ←→ 이동 | ↑/X 회전 | Ctrl 반회전 | ↓ 소프트드롭 | Space 하드드롭 | Shift 홀드</span>
+  </footer>
+</body>
+</html>

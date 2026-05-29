@@ -1,0 +1,57 @@
+[
+  {
+    "id": "codenames-duet",
+    "name": "코드네임 듀엣",
+    "description": "단어 힌트로 협력해서 요원을 찾아라! 2인 협동 워드 게임",
+    "port": 3001,
+    "httpPath": "/codenames-duet/",
+    "wsPath": "/codenames-duet/ws",
+    "color": "#4A90D9",
+    "emoji": "🕵️",
+    "botAvailable": false
+  },
+  {
+    "id": "davinci-code",
+    "name": "다빈치 코드",
+    "description": "숫자 배열을 추리하라! 2인 추리 게임",
+    "port": 3002,
+    "httpPath": "/davinci-code/",
+    "wsPath": "/davinci-code/ws",
+    "color": "#7B68EE",
+    "emoji": "🎴",
+    "botAvailable": false
+  },
+  {
+    "id": "matgo",
+    "name": "맞고",
+    "description": "화투로 즐기는 2인 맞고 (고스톱). 녹색 테이블의 두뇌 싸움",
+    "port": 3003,
+    "httpPath": "/matgo/",
+    "wsPath": "/matgo/ws",
+    "color": "#2E8B57",
+    "emoji": "🃏",
+    "botAvailable": true
+  },
+  {
+    "id": "yutnori",
+    "name": "윷놀이",
+    "description": "전통 윷가락을 던져 말을 먼저 완주시켜라! 2인 윷놀이",
+    "port": 3004,
+    "httpPath": "/yutnori/",
+    "wsPath": "/yutnori/ws",
+    "color": "#D4A017",
+    "emoji": "🎲",
+    "botAvailable": false
+  },
+  {
+    "id": "tetris-battle",
+    "name": "테트리스 배틀",
+    "description": "가비지+아이템 대전! 한게임 스타일 1:1 테트리스 배틀",
+    "port": 3005,
+    "httpPath": "/tetris-battle/",
+    "wsPath": "/tetris-battle/ws",
+    "color": "#5DADE2",
+    "emoji": "🟦",
+    "botAvailable": false
+  }
+]
