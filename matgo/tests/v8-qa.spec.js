@@ -94,7 +94,7 @@ async function readState(page) {
       actionDisplay: document.getElementById('action-display')?.textContent,
       // 첫 번째 클릭 가능한 손패 카드 (현재 턴 플레이어인 경우)
       firstClickableId: document.querySelector('#my-hand-cards .card.clickable')?.dataset?.cardId,
-      shakePanelVisible: !document.getElementById('shake-panel')?.classList.contains('hidden'),
+      shakePanelVisible: !document.getElementById('shake-modal')?.classList.contains('hidden'),
       bombPanelVisible: !document.getElementById('bomb-panel')?.classList.contains('hidden'),
       goStopVisible: !document.getElementById('go-stop-overlay')?.classList.contains('hidden'),
       kkeutModalVisible: !document.getElementById('kkeut-modal')?.classList.contains('hidden'),
@@ -184,7 +184,7 @@ test.describe('맞고 v8 UI 게임 로직 회귀 검증', () => {
           'banner-status', 'banner-multiplier',
           'deck-card', 'deck-count-big',
           'go-stop-overlay', 'btn-go', 'btn-stop',
-          'shake-panel', 'btn-shake', 'btn-shake-no',
+          'shake-modal', 'btn-shake', 'btn-shake-no',
           'bomb-panel', 'btn-bomb', 'bomb-months',
           'btn-new-round', 'btn-new-game',
           'round-modal', 'btn-new-round-modal',
@@ -218,7 +218,7 @@ test.describe('맞고 v8 UI 게임 로직 회귀 검증', () => {
           await page.click('#btn-shake-no');
           // STATE 재수신 대기
           await page.waitForFunction(() =>
-            document.getElementById('shake-panel')?.classList.contains('hidden'),
+            document.getElementById('shake-modal')?.classList.contains('hidden'),
             { timeout: 3000 },
           );
         }

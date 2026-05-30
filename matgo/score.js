@@ -129,13 +129,13 @@ export function applyFinalMultipliers(winner, loser, flags) {
     mult *= 2;
     reasons.push('광박 ×2');
   }
-  // 피박: 패자 피 ≤6
-  if (loser.piCount <= 6) {
+  // 피박: 패자 피 ≤7 (나무위키 맞고 기준)
+  if (loser.piCount <= 7) {
     mult *= 2;
     reasons.push('피박 ×2');
   }
-  // 멍박: 패자 끗 ≤6
-  if (loser.kkeut <= 6) {
+  // 멍박: 패자 끗 0장 (나무위키 기준 — 끗이 아예 없어야 발동)
+  if (loser.kkeut === 0) {
     mult *= 2;
     reasons.push('멍박 ×2');
   }
