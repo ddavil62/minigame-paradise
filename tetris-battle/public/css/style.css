@@ -79,6 +79,26 @@ body {
   opacity: 0.3;
 }
 
+/* ── 상시 뒤로가기 버튼 ───────────────────────────────── */
+.btn-back-to-lobby {
+  background: transparent;
+  color: rgba(0, 240, 240, 0.5);   /* --accent 50% 투명 */
+  border: 1px solid rgba(0, 240, 240, 0.2);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Consolas', 'Menlo', 'Malgun Gothic', monospace;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+.btn-back-to-lobby:hover {
+  background: rgba(0, 240, 240, 0.08);
+  color: rgba(0, 240, 240, 0.85);
+}
+
 /* ── 메인 게임 영역 ─────────────────────────────────────────────── */
 .game-main {
   flex: 1;

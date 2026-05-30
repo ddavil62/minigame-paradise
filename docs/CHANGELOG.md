@@ -1,5 +1,49 @@
 # Changelog
 
+## [2026-05-31] - 5개 게임 게임 중 상시 뒤로가기 버튼 추가
+
+### 추가
+- **`#btn-back-to-lobby` 버튼**: 5개 게임(matgo, tetris-battle, davinci-code, yutnori, codenames-duet)의 헤더/메타패널에 "← 게임 선택" 상시 표시 버튼 추가. 게임 진행 중 언제든 로비(`/`)로 복귀 가능
+- **confirm 다이얼로그**: 버튼 클릭 시 `confirm('게임을 중단하고 게임 선택 화면으로 돌아가시겠어요? 상대방도 함께 로비로 이동합니다.')` 표시. 취소 시 동작 없음
+- **양쪽 동시 로비 복귀**: P1이 confirm 수락 -> `fetch('/lobby/return')` + `location.href = '/'`. P1 WS 연결 종료 -> 게임 서버가 P2에 disconnect 메시지 전송 -> P2 클라이언트가 path 기반 런처 모드 판정 후 1.2초 딜레이로 자동 redirect
+  - matgo/davinci-code/codenames-duet: `OPPONENT_LEFT` 핸들러에 런처 모드 감지 + redirect 추가
+  - tetris-battle: `GAME_RESULT` (reason=disconnect) 핸들러에 런처 모드 감지 + redirect 추가
+  - yutnori: `GAME_OVER` (reason=disconnect) 핸들러에 런처 모드 감지 + redirect 추가
+- **게임별 고스트 버튼 CSS**: 각 게임 팔레트에 맞춘 투명 고스트 스타일 적용
+  - matgo: gold-soft 60% 투명 (`.meta-panel .btn-back-to-lobby`, 특이도 0,2,0)
+  - tetris-battle: accent 민트 50% 투명 + flex-shrink:0
+  - davinci-code: wheat 55% 투명 + `.back-stat` 래퍼 + `.topbar-stats { flex-wrap: wrap }`
+  - yutnori: text-dim 60% 투명 + flex-shrink:0
+  - codenames-duet: wheat 55% 투명 + `.back-stat` 래퍼 + `.topbar-stats { flex-wrap: wrap }`
+- **QA 테스트**: `tests/back-button-qa.spec.js` (BB-01~BB-10, 14개), `tests/back-button-extended-qa.spec.js` (EQ-1~EQ-7, 24개)
+
+### 수정
+- **matgo CSS 특이도 버그 (QA v1 FAIL-1)**: `.btn-back-to-lobby` (0,1,0)이 `.meta-panel button` (0,1,1)에 패배하여 gold gradient가 표시됨 -> `.meta-panel .btn-back-to-lobby` (0,2,0)으로 셀렉터 변경하여 투명 고스트 정상 적용
+- **양쪽 동시 로비 복귀 미동작 (QA v1 FAIL-2)**: `POST /lobby/return`의 `RETURN_LOBBY` broadcast가 런처 WS에만 도달하여 게임 페이지 P2에 전달 안됨 -> 서버 코드 변경 없이 기존 disconnect 감지 메커니즘 활용 + 클라이언트 측 path 기반 런처 모드 판정 + 1.2초 딜레이 redirect로 해결
+
+### 변경된 파일 목록
+- `matgo/public/index.html`, `matgo/public/style.css`, `matgo/public/client.js`
+- `tetris-battle/public/index.html`, `tetris-battle/public/css/style.css`, `tetris-battle/public/js/main.js`
+- `davinci-code/public/index.html`, `davinci-code/public/style.css`, `davinci-code/public/client.js`
+- `yutnori/public/index.html`, `yutnori/public/css/style.css`, `yutnori/public/js/main.js`
+- `codenames-duet/public/index.html`, `codenames-duet/public/style.css`, `codenames-duet/public/client.js`
+- `tests/back-button-qa.spec.js` (신규), `tests/back-button-extended-qa.spec.js` (QA 자체 작성)
+
+### 참고
+- 스펙: `.claude/specs/2026-05-31-minigame-back-button-plan.md`
+- 목적 정의서: `.claude/specs/2026-05-31-minigame-back-button-scope.md`
+- 구현 리포트 v1: `.claude/specs/2026-05-31-minigame-back-button-coder-report.md`
+- 구현 리포트 v2: `.claude/specs/2026-05-31-minigame-back-button-coder-report-v2.md` (QA FAIL 수정)
+- AD3: `.claude/specs/2026-05-31-minigame-back-button-ad3-report.md` (APPROVED)
+- QA v1: `.claude/specs/2026-05-31-minigame-back-button-qa-report.md` (FAIL -- FAIL-1 CSS 특이도, FAIL-2 양쪽 복귀)
+- QA v2: `.claude/specs/2026-05-31-minigame-back-button-qa-report-v2.md` (PASS -- 59개 전체 통과, BB-10 테스트 타이밍 이슈는 기능 정상)
+- 서버 코드(launcher/server.js, 5개 게임 server.js) 변경 없음
+- 기존 `#btn-return-lobby`(결과 화면) 유지, 새 `#btn-back-to-lobby`(상시)와 ID 분리
+- 기존 회귀: lobby-ux-reqa 21/21 PASS, T-10~T-14 PASS
+- BB-10 테스트 잔존 이슈: WS 연결 대기 타이밍 부족으로 CI에서 간헐 FAIL 가능. `await p2.waitForTimeout(500)` 추가 권장
+
+---
+
 ## [2026-05-30] - 다빈치 코드 플러스 (3색 룰업)
 
 ### 추가

@@ -150,6 +150,11 @@
         turnEl.textContent = '상대 대기 중';
         clueDisplay.textContent = '새 친구가 접속하기를 기다리는 중...';
         hideModal();
+        // 런처 모드(경로가 /codenames-duet/로 시작)이면 로비로 자동 복귀
+        if (window.location.pathname.startsWith('/codenames-duet/')) {
+          autoReconnect = false;
+          setTimeout(() => { window.location.href = '/'; }, 1200);
+        }
         break;
       case 'ERROR':
         showToast(msg.message || '알 수 없는 오류');
@@ -307,6 +312,16 @@
   const returnLobbyBtn = document.getElementById('btn-return-lobby');
   if (returnLobbyBtn) {
     returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
+  // ── 상시 뒤로가기 버튼 (게임 중 로비 복귀) ──
+  const backToLobbyBtn = document.getElementById('btn-back-to-lobby');
+  if (backToLobbyBtn) {
+    backToLobbyBtn.addEventListener('click', () => {
+      if (!confirm('게임을 중단하고 게임 선택 화면으로 돌아가시겠어요? 상대방도 함께 로비로 이동합니다.')) return;
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });

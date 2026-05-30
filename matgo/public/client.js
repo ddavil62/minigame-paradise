@@ -277,6 +277,11 @@
         bannerStatusEl.textContent = '상대 대기 중';
         actionDisplay.textContent = '새 친구가 접속하기를 기다리는 중...';
         hideRoundModal();
+        // 런처 모드(경로가 /matgo/로 시작)이면 로비로 자동 복귀
+        if (window.location.pathname.startsWith('/matgo/')) {
+          autoReconnect = false;
+          setTimeout(() => { window.location.href = '/'; }, 1200);
+        }
         break;
       case 'ERROR':
         if (msg.message && msg.message.includes('가득')) {
@@ -1031,6 +1036,16 @@
   const returnLobbyBtn = document.getElementById('btn-return-lobby');
   if (returnLobbyBtn) {
     returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
+  // ── 상시 뒤로가기 버튼 (게임 중 로비 복귀) ──
+  const backToLobbyBtn = document.getElementById('btn-back-to-lobby');
+  if (backToLobbyBtn) {
+    backToLobbyBtn.addEventListener('click', () => {
+      if (!confirm('게임을 중단하고 게임 선택 화면으로 돌아가시겠어요? 상대방도 함께 로비로 이동합니다.')) return;
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });

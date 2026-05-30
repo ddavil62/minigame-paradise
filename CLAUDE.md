@@ -33,7 +33,8 @@ node matgo/server.js --port 3013
 - 1/2: 호스트가 카드 클릭 시 AI 모드로 게임 시작 (봇 미지원 게임은 비활성)
 - 2/2: 호스트가 카드 클릭 시 인간 대전으로 양쪽 동시 이동
 - 게스트: 카드 클릭 불가, 투표만 가능
-- 게임 완료 후 "다른 종목" 버튼으로 양쪽 동시 로비 복귀
+- 게임 완료 후 "다른 종목" 버튼(`#btn-return-lobby`)으로 양쪽 동시 로비 복귀
+- 게임 진행 중 상시 "게임 선택" 버튼(`#btn-back-to-lobby`)으로 로비 복귀 가능. confirm 다이얼로그 표시 후 `POST /lobby/return` 호출. 상대방은 disconnect 감지(OPPONENT_LEFT / GAME_RESULT disconnect / GAME_OVER disconnect) + path 기반 런처 모드 판정으로 1.2초 후 자동 redirect
 
 ### WS 프로토콜 (launcher /ws)
 

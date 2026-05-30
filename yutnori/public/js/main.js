@@ -125,6 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
       els.rematchBtnEl.disabled = false;
       els.rematchBtnEl.textContent = '재대결';
       ui.setThrowEnabled(false, '윷 던지기');
+      // 런처 모드에서 상대 disconnect 시 로비로 자동 복귀
+      if (reason === 'disconnect' && window.location.pathname.startsWith('/yutnori/')) {
+        setTimeout(() => { window.location.href = '/'; }, 1200);
+      }
     },
     onRematchStatus: ({ p1Ready, p2Ready }) => {
       const myReady = (myId === 'p1' && p1Ready) || (myId === 'p2' && p2Ready);
@@ -164,6 +168,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const returnLobbyBtn = document.getElementById('btn-return-lobby');
   if (returnLobbyBtn) {
     returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
+  // ── 상시 뒤로가기 버튼 (게임 중 로비 복귀) ──
+  const backToLobbyBtn = document.getElementById('btn-back-to-lobby');
+  if (backToLobbyBtn) {
+    backToLobbyBtn.addEventListener('click', () => {
+      if (!confirm('게임을 중단하고 게임 선택 화면으로 돌아가시겠어요? 상대방도 함께 로비로 이동합니다.')) return;
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });
