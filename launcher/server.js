@@ -6,13 +6,14 @@
  *     - `/{gameId}/...` → 각 게임의 정적 파일 (game.public via createApp().handleHttp)
  *     - WS `/ws` → 런처 로비 WSS
  *     - WS `/{gameId}/ws` → 각 게임 WSS (noServer 모드로 라우팅)
+ *     - POST `/lobby/return` → 게임 완료 후 로비 복귀 (RETURN_LOBBY broadcast)
  *
  *   외부 의존성: ws@^8.18.0, express(yutnori/tetris-battle 한정)
  *
  * 로비 흐름:
  *   1. 클라이언트가 `/ws`로 접속 → 정원(2명) 검사 → 호스트/게스트 역할 부여
- *   2. 호스트가 START → 인원수에 따라 mode(ai|human) 결정 → 종목 선택 화면 전환
- *   3. 호스트가 PICK_GAME → 모든 클라에 REDIRECT broadcast (`/{gameId}/`) + AI 모드면 봇 spawn
+ *   2. 게임 카드가 즉시 표시됨. 호스트가 PICK_GAME → mode(ai|human) 결정 → REDIRECT broadcast
+ *   3. 게임 완료 후 POST /lobby/return → RETURN_LOBBY broadcast → 양쪽 로비 복귀
  */
 
 import http from 'node:http';
@@ -125,6 +126,18 @@ const server = http.createServer((req, res) => {
   const segments = urlPath.split('/').filter(Boolean);
   const first = segments[0] || '';
 
+  // POST /lobby/return — 게임 완료 후 양쪽 로비 복귀
+  if (req.method === 'POST' && urlPath === '/lobby/return') {
+    res.writeHead(204);
+    res.end();
+    // 로비 상태 리셋
+    currentMode = null;
+    votes.clear();
+    broadcast({ type: 'RETURN_LOBBY' });
+    console.log('[launcher] POST /lobby/return → RETURN_LOBBY broadcast');
+    return;
+  }
+
   if (first && GAME_APPS[first]) {
     // 게임 prefix 제거 후 req.url 재작성: /matgo/style.css → '/style.css'
     const sub = segments.length === 1
@@ -170,16 +183,17 @@ const gamesMap = loadGamesMap();
 const clients = new Map();
 
 /**
- * 로비 단계: 'lobby' = 카운트/스타트 화면, 'game-select' = 종목 선택 화면.
- * @type {'lobby' | 'game-select'}
- */
-let lobbyPhase = 'lobby';
-
-/**
- * 현재 대전 모드. 스타트 클릭 시 결정됨.
+ * 현재 대전 모드. PICK_GAME 시 인원수에 따라 결정됨.
  * @type {'ai' | 'human' | null}
  */
 let currentMode = null;
+
+/**
+ * 게임별 투표 현황.
+ * key: gameId (string), value: Set of playerId (string, 'p1'|'p2')
+ * @type {Map<string, Set<string>>}
+ */
+const votes = new Map();
 
 /**
  * 다음 클라이언트에 부여할 ID 일련번호. 'p1'부터 시작.
@@ -216,20 +230,25 @@ function broadcast(payload) {
 
 /**
  * 특정 클라이언트에게만 LOBBY_STATE를 보낸다.
- * count, role, phase, mode 등 현재 스냅샷을 포함.
+ * count, role, mode, votes 등 현재 스냅샷을 포함.
  * @param {import('ws').WebSocket} ws
  */
 function sendLobbyStateTo(ws) {
   const meta = clients.get(ws);
   if (!meta) return;
   const hostEntry = [...clients.values()].find((m) => m.role === 'host');
+  // votes를 { gameId: count } 형태로 직렬화
+  const votesSnapshot = {};
+  for (const [gameId, playerSet] of votes) {
+    votesSnapshot[gameId] = playerSet.size;
+  }
   sendJson(ws, {
     type: 'LOBBY_STATE',
     count: clients.size,
     role: meta.role,
     hostId: hostEntry ? hostEntry.id : null,
-    phase: lobbyPhase,
     mode: currentMode,
+    votes: votesSnapshot,
   });
 }
 
@@ -295,33 +314,23 @@ function handleMessage(ws, msg) {
   if (!meta) return;
 
   switch (msg.type) {
-    case 'START': {
-      if (meta.role !== 'host') {
-        // 호스트가 아닌 클라이언트의 START는 무시
-        return;
-      }
-      if (lobbyPhase !== 'lobby') return;
-      // 인원수에 따라 모드 결정: 1명이면 AI, 2명이면 인간 대전
-      currentMode = clients.size === 1 ? 'ai' : 'human';
-      lobbyPhase = 'game-select';
-      console.log(`[launcher] START → phase=game-select, mode=${currentMode}, count=${clients.size}`);
-      broadcast({
-        type: 'PHASE',
-        phase: 'game-select',
-        mode: currentMode,
-      });
-      break;
-    }
-
     case 'PICK_GAME': {
       if (meta.role !== 'host') return;
-      if (lobbyPhase !== 'game-select') return;
       const gameId = String(msg.gameId || '');
       const game = gamesMap.get(gameId);
       if (!game) {
         console.warn(`[launcher] PICK_GAME 알 수 없는 gameId: ${gameId}`);
         return;
       }
+      // 인원수에 따라 모드 결정 (pick 시점에 확정)
+      const isAiMode = clients.size === 1;
+      // AI 모드 + 봇 미지원 게임이면 차단 (서버 이중 안전망)
+      if (isAiMode && !game.botAvailable) {
+        sendJson(ws, { type: 'ERROR', message: '이 게임은 AI 봇을 지원하지 않습니다.' });
+        console.warn(`[launcher] PICK_GAME 차단: ${gameId} (AI 모드이나 봇 미지원)`);
+        return;
+      }
+      currentMode = isAiMode ? 'ai' : 'human';
       // 통합 라우터: 같은 포트(3000) 내 `/{gameId}/`로 이동한다.
       const redirectPath = `/${gameId}/`;
       console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=${currentMode}`);
@@ -331,14 +340,27 @@ function handleMessage(ws, msg) {
         path: redirectPath,
         mode: currentMode,
       });
-      // AI 모드의 봇 spawn 책임은 각 게임 서버로 이관됨.
-      // 게임 client가 mode=ai로 WS 연결하면 게임 서버가 자체적으로 봇을 spawn한다.
-      // 새로고침 시에도 sessionStorage/URL query로 mode가 유지되어 봇이 자동 재spawn.
+      break;
+    }
+
+    case 'VOTE_GAME': {
+      const gameId = String(msg.gameId || '');
+      if (!gamesMap.has(gameId)) return;
+      if (!votes.has(gameId)) votes.set(gameId, new Set());
+      const voterSet = votes.get(gameId);
+      // toggle: 이미 투표했으면 취소, 아니면 추가
+      if (voterSet.has(meta.id)) {
+        voterSet.delete(meta.id);
+      } else {
+        voterSet.add(meta.id);
+      }
+      console.log(`[launcher] VOTE_GAME: ${meta.id} → ${gameId}, count=${voterSet.size}`);
+      broadcastLobbyState();
       break;
     }
 
     default:
-      // 미정의 메시지 무시
+      // 미정의 메시지 무시 (START 등 하위 호환)
       break;
   }
 }
@@ -387,9 +409,9 @@ lobbyWss.on('connection', (ws) => {
 
     if (clients.size === 0) {
       // 모두 나감 → 상태 리셋
-      lobbyPhase = 'lobby';
       currentMode = null;
       nextIdSeq = 1;
+      votes.clear();
       return;
     }
 
@@ -397,8 +419,8 @@ lobbyWss.on('connection', (ws) => {
     if (departed.role === 'host') {
       // 남아있는 게스트 모두에게 RESET 전송 (UI를 로비로)
       broadcast({ type: 'RESET' });
-      lobbyPhase = 'lobby';
       currentMode = null;
+      votes.clear();
       reassignHost();
     }
     // 게스트가 떠난 경우: 호스트는 그대로, 단지 count만 갱신

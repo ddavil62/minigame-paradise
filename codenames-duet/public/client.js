@@ -303,6 +303,15 @@
     ws.send(JSON.stringify({ type: 'NEW_GAME', tokens: readNextTokens() }));
   });
 
+  // "← 다른 종목" 버튼 핸들러 — 로비로 복귀
+  const returnLobbyBtn = document.getElementById('btn-return-lobby');
+  if (returnLobbyBtn) {
+    returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
   // 엔터키로 단서 전송 편의
   clueWordEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') btnClue.click();

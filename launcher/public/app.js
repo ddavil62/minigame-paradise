@@ -1,19 +1,16 @@
 /**
- * @fileoverview 미니게임 천국 런처 클라이언트 — WS 기반 로비 상태 머신.
- *   페이지 로드 시 launcher 서버의 WebSocket에 접속하여 LOBBY_STATE / PHASE / REDIRECT
- *   메시지를 수신하고, 화면을 로비 ↔ 종목 선택 사이에서 전환한다.
+ * @fileoverview 미니게임 천국 런처 클라이언트 — WS 기반 단일 로비 화면.
+ *   페이지 로드 시 launcher 서버의 WebSocket에 접속하여 LOBBY_STATE / REDIRECT
+ *   메시지를 수신하고, 인원/역할에 따라 게임 카드 그리드를 활성/비활성 전환한다.
+ *   게스트와 호스트 모두 카드에 투표(VOTE_GAME) 할 수 있다.
  *
  *   상태 흐름:
- *     lobby (player count 표시, 스타트 버튼)
- *        ↓  PHASE 수신
- *     game-select (게임 카드 그리드, 호스트만 선택 가능)
+ *     lobby (player count + 게임 카드 즉시 표시, 호스트만 선택 가능)
  *        ↓  REDIRECT 수신
- *     location.href = `http://${hostname}:${port}` (게임 페이지로 이동)
+ *     location.href = `/{gameId}/?mode=...` (게임 페이지로 이동)
  */
 
 const GRID_EL_ID = 'game-grid';
-const LOBBY_VIEW_ID = 'lobby-view';
-const SELECT_VIEW_ID = 'game-select-view';
 
 // ── 모듈 수준 상태 ─────────────────────────────────────────────
 /** @type {WebSocket | null} */
@@ -22,19 +19,35 @@ let ws = null;
 /** @type {'host' | 'guest' | null} */
 let myRole = null;
 
-/** @type {'lobby' | 'game-select'} */
-let currentPhase = 'lobby';
-
 /** @type {'ai' | 'human' | null} */
 let currentMode = null;
 
 /** @type {Array<object>} games.json 캐시 */
 let gamesCache = [];
 
-/** @type {boolean} 카드 렌더링 완료 여부 (중복 렌더 방지) */
-let cardsRendered = false;
+/** @type {number} 서버에서 수신한 현재 접속 인원 수 */
+let currentCount = 0;
+
+/** @type {{ [gameId: string]: number }} 서버에서 수신한 투표 현황 */
+let currentVotes = {};
+
+/**
+ * 로비가 활성화된 상태 (호스트)인지 여부.
+ * 이 플래그가 true일 때만 카드 클릭이 가능하다.
+ * @type {boolean}
+ */
+let cardClickEnabled = false;
 
 // ── 유틸 ───────────────────────────────────────────────────────
+/**
+ * #lobby-status 영역에 메시지를 표시한다.
+ * @param {string} text 표시할 텍스트
+ */
+function showStatus(text) {
+  const statusEl = document.getElementById('lobby-status');
+  if (statusEl) statusEl.textContent = text;
+}
+
 /**
  * games.json을 fetch하여 게임 메타데이터 배열을 반환한다.
  * @returns {Promise<Array<object>>}
@@ -47,7 +60,7 @@ async function loadGames() {
 
 /**
  * 게임 한 개에 대한 카드 DOM을 생성한다.
- * 클릭 핸들러는 PICK_GAME WS 메시지를 보낸다 (호스트일 때만 등록).
+ * 클릭 핸들러는 PICK_GAME WS 메시지를 보낸다 (호스트일 때만).
  * @param {object} game games.json 한 항목
  * @returns {HTMLElement}
  */
@@ -103,6 +116,15 @@ function createCard(game) {
   btn.textContent = '선택';
   body.appendChild(btn);
 
+  // 투표 버튼 (카드 하단)
+  const voteBtn = document.createElement('button');
+  voteBtn.className = 'game-card-vote';
+  voteBtn.type = 'button';
+  voteBtn.dataset.gameId = game.id;
+  voteBtn.setAttribute('aria-label', `${game.name} 추천`);
+  voteBtn.innerHTML = '\uD83D\uDC4D <span class="vote-count" id="vote-count-' + game.id + '">0</span>';
+  body.appendChild(voteBtn);
+
   card.appendChild(body);
 
   // ── 클릭/키보드 핸들러 ────────────────────────────
@@ -112,9 +134,14 @@ function createCard(game) {
    */
   const pick = (event) => {
     if (event) event.stopPropagation();
+    if (!cardClickEnabled) return;
     if (myRole !== 'host') return;
-    // AI 모드 + 봇 미지원이면 차단
-    if (currentMode === 'ai' && game.botAvailable === false) return;
+    // AI 모드(1인 접속) + 봇 미지원이면 차단 — currentCount 기반 판단
+    const effectiveMode = (currentCount === 1) ? 'ai' : 'human';
+    if (effectiveMode === 'ai' && game.botAvailable === false) {
+      showStatus('이 게임은 AI 봇을 지원하지 않습니다. 친구와 함께 플레이하세요!');
+      return;
+    }
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'PICK_GAME', gameId: game.id }));
   };
@@ -126,6 +153,13 @@ function createCard(game) {
       event.preventDefault();
       pick(event);
     }
+  });
+
+  // 투표 이벤트 — 호스트/게스트 모두 가능, 항상 활성
+  voteBtn.addEventListener('click', (event) => {
+    event.stopPropagation(); // 카드 pick 이벤트 방지
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'VOTE_GAME', gameId: game.id }));
   });
 
   return card;
@@ -158,76 +192,19 @@ function renderCards() {
   for (const game of gamesCache) {
     grid.appendChild(createCard(game));
   }
-  cardsRendered = true;
-}
-
-// ── 화면 전환 ───────────────────────────────────────────────────
-/**
- * 로비 / 종목 선택 화면 전환.
- * @param {'lobby' | 'game-select'} phase
- * @param {'ai' | 'human' | null} mode
- */
-function transitionTo(phase, mode) {
-  currentPhase = phase;
-  currentMode = mode;
-
-  const lobbyView = document.getElementById(LOBBY_VIEW_ID);
-  const selectView = document.getElementById(SELECT_VIEW_ID);
-  if (!lobbyView || !selectView) return;
-
-  if (phase === 'lobby') {
-    lobbyView.classList.remove('hidden');
-    selectView.classList.add('hidden');
-    selectView.classList.remove('guest-mode', 'ai-mode', 'human-mode');
-    return;
-  }
-
-  // game-select
-  lobbyView.classList.add('hidden');
-  selectView.classList.remove('hidden');
-
-  // 모드 배지 갱신
-  const badge = document.getElementById('mode-badge');
-  if (badge) {
-    if (mode === 'ai') {
-      badge.textContent = 'AI 대전';
-      badge.classList.remove('mode-human');
-    } else {
-      badge.textContent = '인간 대전';
-      badge.classList.add('mode-human');
-    }
-  }
-
-  // 모드 클래스 (CSS에서 .ai-mode 일 때만 .no-bot 카드 비활성화)
-  selectView.classList.remove('ai-mode', 'human-mode');
-  selectView.classList.add(mode === 'ai' ? 'ai-mode' : 'human-mode');
-
-  // 호스트/게스트 hint
-  const hostHint = document.getElementById('host-pick-hint');
-  const guestHint = document.getElementById('guest-pick-hint');
-  if (myRole === 'host') {
-    if (hostHint) hostHint.hidden = false;
-    if (guestHint) guestHint.hidden = true;
-    selectView.classList.remove('guest-mode');
-  } else {
-    if (hostHint) hostHint.hidden = true;
-    if (guestHint) guestHint.hidden = false;
-    selectView.classList.add('guest-mode');
-  }
-
-  // 카드 그리드는 init에서 이미 렌더됨, 한번 더 안전 렌더
-  if (!cardsRendered) renderCards();
 }
 
 // ── 메시지 핸들러 ───────────────────────────────────────────────
 /**
- * LOBBY_STATE 메시지 처리: 카운트/역할/힌트 갱신.
- * @param {{count:number, role:'host'|'guest', phase:string, mode:string|null}} msg
+ * LOBBY_STATE 메시지 처리: 카운트/역할/힌트/투표 갱신.
+ * @param {{count:number, role:'host'|'guest', mode:string|null, votes:object}} msg
  */
 function updateLobbyUI(msg) {
-  const { count, role, phase, mode } = msg;
+  const { count, role, mode, votes } = msg;
   myRole = role;
   currentMode = mode;
+  currentCount = count;
+  currentVotes = votes || {};
 
   // 카운트 표시
   const countEl = document.getElementById('player-count');
@@ -237,25 +214,49 @@ function updateLobbyUI(msg) {
   const roleEl = document.getElementById('player-role');
   if (roleEl) roleEl.textContent = role === 'host' ? '호스트' : '게스트';
 
-  // 힌트 텍스트
+  // 힌트 텍스트 — 게스트 2/2에서는 #guest-waiting만 표시하므로 중복 방지
   const hintEl = document.getElementById('lobby-hint');
+  const guestWait = document.getElementById('guest-waiting');
   if (hintEl) {
-    if (count === 1) {
-      hintEl.textContent = '혼자 시작하면 AI 대전으로 진행됩니다';
+    if (role === 'guest') {
+      // 게스트는 #guest-waiting이 안내를 담당 → #lobby-hint 비움
+      hintEl.textContent = '';
+    } else if (count === 1) {
+      hintEl.textContent = '혼자 플레이 가능 (AI 대전) — 또는 친구를 기다리세요';
     } else {
-      hintEl.textContent = '친구가 들어왔습니다! 인간 대전으로 진행됩니다';
+      hintEl.textContent = '친구가 들어왔습니다! 종목을 선택하세요';
     }
   }
 
-  // 호스트는 스타트 활성, 게스트는 비활성 + 대기 안내
-  const startBtn = document.getElementById('start-btn');
-  const guestWait = document.getElementById('guest-waiting');
-  if (startBtn) startBtn.disabled = role !== 'host';
+  // 게스트 대기 안내 — 호스트에게는 숨김
   if (guestWait) guestWait.hidden = role === 'host';
 
-  // 서버에서 알려준 phase가 game-select면 즉시 전환 (재접속 케이스)
-  if (phase === 'game-select' && currentPhase !== 'game-select') {
-    transitionTo('game-select', mode);
+  // cardClickEnabled: 호스트이면 항상 클릭 가능 (1/2=ai, 2/2=human 자동 결정)
+  cardClickEnabled = role === 'host';
+
+  // 그리드 비활성 CSS 클래스 갱신
+  const grid = document.getElementById(GRID_EL_ID);
+  if (grid) {
+    // 게스트이면 항상 guest-mode (카드 비활성, 투표 버튼만 활성)
+    grid.classList.toggle('guest-mode', role === 'guest');
+    // 1인(AI) 모드이면 봇 미지원 카드에 시각적 비활성화 적용
+    grid.classList.toggle('ai-mode', count === 1);
+  }
+
+  // 투표 배지 갱신
+  updateVoteBadges();
+}
+
+/**
+ * 모든 카드의 투표 카운트를 현재 currentVotes로 갱신한다.
+ */
+function updateVoteBadges() {
+  for (const game of gamesCache) {
+    const countEl = document.getElementById(`vote-count-${game.id}`);
+    if (countEl) {
+      const count = currentVotes[game.id] || 0;
+      countEl.textContent = count;
+    }
   }
 }
 
@@ -285,12 +286,10 @@ function handleRedirect(msg) {
  */
 function showFullAlert() {
   const statusEl = document.getElementById('lobby-status');
-  const startBtn = document.getElementById('start-btn');
   if (statusEl) {
     statusEl.textContent = '현재 게임이 진행 중입니다. 잠시 후 다시 시도하세요.';
     statusEl.classList.add('full');
   }
-  if (startBtn) startBtn.disabled = true;
   // 카운트/역할 표시도 정리
   const countEl = document.getElementById('player-count');
   if (countEl) countEl.textContent = '2/2';
@@ -299,10 +298,13 @@ function showFullAlert() {
 }
 
 /**
- * RESET 수신 (호스트 disconnect 등): 로비 초기화.
+ * RESET 수신 (호스트 disconnect 등): 로비 상태 초기화.
  */
 function resetToLobby() {
-  transitionTo('lobby', null);
+  currentVotes = {};
+  cardClickEnabled = false;
+  myRole = null;
+  // LOBBY_STATE가 곧 다시 오므로 그때 UI 갱신됨
 }
 
 /**
@@ -323,7 +325,13 @@ function onMessage(event) {
       updateLobbyUI(msg);
       break;
     case 'PHASE':
-      transitionTo(msg.phase, msg.mode);
+      // 하위 호환 — 무시 (서버에서 더 이상 송신 안 함)
+      break;
+    case 'RETURN_LOBBY':
+      // POST /lobby/return 결과로 서버가 broadcast
+      currentVotes = {};
+      cardClickEnabled = false;
+      location.href = '/';
       break;
     case 'REDIRECT':
       handleRedirect(msg);
@@ -374,7 +382,7 @@ function connectWS() {
  * 페이지 초기화.
  */
 async function init() {
-  // 게임 목록 미리 로드 (카드 그리드용)
+  // 게임 목록 로드 후 즉시 카드 렌더링
   try {
     gamesCache = await loadGames();
     renderCards();
@@ -382,16 +390,6 @@ async function init() {
     console.error(err);
     const grid = document.getElementById(GRID_EL_ID);
     if (grid) renderMessage(grid, '게임 목록을 불러올 수 없습니다. (콘솔 확인)');
-  }
-
-  // 스타트 버튼 핸들러
-  const startBtn = document.getElementById('start-btn');
-  if (startBtn) {
-    startBtn.addEventListener('click', () => {
-      if (myRole !== 'host') return;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ type: 'START' }));
-    });
   }
 
   // WS 연결 시작

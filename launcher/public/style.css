@@ -4,6 +4,7 @@
  *   - 어두운 우드/네이비 배경 + 황금/크림 액센트
  *   - CSS Grid 5열 카드 그리드
  *   - hover 시 부드러운 스케일/그림자 강조
+ *   - 단일 로비 화면 (인원 정보 + 게임 카드 즉시 표시)
  */
 
 /* ── 리셋 & 베이스 ─────────────────────────────────────────── */
@@ -201,7 +202,7 @@ body {
   margin: 0;
 }
 
-/* ── 로비/종목 선택 view 토글 유틸 ─────────────────────────── */
+/* ── view 유틸 ────────────────────────────────────────────── */
 .view {
   display: flex;
   flex-direction: column;
@@ -211,30 +212,29 @@ body {
   display: none !important;
 }
 
-/* ── 로비 화면 ────────────────────────────────────────────── */
+/* ── 로비 화면 (단일 뷰) ─────────────────────────────────── */
 .lobby-view {
   align-items: stretch;
   min-height: calc(100vh - 80px);
 }
 
-.lobby-body {
-  flex: 1 0 auto;
+/* ── 로비 메타 (인원/역할/힌트) ──────────────────────────── */
+.lobby-meta {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 40px 24px 48px;
+  gap: 12px;
+  padding: 24px 24px 16px;
 }
 
 .player-count {
-  font-size: 120px;
+  font-size: 72px;
   font-weight: 900;
   color: #ffd97a;
   line-height: 1;
   text-shadow:
-    0 6px 0 rgba(0, 0, 0, 0.32),
-    0 12px 32px rgba(255, 200, 60, 0.28);
+    0 4px 0 rgba(0, 0, 0, 0.32),
+    0 8px 24px rgba(255, 200, 60, 0.28);
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
@@ -259,41 +259,6 @@ body {
   max-width: 560px;
 }
 
-.start-btn {
-  margin-top: 12px;
-  padding: 18px 80px;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ffd97a 0%, #f5a623 100%);
-  color: #0b1322;
-  cursor: pointer;
-  transition: filter 160ms ease-out, transform 160ms ease-out, box-shadow 160ms ease-out;
-  font-family: inherit;
-  box-shadow:
-    0 6px 16px rgba(245, 166, 35, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.start-btn:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow:
-    0 10px 24px rgba(245, 166, 35, 0.44),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-.start-btn:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.start-btn:disabled {
-  opacity: 0.32;
-  cursor: not-allowed;
-  filter: grayscale(0.3);
-}
-
 .guest-waiting {
   font-size: 15px;
   color: rgba(245, 233, 201, 0.5);
@@ -310,66 +275,13 @@ body {
   min-height: 18px;
 }
 
-/* ── 종목 선택 화면 ──────────────────────────────────────── */
-.game-select-view {
-  align-items: stretch;
-  min-height: calc(100vh - 80px);
-}
-
-.game-select-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 36px 24px 12px;
-  border-bottom: 1px solid rgba(245, 233, 201, 0.08);
-}
-
-.game-select-title {
-  margin: 0;
-  font-size: 32px;
-  font-weight: 800;
-  color: #ffd97a;
-  letter-spacing: 0.04em;
-}
-
-.mode-badge {
-  padding: 6px 18px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 700;
-  background: rgba(255, 217, 122, 0.16);
-  color: #ffd97a;
-  border: 1px solid rgba(255, 217, 122, 0.36);
-  letter-spacing: 0.06em;
-}
-
-.mode-badge.mode-human {
-  background: rgba(93, 173, 226, 0.18);
-  color: #8fcdf2;
-  border-color: rgba(93, 173, 226, 0.4);
-}
-
-.host-pick-hint,
-.guest-pick-hint {
-  text-align: center;
-  font-size: 15px;
-  color: rgba(245, 233, 201, 0.7);
-  margin: 0 0 18px;
-}
-
-.guest-pick-hint {
-  font-style: italic;
-  color: rgba(245, 233, 201, 0.55);
-}
-
 /* ── 게스트 모드: 카드 비활성 + 오버레이 ─────────────────── */
-.game-select-view.guest-mode .game-card {
+.game-grid.guest-mode .game-card {
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.game-select-view.guest-mode .game-card::after {
+.game-grid.guest-mode .game-card::after {
   content: '호스트가 선택 중...';
   position: absolute;
   inset: 0;
@@ -387,20 +299,53 @@ body {
   z-index: 2;
 }
 
-.game-select-view.guest-mode .game-card:hover {
+.game-grid.guest-mode .game-card:hover {
   transform: none;
   border-color: rgba(245, 233, 201, 0.1);
 }
 
+/* ── 투표 버튼 ───────────────────────────────────────────── */
+.game-card-vote {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid rgba(245, 233, 201, 0.25);
+  border-radius: 999px;
+  background: rgba(245, 233, 201, 0.06);
+  color: rgba(245, 233, 201, 0.72);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 150ms ease-out, border-color 150ms ease-out;
+  font-family: inherit;
+  pointer-events: all; /* guest-mode에서도 항상 클릭 가능 */
+}
+
+.game-card-vote:hover {
+  background: rgba(245, 233, 201, 0.14);
+  border-color: rgba(245, 233, 201, 0.5);
+}
+
+/* 게스트 모드에서도 투표 버튼만은 클릭 가능하게 z-index 및 pointer-events 재정의 */
+.game-grid.guest-mode .game-card .game-card-vote {
+  position: relative;
+  z-index: 3;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.vote-count {
+  font-weight: 700;
+  color: #ffd97a;
+}
+
 /* ── 봇 미지원 카드 (AI 모드에서만 적용) ───────────────── */
-.game-select-view.ai-mode .game-card.no-bot {
+.game-grid.ai-mode .game-card.no-bot {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
   filter: grayscale(0.6);
 }
 
-.game-select-view.ai-mode .game-card.no-bot::after {
+.game-grid.ai-mode .game-card.no-bot::after {
   content: 'AI 봇 미지원';
   position: absolute;
   top: 10px;

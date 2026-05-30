@@ -819,6 +819,27 @@ body {
   margin: -8px 0 16px;
 }
 
+/* ── 로비 복귀 버튼 ─────────────────────────────────────── */
+.return-lobby-btn {
+  margin-top: 12px;
+  padding: 10px 24px;
+  border: 1px solid rgba(245, 233, 201, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(245, 233, 201, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+  font-family: inherit;
+  display: block;
+  width: 100%;
+}
+
+.return-lobby-btn:hover {
+  background: rgba(245, 233, 201, 0.1);
+}
+
 /* ── 토스트 ───────────────────────────────────────────────── */
 .toast {
   position: fixed;

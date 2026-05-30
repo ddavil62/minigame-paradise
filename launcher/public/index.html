@@ -7,32 +7,24 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- ── 로비 화면 (초기 표시) ─────────────────────────── -->
+  <!-- ── 로비 화면 (단일 뷰: 인원 정보 + 게임 카드 그리드) ──── -->
   <div class="lobby-view view" id="lobby-view">
     <header class="hero">
       <h1 class="hero-title">미니게임 천국</h1>
       <p class="hero-sub">친구랑 한 판 — LAN 1:1</p>
     </header>
 
-    <div class="lobby-body">
+    <div class="lobby-meta">
       <div class="player-count" id="player-count">1/2</div>
       <div class="player-role" id="player-role">호스트</div>
-      <p class="lobby-hint" id="lobby-hint">혼자 시작하면 AI 대전으로 진행됩니다</p>
-      <button class="start-btn" id="start-btn" type="button">스타트</button>
-      <p class="guest-waiting" id="guest-waiting" hidden>호스트가 시작하길 기다리는 중...</p>
+      <p class="lobby-hint" id="lobby-hint">친구가 접속하면 종목을 선택하세요</p>
+      <!-- 게스트 대기 안내 (호스트에게는 hidden) -->
+      <p class="guest-waiting" id="guest-waiting" hidden>호스트가 종목을 선택 중...</p>
       <p class="lobby-status" id="lobby-status"></p>
     </div>
-  </div>
 
-  <!-- ── 종목 선택 화면 (초기 숨김) ────────────────────── -->
-  <div class="game-select-view view hidden" id="game-select-view">
-    <header class="game-select-header">
-      <h2 class="game-select-title">종목 선택</h2>
-      <span class="mode-badge" id="mode-badge">AI 대전</span>
-    </header>
+    <!-- 게임 카드 그리드 (항상 표시, 인원/역할에 따라 CSS로 비활성) -->
     <main class="container">
-      <p class="host-pick-hint" id="host-pick-hint" hidden>카드를 선택하세요</p>
-      <p class="guest-pick-hint" id="guest-pick-hint" hidden>호스트가 선택 중...</p>
       <section id="game-grid" class="game-grid" aria-label="게임 목록">
         <!-- app.js가 games.json을 fetch하여 카드 동적 생성 -->
       </section>

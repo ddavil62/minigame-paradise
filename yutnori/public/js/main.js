@@ -160,6 +160,15 @@ document.addEventListener('DOMContentLoaded', () => {
     els.rematchBtnEl.textContent = '재대결 대기 중';
   });
 
+  // ── 로비 복귀 버튼 ──
+  const returnLobbyBtn = document.getElementById('btn-return-lobby');
+  if (returnLobbyBtn) {
+    returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
   // ── 분기 선택 버튼 ──
   els.branchTopBtn.addEventListener('click', () => {
     net.choosePath('top');

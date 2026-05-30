@@ -1027,6 +1027,15 @@
   btnNewRound.addEventListener('click', sendNewRound);
   btnNewRoundMod.addEventListener('click', () => { hideRoundModal(); sendNewRound(); });
 
+  // "← 다른 종목" 버튼 핸들러 — 로비로 복귀
+  const returnLobbyBtn = document.getElementById('btn-return-lobby');
+  if (returnLobbyBtn) {
+    returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
   // 9월 술잔 끗/쌍피 선택 핸들러
   function sendKkeutChoice(choice) {
     if (!ws || ws.readyState !== 1) return;

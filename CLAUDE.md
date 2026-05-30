@@ -26,6 +26,33 @@ node matgo/server.js --port 3013
 
 각 게임별 CLAUDE.md에 테스트 가이드가 있다. QA는 반드시 해당 게임의 **룰북**을 먼저 숙지한 후 테스트를 진행한다.
 
+## 런처 로비
+
+단일 화면에서 게임 카드 5개를 즉시 표시하고, 호스트가 카드를 클릭하여 게임을 선택한다. 스타트 버튼이나 별도의 종목 선택 단계는 없다.
+
+- 1/2: 호스트가 카드 클릭 시 AI 모드로 게임 시작 (봇 미지원 게임은 비활성)
+- 2/2: 호스트가 카드 클릭 시 인간 대전으로 양쪽 동시 이동
+- 게스트: 카드 클릭 불가, 투표만 가능
+- 게임 완료 후 "다른 종목" 버튼으로 양쪽 동시 로비 복귀
+
+### WS 프로토콜 (launcher /ws)
+
+| 방향 | 메시지 | 페이로드 | 설명 |
+|------|--------|---------|------|
+| C->S | `PICK_GAME` | `{ gameId }` | 호스트가 게임 선택 |
+| C->S | `VOTE_GAME` | `{ gameId }` | 투표 toggle |
+| S->C | `LOBBY_STATE` | `{ count, role, hostId, mode, votes }` | 로비 상태 스냅샷 |
+| S->C | `REDIRECT` | `{ gameId, path, mode }` | 게임 페이지 이동 |
+| S->C | `FULL` | `{ message }` | 정원 초과 거절 |
+| S->C | `RESET` | `{}` | 호스트 disconnect 시 초기화 |
+| S->C | `RETURN_LOBBY` | `{}` | 로비 복귀 (양쪽 location.href='/') |
+
+### HTTP 엔드포인트
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `POST` | `/lobby/return` | 게임 완료 화면에서 호출. 서버가 votes/mode 리셋 + RETURN_LOBBY broadcast. 204 응답 |
+
 ## 기술 스택
 
 - 바닐라 JavaScript (Node.js 서버, 브라우저 클라이언트)

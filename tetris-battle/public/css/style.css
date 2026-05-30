@@ -472,6 +472,27 @@ body {
   box-shadow: 0 0 8px rgba(0, 240, 240, 0.4);
 }
 
+/* ── 로비 복귀 버튼 ─────────────────────────────────────── */
+.return-lobby-btn {
+  margin: 8px 0;
+  min-width: 160px;
+  padding: 10px 24px;
+  border: 1px solid rgba(245, 233, 201, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(245, 233, 201, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+  font-family: inherit;
+  display: block;
+}
+
+.return-lobby-btn:hover {
+  background: rgba(245, 233, 201, 0.1);
+}
+
 .result-hint {
   font-size: 13px;
   opacity: 0.7;

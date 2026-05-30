@@ -194,6 +194,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 2000);
   });
 
+  // ── 로비 복귀 버튼 ──
+  const returnLobbyBtn = document.getElementById('btn-return-lobby');
+  if (returnLobbyBtn) {
+    returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
   // ── 카운트다운 헬퍼 ──
   /**
    * 카운트다운을 표시한 뒤 onComplete를 호출한다 (Phase 3: 매 단계 펄스 애니메이션).

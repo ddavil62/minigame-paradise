@@ -390,6 +390,15 @@
     ws.send(JSON.stringify({ type: 'NEW_GAME' }));
   });
 
+  // "← 다른 종목" 버튼 핸들러 — 로비로 복귀
+  const returnLobbyBtn = document.getElementById('btn-return-lobby');
+  if (returnLobbyBtn) {
+    returnLobbyBtn.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
+
   // ── 모달/토스트 ─────────────────────────────────────────────
   /**
    * 결과 모달 표시.
