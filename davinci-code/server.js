@@ -17,7 +17,7 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
-import { createGame, guess, continueDecision, selfReveal, snapshotForPlayer } from './game.js';
+import { createGame, guess, continueDecision, selfReveal, placeJoker, snapshotForPlayer } from './game.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -141,6 +141,18 @@ export function createApp() {
       }
 
       switch (msg.type) {
+        case 'PLACE_JOKER': {
+          if (!game) break;
+          const result = placeJoker(game, player.id, msg.insertAfter);
+          if (!result.ok) {
+            sendTo(player, { type: 'ERROR', message: result.error });
+            break;
+          }
+          console.log(`[davinci] PLACE_JOKER: ${player.id} → insertAfter=${msg.insertAfter}`);
+          broadcastState();
+          break;
+        }
+
         case 'GUESS': {
           if (!game) break;
           const result = guess(game, player.id, msg.slot, msg.value);
@@ -148,7 +160,7 @@ export function createApp() {
             sendTo(player, { type: 'ERROR', message: result.error });
             break;
           }
-          console.log(`[davinci] GUESS: ${player.id} → slot=${msg.slot}, val=${msg.value}, correct=${result.correct}`);
+          console.log(`[davinci] GUESS: ${player.id} → slot=${msg.slot}, val=${msg.value === null ? 'JOKER' : msg.value}, correct=${result.correct}`);
           broadcastState();
           if (result.win) {
             broadcastAll({ type: 'GAME_END', winner: game.winner });
@@ -367,7 +379,7 @@ if (isDirectExecution()) {
 
     console.log('');
     console.log(ANSI.cyan + top + ANSI.reset);
-    console.log(ANSI.cyan + line(`  ${ANSI.bold}DA VINCI CODE${ANSI.reset}${ANSI.cyan} - LAN 1:1 대전`) + ANSI.reset);
+    console.log(ANSI.cyan + line(`  ${ANSI.bold}DA VINCI CODE+${ANSI.reset}${ANSI.cyan} - LAN 1:1 대전`) + ANSI.reset);
     console.log(ANSI.cyan + sep + ANSI.reset);
     console.log(ANSI.cyan + line(`  ${ANSI.yellow}호스트 PC 접속:${ANSI.reset}`) + ANSI.reset);
     console.log(ANSI.cyan + line(`    ${ANSI.green}http://localhost:${port}${ANSI.reset}`) + ANSI.reset);

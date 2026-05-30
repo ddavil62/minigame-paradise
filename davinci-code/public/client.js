@@ -1,11 +1,13 @@
 /**
- * @fileoverview 다빈치 코드 클라이언트.
+ * @fileoverview 다빈치 코드 플러스 클라이언트.
  *
  * - WebSocket 자동 재연결 (backoff 1->2->4->8s)
  * - pagehide 시 즉시 close -> 서버 좀비 슬롯 방지
  * - 서버 STATE 스냅샷을 받아 DOM 렌더링
- * - 상대 미공개 카드 클릭 -> slot 선택 -> 숫자 입력 -> 추측
- * - 우 패널: 숫자 메모판 + 추측 기록 누적
+ * - 3색(red/yellow/blue) 카드 + 조커 지원
+ * - 조커 배치 페이즈 UI
+ * - 상대 미공개 카드 클릭 -> slot 선택 -> 숫자 입력 or 조커? 버튼 -> 추측
+ * - 우 패널: 숫자 메모판(39칸) + 추측 기록 누적
  */
 
 (() => {
@@ -21,6 +23,10 @@
   const pendingCardEl  = document.getElementById('pending-card');
   const actionDisplay  = document.getElementById('action-display');
 
+  const jokerPlacePanel   = document.getElementById('joker-place-panel');
+  const myJokerBadgeEl    = document.getElementById('my-joker-badge');
+  const jokerSlotButtonsEl= document.getElementById('joker-slot-buttons');
+
   const guessPanel     = document.getElementById('guess-panel');
   const continuePanel  = document.getElementById('continue-panel');
   const selfRevealPanel= document.getElementById('self-reveal-panel');
@@ -28,6 +34,7 @@
   const selectedSlotEl = document.getElementById('selected-slot');
   const guessValueEl   = document.getElementById('guess-value');
   const btnGuess       = document.getElementById('btn-guess');
+  const btnGuessJoker  = document.getElementById('btn-guess-joker');
   const btnContinue    = document.getElementById('btn-continue');
   const btnStop        = document.getElementById('btn-stop');
 
@@ -41,6 +48,9 @@
   // 우 패널 DOM 참조
   const memoBoardEl      = document.getElementById('memo-board');
   const guessHistoryEl   = document.getElementById('guess-history');
+
+  // ── 색상 이름 매핑 ──────────────────────────────────────────
+  const COLOR_NAME = { red: '빨강', yellow: '노랑', blue: '파랑' };
 
   // ── 상태 ─────────────────────────────────────────────────────
   /** @type {WebSocket|null} */
@@ -169,6 +179,8 @@
     let turnText;
     if (s.phase === 'won') {
       turnText = s.winner === me ? '승리' : '패배';
+    } else if (s.phase === 'awaiting_joker_placement') {
+      turnText = '조커 배치';
     } else if (myTurn) {
       turnText = '내 턴';
     } else {
@@ -201,9 +213,22 @@
     guessPanel.classList.add('hidden');
     continuePanel.classList.add('hidden');
     selfRevealPanel.classList.add('hidden');
+    jokerPlacePanel.classList.add('hidden');
 
     if (s.phase === 'won') {
       actionDisplay.textContent = '게임 종료';
+      return;
+    }
+
+    if (s.phase === 'awaiting_joker_placement') {
+      if (s.jokerPlaced && s.jokerPlaced[me]) {
+        // 내 조커 배치 완료, 상대 대기
+        actionDisplay.textContent = '내 조커 배치 완료. 상대 배치 대기 중...';
+      } else {
+        actionDisplay.textContent = '게임 시작 전: 조커를 손패의 원하는 위치에 배치해라.';
+        renderJokerPlacement(s);
+        jokerPlacePanel.classList.remove('hidden');
+      }
       return;
     }
 
@@ -238,9 +263,51 @@
     selectedSlotEl.textContent = selectedSlot === null ? '없음' : `${selectedSlot + 1}번째`;
   }
 
+  // ── 조커 배치 UI ──────────────────────────────────────────────
+  /**
+   * 조커 배치 페이즈의 슬롯 버튼을 렌더링한다.
+   * @param {object} s - STATE 스냅샷
+   */
+  function renderJokerPlacement(s) {
+    jokerSlotButtonsEl.innerHTML = '';
+
+    if (!s.yourUnplacedJoker) return;
+
+    // 조커 뱃지 색상 표시
+    const jokerColor = s.yourUnplacedJoker.color;
+    myJokerBadgeEl.textContent = '\u2605';
+    myJokerBadgeEl.className = `joker-badge ${jokerColor}`;
+
+    const handLen = s.yourHand.length;
+    // (handLen + 1)개의 배치 버튼 생성
+    for (let i = 0; i <= handLen; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'btn-slot-place';
+      if (i === 0) {
+        btn.textContent = '맨 앞';
+      } else if (i === handLen) {
+        btn.textContent = '맨 뒤';
+      } else {
+        // i번째 카드 뒤 (카드 value 표시)
+        const prevCard = s.yourHand[i - 1];
+        const prevLabel = prevCard.isJoker ? '\u2605' : String(prevCard.value);
+        const nextCard = s.yourHand[i];
+        const nextLabel = nextCard.isJoker ? '\u2605' : String(nextCard.value);
+        btn.textContent = `${prevLabel} | ${nextLabel}`;
+      }
+
+      const insertAfter = i - 1; // i=0 → insertAfter=-1 (맨 앞)
+      btn.addEventListener('click', () => {
+        if (!ws || ws.readyState !== 1) return;
+        ws.send(JSON.stringify({ type: 'PLACE_JOKER', insertAfter }));
+      });
+      jokerSlotButtonsEl.appendChild(btn);
+    }
+  }
+
   /**
    * pendingDrawn 카드 렌더링.
-   * @param {object|null} p - { color, value } 또는 null. value가 null이면 색깔만 보임.
+   * @param {object|null} p - { color, value, isJoker } 또는 null.
    */
   function renderPending(p) {
     pendingCardEl.className = 'pending-card';
@@ -250,7 +317,11 @@
       return;
     }
     pendingCardEl.classList.add(p.color);
-    if (p.value === null || p.value === undefined) {
+    if (p.isJoker) {
+      // 자기가 뽑은 조커 — value는 항상 null이지만 조커임을 알 수 있음
+      pendingCardEl.textContent = '-';
+    } else if (p.value === null || p.value === undefined) {
+      // 상대가 뽑은 카드 — 숫자 모름
       pendingCardEl.textContent = '?';
       pendingCardEl.classList.add('hidden-value');
     } else {
@@ -270,9 +341,12 @@
     s.oppHand.forEach((card, idx) => {
       const el = document.createElement('div');
       el.className = `card ${card.color}`;
+      if (card.isJoker) el.classList.add('joker');
+
       if (card.revealed) {
         el.classList.add('revealed');
-        el.textContent = String(card.value);
+        // 공개된 조커는 '-', 공개된 숫자 카드는 숫자 표시
+        el.textContent = card.isJoker ? '-' : String(card.value);
       } else {
         el.classList.add('hidden-value');
         el.textContent = '?';
@@ -298,7 +372,11 @@
     s.yourHand.forEach((card, idx) => {
       const el = document.createElement('div');
       el.className = `card ${card.color}`;
-      el.textContent = String(card.value);
+      if (card.isJoker) el.classList.add('joker');
+
+      // 자기 카드는 항상 보임 — 조커는 '-', 숫자는 숫자 표시
+      el.textContent = card.isJoker ? '-' : String(card.value);
+
       if (card.revealed) {
         el.classList.add('revealed');
       } else if (canSelfReveal) {
@@ -312,49 +390,49 @@
 
   // ── 숫자 메모판 ──────────────────────────────────────────────
   /**
-   * 메모판 초기 타일 24개(흑 0~11, 백 0~11) 생성.
+   * 메모판 초기 타일 39개(빨강 0~11 + 조커, 노랑 0~11 + 조커, 파랑 0~11 + 조커) 생성.
    * GAME_START 시 1회 호출한다.
    */
   function initMemoBoard() {
     memoBoardEl.innerHTML = '';
 
-    // 흑 섹션 레이블
-    const blackLabel = document.createElement('div');
-    blackLabel.className = 'memo-section-label';
-    blackLabel.textContent = '⬛ 검정';
-    memoBoardEl.appendChild(blackLabel);
+    const sections = [
+      { color: 'red', label: '빨강', tileClass: 'red-tile' },
+      { color: 'yellow', label: '노랑', tileClass: 'yellow-tile' },
+      { color: 'blue', label: '파랑', tileClass: 'blue-tile' },
+    ];
 
-    // 흑 타일 0~11
-    const blackRow = document.createElement('div');
-    blackRow.className = 'memo-row';
-    for (let i = 0; i <= 11; i++) {
-      const el = document.createElement('div');
-      el.className = 'memo-tile black-tile';
-      el.dataset.color = 'black';
-      el.dataset.value = i;
-      el.textContent = i;
-      blackRow.appendChild(el);
+    for (const sec of sections) {
+      // 섹션 레이블
+      const labelEl = document.createElement('div');
+      labelEl.className = 'memo-section-label';
+      labelEl.textContent = sec.label;
+      memoBoardEl.appendChild(labelEl);
+
+      // 타일 행
+      const row = document.createElement('div');
+      row.className = 'memo-row';
+
+      // 숫자 타일 0~11
+      for (let i = 0; i <= 11; i++) {
+        const el = document.createElement('div');
+        el.className = `memo-tile ${sec.tileClass}`;
+        el.dataset.color = sec.color;
+        el.dataset.value = String(i);
+        el.textContent = String(i);
+        row.appendChild(el);
+      }
+
+      // 조커 타일
+      const jokerEl = document.createElement('div');
+      jokerEl.className = `memo-tile ${sec.tileClass} joker-tile`;
+      jokerEl.dataset.color = sec.color;
+      jokerEl.dataset.value = 'joker';
+      jokerEl.textContent = '\u2605';
+      row.appendChild(jokerEl);
+
+      memoBoardEl.appendChild(row);
     }
-    memoBoardEl.appendChild(blackRow);
-
-    // 백 섹션 레이블
-    const whiteLabel = document.createElement('div');
-    whiteLabel.className = 'memo-section-label';
-    whiteLabel.textContent = '⬜ 흰색';
-    memoBoardEl.appendChild(whiteLabel);
-
-    // 백 타일 0~11
-    const whiteRow = document.createElement('div');
-    whiteRow.className = 'memo-row';
-    for (let i = 0; i <= 11; i++) {
-      const el = document.createElement('div');
-      el.className = 'memo-tile white-tile';
-      el.dataset.color = 'white';
-      el.dataset.value = i;
-      el.textContent = i;
-      whiteRow.appendChild(el);
-    }
-    memoBoardEl.appendChild(whiteRow);
   }
 
   /**
@@ -363,12 +441,16 @@
    * @param {object} s - STATE 스냅샷
    */
   function renderMemoBoard(s) {
-    // 공개된 {color, value} 집합 구성
+    // 공개된 {color-value} 집합 구성
     const used = new Set();
     const allCards = [...(s.oppHand || []), ...(s.yourHand || [])];
     for (const card of allCards) {
       if (card.revealed) {
-        used.add(`${card.color}-${card.value}`);
+        if (card.isJoker) {
+          used.add(`${card.color}-joker`);
+        } else {
+          used.add(`${card.color}-${card.value}`);
+        }
       }
     }
     // 메모판 갱신
@@ -388,7 +470,9 @@
    */
   function addGuessHistory(lg, myId) {
     if (!lg) return;
-    const key = `${lg.from}-${lg.slot}-${lg.value}`;
+    const key = lg.value === null
+      ? `${lg.from}-${lg.slot}-JOKER`
+      : `${lg.from}-${lg.slot}-${lg.value}`;
     if (key === lastHistoryKey) return; // 중복 방지
     lastHistoryKey = key;
 
@@ -397,9 +481,10 @@
     const el = document.createElement('div');
     el.className = `history-item ${lg.correct ? 'correct' : 'wrong'}`;
     const who = lg.from === myId ? '나' : '상대';
+    const guessLabel = lg.value === null ? '조커' : lg.value;
     el.innerHTML = `
       <span class="history-who">${who}</span>
-      <span class="history-detail">#${lg.slot + 1} → <strong>${lg.value}</strong></span>
+      <span class="history-detail">#${lg.slot + 1} → <strong>${guessLabel}</strong></span>
       <span class="history-result">${lg.correct ? '\u2713' : '\u2717'}</span>
     `;
     guessHistoryEl.prepend(el);
@@ -439,11 +524,13 @@
       showToast('이미 공개된 카드는 선택할 수 없다');
       return;
     }
-    if (!confirm(`${card.color === 'black' ? '검정' : '흰색'} ${card.value} 카드를 공개하겠는가?`)) return;
+    const colorName = COLOR_NAME[card.color] || card.color;
+    const label = card.isJoker ? `${colorName} 조커` : `${colorName} ${card.value}`;
+    if (!confirm(`${label} 카드를 공개하겠는가?`)) return;
     ws.send(JSON.stringify({ type: 'SELF_REVEAL', slot: idx }));
   }
 
-  // 추측 버튼
+  // 숫자 추측 버튼
   btnGuess.addEventListener('click', () => {
     if (!ws || ws.readyState !== 1) return;
     if (selectedSlot === null) { showToast('상대 카드를 먼저 선택해라'); return; }
@@ -453,6 +540,15 @@
       return;
     }
     ws.send(JSON.stringify({ type: 'GUESS', slot: selectedSlot, value }));
+    selectedSlot = null;
+    guessValueEl.value = '';
+  });
+
+  // 조커 추측 버튼
+  btnGuessJoker.addEventListener('click', () => {
+    if (!ws || ws.readyState !== 1) return;
+    if (selectedSlot === null) { showToast('상대 카드를 먼저 선택해라'); return; }
+    ws.send(JSON.stringify({ type: 'GUESS', slot: selectedSlot, value: null }));
     selectedSlot = null;
     guessValueEl.value = '';
   });

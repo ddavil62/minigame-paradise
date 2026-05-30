@@ -1,7 +1,8 @@
 /**
- * 다빈치 코드 클라이언트 스타일.
+ * 다빈치 코드 플러스 클라이언트 스타일.
  * 다크 테마 (배경 #1a1a2e), 코드네임 듀엣과 톤 통일.
  * 2-column 레이아웃: 좌 게임보드 + 우 정보 패널.
+ * 3색: red (#c0392b), yellow (#f1c40f), blue (#2980b9)
  */
 
 * { box-sizing: border-box; }
@@ -181,23 +182,38 @@ body {
   transition: transform 0.1s, border-color 0.15s, box-shadow 0.15s;
 }
 
-.card.black {
-  background: #1a1a1a;
+.card.red {
+  background: #c0392b;
   color: #fff;
-  box-shadow: 0 2px 0 #000;
+  box-shadow: 0 2px 0 #922b21;
 }
-.card.white {
-  background: #f0f0f0;
-  color: #222;
-  box-shadow: 0 2px 0 #c8c8c8;
+.card.yellow {
+  background: #f1c40f;
+  color: #2c2c2c;
+  box-shadow: 0 2px 0 #b7950b;
+}
+.card.blue {
+  background: #2980b9;
+  color: #fff;
+  box-shadow: 0 2px 0 #1a5276;
+}
+
+/* 조커 카드 스타 아이콘 */
+.card.joker::after {
+  content: '\2605';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.65rem;
+  opacity: 0.7;
 }
 
 /* 미공개 상대 카드는 "?" 표시 */
 .card.hidden-value {
   color: rgba(255,255,255,0.4);
 }
-.card.white.hidden-value {
-  color: rgba(34,34,34,0.4);
+.card.yellow.hidden-value {
+  color: rgba(44,44,44,0.4);
 }
 
 /* 클릭 가능한 카드 (상대 미공개 카드 or 자기 미공개 카드 in self-reveal) */
@@ -298,23 +314,29 @@ body {
   border-style: dashed;
 }
 
-.pending-card.black {
-  background: #1a1a1a;
+.pending-card.red {
+  background: #c0392b;
   color: #fff;
   border-color: #ffd166;
   border-style: solid;
 }
-.pending-card.white {
-  background: #f0f0f0;
-  color: #222;
+.pending-card.yellow {
+  background: #f1c40f;
+  color: #2c2c2c;
+  border-color: #ffd166;
+  border-style: solid;
+}
+.pending-card.blue {
+  background: #2980b9;
+  color: #fff;
   border-color: #ffd166;
   border-style: solid;
 }
 .pending-card.hidden-value {
   color: rgba(255,255,255,0.4);
 }
-.pending-card.white.hidden-value {
-  color: rgba(34,34,34,0.4);
+.pending-card.yellow.hidden-value {
+  color: rgba(44,44,44,0.4);
 }
 
 /* ── 액션 패널 ────────────────────────────────────────────────── */
@@ -397,6 +419,67 @@ body {
   background: #c89050;
 }
 
+/* ── 조커 배치 패널 ──────────────────────────────────────────── */
+.joker-place-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.joker-place-panel.hidden { display: none; }
+
+.joker-slot-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-slot-place {
+  background: #2a2a4a;
+  color: #ffd166;
+  border: 1.5px dashed #ffd166;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-slot-place:hover {
+  background: rgba(255,209,102,0.15);
+}
+
+.joker-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.joker-badge.red   { background: #c0392b; color: #fff; }
+.joker-badge.yellow { background: #f1c40f; color: #2c2c2c; }
+.joker-badge.blue  { background: #2980b9; color: #fff; }
+
+/* ── 조커 추측 버튼 ──────────────────────────────────────────── */
+.btn-joker-guess {
+  background: #7d3c98;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+.btn-joker-guess:hover:not(:disabled) {
+  background: #9b59b6;
+}
+
 /* ── 숫자 메모판 ──────────────────────────────────────────────── */
 .memo-board {
   display: flex;
@@ -431,14 +514,27 @@ body {
   cursor: default;
 }
 
-.memo-tile.black-tile {
-  background: #1a1a1a;
-  color: #e0e0e0;
+.memo-tile.red-tile {
+  background: #c0392b;
+  color: #fff;
+  border-color: #922b21;
 }
 
-.memo-tile.white-tile {
-  background: #f0f0f0;
-  color: #1a1a1a;
+.memo-tile.yellow-tile {
+  background: #f1c40f;
+  color: #2c2c2c;
+  border-color: #b7950b;
+}
+
+.memo-tile.blue-tile {
+  background: #2980b9;
+  color: #fff;
+  border-color: #1a5276;
+}
+
+.memo-tile.joker-tile {
+  font-size: 0.65rem;
+  letter-spacing: 0;
 }
 
 .memo-tile.used {

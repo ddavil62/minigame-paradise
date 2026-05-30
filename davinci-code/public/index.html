@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>다빈치 코드 - LAN 1:1 대전</title>
+  <title>다빈치 코드 플러스 - LAN 1:1 대전</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-left">
-      <span class="title">DA VINCI CODE</span>
+      <span class="title">DA VINCI CODE+</span>
       <span class="you-tag" id="you-tag">접속 중...</span>
     </div>
     <div class="topbar-stats">
@@ -57,11 +57,21 @@
       <section class="action-panel">
         <div id="action-display" class="action-display">접속 대기 중...</div>
 
+        <!-- 조커 배치 (awaiting_joker_placement 상태) -->
+        <div id="joker-place-panel" class="joker-place-panel hidden">
+          <span class="panel-text">
+            내 조커: <span id="my-joker-badge" class="joker-badge">-</span>
+            를 손패의 원하는 위치에 배치해라.
+          </span>
+          <div id="joker-slot-buttons" class="joker-slot-buttons"></div>
+        </div>
+
         <!-- 추측 입력 (awaiting_guess 상태) -->
         <div id="guess-panel" class="guess-panel hidden">
           <span class="panel-text">선택한 슬롯: <span id="selected-slot">없음</span></span>
           <input type="number" id="guess-value" min="0" max="11" placeholder="0~11" />
           <button id="btn-guess">추측</button>
+          <button id="btn-guess-joker" class="btn-joker-guess">조커?</button>
         </div>
 
         <!-- 계속/멈춤 (awaiting_continue_decision 상태) -->

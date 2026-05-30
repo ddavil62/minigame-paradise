@@ -1,5 +1,38 @@
 # Changelog
 
+## [2026-05-30] - 다빈치 코드 플러스 (3색 룰업)
+
+### 추가
+- **3색 타일 구성**: 기존 흑/백 2색(24장)을 빨강/노랑/파랑 3색(39장)으로 전면 교체. 각 색상별 0~11 숫자 12장 + 조커 1장 = 13장 x 3색 = 39장
+- **조커 배치 페이즈**: 게임 시작 직후 `awaiting_joker_placement` 페이즈 진입. 양쪽 모두 조커를 손패 원하는 위치에 배치 완료 후 게임 시작 (`drawForCurrentTurn` -> `awaiting_guess`)
+- **`placeJoker(state, playerId, insertAfter)` 함수**: 조커를 손패 `insertAfter+1` 위치에 splice 삽입. 양쪽 배치 완료 시 자동 전환
+- **조커 추측 UI**: 추측 패널에 "조커?" 버튼(`#btn-guess-joker`, `.btn-joker-guess` 보라색 #7d3c98) 추가. `{ type: 'GUESS', slot: N, value: null }` 전송
+- **조커 배치 UI**: `#joker-place-panel`에 손패 수+1개 배치 버튼(`.btn-slot-place`) 렌더링, 조커 뱃지에 색상 표시
+- **3색 메모판**: 빨강/노랑/파랑 각 12칸 + 조커 3칸 = 39칸. `.memo-tile.red-tile/.yellow-tile/.blue-tile/.joker-tile` CSS 클래스
+- **PLACE_JOKER 서버 핸들러**: `server.js`에 PLACE_JOKER 메시지 케이스 추가, `placeJoker` import
+
+### 변경
+- `game.js` (541줄): `COLORS = ['red', 'yellow', 'blue']`, `buildFullDeck()` 39장, `sortHand()` 조커 위치 보존, `createGame()` 조커 분리(`unplacedJokers`) + `awaiting_joker_placement` 시작, `guess()` value=null 허용 (조커 추측), `snapshotForPlayer()` 조커 관련 필드 포함
+- `server.js` (416줄): PLACE_JOKER 핸들러, GUESS 로그 가독성 개선 (`val=JOKER`)
+- `public/client.js` (628줄): `initMemoBoard()` 3색 39칸, `renderJokerPlacement()`, `updateActionPanel()` 조커 배치 페이즈, `renderOppHand()`/`renderMyHand()` 3색+조커 표시, `btnGuessJoker` 핸들러, `addGuessHistory()` 조커 중복 방지 키
+- `public/style.css` (672줄): 흑/백 CSS 전부 삭제 (`.card.black/.white`, `.pending-card.black/.white`, `.memo-tile.black-tile/.white-tile`), red/yellow/blue 카드 색상 추가, `.card.joker::after` 별표 오버레이, 조커 배치/추측 UI 스타일
+- `public/index.html` (118줄): 타이틀 "DA VINCI CODE+", `#joker-place-panel` 추가, `#btn-guess-joker` 추가
+
+### 수정
+- **CSS 유니코드 이스케이프 (LOW)**: `style.css`의 `.card.joker::after` content에서 `\u2605` (JS 방식) -> `\2605` (CSS 방식)으로 수정. 수정 전에는 "u2605" 텍스트가 표시되었으나, font-size 0.65rem + opacity 0.7로 사용성 영향 미미
+
+### 참고
+- 스펙: `.claude/specs/2026-05-30-davinci-plus-plan.md`
+- 목적 정의서: `.claude/specs/2026-05-30-davinci-plus-scope.md`
+- 구현 리포트: `.claude/specs/2026-05-30-davinci-plus-coder-report.md`
+- AD3: `.claude/specs/2026-05-30-davinci-plus-ad3-report.md` (APPROVED, 23항목 전 PASS)
+- QA: `.claude/specs/2026-05-30-davinci-plus-qa-report.md` (PASS, 단위 53개 + E2E 25개 = 78개 전체 통과)
+- QA 테스트: `davinci-code/tests/game-unit-qa.spec.js` (53개), `davinci-code/tests/davinci-plus-qa.spec.js` (25개)
+- 정렬 규칙: value 오름차순, 동점 시 red < yellow < blue. 조커는 배치 위치 고정
+- 색상 값: red=#c0392b, yellow=#f1c40f, blue=#2980b9
+
+---
+
 ## [2026-05-30] - 다빈치 코드 UI 전면 개편 (2-column 레이아웃)
 
 ### 추가
