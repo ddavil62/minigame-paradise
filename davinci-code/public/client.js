@@ -1,10 +1,11 @@
 /**
  * @fileoverview 다빈치 코드 클라이언트.
  *
- * - WebSocket 자동 재연결 (backoff 1→2→4→8s)
- * - pagehide 시 즉시 close → 서버 좀비 슬롯 방지
+ * - WebSocket 자동 재연결 (backoff 1->2->4->8s)
+ * - pagehide 시 즉시 close -> 서버 좀비 슬롯 방지
  * - 서버 STATE 스냅샷을 받아 DOM 렌더링
- * - 상대 미공개 카드 클릭 → slot 선택 → 숫자 입력 → 추측
+ * - 상대 미공개 카드 클릭 -> slot 선택 -> 숫자 입력 -> 추측
+ * - 우 패널: 숫자 메모판 + 추측 기록 누적
  */
 
 (() => {
@@ -18,7 +19,6 @@
   const oppCardsEl     = document.getElementById('opp-cards');
   const myCardsEl      = document.getElementById('my-cards');
   const pendingCardEl  = document.getElementById('pending-card');
-  const lastGuessEl    = document.getElementById('last-guess');
   const actionDisplay  = document.getElementById('action-display');
 
   const guessPanel     = document.getElementById('guess-panel');
@@ -38,6 +38,10 @@
   const btnNewGame     = document.getElementById('btn-new-game');
   const toastEl        = document.getElementById('toast');
 
+  // 우 패널 DOM 참조
+  const memoBoardEl      = document.getElementById('memo-board');
+  const guessHistoryEl   = document.getElementById('guess-history');
+
   // ── 상태 ─────────────────────────────────────────────────────
   /** @type {WebSocket|null} */
   let ws = null;
@@ -52,6 +56,11 @@
   let reconnectTimer = null;
   let reconnectAttempts = 0;
   let toastTimer = null;
+
+  /** 추측 기록 누적 배열 */
+  let guessHistory = [];
+  /** 중복 방지 키 (from+slot+value 튜플) */
+  let lastHistoryKey = null;
 
   // ── WebSocket 연결 ───────────────────────────────────────────
   /**
@@ -113,6 +122,8 @@
       case 'GAME_START':
         hideModal();
         selectedSlot = null;
+        resetGuessHistory();
+        initMemoBoard();
         break;
       case 'STATE':
         lastState = msg;
@@ -132,7 +143,7 @@
       case 'OPPONENT_LEFT':
         showToast(msg.message || '상대방이 나갔다.');
         turnEl.textContent = '상대 대기 중';
-        actionDisplay.textContent = '새 친구가 접속하기를 기다리는 중...';
+        actionDisplay.textContent = '새 친구가 접속하면 게임이 재시작된다.';
         hideModal();
         break;
       case 'ERROR':
@@ -177,8 +188,9 @@
     // 자기 손 렌더
     renderMyHand(s);
 
-    // last guess 표시
-    renderLastGuess(s.lastGuess);
+    // 우 패널: 메모판 + 추측 기록
+    renderMemoBoard(s);
+    addGuessHistory(s.lastGuess, me);
   }
 
   /**
@@ -298,25 +310,108 @@
     });
   }
 
+  // ── 숫자 메모판 ──────────────────────────────────────────────
   /**
-   * 마지막 추측 결과 표시.
-   * @param {object|null} lg
+   * 메모판 초기 타일 24개(흑 0~11, 백 0~11) 생성.
+   * GAME_START 시 1회 호출한다.
    */
-  function renderLastGuess(lg) {
-    if (!lg) {
-      lastGuessEl.textContent = '';
-      lastGuessEl.className = 'last-guess';
-      return;
+  function initMemoBoard() {
+    memoBoardEl.innerHTML = '';
+
+    // 흑 섹션 레이블
+    const blackLabel = document.createElement('div');
+    blackLabel.className = 'memo-section-label';
+    blackLabel.textContent = '⬛ 검정';
+    memoBoardEl.appendChild(blackLabel);
+
+    // 흑 타일 0~11
+    const blackRow = document.createElement('div');
+    blackRow.className = 'memo-row';
+    for (let i = 0; i <= 11; i++) {
+      const el = document.createElement('div');
+      el.className = 'memo-tile black-tile';
+      el.dataset.color = 'black';
+      el.dataset.value = i;
+      el.textContent = i;
+      blackRow.appendChild(el);
     }
-    const who = lg.from === me ? '나' : '상대';
-    const slotLabel = `${lg.slot + 1}번째`;
-    if (lg.correct) {
-      lastGuessEl.textContent = `${who}: ${slotLabel} → "${lg.value}" 정답!`;
-      lastGuessEl.className = 'last-guess correct';
-    } else {
-      lastGuessEl.textContent = `${who}: ${slotLabel} → "${lg.value}" 오답`;
-      lastGuessEl.className = 'last-guess wrong';
+    memoBoardEl.appendChild(blackRow);
+
+    // 백 섹션 레이블
+    const whiteLabel = document.createElement('div');
+    whiteLabel.className = 'memo-section-label';
+    whiteLabel.textContent = '⬜ 흰색';
+    memoBoardEl.appendChild(whiteLabel);
+
+    // 백 타일 0~11
+    const whiteRow = document.createElement('div');
+    whiteRow.className = 'memo-row';
+    for (let i = 0; i <= 11; i++) {
+      const el = document.createElement('div');
+      el.className = 'memo-tile white-tile';
+      el.dataset.color = 'white';
+      el.dataset.value = i;
+      el.textContent = i;
+      whiteRow.appendChild(el);
     }
+    memoBoardEl.appendChild(whiteRow);
+  }
+
+  /**
+   * 숫자 메모판 렌더링.
+   * revealed 카드(자기 + 상대)를 dim 처리한다.
+   * @param {object} s - STATE 스냅샷
+   */
+  function renderMemoBoard(s) {
+    // 공개된 {color, value} 집합 구성
+    const used = new Set();
+    const allCards = [...(s.oppHand || []), ...(s.yourHand || [])];
+    for (const card of allCards) {
+      if (card.revealed) {
+        used.add(`${card.color}-${card.value}`);
+      }
+    }
+    // 메모판 갱신
+    const tiles = memoBoardEl.querySelectorAll('.memo-tile');
+    tiles.forEach(tile => {
+      const key = `${tile.dataset.color}-${tile.dataset.value}`;
+      tile.classList.toggle('used', used.has(key));
+    });
+  }
+
+  // ── 추측 기록 ────────────────────────────────────────────────
+  /**
+   * lastGuess가 신규 항목이면 guessHistory 맨 앞에 추가하고 DOM에 표시한다.
+   * 동일한 항목(from+slot+value 일치)은 중복 추가하지 않는다.
+   * @param {object|null} lg - lastGuess 객체
+   * @param {string} myId - 현재 플레이어 ID
+   */
+  function addGuessHistory(lg, myId) {
+    if (!lg) return;
+    const key = `${lg.from}-${lg.slot}-${lg.value}`;
+    if (key === lastHistoryKey) return; // 중복 방지
+    lastHistoryKey = key;
+
+    guessHistory.unshift(lg); // 최신이 앞에
+
+    const el = document.createElement('div');
+    el.className = `history-item ${lg.correct ? 'correct' : 'wrong'}`;
+    const who = lg.from === myId ? '나' : '상대';
+    el.innerHTML = `
+      <span class="history-who">${who}</span>
+      <span class="history-detail">#${lg.slot + 1} → <strong>${lg.value}</strong></span>
+      <span class="history-result">${lg.correct ? '\u2713' : '\u2717'}</span>
+    `;
+    guessHistoryEl.prepend(el);
+  }
+
+  /**
+   * 추측 기록 초기화 (새 게임 시작 시).
+   */
+  function resetGuessHistory() {
+    guessHistory = [];
+    lastHistoryKey = null;
+    guessHistoryEl.innerHTML = '';
   }
 
   // ── 입력 핸들러 ─────────────────────────────────────────────
@@ -432,5 +527,6 @@
   }
 
   // ── 시작 ────────────────────────────────────────────────────
+  initMemoBoard();
   connect();
 })();

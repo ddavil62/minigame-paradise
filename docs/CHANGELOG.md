@@ -1,5 +1,37 @@
 # Changelog
 
+## [2026-05-30] - 다빈치 코드 UI 전면 개편 (2-column 레이아웃)
+
+### 추가
+- **2-column Grid 레이아웃**: `.play-area`를 `display: grid; grid-template-columns: 1fr 300px`으로 전환. 좌 컬럼(`.game-board`)에 게임보드, 우 컬럼(`.info-panel`)에 정보 패널 배치
+- **숫자 메모판**: 우 패널 상단에 흑 0~11(12칸) + 백 0~11(12칸) = 24칸 타일. 공개된 카드에 대응하는 타일에 `.used` 클래스 적용 (opacity 0.25, line-through)
+- **추측 기록 누적 표시**: 우 패널 하단에 추측 기록을 클라이언트 메모리에 누적하여 스크롤 가능한 목록으로 표시. 최신 항목이 맨 위. `lastHistoryKey`(from+slot+value 3-tuple)로 중복 추가 방지
+- **`initMemoBoard()`**: 모듈 로드 시 호출하여 게임 시작 전에도 24타일 표시
+- **`addGuessHistory()`**: `lastGuess` 신규 항목을 prepend 방식으로 추가
+- **`resetGuessHistory()`**: `GAME_START` 수신 시 추측 기록 + 메모판 초기화
+
+### 변경
+- `davinci-code/public/index.html`: `.game-board` 좌 컬럼 래퍼 추가, `action-panel`을 `<main>` 내부로 이동, `#last-guess` 엘리먼트 제거, `<aside class="info-panel">` 추가 (메모판 + 추측 기록 DOM)
+- `davinci-code/public/style.css`: `.play-area` flex -> CSS Grid 전환, 카드 크기 `.card`/`.pending-card` 80x110px, `.deck-card` 86x118px으로 확대, `.hand` max-width 1000px -> 100%, `.info-panel`/`.memo-board`/`.memo-tile`/`.guess-history-panel`/`.history-item` 신규 스타일 추가, `.last-guess` 관련 규칙 제거
+- `davinci-code/public/client.js`: `lastGuessEl`/`renderLastGuess()` 제거, `memoBoardEl`/`guessHistoryEl` DOM 참조 추가, `renderState()` 내에서 `renderMemoBoard()` + `addGuessHistory()` 호출로 교체
+
+### 스펙 대비 구현 차이
+- `.play-area` gap: 스펙 16px -> 구현 0 (border-left로 시각적 구분 대체, QA 허용)
+- `.memo-tile.used` opacity: 스펙 0.3 -> 구현 0.25 (시각적 차이 미미, QA 허용)
+- 추측 기록 렌더링: 스펙의 전체 재렌더 방식 대신 prepend + `lastHistoryKey` 중복 방지 방식으로 구현 (동일 결과, 성능 개선)
+
+### 변경된 파일 목록
+- `davinci-code/public/index.html`, `davinci-code/public/style.css`, `davinci-code/public/client.js`
+
+### 참고
+- 스펙: `.claude/specs/2026-05-30-davinci-ui-overhaul-plan.md`
+- 구현 리포트: `.claude/specs/2026-05-30-davinci-ui-overhaul-coder-report.md`
+- QA: `.claude/specs/2026-05-30-davinci-ui-overhaul-qa-report.md` (26개 테스트 전체 PASS)
+- QA 테스트: `tests/davinci-ui-overhaul-qa.spec.js`
+- server.js, game.js 미수정. WebSocket 프로토콜 변경 없음.
+
+---
+
 ## [2026-05-30] - 로비 UX 개선
 
 ### 추가

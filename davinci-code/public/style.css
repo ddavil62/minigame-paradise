@@ -1,6 +1,7 @@
 /**
  * 다빈치 코드 클라이언트 스타일.
  * 다크 테마 (배경 #1a1a2e), 코드네임 듀엣과 톤 통일.
+ * 2-column 레이아웃: 좌 게임보드 + 우 정보 패널.
  */
 
 * { box-sizing: border-box; }
@@ -94,19 +95,54 @@ body {
 }
 .new-game-stat button:hover { background: #c89050; }
 
-/* ── 메인 플레이 영역 ─────────────────────────────────────────── */
+/* ── 메인 플레이 영역 (2-column Grid) ─────────────────────────── */
 .play-area {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px 24px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  overflow: hidden;
 }
 
+.game-board {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px;
+  gap: 12px;
+}
+
+/* ── 우 컬럼: 정보 패널 ──────────────────────────────────────── */
+.info-panel {
+  display: flex;
+  flex-direction: column;
+  background: #16162a;
+  border-left: 1px solid #2a2a4a;
+  overflow-y: auto;
+  padding: 16px;
+  gap: 16px;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ffd166;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+/* ── 손패 영역 ────────────────────────────────────────────────── */
 .hand {
   width: 100%;
-  max-width: 1000px;
+  max-width: 100%;
   background: #16162a;
   border-radius: 10px;
   padding: 14px 18px;
@@ -124,19 +160,19 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  min-height: 96px;
+  min-height: 116px;
   align-items: center;
 }
 
 /* ── 카드 ─────────────────────────────────────────────────────── */
 .card {
-  width: 64px;
-  height: 90px;
+  width: 80px;
+  height: 110px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 1.5rem;
   font-weight: bold;
   cursor: default;
   user-select: none;
@@ -195,9 +231,10 @@ body {
 .center-area {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 110px;
+  padding: 0 18px;
 }
 
 .deck-zone {
@@ -207,8 +244,8 @@ body {
 }
 
 .deck-card {
-  width: 70px;
-  height: 96px;
+  width: 86px;
+  height: 118px;
   background: linear-gradient(135deg, #2a2a4a 0%, #16162a 100%);
   border: 2px solid #f5deb3;
   border-radius: 8px;
@@ -244,13 +281,13 @@ body {
 }
 
 .pending-card {
-  width: 64px;
-  height: 90px;
+  width: 80px;
+  height: 110px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 1.5rem;
   font-weight: bold;
   border: 2.5px dashed #3a3a5a;
 }
@@ -280,16 +317,6 @@ body {
   color: rgba(34,34,34,0.4);
 }
 
-.last-guess {
-  font-size: 14px;
-  color: #a0a0c0;
-  min-height: 20px;
-  margin-top: 4px;
-}
-
-.last-guess.correct { color: #4caf50; }
-.last-guess.wrong   { color: #ff6b6b; }
-
 /* ── 액션 패널 ────────────────────────────────────────────────── */
 .action-panel {
   background: #16162a;
@@ -299,6 +326,7 @@ body {
   flex-direction: column;
   gap: 12px;
   align-items: center;
+  border-radius: 0 0 10px 10px;
 }
 
 .action-display {
@@ -367,6 +395,98 @@ body {
 }
 #btn-stop:hover:not(:disabled) {
   background: #c89050;
+}
+
+/* ── 숫자 메모판 ──────────────────────────────────────────────── */
+.memo-board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memo-section-label {
+  font-size: 0.7rem;
+  color: #a0a0c0;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.memo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.memo-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1.5px solid #3a3a5a;
+  transition: opacity 0.3s;
+  cursor: default;
+}
+
+.memo-tile.black-tile {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.memo-tile.white-tile {
+  background: #f0f0f0;
+  color: #1a1a1a;
+}
+
+.memo-tile.used {
+  opacity: 0.25;
+  text-decoration: line-through;
+}
+
+/* ── 추측 기록 ────────────────────────────────────────────────── */
+.guess-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: #2a2a4a;
+  border: 1px solid #3a3a5a;
+}
+
+.history-item.correct {
+  border-color: #4caf50;
+}
+
+.history-item.wrong {
+  border-color: #ff6b6b;
+}
+
+.history-who {
+  color: #a0a0c0;
+  font-size: 0.75rem;
+  min-width: 2em;
+}
+
+.history-detail {
+  flex: 1;
+}
+
+.history-result {
+  font-size: 1rem;
+  margin-left: auto;
 }
 
 /* ── 모달 ─────────────────────────────────────────────────────── */
