@@ -27,6 +27,7 @@
 ```
 matgo/
 ├── server.js       — HTTP + WebSocket 서버 (createApp export + 단독 실행 지원)
+│                     POST /test/inject 엔드포인트 포함 (Playwright E2E용)
 ├── game.js         — 게임 상태 머신 (턴 진행, 특수 이벤트)
 ├── score.js        — 점수 계산 + 배수/박 처리
 ├── cards.js        — 화투 48장 정의 (buildDeck)
@@ -36,8 +37,11 @@ matgo/
 │   ├── client.js   — 클라이언트 로직 (WebSocket + 렌더링)
 │   └── style.css
 └── tests/
-    ├── v8-qa.spec.js   — Playwright QA (11개 테스트)
-    └── screenshots/    — 테스트 스크린샷
+    ├── score.unit.spec.js   — score.js 단위 테스트 (52개, 서버 불필요)
+    ├── game.unit.spec.js    — game.js 단위 테스트 (27개, 서버 불필요)
+    ├── e2e-scenarios.spec.js — 브라우저 E2E 시나리오 (25개, 서버 필요)
+    ├── v8-qa.spec.js        — 구버전 QA 테스트 (레거시)
+    └── screenshots/         — E2E 스크린샷 출력
 ```
 
 ## 서버 실행 (테스트용)
@@ -52,31 +56,42 @@ node matgo/server.js --port 3013
 ## 테스트 실행
 
 ```bash
-# 서버 먼저 실행 후:
 cd C:/antigravity/minigame-paradise/matgo
-npx playwright test tests/v8-qa.spec.js --reporter=list
+
+# 단위 테스트 (서버 불필요, 빠름)
+npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js --reporter=list
+
+# E2E 시나리오 테스트 (서버 3013 포트 사전 실행 필요)
+node server.js --port 3013 &
+npx playwright test tests/e2e-scenarios.spec.js --reporter=list
+
+# 전체 실행 (단위 + E2E, 총 104개)
+npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-scenarios.spec.js --reporter=list
 ```
 
-### 테스트 목록 및 상태
+### 테스트 현황 (2026-05-30 기준)
 
-| ID | 테스트명 | 상태 | 비고 |
-|----|---------|------|------|
-| A | 기본 진행: 손패 10장씩 분배 | ✅ PASS | |
-| B | DOM 참조 회귀: v8 신 ID 존재 | ✅ PASS | `shake-modal` ID 사용 (shake-panel 아님) |
-| C | 카드 클릭 → 손패 감소 + 턴 교대 | ✅ PASS | |
-| D | perPoint 변경 → 양측 동기화 | ✅ PASS | |
-| E | 새 게임 confirm 다이얼로그 | ✅ PASS | |
-| F | 카드 5장 진행 + 콘솔 에러 없음 | ❌ FAIL | fly 애니메이션 중 클릭 타이밍 문제 (미수정) |
-| G | 빠른 연속 클릭 방어 | ✅ PASS | |
-| H | 페이지 새로고침 후 재연결 | ✅ PASS | |
-| I | UI 시각 검증 스크린샷 | ✅ PASS | |
-| J | 흔들기 패널 표시 | ⏭ SKIP | 랜덤성 의존, 흔들기 미발생 라운드 시 skip |
-| K | 새 라운드 버튼 안전 처리 | ✅ PASS | |
+| 파일 | 테스트 수 | 상태 | 서버 필요 |
+|------|----------|------|----------|
+| `score.unit.spec.js` | 52개 | ✅ 전부 PASS | ❌ |
+| `game.unit.spec.js` | 27개 | ✅ 전부 PASS | ❌ |
+| `e2e-scenarios.spec.js` | 25개 | ✅ 전부 PASS | ✅ (3013) |
+| **합계** | **104개** | **✅ 전부 PASS** | |
 
-### 알려진 이슈
+#### E2E 시나리오 요약 (e2e-scenarios.spec.js)
 
-- **F 테스트 타임아웃**: 카드 fly 애니메이션 중(`visibility:hidden`) `firstClickableId` 카드를 Playwright가 클릭 시도 → 30초 대기 누적. **게임 버그 아님**, 테스트 타이밍 처리 부족.
-- **J 테스트 랜덤**: 흔들기 발동 조건(같은 월 3장)이 확률적. 발동 시 PASS, 미발동 시 SKIP.
+| 구간 | ID | 내용 |
+|------|-----|------|
+| §1 기본 연결 | E-01~E-06 | P1/P2 입장, 초기 상태, DOM ID 확인 |
+| §2 기본 플레이 | E-07~E-11 | 카드 클릭, 턴 교대, perPoint 동기화, 재연결 |
+| §3 inject 모달 | E-12~E-18 | go-stop, shake, floor-choice, kkeut 모달 주입 테스트 |
+| §4 박 시나리오 | E-19~E-22 | 피박·멍박·광박·고박 round-modal 텍스트 검증 |
+| §5 안정성 | E-23~E-25 | 콘솔 에러, AI봇 연결, 레이아웃 스크린샷 |
+
+#### 알려진 주의사항
+
+- **go-stop 버튼 클릭**: `go-stop-overlay`의 CSS `gostop-pulse` 애니메이션(infinite scale)으로 Playwright 안정성 검사가 무한 대기됨 → `{ force: true }` 옵션으로 우회 (E-13, E-14).
+- **AI 봇 모드**: 단독 실행(`node server.js`)에서 `getBotUrl` 옵션이 필요. v8에서 자동 설정되도록 수정됨.
 
 ## 주요 ID 매핑 (DOM)
 

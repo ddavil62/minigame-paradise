@@ -482,6 +482,55 @@ export function createApp(opts = {}) {
     const reqUrl = req.url || '/';
     // query string은 무시하고 path만 추출. mode=ai 같은 쿼리가 붙어도 정상 매칭.
     const reqPath = reqUrl.split('?')[0] || '/';
+
+    // ── 테스트 전용 엔드포인트: POST /test/inject ─────────────────────────────
+    // 결정적 테스트를 위해 게임 상태(손패/바닥/덱)를 직접 주입한다.
+    // 이 엔드포인트는 Playwright E2E 테스트에서만 사용한다 (LAN 전용 게임이므로 보안 위험 없음).
+    if (req.method === 'POST' && reqPath === '/test/inject') {
+      let body = '';
+      req.on('data', (chunk) => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const cfg = JSON.parse(body);
+          if (!game) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: '게임이 아직 시작되지 않음' }));
+            return;
+          }
+          // 주입 가능 필드들 (undefined는 현재 값 유지)
+          if (cfg.p1Hand   !== undefined) game.hands.p1    = cfg.p1Hand;
+          if (cfg.p2Hand   !== undefined) game.hands.p2    = cfg.p2Hand;
+          if (cfg.floor    !== undefined) game.floor        = cfg.floor;
+          if (cfg.deck     !== undefined) game.deck         = cfg.deck;
+          if (cfg.turn     !== undefined) game.turn         = cfg.turn;
+          if (cfg.phase    !== undefined) game.phase        = cfg.phase;
+          if (cfg.captured !== undefined) game.captured     = cfg.captured;
+          if (cfg.goCount  !== undefined) game.goCount      = cfg.goCount;
+          if (cfg.shaking  !== undefined) game.shaking      = cfg.shaking;
+          if (cfg.kkeutAsSsangpi  !== undefined) game.kkeutAsSsangpi  = cfg.kkeutAsSsangpi;
+          if (cfg.kkeutChoiceMade !== undefined) game.kkeutChoiceMade = cfg.kkeutChoiceMade;
+          if (cfg.roundResult !== undefined) game.roundResult = cfg.roundResult;
+          // 항상 초기화 — 이전 대기 상태 잔류 방지
+          game.ppeokFlags         = cfg.ppeokFlags || {};
+          game.pendingFloorChoice = null;
+          game.pendingShake       = cfg.pendingShake || null;
+          game.pendingKkeutChoice = cfg.pendingKkeutChoice || null;
+          game.lastAction         = { kind: 'test_inject' };
+          broadcastState();
+          // round_end 상태 주입 시 ROUND_END 이벤트도 발송
+          if (game.phase === 'round_end' && game.roundResult) {
+            broadcastAll({ type: 'ROUND_END', result: game.roundResult });
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
+    }
+
     const urlPath = (reqPath === '/' || reqPath === '') ? '/index.html' : reqPath;
     const safePath = path.normalize(urlPath).replace(/^([\\/])+/, '');
     const fullPath = path.join(PUBLIC_DIR, safePath);
@@ -541,7 +590,10 @@ if (isDirectExecution()) {
     ? parseInt(argv[portFlagIndex + 1], 10)
     : 3003;
 
-  const app = createApp();
+  const app = createApp({
+    // 단독 실행 시 봇 WS URL 제공 (mode=ai 사용자 진입 시 봇 자동 spawn 지원)
+    getBotUrl: () => `ws://localhost:${PORT}/ws?mode=bot`,
+  });
   const server = http.createServer(app.handleHttp);
   server.on('upgrade', app.handleUpgrade);
 
