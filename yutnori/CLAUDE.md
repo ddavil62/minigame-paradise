@@ -1,6 +1,6 @@
 # Yutnori — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. Phase 1 완료, smoke 18/18 PASS.
+> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. Phase 1 완료, smoke 18/18 PASS. Playwright 3종(유닛 65 + WS 20 + E2E 25 = 110) 전부 PASS.
 
 ## 정체성
 
@@ -34,6 +34,7 @@ yutnori/
 ├── server.js                 # 백엔드 + 게임 로직 (서버 권위)
 ├── start.bat / stop.bat      # Windows 더블클릭 런처
 ├── package.json
+├── playwright.config.js      # Playwright 공통 설정 (port 3088)
 ├── README.md                 # 사용자 대상
 ├── CLAUDE.md                 # 본 문서
 ├── docs/
@@ -51,18 +52,36 @@ yutnori/
 │       ├── piece.js          # 클릭 hit-test
 │       └── ui.js             # Canvas 보드/말 + DOM HUD
 └── tests/
-    └── smoke.test.js         # 6개 시나리오, 18 assert
+    ├── smoke.test.js          # 레거시 smoke, 18 assert (node 직접 실행)
+    ├── yut.unit.spec.js       # Playwright 단위 65개 — throwYutSticks/computeNextCell
+    ├── ws.scenarios.spec.js   # Playwright WS 20개 — 메시지 프로토콜/게임 흐름
+    └── e2e-scenarios.spec.js  # Playwright E2E 25개 — 브라우저 2페이지 실전 검증
 ```
 
 ## 테스트 실행법
 
-```powershell
-cd C:\LazySlimeStudio\yutnori
+### Playwright (주력 테스트 스위트, 110개)
 
-# 터미널 1 (서버)
+```powershell
+cd C:\antigravity\minigame-paradise\yutnori
+
+# 터미널 1 (서버 — E2E 테스트용. 유닛/WS는 서버 없이도 가능)
 node server.js --port 3088
 
-# 터미널 2 (테스트)
+# 터미널 2 (전체 110개 실행)
+npx playwright test tests/yut.unit.spec.js tests/ws.scenarios.spec.js tests/e2e-scenarios.spec.js --reporter=list
+
+# 개별 실행
+npx playwright test tests/yut.unit.spec.js      # 유닛 65개 (서버 불필요)
+npx playwright test tests/ws.scenarios.spec.js  # WS  20개 (서버 불필요 — createApp 직접 import)
+npx playwright test tests/e2e-scenarios.spec.js # E2E 25개 (port 3088 서버 필요)
+```
+
+기대: `110 passed`
+
+### 레거시 smoke (18 assert)
+
+```powershell
 node tests/smoke.test.js --port 3088
 ```
 
@@ -70,7 +89,8 @@ node tests/smoke.test.js --port 3088
 
 ### 회귀 게이트
 
-- 모든 변경은 smoke 18/18 PASS를 유지해야 한다.
+- 모든 변경은 **Playwright 110/110 PASS**를 유지해야 한다.
+- smoke 18/18도 유지한다.
 - 신규 시나리오는 추가하되 기존 시나리오는 수정/삭제하지 않는다.
 
 ## WebSocket 메시지 프로토콜

@@ -304,6 +304,46 @@ export function createApp(opts = {}) {
 
   // ── express 앱 (정적 서빙) ────────────────────────────────────
   const expressApp = express();
+
+  // ── 테스트 전용 엔드포인트 ───────────────────────────────────
+  // POST /test/inject: 게임 상태를 직접 주입한다 (Playwright E2E/WS 테스트용).
+  // 요청 바디(JSON)에서 다음 필드를 선택적으로 주입한다:
+  //   started, currentTurn, pendingResults, awaitingBranchAt,
+  //   awaitingBranchResult, capturedBonus, winner,
+  //   pieces: { p1: [{cell,stack,done}, ...], p2: [...] }
+  expressApp.post('/test/inject', express.json(), (req, res) => {
+    const cfg = req.body || {};
+    if (cfg.started !== undefined) game.started = Boolean(cfg.started);
+    if (cfg.currentTurn !== undefined) game.currentTurn = cfg.currentTurn;
+    if (cfg.pendingResults !== undefined) {
+      game.pendingResults = Array.isArray(cfg.pendingResults) ? cfg.pendingResults.slice() : [];
+    }
+    if (cfg.awaitingBranchAt !== undefined) game.awaitingBranchAt = cfg.awaitingBranchAt;
+    if (cfg.awaitingBranchResult !== undefined) game.awaitingBranchResult = cfg.awaitingBranchResult;
+    if (cfg.capturedBonus !== undefined) game.capturedBonus = Boolean(cfg.capturedBonus);
+    if (cfg.winner !== undefined) {
+      game.winner = cfg.winner;
+      if (cfg.winner) game.started = false;
+    }
+    if (cfg.pieces) {
+      for (const pid of ['p1', 'p2']) {
+        if (!Array.isArray(cfg.pieces[pid])) continue;
+        const p = players.find((pl) => pl.id === pid);
+        if (!p) continue;
+        p.pieces = cfg.pieces[pid].map((pc) => ({
+          cell: typeof pc.cell === 'number' ? pc.cell : HOME,
+          stack: typeof pc.stack === 'number' ? pc.stack : 1,
+          done: typeof pc.done === 'boolean' ? pc.done : false,
+        }));
+      }
+    }
+    broadcastState();
+    if (cfg.winner) {
+      broadcastAll({ type: 'GAME_OVER', winner: cfg.winner });
+    }
+    res.json({ ok: true });
+  });
+
   expressApp.use(express.static(PUBLIC_DIR));
 
   // ── WSS (noServer 모드) ───────────────────────────────────────
