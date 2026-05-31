@@ -23,7 +23,22 @@
 - 기본 포트 `3000`. 다른 서비스(예: tetris-battle)가 점유 중이면 자동으로 `3001`, `3002`, ... `3010`까지 폴백.
 - 실제 사용 중인 포트는 콘솔 박스에 표시됨.
 
+## 룰 기준 문서
+
+본 구현의 권위 룰북: **[`docs/RULEBOOK.md`](docs/RULEBOOK.md)** — 한국 표준 룰 + 본 구현 비교 (13섹션 + 부록).
+
+- 출처: 한국어 위키백과 「윷놀이」, 영문 Wikipedia 「Yunnori」, 한국민속대백과사전, 나무위키 (29회 인용).
+- `§13 구현 노트`: 구현 vs 표준 차이 **11건** (HIGH 2 미해소 + 1 해소, MED 1 미해소 + 1 해소, LOW 5 미해소 + 1 해소).
+  - **§13-1 [HIGH]** 모서리(5/10)에서 강제 지름길 진입 (정통은 선택). 사용자 의심 후보 1순위. **(미해소)**
+  - **§13-2 [HIGH]** centerExitB(중앙→좌하) 즉시 완주 (정통은 중간 칸 거침). 사용자 의심 후보 2순위. **(미해소)**
+  - **§13-9 [LOW, 해소]** HOME 시작 위치 좌우 분리 → 2026-05-31 양 팀 좌하 통일.
+  - **§13-10 [MED, 해소]** HOME → 칸 N-1 단순화 → 2026-05-31 정통 매핑(HOME → 칸 N).
+  - **§13-11 [HIGH, 해소]** MOVE_PIECE 후 capturedBonus 잔류 → 2026-05-31 명시 리셋.
+- `§12 QA 체크리스트`: 룰북 기반 시나리오 작성 시 §번호를 인용한다.
+
 ## 게임 규칙 요약 (한국 표준 윷놀이)
+
+상세는 [`docs/RULEBOOK.md`](docs/RULEBOOK.md) 참조.
 
 ### 보드
 
@@ -61,7 +76,7 @@
 - **윷 던지기** 버튼 → 결과가 좌측 "남은 결과" 큐에 추가됨
 - 남은 결과 칩 클릭 → 사용할 결과 선택 (강조됨)
 - 보드의 내 말 클릭 → 해당 말 이동
-- HOME(시작 전) 말 출발: 보드 좌하(P1)/우상(P2) HOME 영역 클릭 또는 빈 영역 클릭으로 자동 선택
+- HOME(시작 전) 말 출발: 양 팀 모두 보드 좌하 출발점 근처 HOME 영역 클릭 또는 빈 영역 클릭으로 자동 선택 (2026-05-31 정통 룰 정합)
 - 중앙 도착 시: 모달의 "↖ 위쪽 출구 / ↙ 아래쪽 출구" 선택
 - 게임 종료 시: **재대결** 버튼 (양쪽 모두 누르면 새 게임)
 
@@ -105,13 +120,44 @@ yutnori/
 
 ## 테스트
 
-별도 포트(3088 권장)로 서버를 띄운 뒤 smoke 슈트 실행:
+### Playwright 주력 슈트 (273개)
 
 ```powershell
 cd C:\LazySlimeStudio\minigames\yutnori
-# 터미널 1
+
+# 터미널 1 (E2E 25개 전용 — 유닛/WS/룰북은 서버 불필요)
 node server.js --port 3088
-# 터미널 2
+
+# 터미널 2 (룰북 168 + 기존 110 = 273개)
+npx playwright test --reporter=list
+```
+
+기대 출력: `253 passed` (유닛 65 + WS 20 + 룰북 168, 서버 없이 실행 시) 또는 `273 passed` (E2E 25 포함, 서버 가동 시).
+
+### 룰북 기반 시나리오 (YR-Cx 시리즈, 168개)
+
+2026-05-31 추가. 룰북 §1~§13 + 부록을 14개 카테고리로 분할하여 `tests/rulebook-c1~c14-*.spec.js`로 작성. §13 11건 모두 커버 (정책 PASS 8 + 회귀 가드 3).
+
+| 카테고리 | 파일 | 시나리오 수 | 룰북 §참조 |
+|---|---|---|---|
+| YR-C1 | `rulebook-c1-yutsticks.spec.js` | 30 | §3, §13-3, §13-4 |
+| YR-C2 | `rulebook-c2-movement.spec.js` | 15 | §5, §13-10 |
+| YR-C3 | `rulebook-c3-capture.spec.js` | 10 | §7 |
+| YR-C4 | `rulebook-c4-stack.spec.js` | 10 | §8 |
+| YR-C5 | `rulebook-c5-backdo.spec.js` | 10 | §9, §13-5 |
+| YR-C6 | `rulebook-c6-corner.spec.js` | 10 | §10-1~3, §13-1 |
+| YR-C7 | `rulebook-c7-center.spec.js` | 10 | §10-3~5, §13-2, §13-6 |
+| YR-C8 | `rulebook-c8-bonus.spec.js` | 10 | §6 |
+| YR-C9 | `rulebook-c9-turn.spec.js` | 10 | §5-1, §13-11 |
+| YR-C10 | `rulebook-c10-victory.spec.js` | 5 | §11 |
+| YR-C11 | `rulebook-c11-ws.spec.js` | 15 | 부록 (WS) |
+| YR-C12 | `rulebook-c12-unresolved.spec.js` | 8 | §13-1~8 (정책 PASS) |
+| YR-C13 | `rulebook-c13-resolved-regression.spec.js` | 10 | §13-9/10/11 (회귀 가드) |
+| YR-C14 | `rulebook-c14-edge.spec.js` | 15 | §10/§6/§9/§11/부록 |
+
+### 레거시 smoke (18 assert)
+
+```powershell
 node tests/smoke.test.js --port 3088
 ```
 

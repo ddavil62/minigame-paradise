@@ -178,8 +178,8 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
     return { toCell: fromCell, awaitingBranch: false, passedStart: false };
   }
 
-  // 출발 전: HOME → 첫 이동 시 칸 0에서 시작 (0이 출발선 = 1칸 이동이면 칸 0)
-  // 단순화: HOME에서 N칸 이동 = 칸 (N-1)에 도착 (출발선 0을 첫 칸으로 카운트)
+  // 정통 룰: HOME(출발점) → 첫 던지기에서 출발 칸은 카운트하지 않는다.
+  // advanceOneCell의 -1 → 1 매핑이 이를 처리. 즉 HOME에서 도 → 칸 1, 걸 → 칸 3.
   let current = fromCell === HOME ? -1 : fromCell;
 
   // 본 구현의 외곽 진행 방향: 0 → 1 → 2 → ... → 19 → 0(완주)
@@ -248,9 +248,12 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
  */
 function advanceOneCell(cell, pathContext) {
   if (pathContext === 'outer') {
-    if (cell === -1) return 0;        // HOME → 첫 칸 (0)
-    if (cell >= 0 && cell < 19) return cell + 1;
-    if (cell === 19) return GOAL;     // 외곽 한 바퀴 완주 (19→0이면 시작점 통과 = 완주)
+    // 정통 룰: HOME(출발점) → 첫 던지기에서 출발 칸은 카운트하지 않는다.
+    // 즉 HOME에서 도(1) → 칸 1, 걸(3) → 칸 3. 출발 칸 자체(칸 0)는 "지나가는 칸"으로 처리.
+    if (cell === -1) return 1;        // HOME → 출발선 통과 + 첫 칸 카운트 = 칸 1
+    if (cell >= 1 && cell < 19) return cell + 1;
+    if (cell === 19) return GOAL;
+    if (cell === 0) return 1;         // 안전망: 칸 0(출발선)에 있으면 다음은 칸 1
     return GOAL;
   }
   if (pathContext === 'shortcutA') {
@@ -389,6 +392,9 @@ let game = {
   awaitingBranchAt: null,
   awaitingBranchResult: null,
   winner: null,
+  // 잡기 보너스 권리 플래그 (룰북 §6-2, §13-11).
+  // true면 큐가 비어도 추가 THROW_YUT 1회 허용. THROW 후 즉시 false로 소진.
+  capturedBonus: false,
 };
 
 /**
@@ -405,6 +411,8 @@ function resetGame() {
   game.awaitingBranchAt = null;
   game.awaitingBranchResult = null;
   game.winner = null;
+  // §13-11: 이전 게임의 capturedBonus 잔류 방지 (REMATCH 경계 케이스).
+  game.capturedBonus = false;
 }
 
 function createPiece() {
@@ -427,6 +435,8 @@ function softResetRoom() {
     awaitingBranchAt: null,
     awaitingBranchResult: null,
     winner: null,
+    // §13-11: 룸 전체 리셋 시 capturedBonus도 초기화 (잔류 방지).
+    capturedBonus: false,
   };
 }
 
@@ -718,6 +728,14 @@ wss.on('connection', (ws) => {
           }
         }
         const thrown = throwYutSticks();
+        // §13-11: 잡기 보너스 권리(capturedBonus)는 "한 턴 안 단 한 번"만 추가 THROW 보장.
+        // 이 시점이 capturedBonus 권리로 진입한 던지기였다면, 결과 산출 직후 즉시 false로 소진한다.
+        // (큐에 yut/mo가 남아 있어 보너스 던지기가 가능한 케이스와 무관하게 capturedBonus는 1회 소진)
+        // 이 처리가 없으면 잡기 → 보너스 THROW(do 등) → MOVE 후에도 capturedBonus=true가 남아
+        // 큐가 비어도 hasBonus=true로 평가되어 턴이 결정적으로 잠긴다 (QA-D2-001/002 재현).
+        if (game.capturedBonus === true) {
+          game.capturedBonus = false;
+        }
         // 백도인데 출발한 말이 하나도 없으면 자동 폐기 (큐에 넣지 않음).
         // 사용자에게 결과는 알려주되, 사용 불가하므로 다음 던지기/턴 종료로 진행한다.
         const canUseBackdo = thrown.result !== 'backdo'
@@ -826,6 +844,9 @@ wss.on('connection', (ws) => {
         const hasBonus = game.capturedBonus === true || lastResult === 'yut' || lastResult === 'mo';
         if (game.pendingResults.length === 0 && !hasBonus) {
           passTurn();
+          // capturedBonus 리셋 — 다음 턴에 잔류하면 상대 차례에 추가 던지기 권리가
+          // 잘못 전달되어 턴 흐름이 꼬인다. (룰북 §13-7 capturedBonus 누락 케이스)
+          game.capturedBonus = false;
         }
         broadcastState();
         break;

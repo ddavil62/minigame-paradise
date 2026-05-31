@@ -103,7 +103,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
  * @param {number} maxTries
  * @returns {Promise<object|null>} 일반 결과(YUT_RESULT) 또는 null
  */
-async function throwUntilNonBackdo(client, maxTries = 20) {
+async function throwUntilNonBackdo(client, maxTries = 50) {
+  // maxTries=50: 백도(1/16)가 한 번도 안 나올 확률 = (15/16)^50 ≈ 4%,
+  //              일반 결과(do/gae/geol/yut/mo)가 한 번이라도 나올 확률 ≈ 96%.
+  //              20회였을 때 fail 확률 ≈ 27% → 50회로 안정성 확보.
   for (let i = 0; i < maxTries; i++) {
     client.send({ type: 'THROW_YUT' });
     let r;

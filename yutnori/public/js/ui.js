@@ -199,13 +199,14 @@ export function createUI(els) {
     for (const [key, indices] of groups) {
       let cx, cy;
       if (key.startsWith('home_')) {
-        // HOME 영역: P1은 좌하, P2는 우상에 작게 배치
+        // HOME 영역: 양 팀 모두 같은 출발점(좌하) 근처에 배치. 정통 윷놀이는
+        // 두 팀이 같은 출발점에서 시작하며, 시각적 구분은 piece 색상으로 한다.
+        // P1은 출발선 바로 위, P2는 그 옆 가로 라인에 배치(겹침 방지).
         const home = homeCoord();
-        const baseX = player.id === 'p1' ? home.x : BOARD_SIZE - home.x;
-        const baseY = player.id === 'p1' ? home.y - 30 : 30;
-        cx = baseX + (indices.length > 1 ? 0 : 0);
+        const baseX = home.x;
+        const baseY = player.id === 'p1' ? home.y - 30 : home.y - 12;
+        cx = baseX;
         cy = baseY;
-        // 여러 개면 가로로 작게 배치
         indices.forEach((idx, k) => {
           drawPiece(ctx, baseX + k * 16, baseY, 10, color, colorDim, '');
         });

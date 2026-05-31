@@ -1,6 +1,16 @@
 # Yutnori — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. Phase 1 완료, smoke 18/18 PASS. Playwright 3종(유닛 65 + WS 20 + E2E 25 = 110) 전부 PASS.
+> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. Phase 1 완료, smoke 18/18 PASS. **Playwright 273/273 PASS** (유닛 65 + WS 20 + 룰북 168 + E2E 25). 룰북 §13 11/11 100% 커버 (2026-05-31).
+
+## 룰북 (필수 숙지)
+
+**`docs/RULEBOOK.md`** — 한국 표준 윷놀이 룰 + 본 구현 비교. matgo/janggi와 동일한 13섹션 패턴.
+
+- QA는 룰북 시나리오 작성 시 §번호를 반드시 인용한다 (예: §5-2 칸 수 검증, §10-2 모서리 분기).
+- Coder가 게임 로직(`server.js`)을 수정하면 **§13 구현 노트의 영향 항목을 확인**하고 룰북에 영향이 있으면 Doc Writer가 §13을 갱신한다.
+- `§13 구현 노트`: 구현 vs 표준 차이 **11건** (미해소 HIGH 2 / MED 1 / LOW 5, 해소 HIGH 1 / MED 1 / LOW 1). 룰북 시나리오 회귀 게이트의 핵심.
+- **2026-05-31 정통 룰 정합 수정 3건 완료**: §13-9 HOME 시각 통일 / §13-10 HOME → 칸 N 정통 매핑 / §13-11 capturedBonus 리셋. 상세는 룰북 §13.
+- **2026-05-31 룰북 기반 168 시나리오 추가 + 잠재 결함 5건 수정**: §13-11 capturedBonus 라이프사이클을 정밀 검증 중 결정적 잠금 버그(잡기 후 보너스 THROW 잔류) 발견 및 해소. U-18~U-22 기댓값 정통 룰로 갱신, resetGame/softResetRoom 명시 초기화, YR-C5-008/C8-008 flaky 안정화. 회귀 게이트가 253/253 PASS로 확장.
 
 ## 정체성
 
@@ -22,10 +32,12 @@
 3. **포트 충돌 자동 폴백**
    - 3000~3010 자동 시도. `wss = new WebSocketServer({ server })`가 HTTP server를 공유하므로 EADDRINUSE 시 **양 채널에 error 핸들러 필수** (tetris-battle 함정 동일).
 4. **단순화 결정**
-   - 모서리(5, 10)에 정확히 멈추면 다음 이동 시 **자동으로** 지름길 진입. (정통 룰은 선택지지만 친구 게임은 빠르게)
+   - 모서리(5, 10)에 정확히 멈추면 다음 이동 시 **자동으로** 지름길 진입. (정통 룰은 선택지지만 친구 게임은 빠르게) — 룰북 §13-1 미해소.
    - 중앙(23)에서만 분기 모달로 출구 선택.
    - 백도(빽도, X자 표식 가락) 변형 룰 미적용.
-   - 중앙→좌하 출구 합류는 직접 완주(GOAL)로 단순화 (정통 룰의 마지막 칸 1개 거치기 생략).
+   - 중앙→좌하 출구 합류는 직접 완주(GOAL)로 단순화 (정통 룰의 마지막 칸 1개 거치기 생략) — 룰북 §13-2 미해소.
+   - HOME → 보드 진입은 **2026-05-31부로 정통 룰 매핑 적용** (HOME → 칸 N). 이전 단순화(HOME → 칸 N-1)는 해소. 룰북 §13-10 참조.
+   - HOME 시각 위치는 **2026-05-31부로 양 팀 좌하 통일** (정통 룰). 이전 P2 우상 배치 단순화는 해소. 룰북 §13-9 참조.
 
 ## 디렉토리
 
@@ -52,32 +64,38 @@ yutnori/
 │       ├── piece.js          # 클릭 hit-test
 │       └── ui.js             # Canvas 보드/말 + DOM HUD
 └── tests/
-    ├── smoke.test.js          # 레거시 smoke, 18 assert (node 직접 실행)
-    ├── yut.unit.spec.js       # Playwright 단위 65개 — throwYutSticks/computeNextCell
-    ├── ws.scenarios.spec.js   # Playwright WS 20개 — 메시지 프로토콜/게임 흐름
-    └── e2e-scenarios.spec.js  # Playwright E2E 25개 — 브라우저 2페이지 실전 검증
+    ├── smoke.test.js                       # 레거시 smoke, 18 assert (node 직접 실행)
+    ├── yut.unit.spec.js                    # Playwright 단위 65개 — throwYutSticks/computeNextCell
+    ├── ws.scenarios.spec.js                # Playwright WS 20개 — 메시지 프로토콜/게임 흐름
+    ├── e2e-scenarios.spec.js               # Playwright E2E 25개 — 브라우저 2페이지 실전 검증
+    ├── rulebook-helpers.js                 # 룰북 시나리오 공용 헬퍼 (WsClient/startServer/inject/withRandom)
+    └── rulebook-c1~c14-*.spec.js           # Playwright 룰북 168개 (YR-C1~C14, §1~§13+부록 정밀 커버)
 ```
 
 ## 테스트 실행법
 
-### Playwright (주력 테스트 스위트, 110개)
+### Playwright (주력 테스트 스위트, 273개)
 
 ```powershell
-cd C:\antigravity\minigame-paradise\yutnori
+cd C:\LazySlimeStudio\minigames\yutnori
 
-# 터미널 1 (서버 — E2E 테스트용. 유닛/WS는 서버 없이도 가능)
+# 터미널 1 (서버 — E2E 25개 전용. 유닛/WS/룰북은 서버 없이도 가능)
 node server.js --port 3088
 
-# 터미널 2 (전체 110개 실행)
-npx playwright test tests/yut.unit.spec.js tests/ws.scenarios.spec.js tests/e2e-scenarios.spec.js --reporter=list
+# 터미널 2 (전체 273개 실행)
+npx playwright test --reporter=list
+
+# 서버 없이 가능한 부분만 (253개)
+npx playwright test tests/yut.unit.spec.js tests/ws.scenarios.spec.js tests/rulebook-c*.spec.js --reporter=list
 
 # 개별 실행
-npx playwright test tests/yut.unit.spec.js      # 유닛 65개 (서버 불필요)
-npx playwright test tests/ws.scenarios.spec.js  # WS  20개 (서버 불필요 — createApp 직접 import)
-npx playwright test tests/e2e-scenarios.spec.js # E2E 25개 (port 3088 서버 필요)
+npx playwright test tests/yut.unit.spec.js          # 유닛 65개 (서버 불필요)
+npx playwright test tests/ws.scenarios.spec.js      # WS 20개 (서버 불필요 — createApp 직접 import)
+npx playwright test tests/rulebook-c*.spec.js       # 룰북 168개 (서버 불필요, §13 11/11 커버)
+npx playwright test tests/e2e-scenarios.spec.js     # E2E 25개 (port 3088 서버 필요)
 ```
 
-기대: `110 passed`
+기대: `273 passed` (E2E 포함) 또는 `253 passed` (서버 불필요 분량만)
 
 ### 레거시 smoke (18 assert)
 
@@ -89,8 +107,9 @@ node tests/smoke.test.js --port 3088
 
 ### 회귀 게이트
 
-- 모든 변경은 **Playwright 110/110 PASS**를 유지해야 한다.
+- 모든 변경은 **Playwright 273/273 PASS**를 유지해야 한다 (서버 없이 핵심 회귀 253/253).
 - smoke 18/18도 유지한다.
+- 룰북 168개(YR-C1~C14)는 §13 11건을 100% 커버. 새 게임 로직 변경 시 영향 받는 카테고리를 우선 회귀 실행한다.
 - 신규 시나리오는 추가하되 기존 시나리오는 수정/삭제하지 않는다.
 
 ## WebSocket 메시지 프로토콜
@@ -127,10 +146,30 @@ node tests/smoke.test.js --port 3088
 | `board.js` 칸 좌표 vs `server.js` 인덱스 | 칸 인덱스 매핑은 양쪽이 **반드시 일치**해야 함 (0~19 외곽, 21/22 지름길A, 26/27 지름길B, 23 중앙). 변경 시 양쪽 동시 갱신. |
 | `MOVE_PIECE`의 `useResult` 검증 | 서버는 `pendingResults`에 해당 결과명이 있는지 indexOf로 검사. 큐에 없으면 ERROR. |
 | 보너스 턴 처리 | `lastResult === 'yut' || 'mo'`이면 큐가 비어도 다시 던질 수 있음. 잡기 보너스는 `game.capturedBonus` 플래그로 별도. 턴 종료 판단 시 `hasBonus` 체크 필수. |
+| `capturedBonus` 라이프사이클 | **3개 분기 모두에 명시 리셋 필요** (2026-05-31 §13-11 + 보강 해소): ① MOVE_PIECE/CHOOSE_PATH 핸들러의 `passTurn()` 직후 `game.capturedBonus = false`, ② THROW_YUT 핸들러에서 잡기 보너스 권리(=`capturedBonus===true`)로 진입한 던지기는 결과 큐 push 직후 `capturedBonus = false`로 1회 소진 처리, ③ `resetGame()` / `softResetRoom()` 명시 초기화. 누락하면 잡기 후 보너스 결과가 yut/mo가 아닐 경우 87.5% 확률로 결정적 턴 잠금이 발생한다 (QA-D2-001/002 회귀 가드 참조). 보너스 진입 검사식: `hasBonus = capturedBonus===true || lastResult==='yut' || lastResult==='mo'`. |
+| HOME → 보드 진입 칸 수 | `advanceOneCell()` cell === -1 분기는 **`return 1`** (정통 룰: HOME에서 도 = 칸 1). 추가로 `cell === 0`에서 `return 1` 안전망 필요. 이전 `return 0` 단순화는 정통과 1칸 차이를 유발했음. (2026-05-31 룰북 §13-10 해소 사유) |
 | 분기 대기 (`awaitingBranchAt`) | THROW/MOVE 모두 차단. 중앙 도달 시 piece는 **아직 이동시키지 않은 상태**로 두고 awaiting만 기록 → CHOOSE_PATH 시 movePiece 재호출. |
 | `start.bat` 인코딩 | ASCII-only로 유지. 한글 포함 시 cmd 949 코드페이지에서 깨짐. |
 | `stop.bat` 방식 | tetris-battle와 달리 윈도우 타이틀(`Yutnori Server`) 기준으로 종료 → 포트 3000~3010을 공유하는 다른 프로젝트(tetris-battle, matgo) 서버를 실수로 죽이지 않음. |
-| 윷가락 fronts↔result 매핑 | 정통 룰: 평평면 개수 = 칸 수 (도=1, 개=2, 걸=3, 윷=4). **모만 예외 (0개 → 5칸).** 백도는 fronts=1이고 그 평평면이 마크 가락일 때 발동. 거꾸로(fronts=0→윷, 4→모) 매핑하면 사용자 직관과 정반대로 동작하여 즉시 신고됨. Phase 2.1 핫픽스 사유. |
+| 윷가락 fronts↔result 매핑 | 정통 룰: 평평면 개수 = 칸 수 (도=1, 개=2, 걸=3, 윷=4). **모만 예외 (0개 → 5칸).** 백도는 fronts=1이고 그 평평면이 마크 가락일 때 발동. 거꾸로(fronts=0→윷, 4→모) 매핑하면 사용자 직관과 정반대로 동작하여 즉시 신고됨. Phase 2.1 핫픽스 사유. (룰북 §13-4) |
+
+### 룰북 §13 매핑 요약 — 구현 vs 표준 차이 (11건, 미해소 8 / 해소 3)
+
+코드 수정 시 영향 항목을 반드시 확인한다. 상세는 `docs/RULEBOOK.md` §13.
+
+| § | 항목 | 영향도 | 상태 | 한 줄 요약 |
+|---|---|---|---|---|
+| §13-1 | 모서리 강제 지름길 진입 | **HIGH** | 미해소 | 정통은 5/10에서 외곽/지름길 선택. 본 구현은 자동 지름길. **사용자 의심 1순위.** |
+| §13-2 | centerExitB 즉시 완주 | **HIGH** | 미해소 | 중앙→좌하 출구 시 남은 steps 무관 즉시 GOAL. **사용자 의심 2순위.** |
+| §13-3 | 윷가락 확률 균등 50% | LOW | 미해소 | 물리 가락은 60~65% 뒤집힘 편향. 디지털 단순화. |
+| §13-4 | 윷가락 매핑 회귀 위험 | MED | 미해소 | Phase 2→2.1 이력. 현재 정상. 회귀 테스트 필수. |
+| §13-5 | HOME 백도 자동 폐기 | LOW | 미해소 | 의도된 단순화. 토스트 안내 권장. |
+| §13-6 | 중앙 분기 양방향 자유 선택 | LOW | 미해소 | 정통은 진입 경로별 출구 고정. 본 구현은 자유. |
+| §13-7 | 선후공 결정 절차 생략 | LOW | 미해소 | 정통은 첫 던지기로 결정. 본 구현은 p1 고정. |
+| §13-8 | 외곽 인덱스 20/24/25/28 미사용 | LOW | 미해소 | 단순화. 코드 가독성 영향만. |
+| §13-9 | HOME 시작 위치 좌우 분리 | LOW | **2026-05-31 해소** | 이전 P1 좌하/P2 우상 → 양 팀 좌하 통일 (`public/js/ui.js`). |
+| §13-10 | HOME → 칸 N-1 단순화 | MED | **2026-05-31 해소** | `advanceOneCell` `cell === -1` `return 0 → 1` + `cell === 0` 안전망. HOME → 칸 N 정통 매핑. |
+| §13-11 | capturedBonus 잔류 위험 | **HIGH** | **2026-05-31 해소(+보강)** | MOVE_PIECE/CHOOSE_PATH `passTurn()` 직후 명시 리셋 + 2026-05-31 보강: THROW_YUT 잡기 보너스 진입 시 결과 큐 push 직후 1회 소진 리셋 + `resetGame`/`softResetRoom` 명시 초기화. 보강 전에는 잡기 후 보너스 결과가 yut/mo 아닐 시 87.5% 확률 잠금. |
 
 ## 파이프라인 적용 규칙
 
@@ -156,6 +195,7 @@ node tests/smoke.test.js --port 3088
 ## 참조
 
 - 사용자 문서: `README.md`
+- **권위 룰북**: `docs/RULEBOOK.md`
 - 현재 상태: `docs/PROJECT.md`
 - 변경 이력: `docs/CHANGELOG.md`
 - Coder 리포트: `C:\LazySlimeStudio\.claude\specs\2026-05-25-yutnori-coder-report.md`

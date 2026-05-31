@@ -1,5 +1,72 @@
 # Yutnori — 변경 이력
 
+## Rulebook Tests — 룰북 기반 168 시나리오 + 결함 5건 수정 (2026-05-31)
+
+### 추가
+- **룰북 기반 Playwright 시나리오 168개 신규 작성** (`tests/rulebook-c1~c14-*.spec.js`, 14개 spec 파일).
+  - ID 체계: `YR-C{1~14}-{NNN}`. 기존 `U-/W-/E-`와 충돌 없음.
+  - 각 `test()`에 룰북 §번호 인용 + Given/When/Then 한국어 주석.
+  - 카테고리: C1 윷가락 30 / C2 이동 15 / C3 잡기 10 / C4 업기 10 / C5 백도 10 / C6 모서리 분기 10 / C7 중앙 분기 10 / C8 보너스 10 / C9 턴 전환 10 / C10 승리 5 / C11 WS 프로토콜 15 / C12 §13 미해소 정책 PASS 8 / C13 §13 해소 회귀 가드 10 / C14 엣지케이스 15.
+- **공용 헬퍼 `tests/rulebook-helpers.js`** 신규: `WsClient`, `withRandom`, `startServer`, `stopServer`, `connectWs`, `setupGame`, `inject`, `injectAndDrain`, `placePieces`, `forceResults` 9개 export.
+- 룰북 §13 11건 100% 커버: §13-1/2 정책 PASS (C6/C7/C12), §13-3/4/5/6/7/8 정책 PASS (C1/C2/C5/C7/C9/C12), §13-9/10/11 회귀 가드 (C2/C13).
+
+### 변경
+- `tests/yut.unit.spec.js` U-18~U-22 5건 기댓값 갱신: §13-10 해소(HOME → 칸 N 정통 매핑) 이전 단순화 기댓값(HOME + do → cell 0 등)이 잔존하여 사전 FAIL 상태였음. YR-C2-001~005 / YR-C13-001~004와 동일 매핑으로 통일. `yut.unit` 65/65 PASS 회복.
+
+### 수정 (Bugfix)
+- **`server.js` THROW_YUT 핸들러 capturedBonus 잔류 [HIGH 결함]**: 잡기 직후 보너스 THROW로 do/gae/geol/backdo가 나오면 `capturedBonus=true`가 잔류하여 MOVE 후에도 `hasBonus`가 계속 true → `passTurn`이 진입되지 않아 턴이 영원히 안 넘어가던 결정적 잠금 버그. 발생 확률: 잡기 후 87.5%. 결과 큐 push 직후 `capturedBonus = false`로 1회 소진 리셋 추가. (QA-D2-001/002 회귀 가드)
+- **`server.js` MOVE_PIECE 핸들러 capturedBonus 리셋 시점 보강**: 잡기 발생 분기에서 `passTurn` 진입 전 `capturedBonus` 일관성 보장.
+- **`server.js` `resetGame()` / `softResetRoom()` capturedBonus 명시 초기화**: 기존에 미초기화되어 첫 액세스 시 undefined. REMATCH 경계에서 잔류 가능성 차단. `game = { ..., capturedBonus: false }` 추가.
+- **YR-C5-008 (HOME 백도 자동 폐기) flaky 안정화**: backdo 시도 한도 50회 → 100회 상향으로 이론적 fail 확률 4.07% → 0.16%로 감소.
+- **YR-C8-008 (백도 보너스 없음) flaky 안정화**: WS race condition 완화 (drain 순서 보강).
+
+### 회귀 결과
+- **253/253 PASS** (5.2초): 신규 168 + 기존 yut.unit 65 + ws.scenarios 20. 5회 반복 안정성 0 flaky.
+- E2E 25개는 서버 가동 시 별도 회귀.
+
+### 알려진 이슈 (Out of Scope)
+- §13-1 / §13-2 (HIGH 미해소) 정통 룰 정합 발주는 본 작업 범위 밖. C6/C7/C12에서 정책 PASS로 검증만 유지.
+- Windows libuv `UV_HANDLE_CLOSING` 콘솔 경고. 테스트 결과 자체에는 영향 없음. Node 22.x 업그레이드 시 자연 해결 가능성.
+
+### 참고
+- 목적 정의서: `.claude/specs/2026-05-31-yutnori-rulebook-tests-scope.md`
+- 스펙: `.claude/specs/2026-05-31-yutnori-rulebook-tests-plan.md`
+- Coder 리포트: `.claude/specs/2026-05-31-yutnori-rulebook-tests-coder-report.md`
+- Coder Revise 리포트: `.claude/specs/2026-05-31-yutnori-rulebook-tests-coder-revise-report.md`
+- QA 리포트: `.claude/specs/2026-05-31-yutnori-rulebook-tests-qa-report.md`
+- Doc Writer 리포트: `.claude/specs/2026-05-31-yutnori-rulebook-tests-doc-writer-report.md`
+
+## Rulebook — 한국 표준 룰북 작성 (2026-05-31)
+
+### 추가
+- **`docs/RULEBOOK.md` 신규 작성** (635줄, §1~§13 + 부록).
+  - matgo/janggi와 동일한 13섹션 패턴 채택.
+  - 출처 29회 인용: 한국어 위키백과 「윷놀이」, 영문 Wikipedia 「Yunnori」, 한국민속대백과사전, 나무위키.
+  - 섹션 구성:
+    - §1 게임 개요 / §2 말판 + ASCII 다이어그램 / §3 윷가락 결과 표 (실측 5,000회 분포 포함)
+    - §4 말 / §5 이동 규칙 + 칸 수 표 / §6 보너스 / §7 잡기 / §8 업기
+    - §9 백도 / §10 분기점(모서리/중앙) / §11 승리 / §12 QA 체크리스트 (8 카테고리)
+    - §13 구현 노트 (구현 vs 표준 차이) + 부록 WebSocket 프로토콜
+- **§13 구현 vs 표준 차이 8건** (영향도 라벨):
+  - **§13-1 [HIGH]** 모서리(5/10) 강제 지름길 진입 — 정통은 외곽/지름길 선택. 사용자 의심 후보 **1순위**.
+  - **§13-2 [HIGH]** centerExitB 즉시 완주 — 중앙→좌하 진행 시 남은 steps 무관 즉시 GOAL. 사용자 의심 후보 **2순위**.
+  - §13-3 [LOW] 윷가락 확률 균등 50% (의도된 디지털 단순화).
+  - §13-4 [MED] 윷가락 매핑 회귀 위험 (Phase 2→2.1 이력, 현재 해소).
+  - §13-5 [LOW] HOME 백도 자동 폐기 (의도된 단순화).
+  - §13-6 [LOW] 중앙 분기 양방향 자유 선택 (표준에 모호).
+  - §13-7 [LOW] 선후공 결정 절차 생략 (p1 고정).
+  - §13-8 [LOW] 외곽 인덱스 20/24/25/28 미사용 (단순화).
+- 사용자가 보고한 "뭔가 많이 이상해"의 원인 후보 3건 (§13-1 / §13-2 / §13-4) 명시.
+
+### 변경
+- `README.md`: "룰 기준 문서" 섹션 추가. 룰북 링크 + §13 HIGH 2건 강조.
+- `CLAUDE.md`: "룰북 (필수 숙지)" 섹션 추가. "변경 시 자주 깨지는 함정"에 §13 매핑 8건 요약표 추가.
+
+### 참고
+- 목적 정의서: `.claude/specs/2026-05-31-yutnori-rulebook-scope.md`
+- 스펙: `.claude/specs/2026-05-31-yutnori-rulebook-plan.md`
+- Doc Writer 리포트: `.claude/specs/2026-05-31-yutnori-rulebook-doc-writer-report.md`
+
 ## Phase 2.1 — 윷가락 매핑 재정정 (2026-05-25, 긴급 핫픽스)
 
 ### 정정 (Bugfix)

@@ -57,8 +57,10 @@
 
 ## 테스트 현황
 
-- `tests/smoke.test.js`: 6개 시나리오, 18 assert, **18/18 PASS**.
-  - 시나리오: JOIN 흐름, READY/START, THROW_YUT broadcast, MOVE_PIECE, Room is full, 알 수 없는 메시지 무시.
+- **Playwright 273개**: 유닛 65 + WS 20 + 룰북 168 + E2E 25.
+  - 룰북 168개 (YR-C1~C14): 룰북 §1~§13 + 부록 정밀 커버, §13 11/11 100% (2026-05-31).
+  - 서버 미가동 시 253/253 PASS, 서버 가동 시 273/273 PASS.
+- `tests/smoke.test.js`: 6개 시나리오, 18 assert, **18/18 PASS** (레거시 유지).
 
 ## 참조
 

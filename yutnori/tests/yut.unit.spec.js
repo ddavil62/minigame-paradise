@@ -187,33 +187,39 @@ test('U-17: 1000회 던지기에서 모든 6가지 결과가 나온다', () => {
   expect(seen.has('mo')).toBe(true);
 });
 
-// ── §3 computeNextCell — HOME에서 이동 ──────────────────────────
+// ── §3 computeNextCell — HOME에서 이동 (§13-10 해소: HOME → 칸 N 정통 매핑) ─
 
-test('U-18: HOME + do(1) → cell 0', () => {
+test('U-18: HOME + do(1) → cell 1 (§13-10 정통 매핑)', () => {
+  // 2026-05-31 §13-10 해소: HOME에서 도(1)는 칸 1로 진입한다.
+  // 이전 단순화(HOME → 칸 N-1)는 폐기. YR-C2-001 / YR-C13-001과 일치.
   const r = computeNextCell(HOME, 1);
-  expect(r.toCell).toBe(0);
+  expect(r.toCell).toBe(1);
   expect(r.awaitingBranch).toBe(false);
   expect(r.passedStart).toBe(false);
 });
 
-test('U-19: HOME + gae(2) → cell 1', () => {
+test('U-19: HOME + gae(2) → cell 2 (§13-10)', () => {
+  // 2026-05-31 §13-10 해소 후 정통 매핑.
   const r = computeNextCell(HOME, 2);
-  expect(r.toCell).toBe(1);
-});
-
-test('U-20: HOME + geol(3) → cell 2', () => {
-  const r = computeNextCell(HOME, 3);
   expect(r.toCell).toBe(2);
 });
 
-test('U-21: HOME + yut(4) → cell 3', () => {
-  const r = computeNextCell(HOME, 4);
+test('U-20: HOME + geol(3) → cell 3 (§13-10)', () => {
+  // 2026-05-31 §13-10 해소 후 정통 매핑.
+  const r = computeNextCell(HOME, 3);
   expect(r.toCell).toBe(3);
 });
 
-test('U-22: HOME + mo(5) → cell 4', () => {
-  const r = computeNextCell(HOME, 5);
+test('U-21: HOME + yut(4) → cell 4 (§13-10)', () => {
+  // 2026-05-31 §13-10 해소 후 정통 매핑.
+  const r = computeNextCell(HOME, 4);
   expect(r.toCell).toBe(4);
+});
+
+test('U-22: HOME + mo(5) → cell 5 (§13-10)', () => {
+  // 2026-05-31 §13-10 해소 후 정통 매핑. (보너스 결과는 별도 — 본 케이스는 이동 칸 수만 검증)
+  const r = computeNextCell(HOME, 5);
+  expect(r.toCell).toBe(5);
 });
 
 // ── §4 computeNextCell — 외곽 경로 ───────────────────────────────
