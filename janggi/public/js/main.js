@@ -40,6 +40,8 @@ let gameState = null;
 let selectedPiece = null;
 /** @type {Array<{file:number, rank:number}>} 현재 합법 수 목록 */
 let currentLegalMoves = [];
+/** @type {any} 직전 STATE의 board 스냅샷 — 매 초 시간 broadcast 시 selectedPiece 유지 판정용 */
+let prevBoardSnapshot = null;
 /** @type {Map<string, HTMLElement>} 기물 DOM 맵 */
 let pieceMap = new Map();
 /** @type {boolean} 게임 종료 여부 */
@@ -79,10 +81,20 @@ function connect() {
     wsPath = `${proto}//${location.host}/ws`;
   }
 
-  // side 쿼리 전달
-  if (querySide) {
-    wsPath += `?side=${querySide}`;
+  // mode 정보 유지: URL query 우선, 없으면 sessionStorage. 새로고침해도 같은 모드로 재진입.
+  // mode=ai이면 서버가 봇 child_process를 자동 spawn.
+  let mode = queryMode;
+  if (mode) {
+    sessionStorage.setItem('janggi:mode', mode);
+  } else {
+    mode = sessionStorage.getItem('janggi:mode') || 'human';
   }
+
+  // query 조립 (side + mode)
+  const params = new URLSearchParams();
+  if (querySide) params.set('side', querySide);
+  params.set('mode', mode);
+  wsPath += `?${params.toString()}`;
 
   ws = new WebSocket(wsPath);
 
@@ -216,13 +228,28 @@ function handleState(msg) {
 
   // 기물 렌더링
   const isPlaying = msg.phase === 'playing';
-  selectedPiece = null;
-  currentLegalMoves = [];
+  // 서버가 시간 카운트다운으로 매 초 STATE를 broadcast하기 때문에 selectedPiece를
+  // 무조건 리셋하면 사용자 선택 하이라이트가 1초마다 사라진다. 보드 상태(board)가
+  // 직전 STATE와 동일하면 선택 유지.
+  const boardChanged = JSON.stringify(msg.board) !== JSON.stringify(prevBoardSnapshot);
+  prevBoardSnapshot = msg.board;
+  if (boardChanged) {
+    selectedPiece = null;
+    currentLegalMoves = [];
+  }
   clearHighlights(highlightsLayer);
 
   pieceMap = renderPieces(
     piecesLayer, msg.board, mySide, msg.turn, isPlaying
   );
+
+  // 선택 유지 케이스 — 하이라이트 다시 그림 (시그니처: container, file, rank, moves, board)
+  if (!boardChanged && selectedPiece && currentLegalMoves.length > 0) {
+    highlightMoves(
+      highlightsLayer, selectedPiece.file, selectedPiece.rank,
+      currentLegalMoves, msg.board
+    );
+  }
 
   // 마지막 수 표시
   markLastMove(highlightsLayer, msg.lastMove);

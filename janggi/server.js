@@ -15,6 +15,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import {
@@ -44,9 +45,15 @@ const MIME = {
  * 장기 게임 앱 인스턴스를 생성한다.
  * 모든 룸 상태(players/game)는 closure로 격리되어 다른 게임과 공유되지 않는다.
  *
+ * @param {object} [opts]
+ * @param {() => string} [opts.getBotUrl]
+ *   봇이 접속할 WS URL을 반환하는 함수 (mode=ai 사용자 진입 시 호출).
+ *   launcher 통합 모드에서는 launcher가 `ws://localhost:{PORT}/janggi/ws?mode=bot` 를 넘기고,
+ *   standalone 모드에서는 listen 포트로 자동 구성.
  * @returns {{ handleHttp: Function, handleUpgrade: Function }}
  */
-export function createApp() {
+export function createApp(opts = {}) {
+  const getBotUrl = opts.getBotUrl || (() => null);
   // ── 룸 상태 (closure 격리, 2인 1룸 고정) ─────────────────────────
   /**
    * @typedef {Object} Player
@@ -194,14 +201,63 @@ export function createApp() {
     broadcastAll({ type: 'GAME_START', phase: 'playing' });
   }
 
+  // ── 봇 자식 프로세스 관리 (mode=ai 사용자가 들어왔을 때 자동 spawn) ────
+  /** @type {import('child_process').ChildProcess|null} */
+  let botChild = null;
+
+  /**
+   * 봇 자식 프로세스를 spawn한다. 이미 실행 중이면 무시.
+   * bot.js가 없으면 경고 출력 후 스킵.
+   */
+  function spawnBotChild() {
+    const botPath = path.join(__dirname, 'bot.js');
+    if (!fs.existsSync(botPath)) {
+      console.warn('[janggi] bot.js 없음 — 봇 spawn 스킵');
+      return;
+    }
+    if (botChild && botChild.exitCode === null) {
+      console.log('[janggi] 봇 이미 실행 중');
+      return;
+    }
+    const url = getBotUrl();
+    if (!url) {
+      console.warn('[janggi] getBotUrl이 null 반환 — 봇 spawn 스킵');
+      return;
+    }
+    console.log(`[janggi] 봇 spawn: ${url}`);
+    botChild = spawn(process.execPath, [botPath, '--url', url], {
+      detached: false,
+      stdio: 'ignore',
+    });
+    botChild.on('exit', (code) => {
+      console.log(`[janggi] 봇 종료 (code=${code})`);
+      botChild = null;
+    });
+  }
+
+  /**
+   * 봇 자식 프로세스를 종료한다. mode=ai 사용자가 끊어졌을 때 호출.
+   */
+  function killBotChild() {
+    if (botChild && botChild.exitCode === null) {
+      console.log('[janggi] 봇 종료 요청');
+      botChild.kill();
+      botChild = null;
+    }
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
   // ── WebSocket 핸들러 ──────────────────────────────────────────────
   wss.on('connection', (ws, req) => {
-    // URL 쿼리에서 roomId, side 파싱 (런처에서 전달)
+    // URL 쿼리에서 roomId, side, mode 파싱 (런처에서 전달)
     const url = new URL(req.url, 'http://localhost');
     const querySide = url.searchParams.get('side'); // 'han' | 'cho' | null
+    const wsMode = url.searchParams.get('mode') || 'human'; // 'human' | 'ai' | 'bot'
+    const isBot = wsMode === 'bot';
+    ws._mode = wsMode;
+    ws._isBot = isBot;
 
     // 정원 초과 직전, 좀비 슬롯 즉시 청소 시도
     if (players.length >= 2) {
@@ -279,6 +335,11 @@ export function createApp() {
       broadcastState();
       // 초가 먼저 배치 선택 (30초 타이머)
       startSetupTimer('cho');
+    } else if (wsMode === 'ai' && !isBot) {
+      // mode=ai 사용자가 혼자 들어왔다 → 봇 자동 spawn (자기 자식 프로세스).
+      // 봇이 connect하면 위 분기로 게임 시작.
+      // 약간의 지연: 사용자가 JOINED를 받기 전 봇이 먼저 와서 side 충돌 가능성 회피.
+      setTimeout(() => spawnBotChild(), 200);
     }
 
     setupMessageHandler(ws, player);
@@ -420,8 +481,13 @@ export function createApp() {
     });
 
     ws.on('close', () => {
-      console.log(`[janggi] ${player.id}(${player.side}) 연결 해제`);
+      console.log(`[janggi] ${player.id}(${player.side}) 연결 해제 (mode=${ws._mode})`);
       players = players.filter((p) => p.id !== player.id);
+      // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
+      // 새 사용자가 다시 들어오면 새 봇이 spawn된다.
+      if (!ws._isBot) {
+        killBotChild();
+      }
       if (players.length === 0) {
         game = null;
         stopTickTimer();
@@ -526,7 +592,10 @@ if (isDirectExecution()) {
     ? parseInt(argv[portFlagIndex + 1], 10)
     : 3006;
 
-  const app = createApp();
+  const app = createApp({
+    // 단독 실행 시 봇 WS URL 제공 (mode=ai 사용자 진입 시 봇 자동 spawn 지원)
+    getBotUrl: () => `ws://localhost:${PORT}/ws?mode=bot`,
+  });
   const server = http.createServer(app.handleHttp);
   server.on('upgrade', app.handleUpgrade);
 

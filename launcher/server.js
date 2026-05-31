@@ -73,7 +73,10 @@ const GAME_APPS = {
   }),
   'yutnori':        createYutnoriApp(),
   'tetris-battle':  createTetrisApp(),
-  'janggi':         createJanggiApp(),
+  'janggi':         createJanggiApp({
+    // mode=ai 사용자 진입 시 janggi 서버가 자체적으로 봇을 spawn할 URL.
+    getBotUrl: () => `ws://localhost:${PORT}/janggi/ws?mode=bot`,
+  }),
 };
 
 /**

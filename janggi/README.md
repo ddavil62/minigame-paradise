@@ -58,11 +58,21 @@ node janggi/lib/_smoke_server.js     # P2 서버 WS (34개)
 node janggi/lib/_smoke_launcher.js   # P3 런처 통합 (19개)
 ```
 
+## AI 봇
+
+- `bot.js` 단독 WS 클라이언트. matgo 봇 패턴과 동일 (`node bot.js --url ws://...` 실행).
+- 1수 휴리스틱 평가: 잡는 수 우선(차13/포7/마5/상3/사3/졸2) + 장군 보너스(+1) + 기본 가중치(0.1) + 동률 random.
+- 자살수는 `getAllLegalMoves`의 `wouldBeSelfCheck` 필터로 원천 차단. 합법 수 0이면 자동 RESIGN.
+- 마/상 배치는 `MSMS` 고정 송신. 무승부 제안은 무시(묵시적 거절, 다음 수 송신 시 서버가 자동 리셋).
+- 응답 지연 400~900ms.
+- launcher 1/2 AI 모드에서 장기 카드 클릭 → janggi 서버가 child_process로 봇 자동 spawn → 사람 disconnect 시 자동 종료.
+
 ## 파일 구조
 
 ```
 janggi/
-  server.js                  # createApp() + WS 핸들러 + 정적 파일 서빙 (포트 3006)
+  server.js                  # createApp(opts) + WS 핸들러 + bot spawn/kill + 정적 파일 서빙 (포트 3006)
+  bot.js                     # WS 봇 클라이언트 (mode=ai 진입 시 server가 spawn)
   lib/
     board.js                 # 9x10 보드 CRUD, 4종 배치, 직렬화, 해시
     pieces.js                # 7종 기물 합법 이동 산출 (멱/포다리/궁성 대각선)
@@ -114,7 +124,7 @@ janggi/
 
 ## 제약사항
 
-- AI 봇 미지원 (`botAvailable: false`). LAN 2인 PvP 전용.
+- AI 봇은 1수 휴리스틱 수준 (강한 AI/MCTS/정석 DB 없음).
 - 관전 모드, 기보 저장/내보내기 미구현.
 - 모바일 레이아웃 미최적화 (데스크톱 우선).
 - 외부 에셋 없음 (CSS/Canvas only).

@@ -85,11 +85,25 @@ cd minigame-paradise && node launcher/server.js
 cd minigame-paradise && node janggi/server.js
 ```
 
+## AI 봇
+
+- matgo와 동일 패턴: `janggi/bot.js` 신규 + `janggi/server.js`의 `createApp(opts={})`가 `opts.getBotUrl`을 받아 mode=ai 진입 시 child_process로 spawn → 사람 disconnect 시 killBotChild.
+- launcher 통합: `launcher/server.js`에서 `createJanggiApp({ getBotUrl: () => 'ws://localhost:${PORT}/janggi/ws?mode=bot' })`로 주입.
+- 평가 함수 핵심 (`bot.js:chooseMove`):
+  - `lib/rules.js`의 `getAllLegalMoves(board, side)` 사용 → `wouldBeSelfCheck` 필터 내장, 봇이 자살수를 둘 경로 원천 차단.
+  - 잡는 수: `lib/score.js`의 `PIECE_SCORE`(차13/포7/마5/상/사3/졸2) 가산.
+  - 장군 보너스: `cloneBoard` + `movePiece` 후 `isInCheck(sim, opponent)`이면 +1.
+  - 기본 가중치 0.1, 동률 random 선택.
+  - 합법 수 0이면 `RESIGN` 송신 → 외통수 직전 자동 기권 안전망.
+- 마/상 배치는 `'MSMS'` 고정. 무승부 제안은 무시(묵시적 거절, 다음 MOVE 송신 시 서버가 `drawOfferedBy=null` 자동 리셋).
+- 응답 지연 400~900ms. 중복 행동 방지 키 `phase|turn|moveCount`.
+
 ## 파일 구조 (요약)
 
 ```
 janggi/
-├── server.js                — createApp + WS handler (3006)
+├── server.js                — createApp(opts) + WS handler + bot spawn/kill (3006)
+├── bot.js                   — WS 봇 클라이언트 (mode=ai 진입 시 server가 spawn)
 ├── lib/
 │   ├── board.js             — 9x10 보드, 4종 배치, 직렬화, 해시
 │   ├── pieces.js            — 7종 기물 합법 이동 (멱/포다리/궁성 대각)
@@ -117,7 +131,7 @@ janggi/
 
 ## 알려진 제약
 
-- AI 봇 미지원 (`botAvailable: false`) — LAN 2인 PvP 전용
+- AI 봇은 1수 휴리스틱 수준 (강한 AI/MCTS/정석 DB 없음, 봇 강도 조절 UI 없음)
 - 관전 모드 / 기보 저장 / 모바일 레이아웃 미구현
 - 외부 에셋 없음 (CSS/Canvas only)
 

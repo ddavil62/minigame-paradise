@@ -1,5 +1,57 @@
 # Changelog
 
+## [2026-05-31] - 장기 AI 봇 추가 (mode=ai 자동 spawn)
+
+### 추가
+- **`janggi/bot.js`** (신규, 215 LOC): matgo 봇 패턴을 그대로 이식한 WS 봇 클라이언트. `node bot.js --url ws://...` 단독 실행 가능
+  - 메시지 라우터: `JOINED`(mySide 저장) / `STATE`(handleState) / `SETUP_PROMPT`(보조 트리거) / `GAME_OVER`/`OPPONENT_LEFT`/`ERROR`(ws.close)
+  - 자기 차례 감지: `state.turn === mySide` + 중복 행동 방지 키 `phase|turn|moveCount`
+  - 응답 지연 400~900ms (`400 + random*500`)
+  - 마/상 배치: `'MSMS'` 고정 송신
+  - DRAW_OFFERED 수신 시 무시 (묵시적 거절)
+- **`chooseMove(board, side)` 1수 휴리스틱 평가 함수**:
+  - `getAllLegalMoves(board, side)`로 합법 수 열거 (`wouldBeSelfCheck` 내장 필터 → 자살수 원천 차단)
+  - 잡는 수: `PIECE_SCORE[target.type]` 가산 (차13/포7/마5/상3/사3/졸2)
+  - 장군 보너스: `cloneBoard` + `movePiece` 후 `isInCheck(sim, opponent)`이면 +1
+  - 기본 가중치 0.1 (동률 다양성 확보)
+  - 최댓값 동률은 random 선택 → 동형반복 3회 자초 가능성 완화
+  - 합법 수 0이면 `RESIGN` 송신 (외통수 직전 자동 기권)
+
+### 변경
+- **`janggi/server.js`**:
+  - `import { spawn } from 'child_process'` 추가
+  - `createApp()` → `createApp(opts = {})` 시그니처 + `opts.getBotUrl` 옵션 (기본값 `() => null`)
+  - `spawnBotChild()` / `killBotChild()` 블록 이식 (matgo 패턴, prefix `[janggi]`): `fs.existsSync(botPath)` 사전 체크 + `botChild.exitCode === null` 중복 spawn 방지 + `getBotUrl()` null 가드 + `botChild.on('exit')`에서 슬롯 해제
+  - connection 핸들러: `wsMode`/`ws._isBot` 추출 → `wsMode === 'ai' && !isBot` 분기에서 200ms 후 `spawnBotChild()`
+  - close 핸들러: `if (!ws._isBot) killBotChild()` (봇 disconnect 시 cascade 차단)
+  - 단독 실행 분기: `getBotUrl: () => 'ws://localhost:${PORT}/ws?mode=bot'` 자동 구성
+- **`launcher/server.js`**: `createJanggiApp({ getBotUrl: () => 'ws://localhost:${PORT}/janggi/ws?mode=bot' })` 주입 (matgo와 동일 시그니처)
+- **`launcher/public/games.json`**: janggi `botAvailable: false → true` → 1/2 AI 모드 카드 활성화 (현재 botAvailable=true: matgo + janggi 2개)
+
+### 회귀 검증
+- `npx playwright test tests/rulebook-c*.spec.js`: **111/111 PASS** (2.5s, JR-C1~C12 전부)
+- `node --check`: bot.js / server.js / launcher/server.js 모두 PASS
+- 통합 동작 검증 (coder 리포트 §A/B): 단독(3066) + launcher(3077) 모두 사람 입장 → 200ms 후 봇 spawn → MSMS 배치 → playing → 졸 응수 → disconnect 시 봇 자동 정리 정상
+
+### 알려진 한계 (의도된 범위)
+- 봇 강도는 1수 휴리스틱 수준 (다음 턴 상대의 잡힘 위험 평가 없음). 스펙 §봇 강도 명시 범위
+- 장군 보너스(+1)가 졸 잡기(+2)보다 작아 무의미 장군보다 졸 잡기 우선 (보수적 동작, 의도)
+- launcher upgrade 라우터 회귀 (직전 QA agent 발견)는 본 작업과 독립 → 별도 스펙 분리 권고
+
+### 변경된 파일 목록
+- `janggi/bot.js` (신규)
+- `janggi/server.js` (수정)
+- `launcher/server.js` (수정 1줄)
+- `launcher/public/games.json` (수정 1플래그)
+
+### 참고
+- 목적 정의서: `.claude/specs/2026-05-31-janggi-ai-bot-scope.md`
+- 스펙: `.claude/specs/2026-05-31-janggi-ai-bot-plan.md`
+- 구현 리포트: `.claude/specs/2026-05-31-janggi-ai-bot-coder-report.md`
+- QA: `.claude/specs/2026-05-31-janggi-ai-bot-qa-report.md` (PASS, 룰북 111/111 회귀 + 정적 + 평가 함수 리뷰 모두 PASS)
+
+---
+
 ## [2026-05-31] - 장기 룰북 LOW 권고 5건 보강 (105 → 111 시나리오, §11 100% 커버리지)
 
 ### 추가
