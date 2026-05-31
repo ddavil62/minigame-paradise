@@ -13,6 +13,8 @@ LAN 1:1 한국 전통 장기. KJA 2009 개정 룰(빅장 폐지, 점수제, 동�
 - 빅장은 합법 수 (무승부 아님)
 - 시간제: 본 시간 10분 + 초읽기 30초 x 3회
 
+> KJA 2009 표준과 본 구현의 미세 차이 8건(졸 궁성 대각, 차/포 궁성 임의 거리, 50수 트리거, 동형반복 초기 해시, 빅장 합법 처리, 양수겸장 응수 부재, 무승부 자동 취소 방향 등)은 룰북 §13 "구현 노트" 참조.
+
 ## 실행
 
 ### 통합 런처 (권장)
@@ -33,6 +35,8 @@ node janggi/server.js
 
 ## 테스트
 
+총 292개 테스트 — 단위 77 + 엣지 58 + E2E 5 + 룰북 111 + 스모크 126 (lib 73 / server 34 / launcher 19).
+
 ```bash
 cd minigame-paradise
 
@@ -44,6 +48,9 @@ npx playwright test --config janggi/playwright.config.js janggi/tests/qa-edge-ca
 
 # E2E 브라우저 테스트 (서버 필요, 5개)
 npx playwright test --config janggi/playwright.config.js janggi/tests/qa-e2e.spec.js --reporter=list
+
+# 룰북 기반 시나리오 (단위, 서버 불필요, 111개 — JR-C1~C12)
+npx playwright test --config janggi/playwright.config.js janggi/tests/rulebook-c*.spec.js --reporter=list
 
 # 스모크 테스트
 node janggi/lib/_smoke.js            # P1 게임 로직 (73개)
@@ -73,8 +80,22 @@ janggi/
     janggi.spec.js           # QA-001~QA-020 (77개)
     qa-edge-cases.spec.js    # 엣지케이스 (58개)
     qa-e2e.spec.js           # E2E 브라우저 (5개)
+    rulebook-c1-pieces.spec.js     # JR-C1 기물 이동 25개 (§5)
+    rulebook-c2-block.spec.js      # JR-C2 멱/포다리 10개 (§8-1, §8-2)
+    rulebook-c3-palace.spec.js     # JR-C3 궁성 대각/제한 10개 (§2, §5)
+    rulebook-c4-check.spec.js      # JR-C4 장군/외통수/자살수 15개 (§7-1, §8-3, §8-4)
+    rulebook-c5-repetition.spec.js # JR-C5 동형반복/50수 10개 (§7-4, §10)
+    rulebook-c6-score.spec.js      # JR-C6 점수제/덤 10개 (§3, §7-2)
+    rulebook-c7-time.spec.js       # JR-C7 시간/초읽기 5개 (§9)
+    rulebook-c8-draw.spec.js       # JR-C8 무승부/기권 6개 (§7-3, §8-7, §10)
+    rulebook-c9-doublechk.spec.js  # JR-C9 양수겸장 5개 (§8-5, §13-7)
+    rulebook-c10-bigcheck.spec.js  # JR-C10 빅장 합법 처리 5개 (§8-6, §11, §13-6)
+    rulebook-c11-setup.spec.js     # JR-C11 마/상 배치 4종 5개 (§4)
+    rulebook-c12-procedure.spec.js # JR-C12 절차 위반 5개 (§11-11)
     helpers.js               # 테스트 유틸
-  playwright.config.js       # Playwright 설정
+  docs/
+    RULEBOOK.md              # KJA 2009 기반 권위 룰북 (632줄, §1~§13 + 부록)
+  playwright.config.js       # Playwright 설정 (workers:1, fullyParallel:false)
 ```
 
 ## WS 프로토콜
@@ -100,4 +121,5 @@ janggi/
 
 ## 룰 기준 문서
 
-- `.claude/specs/2026-05-31-janggi-rulebook.md`
+- `docs/RULEBOOK.md` — KJA 2009 기반 권위 룰북 (§1 게임 개요 ~ §13 구현 노트, 부록 A/B)
+- 모든 `tests/rulebook-c*.spec.js` 시나리오는 룰북 §번호를 인용한다. QA 회귀 발생 시 시나리오 ID(`JR-C{cat}-{seq}`) + 룰북 §번호로 추적한다.

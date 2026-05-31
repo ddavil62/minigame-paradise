@@ -1,5 +1,64 @@
 # Changelog
 
+## [2026-05-31] - 장기 룰북 LOW 권고 5건 보강 (105 → 111 시나리오, §11 100% 커버리지)
+
+### 추가
+- **`tests/rulebook-c12-procedure.spec.js`** (신규, JR-C12-001~005, 5건): 룰북 §11-11 절차 위반 5종 회귀 가드
+  - JR-C12-001: 상대 차례에 둔 수 거절 (`'당신의 차례가 아니다'`)
+  - JR-C12-002: 자기 차례에 상대 기물 이동 거절 (`'자기 기물만 이동할 수 있다'`)
+  - JR-C12-003: 한 제안 후 한 자기 수락 거절 (`drawOfferedBy === side` 체크)
+  - JR-C12-004: 기권 후 `ended` 상태에서 MOVE 거절
+  - JR-C12-005: `setup_han` 단계에서 MOVE 시도 거절
+- **JR-C8-006** (신규, `rulebook-c8-draw.spec.js`): 무승부 제안 양방향 자동 취소 — 한 제안 → 초가 수를 두면 `drawOfferedBy=null`
+
+### 변경
+- **JR-C5-006/010 강화** (`rulebook-c5-repetition.spec.js`): 종료 시 덤 1.5 정확 검증 추가
+  - `endScores.cho === rawScores.cho + DEOM`, `endScores.cho - rawScores.cho === 1.5`
+  - 포획 없는 사이클 가드: `han === 72`, `cho === 73.5`
+  - `calculateScore`, `DEOM` import 추가
+- **JR-C10-004 재구성** (`rulebook-c10-bigcheck.spec.js`): 빅장 응수 컨텍스트 재구성
+  - "초 차(0,1)가 한 궁(4,1)에 가로 장군 직후" setup → 한이 무관계 차로 응수 시도 → `wouldBeSelfCheck=true`로 자살수 거절
+  - 룰북 §8-6(빅장) + §8-3(자살수) 동시 인용으로 의도 명확화
+- **JR-C1 5개 케이스 정밀도 강화** (`rulebook-c1-pieces.spec.js`): `arrayContaining` → length + set 비교
+  - JR-C1-001(궁 중앙 8), JR-C1-002(대각 4), JR-C1-010(포 가로 5), JR-C1-016(한 졸 3), JR-C1-018(초 병 3)
+  - 의도 외 후보 추가/누락 시 즉시 spec 깨짐 → 회귀 안전망
+
+### 카테고리 분포 (105 → 111)
+| 카테고리 | 파일 | 이전 | 현재 |
+|---------|------|------|------|
+| C8 무승부/기권 | rulebook-c8-draw.spec.js | 5 | 6 (+006) |
+| C12 절차 위반 | rulebook-c12-procedure.spec.js (신규) | 0 | 5 |
+| **합계** | | **105** | **111** |
+
+### §11 금지 수 커버리지
+- 이전 10/11 (절차 위반 항목만 MISS, probe로만 확인)
+- 현재 **11/11 (100%)** — 절차 위반이 JR-C12 5건으로 spec 가드됨
+
+### QA 판정
+- **PASS** (이전 CONDITIONAL_PASS → 격상)
+- 5회 연속 111/111 PASS (평균 2.0초, flaky 0건)
+- 회귀: 비-rulebook spec 135/135 PASS (1.9초)
+- lib/룰북 코드 변경 없음 — 테스트 보강만으로 안전망 강화
+
+### 알려진 트레이드오프 (수용)
+- JR-C10-004 사전 `inCheck` assert는 주석으로만 명시 (helpers `isInCheck` re-export 없음)
+- JR-C8-006의 `state.turn = 'cho'` 직접 조작 — `drawOfferedBy` side-무관 동작 검증 핵심에 영향 없음
+- JR-C5-006/010의 `han=72/cho=73.5` 가정 — `PIECE_SCORE`/`DEOM` 변경 시 알람 (의도된 동작)
+
+### 변경된 파일 목록
+- `janggi/tests/rulebook-c12-procedure.spec.js` (신규)
+- `janggi/tests/rulebook-c1-pieces.spec.js` (5개 케이스 강화)
+- `janggi/tests/rulebook-c5-repetition.spec.js` (006/010 보강)
+- `janggi/tests/rulebook-c8-draw.spec.js` (+006)
+- `janggi/tests/rulebook-c10-bigcheck.spec.js` (004 재구성)
+
+### 참고
+- 스펙: `.claude/specs/2026-05-31-janggi-rulebook-low-fix-plan.md`
+- 구현 리포트: `.claude/specs/2026-05-31-janggi-rulebook-low-fix-coder-report.md`
+- QA: `.claude/specs/2026-05-31-janggi-rulebook-low-fix-qa-report.md` (PASS, 격상)
+
+---
+
 ## [2026-05-31] - 장기(Janggi) 신규 게임 추가
 
 ### 추가
