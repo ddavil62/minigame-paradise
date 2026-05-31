@@ -1,5 +1,75 @@
 # Changelog
 
+## [2026-05-31] - 장기(Janggi) 신규 게임 추가
+
+### 추가
+- **6번째 게임 "장기"**: `janggi/` 디렉토리 신설. KJA 2009 개정 룰(빅장 폐지, 점수제, 동형반복 3회) 준수 LAN 1:1 한국 전통 장기
+- **서버 게임 로직 5개 모듈** (`janggi/lib/`):
+  - `board.js`: 9x10 보드 CRUD, 4종 마/상 배치(MSMS/SMSM/MSSM/SMMS), 직렬화, 동형반복용 해시
+  - `pieces.js`: 7종 기물 합법 이동 산출 (궁/사/차/포/마/상/졸). 포다리 규칙, 마/상 멱 차단, 궁성 대각선 포함
+  - `rules.js`: 장군/외통수/자살수/양수겸장/동형반복 판정
+  - `score.js`: 기물 점수표(K=0, A=3, R=13, C=7, H=5, E=3, P=2) + 후수 덤 1.5
+  - `game.js`: GameSession 상태 관리 (배치 선택 -> 플레이 -> 종료). 종료 조건 5가지(외통수, 기권, 시간패, 동형반복 3회, 50수 룰). 시간제 본 시간 10분 + 초읽기 30초x3회
+- **WebSocket 서버** (`janggi/server.js`): createApp() 팩토리 패턴. WS 메시지 C->S 6종 + S->C 10종. 1초 tick 타이머, 배치 30초 타이머, heartbeat 30초, 재접속 복구. 단독 포트 3006
+- **클라이언트 UI** (`janggi/public/`):
+  - Canvas 보드 렌더링 592x672px (격자선, 강 띠 楚河漢界, 궁성 대각선 X)
+  - 기물 DOM 렌더링 (한자 표기, 팔각형 clip-path, 한 적색 #C8102E / 초 청색 #2E5BBA)
+  - CSS 변수 18개, check-pulse 애니메이션, 런처 일관 radial-gradient 배경
+  - 배치 선택 모달 (4종 카드 + 30초 카운트다운)
+  - 합법 수 하이라이트 (이동/잡기 구분, 서버 권위 REQUEST_MOVES)
+  - 시간 패널 (MM:SS + 초읽기), 잡힌 기물 패널, 장군 토스트, 종료 모달 (승/패 + 점수)
+  - 헤더에 `#btn-back-to-lobby` (기존 5개 게임과 동일 ID/confirm 패턴)
+- **런처 통합** (`launcher/server.js`, `launcher/public/games.json`):
+  - `createJanggiApp()` import + `GAME_APPS` 등록
+  - games.json에 janggi 항목 추가 (color: #C8102E, botAvailable: false)
+  - 콘솔 배너 게임 목록에 `/janggi/` 추가
+- **Playwright 테스트** (`janggi/tests/`):
+  - `janggi.spec.js`: QA-001~QA-020 커버 77개 (서버 lib 직접 호출형 단위 테스트)
+  - `qa-edge-cases.spec.js`: QA 도출 엣지케이스 58개 (상 경계값, 포 궁성 대각선, 배치 코드 16종 전수 검증 등)
+  - `qa-e2e.spec.js`: 브라우저 E2E 5개 (초기 로딩, 배치 모달, 보드 렌더링, 모바일 뷰포트, 3인 거절)
+- **스모크 테스트**: `_smoke.js` 73개 + `_smoke_server.js` 34개 + `_smoke_launcher.js` 19개
+
+### 수정
+- **PATCH-P2-1 (AD 모드3 REVISE)**: `public/js/main.js`에서 기물 클릭 시 piecesLayer와 boardContainer 핸들러가 동시 발화되어 합법 수 하이라이트가 표시되지 않는 버그. piecesLayer/highlightsLayer 핸들러에 `e.stopPropagation()` 추가로 해결
+- **PATCH-P4-1 (상 이동 패턴)**: `lib/pieces.js`의 `getElephantMoves`에서 상(elephant) 최종 변위가 (+-3,+-3)으로 잘못 계산되던 버그. endDf/endDr 값을 (+-1,+-1)로 교정하여 룰북 SS5-6 기준 (+-2,+-3)/(+-3,+-2) 변위로 정상화
+
+### 스펙 대비 구현 차이
+- 스펙의 `GameSession` 클래스 대신 순수 함수 + 상태 객체 패턴 채택 (직렬화 단순화, davinci-code 패턴 일관성)
+- 기물 타입 내부 표현: 스펙 약어(K/A/R/C/H/E/P) 대신 풀네임(`king`/`advisor` 등) 사용 (가독성). 해시에서만 약어
+- games.json color: 스펙 `#8B1A1A` -> AD 컨셉 확정 `#C8102E` (한국 적색)
+- 궁성 대각선 인접 관계: 런타임 계산 대신 정적 매핑(PALACE_DIAG_ADJ) 사전 빌드
+
+### QA 판정
+- **PASS** (140개 테스트 전체 통과)
+- AC-1 ~ AC-8 수용 기준 전부 충족
+- 24개 엣지케이스 시나리오 전부 PASS
+- 6개 게임 런처 회귀 PASS
+
+### 알려진 이슈 (MEDIUM/LOW, 기능 영향 없음)
+- `public/js/ui.js`: `showCheckToast()`/`showToast()` 함수에서 `replaceChild` 후 stale DOM 참조. 연속 호출 시 두 번째 알림 미표시
+- 무승부 거절 시 서버에 `DRAW_REJECT` 미전송. 제안측에 "거절됨" 피드백 없음 (수 두면 자동 초기화)
+
+### 변경된 파일 목록
+- `janggi/server.js`, `janggi/lib/{board,pieces,rules,score,game}.js` (신규 6개)
+- `janggi/public/index.html`, `janggi/public/css/style.css`, `janggi/public/js/{main,board,pieces,ui}.js` (신규 6개)
+- `janggi/tests/{janggi.spec,qa-edge-cases.spec,qa-e2e.spec,helpers}.js`, `janggi/playwright.config.js` (신규 5개)
+- `janggi/lib/{_smoke,_smoke_server,_smoke_launcher}.js` (신규 3개)
+- `launcher/server.js` (수정 3개소: import, GAME_APPS, 배너)
+- `launcher/public/games.json` (수정: janggi 항목 추가)
+
+### 참고
+- 목적 정의서: `.claude/specs/2026-05-31-janggi-add-scope.md`
+- 스펙: `.claude/specs/2026-05-31-janggi-add-plan.md`
+- 룰북: `.claude/specs/2026-05-31-janggi-rulebook.md`
+- Coder P1: `.claude/specs/2026-05-31-janggi-coder-p1-report.md`
+- Coder P2: `.claude/specs/2026-05-31-janggi-coder-p2-report.md`
+- AD2/AD3: `.claude/specs/2026-05-31-janggi-ad2-ad3-report.md` (APPROVED, PATCH-P2-1 적용)
+- Coder P3: `.claude/specs/2026-05-31-janggi-coder-p3-report.md`
+- Coder P4: `.claude/specs/2026-05-31-janggi-coder-p4-report.md` (PATCH-P4-1 상 이동 수정)
+- QA: `.claude/specs/2026-05-31-janggi-qa-report.md` (PASS, 140개)
+
+---
+
 ## [2026-05-31] - 5개 게임 게임 중 상시 뒤로가기 버튼 추가
 
 ### 추가

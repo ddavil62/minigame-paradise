@@ -53,5 +53,16 @@
     "color": "#5DADE2",
     "emoji": "🟦",
     "botAvailable": false
+  },
+  {
+    "id": "janggi",
+    "name": "장기",
+    "description": "9×10 장기판에서 펼치는 두뇌 대결! 전통 한국 장기 2인 대전",
+    "port": 3006,
+    "httpPath": "/janggi/",
+    "wsPath": "/janggi/ws",
+    "color": "#C8102E",
+    "emoji": "♟",
+    "botAvailable": false
   }
 ]

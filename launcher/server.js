@@ -30,6 +30,7 @@ import { createApp as createDavinciApp }   from '../davinci-code/server.js';
 import { createApp as createMatgoApp }     from '../matgo/server.js';
 import { createApp as createYutnoriApp }   from '../yutnori/server.js';
 import { createApp as createTetrisApp }    from '../tetris-battle/server.js';
+import { createApp as createJanggiApp }   from '../janggi/server.js';
 
 // ── 경로 및 인자 파싱 ──────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +73,7 @@ const GAME_APPS = {
   }),
   'yutnori':        createYutnoriApp(),
   'tetris-battle':  createTetrisApp(),
+  'janggi':         createJanggiApp(),
 };
 
 /**
@@ -527,7 +529,7 @@ function printBanner(port, lanIps) {
     console.log(ANSI.cyan + line(`    ${ANSI.dim}(LAN IP 미감지 — ipconfig로 확인)${ANSI.reset}`) + ANSI.reset);
   }
   console.log(ANSI.cyan + empty + ANSI.reset);
-  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/${ANSI.reset}`) + ANSI.reset);
+  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + line(`  ${ANSI.dim}종료: Ctrl+C${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + top + ANSI.reset);
   console.log('');

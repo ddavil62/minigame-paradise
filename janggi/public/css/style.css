@@ -1,0 +1,570 @@
+/**
+ * @fileoverview 장기 게임 스타일시트. AD 모드1 컨셉 문서 §8 기준.
+ *
+ * CSS 변수: §8-1 (전체 토큰)
+ * 폰트: §8-2
+ * 격자/보드: §8-3 ~ §8-6
+ * 기물: §8-7
+ */
+
+/* ── CSS 변수 (AD §8-1) ──────────────────────────────────────────── */
+:root {
+  --janggi-han-primary: #C8102E;
+  --janggi-han-bg: #F4E5D3;
+  --janggi-cho-primary: #2E5BBA;
+  --janggi-cho-bg: #F4E5D3;
+  --janggi-board-bg: #D9B380;
+  --janggi-board-border: #7A4A2B;
+  --janggi-grid-line: #3A2418;
+  --janggi-palace-line: #3A2418;
+  --janggi-river-bg: rgba(70,110,160,0.18);
+  --janggi-river-text: #5A6A7A;
+  --janggi-highlight-self: rgba(255,217,122,0.55);
+  --janggi-highlight-move: rgba(46,139,87,0.45);
+  --janggi-highlight-capture: rgba(200,16,46,0.55);
+  --janggi-last-move: rgba(255,217,122,0.30);
+  --janggi-check-glow: #FF3B30;
+  --janggi-text-primary: #f5e9c9;
+
+  --janggi-cell-size: 64px;
+  --janggi-piece-size: 56px;
+  --janggi-piece-font-size: 28px;
+}
+
+/* ── 리셋 ───────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  background: radial-gradient(ellipse at 50% 30%, #1a1a2e 0%, #0d0d1a 70%, #000 100%);
+  color: var(--janggi-text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── 헤더 ───────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar .title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--janggi-text-primary);
+}
+
+.you-tag {
+  font-size: 13px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.1);
+  color: var(--janggi-text-primary);
+}
+
+.topbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-resign,
+.btn-draw {
+  padding: 4px 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(245,222,179,0.7);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.btn-resign:hover { background: rgba(200,16,46,0.3); color: #fff; }
+.btn-draw:hover { background: rgba(46,139,87,0.3); color: #fff; }
+
+.btn-back-to-lobby {
+  padding: 4px 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(245,222,179,0.6);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.btn-back-to-lobby:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--janggi-text-primary);
+}
+
+/* ── 앱 레이아웃 ─────────────────────────────────────────────────── */
+.janggi-app {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 16px;
+  min-height: calc(100vh - 52px);
+}
+
+/* ── 사이드 패널 ─────────────────────────────────────────────────── */
+.panel {
+  width: 200px;
+  min-width: 180px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-label {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 0;
+  border-radius: 8px;
+}
+
+.han-label {
+  color: var(--janggi-han-primary);
+  border: 1px solid rgba(200,16,46,0.3);
+  background: rgba(200,16,46,0.08);
+}
+
+.cho-label {
+  color: var(--janggi-cho-primary);
+  border: 1px solid rgba(46,91,186,0.3);
+  background: rgba(46,91,186,0.08);
+}
+
+.panel-time {
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.3);
+}
+
+.time-main {
+  display: block;
+  font-size: 32px;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.time-byoyomi {
+  display: block;
+  font-size: 12px;
+  color: rgba(245,222,179,0.5);
+  margin-top: 4px;
+}
+
+.panel.active-turn .panel-time {
+  box-shadow: 0 0 0 2px var(--janggi-highlight-self);
+}
+
+.panel-captured {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.captured-label {
+  font-size: 12px;
+  color: rgba(245,222,179,0.5);
+}
+
+.captured-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 36px;
+}
+
+.captured-piece {
+  width: 32px;
+  height: 32px;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  background: var(--janggi-han-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", serif;
+  font-weight: 700;
+  font-size: 16px;
+  user-select: none;
+}
+
+.captured-piece.han { color: var(--janggi-han-primary); }
+.captured-piece.cho { color: var(--janggi-cho-primary); }
+
+.captured-score {
+  font-size: 13px;
+  color: rgba(245,222,179,0.7);
+  text-align: right;
+}
+
+/* ── 보드 컨테이너 ───────────────────────────────────────────────── */
+.janggi-board-container {
+  position: relative;
+  /* 592 x 672 (AD §3-1): 8*64+2*40 x 9*64+2*48 */
+  width: 592px;
+  height: 672px;
+  flex-shrink: 0;
+}
+
+#janggi-board {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#janggi-pieces-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#janggi-highlights-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ── 기물 (AD §8-7) ─────────────────────────────────────────────── */
+.janggi-piece {
+  width: var(--janggi-piece-size);
+  height: var(--janggi-piece-size);
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  background: var(--janggi-han-bg);
+  border: 2px solid var(--janggi-han-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", serif;
+  font-weight: 700;
+  font-size: var(--janggi-piece-font-size);
+  color: var(--janggi-han-primary);
+  user-select: none;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+  z-index: 10;
+}
+
+.janggi-piece.cho {
+  border-color: var(--janggi-cho-primary);
+  color: var(--janggi-cho-primary);
+}
+
+.janggi-piece.clickable:hover {
+  box-shadow: 0 0 0 3px rgba(255,217,122,0.6);
+  z-index: 15;
+}
+
+.janggi-piece.selected {
+  box-shadow: 0 0 0 4px var(--janggi-highlight-self);
+  z-index: 20;
+}
+
+/* ── 하이라이트 ──────────────────────────────────────────────────── */
+.highlight-dot {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.highlight-move {
+  background: var(--janggi-highlight-move);
+}
+
+.highlight-capture {
+  width: var(--janggi-piece-size);
+  height: var(--janggi-piece-size);
+  border-radius: 50%;
+  background: var(--janggi-highlight-capture);
+  opacity: 0.6;
+  z-index: 8;
+}
+
+.highlight-self {
+  position: absolute;
+  width: calc(var(--janggi-cell-size) - 4px);
+  height: calc(var(--janggi-cell-size) - 4px);
+  border-radius: 4px;
+  background: var(--janggi-highlight-self);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.last-move-marker {
+  position: absolute;
+  width: calc(var(--janggi-cell-size) - 4px);
+  height: calc(var(--janggi-cell-size) - 4px);
+  border-radius: 4px;
+  background: var(--janggi-last-move);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── 장군 펄스 (AD §4-3, §5-4) ──────────────────────────────────── */
+@keyframes check-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(255,59,48,0.3); }
+  50% { box-shadow: 0 0 12px 6px rgba(255,59,48,0.6); }
+}
+
+.janggi-piece.in-check {
+  animation: check-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── 모달 오버레이 ───────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-card {
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 32px;
+  text-align: center;
+  max-width: 90vw;
+}
+
+/* ── 배치 선택 모달 (AD §5-1) ────────────────────────────────────── */
+.setup-modal-card {
+  min-width: 600px;
+}
+
+.setup-modal-card h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: var(--janggi-text-primary);
+}
+
+.setup-subtitle {
+  font-size: 14px;
+  color: rgba(245,222,179,0.6);
+  margin-bottom: 16px;
+}
+
+.setup-timer {
+  font-size: 48px;
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  color: var(--janggi-check-glow);
+  margin-bottom: 20px;
+}
+
+.setup-options {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.setup-btn {
+  width: 130px;
+  padding: 16px 12px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  color: var(--janggi-text-primary);
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms;
+}
+
+.setup-btn:hover {
+  border-color: var(--janggi-highlight-self);
+  background: rgba(255,217,122,0.1);
+}
+
+.setup-btn.selected-setup {
+  border-color: var(--janggi-highlight-self);
+  background: rgba(255,217,122,0.15);
+}
+
+.setup-diagram {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.setup-label {
+  font-size: 12px;
+  color: rgba(245,222,179,0.6);
+}
+
+.setup-wait-msg {
+  font-size: 14px;
+  color: rgba(245,222,179,0.5);
+  margin-top: 16px;
+}
+
+/* ── 게임 종료 모달 (AD §5-5) ────────────────────────────────────── */
+.game-over-card {
+  min-width: 420px;
+}
+
+.game-over-card h2 {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.game-over-reason {
+  font-size: 16px;
+  color: rgba(245,222,179,0.7);
+  margin-bottom: 16px;
+}
+
+.game-over-scores {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.score-han { color: var(--janggi-han-primary); }
+.score-cho { color: var(--janggi-cho-primary); }
+.score-vs { color: rgba(245,222,179,0.5); font-size: 14px; }
+
+.return-lobby-btn {
+  padding: 10px 24px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--janggi-text-primary);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.return-lobby-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* ── 무승부 모달 ─────────────────────────────────────────────────── */
+.draw-card {
+  min-width: 300px;
+}
+
+.draw-card h2 {
+  font-size: 22px;
+  margin-bottom: 12px;
+  color: var(--janggi-text-primary);
+}
+
+.draw-card p {
+  font-size: 14px;
+  color: rgba(245,222,179,0.7);
+  margin-bottom: 16px;
+}
+
+.draw-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.draw-accept-btn,
+.draw-reject-btn {
+  padding: 8px 20px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--janggi-text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.draw-accept-btn:hover { background: rgba(46,139,87,0.3); }
+.draw-reject-btn:hover { background: rgba(200,16,46,0.3); }
+
+/* ── 장군 토스트 (AD §5-4) ───────────────────────────────────────── */
+.check-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255,59,48,0.9);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 10px;
+  z-index: 200;
+  animation: toast-fade 1.5s ease-out forwards;
+}
+
+@keyframes toast-fade {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  70% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+}
+
+/* ── 일반 토스트 ─────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: var(--janggi-text-primary);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 200;
+  animation: toast-fade 2s ease-out forwards;
+}
+
+/* ── 유틸리티 ────────────────────────────────────────────────────── */
+[hidden] {
+  display: none !important;
+}

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>장기 - LAN 1:1 대전</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="title">장기</span>
+      <span class="you-tag" id="you-tag">접속 중...</span>
+    </div>
+    <div class="topbar-right">
+      <button id="btn-resign" class="btn-resign" type="button">기권</button>
+      <button id="btn-draw" class="btn-draw" type="button">무승부 제안</button>
+      <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+    </div>
+  </header>
+
+  <div class="janggi-app">
+    <!-- 한(漢) 진영 패널 (상단 또는 좌측) -->
+    <aside class="panel panel-han" id="panel-han">
+      <div class="panel-label han-label">한(漢)</div>
+      <div class="panel-time" id="time-han">
+        <span class="time-main" id="time-han-main">10:00</span>
+        <span class="time-byoyomi" id="time-han-byoyomi">초읽기 30초 (3회)</span>
+      </div>
+      <div class="panel-captured" id="captured-han">
+        <div class="captured-label">잡은 기물</div>
+        <div class="captured-pieces" id="captured-han-pieces"></div>
+        <div class="captured-score" id="captured-han-score">0점</div>
+      </div>
+    </aside>
+
+    <!-- 보드 영역 -->
+    <main class="janggi-board-container">
+      <canvas id="janggi-board"></canvas>
+      <div id="janggi-pieces-layer"></div>
+      <div id="janggi-highlights-layer"></div>
+    </main>
+
+    <!-- 초(楚) 진영 패널 (하단 또는 우측) -->
+    <aside class="panel panel-cho" id="panel-cho">
+      <div class="panel-label cho-label">초(楚)</div>
+      <div class="panel-time" id="time-cho">
+        <span class="time-main" id="time-cho-main">10:00</span>
+        <span class="time-byoyomi" id="time-cho-byoyomi">초읽기 30초 (3회)</span>
+      </div>
+      <div class="panel-captured" id="captured-cho">
+        <div class="captured-label">잡은 기물</div>
+        <div class="captured-pieces" id="captured-cho-pieces"></div>
+        <div class="captured-score" id="captured-cho-score">0점</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 배치 선택 모달 -->
+  <div id="setup-modal" class="modal-overlay" hidden>
+    <div class="modal-card setup-modal-card">
+      <h2 id="setup-title">마/상 배치를 선택하세요</h2>
+      <p id="setup-subtitle" class="setup-subtitle">초(楚)가 먼저 선택합니다</p>
+      <div class="setup-timer" id="setup-timer">30</div>
+      <div class="setup-options" id="setup-options">
+        <button class="setup-btn" data-setup="MSMS">
+          <div class="setup-diagram">마 상 마 상</div>
+          <div class="setup-label">마상마상</div>
+        </button>
+        <button class="setup-btn" data-setup="SMSM">
+          <div class="setup-diagram">상 마 상 마</div>
+          <div class="setup-label">상마상마</div>
+        </button>
+        <button class="setup-btn" data-setup="MSSM">
+          <div class="setup-diagram">마 상 상 마</div>
+          <div class="setup-label">마상상마</div>
+        </button>
+        <button class="setup-btn" data-setup="SMMS">
+          <div class="setup-diagram">상 마 마 상</div>
+          <div class="setup-label">상마마상</div>
+        </button>
+      </div>
+      <p id="setup-wait-msg" class="setup-wait-msg" hidden>상대방이 선택 중...</p>
+    </div>
+  </div>
+
+  <!-- 게임 종료 모달 -->
+  <div id="game-over-modal" class="modal-overlay" hidden>
+    <div class="modal-card game-over-card">
+      <h2 id="game-over-title">게임 종료</h2>
+      <p id="game-over-reason" class="game-over-reason"></p>
+      <div id="game-over-scores" class="game-over-scores" hidden>
+        <span id="score-han" class="score-han"></span>
+        <span class="score-vs">vs</span>
+        <span id="score-cho" class="score-cho"></span>
+      </div>
+      <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
+    </div>
+  </div>
+
+  <!-- 무승부 제안 모달 -->
+  <div id="draw-modal" class="modal-overlay" hidden>
+    <div class="modal-card draw-card">
+      <h2>무승부 제안</h2>
+      <p>상대방이 무승부를 제안했습니다.</p>
+      <div class="draw-actions">
+        <button id="btn-draw-accept" class="draw-accept-btn">수락</button>
+        <button id="btn-draw-reject" class="draw-reject-btn">거절</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 장군 토스트 -->
+  <div id="check-toast" class="check-toast" hidden>장군!</div>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
