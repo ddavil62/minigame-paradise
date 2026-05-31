@@ -16,6 +16,24 @@
 (() => {
   'use strict';
 
+  // ── 해상도 적응: 1280×800 고정 캔버스를 창에 맞춰 비례 유지 스케일 ────────
+  const DESIGN_W = 1280;
+  const DESIGN_H = 800;
+  function fitToWindow() {
+    const sx = window.innerWidth / DESIGN_W;
+    const sy = window.innerHeight / DESIGN_H;
+    const s = Math.min(sx, sy);
+    const dx = (window.innerWidth - DESIGN_W * s) / 2;
+    const dy = (window.innerHeight - DESIGN_H * s) / 2;
+    document.body.style.transform = `translate(${dx}px, ${dy}px) scale(${s})`;
+  }
+  window.addEventListener('resize', fitToWindow);
+  // 초기 1회 + 폰트 로딩 후 한 번 더(폰트 메트릭 안정화)
+  fitToWindow();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(fitToWindow);
+  }
+
   // ── DOM 참조 (v8 신규/이전 ID 반영) ────────────────────────
   const youTagEl       = document.getElementById('you-tag');
   const perPointEl     = document.getElementById('per-point');
@@ -70,6 +88,16 @@
   const kkeutModalEl   = document.getElementById('kkeut-modal');
   const btnKkeutKkeut  = document.getElementById('btn-kkeut-choice-kkeut');
   const btnKkeutSsangpi= document.getElementById('btn-kkeut-choice-ssangpi');
+  // 사통 모달 (라운드 시작 시 같은 월 4장 손)
+  const sangtongModalEl       = document.getElementById('sangtong-modal');
+  const sangtongMonthTextEl   = document.getElementById('sangtong-month-text');
+  const btnSangtongDeclare    = document.getElementById('btn-sangtong-declare');
+  const btnSangtongContinue   = document.getElementById('btn-sangtong-continue');
+  // 폭탄 확인 모달 (카드 클릭 시점)
+  const bombConfirmModalEl    = document.getElementById('bomb-confirm-modal');
+  const bombConfirmMonthTextEl = document.getElementById('bomb-confirm-month-text');
+  const btnBombConfirm        = document.getElementById('btn-bomb-confirm');
+  const btnBombCancel         = document.getElementById('btn-bomb-cancel');
   const toastEl        = document.getElementById('toast');
 
   // 먹은 패 zone
@@ -108,6 +136,38 @@
   let isAnimating = false;
   /** fly 중에 도착한 STATE 메시지 큐 */
   const stateQueue = [];
+
+  // ── 5건 룰 보강 (2026-05-31) ──
+  /**
+   * 바닥 카드 ID → 슬롯 인덱스 캐시.
+   * 같은 카드는 처음 떨어진 슬롯 위치를 사라질 때까지 유지한다.
+   * 다른 카드가 captured로 가도 인덱스 시프트로 자리 이동하지 않는다.
+   * ROUND_START / GAME_START 수신 시 clear().
+   * @type {Map<string, number>}
+   */
+  const floorSlotMap = new Map();
+
+  /**
+   * 라운드 당 흔들기 모달 1회 표시 제한.
+   * ROUND_START / GAME_START 수신 시 false 리셋.
+   */
+  let shakeAskedThisRound = false;
+
+  /**
+   * 폭탄 모달 취소 시 같은 카드를 재클릭해도 모달이 다시 뜨지 않게 하는 일시 가드.
+   * 다음 sendPlay 한 번만 우회한다.
+   */
+  let bombCheckSkipOnce = false;
+
+  /**
+   * 폭탄 확인 모달의 fallback 카드 ID (취소 시 한 장 내기로 폴백).
+   */
+  let pendingBombFallbackCardId = null;
+
+  /**
+   * 흔들기 모달의 pending 카드 ID (확인/거절 후 PLAY_CARD를 이어 전송).
+   */
+  let pendingShakeCardId = null;
 
   // ── 바닥 카드 허니콤 슬롯 (덱 중심 기준 절대위치) ────────────
   // v8 시안 그대로 이식. R=150px hex 반경.
@@ -251,9 +311,17 @@
         break;
       case 'GAME_START':
         hideRoundModal();
+        // 5건 룰 보강: 바닥 슬롯 캐시 + 흔들기 모달 1회 제한 초기화
+        floorSlotMap.clear();
+        shakeAskedThisRound = false;
+        bombCheckSkipOnce = false;
         break;
       case 'ROUND_START':
         hideRoundModal();
+        // 5건 룰 보강: 바닥 슬롯 캐시 + 흔들기 모달 1회 제한 초기화
+        floorSlotMap.clear();
+        shakeAskedThisRound = false;
+        bombCheckSkipOnce = false;
         break;
       case 'STATE':
         lastState = msg;
@@ -290,6 +358,17 @@
           showToast('방이 가득 찼다 (2/2). 다른 탭/PC를 닫고 새로고침해라.');
         } else {
           showToast(msg.message || '알 수 없는 오류');
+          // 액션 거절 시 보류 중인 fly clone 정리 — 카드가 사라진 듯 보이는 현상 방지
+          if (pendingFlies.length > 0) {
+            for (const fly of pendingFlies) {
+              if (fly.clone) fly.clone.remove();
+              // 원본 visibility 복원
+              const src = myCardsEl.querySelector(`[data-card-id="${fly.cardId}"]`);
+              if (src) src.style.visibility = '';
+            }
+            pendingFlies = [];
+            isAnimating = false;
+          }
         }
         break;
       default:
@@ -310,6 +389,18 @@
       kkeutModalEl.classList.remove('hidden');
     } else {
       kkeutModalEl.classList.add('hidden');
+    }
+
+    // 사통 모달 토글 — 라운드 시작 시 같은 월 4장 손 보유자에게 표시.
+    const needSangtong = s.phase === 'awaiting_sangtong'
+      && s.pendingSangtong && s.pendingSangtong.player === me;
+    if (needSangtong && sangtongModalEl) {
+      if (sangtongMonthTextEl) {
+        sangtongMonthTextEl.textContent = `${s.pendingSangtong.month}월`;
+      }
+      sangtongModalEl.classList.remove('hidden');
+    } else if (sangtongModalEl) {
+      sangtongModalEl.classList.add('hidden');
     }
 
     // 바닥 선택 모달 토글 — 같은 월 후보 카드 중 1장 선택해야 할 때
@@ -435,8 +526,8 @@
    */
   function deriveTurnText(s) {
     if (s.phase === 'round_end') return '라운드 종료';
-    if (s.phase === 'shake_decision') {
-      return s.pendingShake ? '흔들기 결정' : '상대 흔들기 결정';
+    if (s.phase === 'awaiting_sangtong') {
+      return s.pendingSangtong && s.pendingSangtong.player === me ? '사통 결정' : '상대 사통 결정';
     }
     if (s.phase === 'awaiting_floor_choice') {
       return s.turn === me ? '바닥 선택' : '상대 선택 중';
@@ -623,6 +714,12 @@
 
   /**
    * 바닥 카드 — 허니콤 12슬롯 절대위치 (deck-card / floor-mission 보존).
+   *
+   * 5건 룰 보강 (2026-05-31): floorSlotMap(카드 ID → 슬롯 인덱스) 캐시 기반으로
+   * 위치를 고정한다. 같은 월의 "첫 카드"가 어느 슬롯에 떨어졌는지를 기준으로
+   * 그 월 그룹의 슬롯을 결정한다. 짝 카드가 captured로 가도 남은 카드의 슬롯은
+   * 그대로 유지된다. 새 카드가 바닥에 추가되면 비어 있는 슬롯 중 가장 작은
+   * 인덱스부터 배정한다.
    */
   function renderFloor(s) {
     // deck-card / floor-mission / go-stop-overlay 외 카드 제거
@@ -635,12 +732,13 @@
     });
     const deckEl = floorCardsEl.querySelector('.deck-card');
 
-    // 바닥 선택은 별도 화면 중앙 모달(floor-choice-modal)에서 처리한다.
-    // 여기서 바닥 카드들에 클릭 강조를 걸지 않아도 된다.
+    // 바닥에서 사라진 카드는 슬롯 캐시에서 제거 (다음 새 카드가 그 슬롯을 차지하게 한다).
+    const curFloorIdSet = new Set(s.floor.map((c) => c.id));
+    for (const id of Array.from(floorSlotMap.keys())) {
+      if (!curFloorIdSet.has(id)) floorSlotMap.delete(id);
+    }
 
-    // 같은 월 카드끼리 한 슬롯에 모이도록 그룹화 (등장 순서 유지)
-    // 뻑(3장)/또(2장)/단일(1장) 모두 같은 처리. 2장 이상이면 비스듬히 겹침으로
-    // 연관 카드임을 시각적으로 드러낸다.
+    // 같은 월 그룹화 (등장 순서 유지)
     const monthOrder = [];
     const monthGroups = new Map();
     for (const card of s.floor) {
@@ -651,11 +749,42 @@
       monthGroups.get(card.month).push(card);
     }
 
-    monthOrder.forEach((month, groupIdx) => {
+    // 각 월 그룹의 슬롯 인덱스 결정:
+    //   1) 그룹 내 카드 중 이미 floorSlotMap에 등록된 카드가 있으면 그 슬롯을 그대로 사용
+    //   2) 없으면 비어 있는 슬롯 중 가장 작은 인덱스를 할당
+    //   3) 같은 월의 나머지 카드들도 같은 그룹 슬롯에 캐시 등록 (개별 ID 단위 캐시)
+    /**
+     * 현재 floorSlotMap에서 사용 중이지 않은 슬롯 중 가장 작은 인덱스를 반환.
+     * @returns {number}
+     */
+    function nextFreeSlot() {
+      const used = new Set(floorSlotMap.values());
+      let i = 0;
+      while (used.has(i)) i++;
+      return i;
+    }
+
+    monthOrder.forEach((month) => {
       const cards = monthGroups.get(month);
+      // 그룹 슬롯 결정: 캐시에 등록된 카드 우선
+      let groupSlotIdx = null;
+      for (const c of cards) {
+        if (floorSlotMap.has(c.id)) {
+          groupSlotIdx = floorSlotMap.get(c.id);
+          break;
+        }
+      }
+      if (groupSlotIdx == null) {
+        groupSlotIdx = nextFreeSlot();
+      }
+      // 그룹 내 모든 카드를 같은 슬롯으로 캐시 등록 (집중 표시용)
+      for (const c of cards) {
+        if (!floorSlotMap.has(c.id)) floorSlotMap.set(c.id, groupSlotIdx);
+      }
+
       const isPpeok = !!s.ppeokFlags[month];
       const stackSize = cards.length;
-      const slot = FLOOR_SLOTS[groupIdx % FLOOR_SLOTS.length];
+      const slot = FLOOR_SLOTS[groupSlotIdx % FLOOR_SLOTS.length];
       const center = (stackSize - 1) / 2;
 
       cards.forEach((card, cardIdxInGroup) => {
@@ -673,7 +802,7 @@
           el.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
           el.style.zIndex = String(cardIdxInGroup + 5);
         } else {
-          applyFloorSlot(el, groupIdx);
+          applyFloorSlot(el, groupSlotIdx);
         }
 
         floorCardsEl.insertBefore(el, deckEl);
@@ -738,7 +867,8 @@
    */
   function updateActionPanel(s) {
     goStopOverlay.classList.add('hidden');
-    shakeModal.classList.add('hidden');
+    // 흔들기/폭탄 모달은 카드 클릭 시점에 띄우므로 phase 기반으로 강제 hide하지 않는다.
+    // 다만 사통 모달은 renderState에서 토글한다.
     bombPanel.classList.add('hidden');
 
     if (s.phase === 'round_end') {
@@ -746,22 +876,16 @@
       return;
     }
 
-    const myTurn = s.turn === me;
-
-    if (s.phase === 'shake_decision') {
-      if (s.pendingShake) {
-        // 흔들기 결정은 라운드 시작 직후 즉시 일어나는 일회성 결정이라
-        // 바닥 하단 strip 대신 화면 중앙 모달로 띄워 가독성을 높인다.
-        actionDisplay.textContent = `${s.pendingShake.month}월 카드 3장 보유 — 흔들기 결정`;
-        if (shakeMonthText) {
-          shakeMonthText.textContent = `${s.pendingShake.month}월`;
-        }
-        shakeModal.classList.remove('hidden');
+    if (s.phase === 'awaiting_sangtong') {
+      if (s.pendingSangtong && s.pendingSangtong.player === me) {
+        actionDisplay.textContent = `사통! ${s.pendingSangtong.month}월 4장 — 선언/포기 선택`;
       } else {
-        actionDisplay.textContent = '상대가 흔들기 결정 중...';
+        actionDisplay.textContent = '상대가 사통 결정 중...';
       }
       return;
     }
+
+    const myTurn = s.turn === me;
 
     if (!myTurn) {
       actionDisplay.textContent = '상대 차례 — 기다리는 중';
@@ -987,8 +1111,72 @@
 
   function sendPlay(cardId) {
     if (!ws || ws.readyState !== 1) return;
+    // 한 번 더 검증: STATE 큐잉 중 turn이 상대로 바뀌었거나 phase가 awaiting_play가
+    // 아니면 옛 클릭 핸들러 무시. 안 그러면 서버가 stepInProgress 에러로 거절하고
+    // fly clone이 떠 있는 채로 카드가 사라진 듯 보인다.
+    if (!lastState || lastState.turn !== me || lastState.phase !== 'awaiting_play') {
+      return;
+    }
+    // stepInProgress 가드 — 직전 액션 fly 진행 중이면 중복 입력 차단
+    if (isAnimating) return;
+
+    const card = (lastState.yourHand || []).find((c) => c.id === cardId);
+    if (!card) {
+      // 카드를 찾을 수 없으면 안전하게 그대로 전송 (서버가 검증)
+      startFlyFromHand(cardId);
+      ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
+      return;
+    }
+
+    // ── 5건 룰 보강 (2026-05-31): 흔들기 모달 (카드 클릭 시점) ──
+    // 그 월 첫 카드를 낼 때만 모달 표시. 같은 라운드에 두 번 묻지 않는다.
+    // 폭탄(같은 월 3장 + 바닥 1장) 조건은 아래 폭탄 분기에서 별도 처리하므로 여기서 제외.
+    if (!shakeAskedThisRound && !lastState.shaking?.[me]) {
+      const sameMonthInHand = (lastState.yourHand || []).filter((c) => c.month === card.month).length;
+      const bombable = !!(lastState.bombableMonths && lastState.bombableMonths.includes(card.month));
+      // 흔들기 조건: 같은 월 3장 보유 + 폭탄 조건 미충족 (폭탄 가능이면 폭탄 모달 우선)
+      if (sameMonthInHand === 3 && !bombable) {
+        showShakeConfirmModal(card.month, cardId);
+        return;
+      }
+    }
+
+    // ── 폭탄 확인 모달 (window.confirm → 전용 모달로 교체, 2026-05-31) ──
+    if (!bombCheckSkipOnce
+        && lastState.bombableMonths
+        && lastState.bombableMonths.includes(card.month)) {
+      showBombConfirmModal(card.month, cardId);
+      return;
+    }
+    // 폭탄 모달 취소 후 같은 카드 재클릭은 일반 1장 내기로 진행. 일회용 가드.
+    bombCheckSkipOnce = false;
+
     startFlyFromHand(cardId);
     ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
+  }
+
+  /**
+   * 흔들기 확인 모달을 표시한다. 그 월 첫 카드 클릭 시점에 호출.
+   * @param {number} month - 흔들 월
+   * @param {string} cardId - 모달 결과 후 실제 낼 손패 카드 ID
+   */
+  function showShakeConfirmModal(month, cardId) {
+    if (!shakeModal) return;
+    if (shakeMonthText) shakeMonthText.textContent = `${month}월`;
+    pendingShakeCardId = cardId;
+    shakeModal.classList.remove('hidden');
+  }
+
+  /**
+   * 폭탄 확인 모달을 표시한다. 폭탄 가능 월 카드 클릭 시 호출.
+   * @param {number} month
+   * @param {string} fallbackCardId - 취소 시 한 장만 내기로 폴백할 카드 ID
+   */
+  function showBombConfirmModal(month, fallbackCardId) {
+    if (!bombConfirmModalEl) return;
+    if (bombConfirmMonthTextEl) bombConfirmMonthTextEl.textContent = `${month}월`;
+    pendingBombFallbackCardId = fallbackCardId;
+    bombConfirmModalEl.classList.remove('hidden');
   }
   function sendChooseFloor(cardId) {
     if (!ws || ws.readyState !== 1) return;
@@ -998,9 +1186,13 @@
     if (!ws || ws.readyState !== 1) return;
     ws.send(JSON.stringify({ type: 'GO_STOP', decision }));
   }
-  function sendShake(decision) {
+  function sendShake(decision, month) {
     if (!ws || ws.readyState !== 1) return;
-    ws.send(JSON.stringify({ type: 'SHAKE', decision }));
+    ws.send(JSON.stringify({ type: 'SHAKE', decision, month }));
+  }
+  function sendSangtong(choice) {
+    if (!ws || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: 'SELECT_SANGTONG', choice }));
   }
   function sendBomb(month) {
     if (!ws || ws.readyState !== 1) return;
@@ -1022,13 +1214,79 @@
 
   btnGo.addEventListener('click', () => sendGoStop('go'));
   btnStop.addEventListener('click', () => sendGoStop('stop'));
-  btnShake.addEventListener('click', () => sendShake('shake'));
-  btnShakeNo.addEventListener('click', () => sendShake('normal'));
+  // ── 흔들기 모달 (카드 클릭 시점, 2026-05-31) ──
+  // 사용자가 모달에서 결정한 뒤 SHAKE → PLAY_CARD 순서로 전송.
+  // shakeAskedThisRound 플래그로 같은 라운드 재표시 차단.
+  btnShake.addEventListener('click', () => {
+    shakeModal.classList.add('hidden');
+    shakeAskedThisRound = true;
+    const cardId = pendingShakeCardId;
+    pendingShakeCardId = null;
+    // 흔들 월은 클릭한 카드 월
+    const card = cardId ? (lastState?.yourHand || []).find((c) => c.id === cardId) : null;
+    sendShake('shake', card ? card.month : null);
+    if (cardId) {
+      startFlyFromHand(cardId);
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
+      }
+    }
+  });
+  btnShakeNo.addEventListener('click', () => {
+    shakeModal.classList.add('hidden');
+    shakeAskedThisRound = true;
+    const cardId = pendingShakeCardId;
+    pendingShakeCardId = null;
+    const card = cardId ? (lastState?.yourHand || []).find((c) => c.id === cardId) : null;
+    sendShake('normal', card ? card.month : null);
+    if (cardId) {
+      startFlyFromHand(cardId);
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
+      }
+    }
+  });
+  // ── 폭탄 확인 모달 (카드 클릭 시점, 2026-05-31) ──
+  if (btnBombConfirm) {
+    btnBombConfirm.addEventListener('click', () => {
+      if (bombConfirmModalEl) bombConfirmModalEl.classList.add('hidden');
+      const cardId = pendingBombFallbackCardId;
+      pendingBombFallbackCardId = null;
+      const card = cardId ? (lastState?.yourHand || []).find((c) => c.id === cardId) : null;
+      if (card) sendBomb(card.month);
+    });
+  }
+  if (btnBombCancel) {
+    btnBombCancel.addEventListener('click', () => {
+      if (bombConfirmModalEl) bombConfirmModalEl.classList.add('hidden');
+      const cardId = pendingBombFallbackCardId;
+      pendingBombFallbackCardId = null;
+      // 한 장만 내기로 폴백 — 다음 sendPlay 호출 시 폭탄 모달 재진입 차단
+      if (cardId) {
+        bombCheckSkipOnce = true;
+        sendPlay(cardId);
+      }
+    });
+  }
+  // 기존 하단 bomb-panel 버튼 (폴백 — 카드 클릭 우회 시 직접 폭탄)
   btnBomb.addEventListener('click', () => {
     if (!lastState || !lastState.bombableMonths || lastState.bombableMonths.length === 0) return;
     const month = lastState.bombableMonths[0]; // 첫 번째 자동 선택
     sendBomb(month);
   });
+  // ── 사통 모달 핸들러 (2026-05-31) ──
+  if (btnSangtongDeclare) {
+    btnSangtongDeclare.addEventListener('click', () => {
+      if (sangtongModalEl) sangtongModalEl.classList.add('hidden');
+      sendSangtong('declare');
+    });
+  }
+  if (btnSangtongContinue) {
+    btnSangtongContinue.addEventListener('click', () => {
+      if (sangtongModalEl) sangtongModalEl.classList.add('hidden');
+      sendSangtong('continue');
+    });
+  }
   btnNewRound.addEventListener('click', sendNewRound);
   btnNewRoundMod.addEventListener('click', () => { hideRoundModal(); sendNewRound(); });
 
@@ -1056,8 +1314,17 @@
     if (!ws || ws.readyState !== 1) return;
     ws.send(JSON.stringify({ type: 'SELECT_KKEUT_TYPE', choice }));
   }
-  btnKkeutKkeut.addEventListener('click', () => sendKkeutChoice('kkeut'));
-  btnKkeutSsangpi.addEventListener('click', () => sendKkeutChoice('ssangpi'));
+  // 클릭 즉시 모달 hide + 송신. STATE 응답이 큐잉(fly 진행 중)되어 지연되면 모달이
+  // 계속 visible 상태로 남아 중복 클릭이 발생하고, 서버는 첫 처리 후 phase가 바뀌어
+  // 두 번째 메시지에 "지금은 선택할 수 없다" 에러를 반환하는 케이스를 방지한다.
+  btnKkeutKkeut.addEventListener('click', () => {
+    kkeutModalEl.classList.add('hidden');
+    sendKkeutChoice('kkeut');
+  });
+  btnKkeutSsangpi.addEventListener('click', () => {
+    kkeutModalEl.classList.add('hidden');
+    sendKkeutChoice('ssangpi');
+  });
   btnNewGame.addEventListener('click', sendNewGame);
 
   perPointEl.addEventListener('change', () => {

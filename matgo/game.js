@@ -12,16 +12,19 @@
  *   뻑    : 손패+바닥 1장 매칭 직전 더미 뒤집기에서 같은 월 또 나옴 → 3장 바닥에 쌓임 (못 가져감)
  *   따닥  : 한 턴에 같은 월 4장을 모두 가져가는 케이스 → 상대 피 1장
  *   자뻑  : 자기 뻑을 자기가 푸는 것 → 동일 처리 (보너스 없음, 일반 뻑 풀이와 동일)
- *   흔들기: 손패 4장 중 같은 월 3장 보유 시 선언 가능 → 점수 ×2 (선언자측만)
+ *   흔들기: 손패 10장 중 같은 월 3장 보유 시 선언 가능 → 점수 ×2 (선언자측만)
+ *           라운드 시작 일괄 검사가 아니라, 그 월 첫 카드를 낼 때 클라이언트 모달로 선언.
  *   폭탄  : 손 3장 + 바닥 1장 같은 월 → 한번에 점수판 + 상대 피 1장 (표준 규칙)
+ *           폭탄 후 덱 2장 연속 뒤집기 권리 (bombExtraDraw 플래그로 제어).
+ *   사통  : 라운드 시작 시 손 10장 중 같은 월 4장 보유 → 즉시 라운드 승 + 7점 보너스 옵션.
+ *   첫뻑  : 라운드 첫 뻑을 만든 사람이 라운드 승리 시 +7점 가산 (score.js).
  *   쌍피  : 피 카운트에서 2장으로 계산
  *   광박/피박/멍박/고박: score.js applyFinalMultipliers에서 처리
  *
  * 단순화 사항:
- *   - 흔들기는 처음 그 월 카드를 낼 때 자동으로 선언 권유 모달.
  *   - 폭탄 보너스는 "상대 피 1장 + 손 3장 + 바닥 1장 모두 점수판"으로 표준화.
  *   - 고박은 "고 부른 측이 결국 패배 시 점수 ×2"로 단순화.
- *   - 첫뻑/첫쪽 가산 변형 룰은 미적용.
+ *   - 첫쪽 가산 변형 룰은 미적용 (첫뻑만 적용).
  */
 
 import { buildDeck, shuffle } from './cards.js';
@@ -79,6 +82,7 @@ export function createGame(firstTurn = 'p1', opts = {}) {
     hands: { p1: [], p2: [] },
     captured: { p1: [], p2: [] },
     ppeokFlags: {},
+    ppeokCount: { p1: 0, p2: 0 },
     pendingFloorChoice: null,
     turn: firstTurn,
     phase: 'awaiting_play',
@@ -91,6 +95,11 @@ export function createGame(firstTurn = 'p1', opts = {}) {
     lastAction: null,
     pendingShake: null,
     roundResult: null,
+    // ── 5건 룰 보강 (2026-05-31) ──
+    pendingSangtong: null,
+    shakeAsked: { p1: false, p2: false },
+    bombExtraDraw: false,
+    firstPpeokBy: null,
   }, firstTurn);
   return game;
 }
@@ -115,6 +124,8 @@ export function startRound(game, firstTurn) {
   game.hands = { p1: p1Hand, p2: p2Hand };
   game.captured = { p1: [], p2: [] };
   game.ppeokFlags = {};
+  // 라운드 동안 누적된 뻑 개수 — 점수 multiplier(×2^N) 적용 + 3뻑 즉시 승리 판정에 사용
+  game.ppeokCount = { p1: 0, p2: 0 };
   game.pendingFloorChoice = null;
   game.turn = firstTurn;
   game.phase = 'awaiting_play';
@@ -131,24 +142,40 @@ export function startRound(game, firstTurn) {
   game.stoppedBy = null;
   game.lastAction = { kind: 'round_start', firstTurn };
   game.roundResult = null;
-  game.pendingShake = checkShakeOpportunity(game, firstTurn);
-  if (game.pendingShake) game.phase = 'shake_decision';
+  // ── 5건 룰 보강 (2026-05-31): 라운드 단위 상태 초기화 ──
+  // 흔들기는 라운드 시작 일괄 검사가 아니라 클라이언트 모달에서 카드 클릭 시점에 결정한다.
+  // shakeAsked로 라운드 당 흔들기 모달 1회 표시 제한.
+  game.pendingShake = null;
+  game.shakeAsked = { p1: false, p2: false };
+  // 폭탄 후 덱 2장 연속 뒤집기 권리 플래그. 첫 번째 drawAndResolve 직후 true로 설정,
+  // 두 번째 drawAndResolve 직후 false로 복원.
+  game.bombExtraDraw = false;
+  // 라운드 첫 뻑을 만든 사람 — applyFinalMultipliers에서 첫뻑 보너스 판정에 사용.
+  game.firstPpeokBy = null;
+  // 사통(같은 월 4장 손패) 검사 — 자기 차례 선플레이어부터 검사. 동시 충돌 시 선공자 우선.
+  game.pendingSangtong = checkSangtongOpportunity(game);
+  if (game.pendingSangtong) {
+    game.phase = 'awaiting_sangtong';
+  }
   return game;
 }
 
 /**
- * 손패 시작 시점에 흔들기 가능한지 검사 (같은 월 3장 보유).
+ * 라운드 시작 시점에 사통(같은 월 4장 손패) 보유자가 있는지 검사.
+ * 양쪽 모두 사통 가능한 경우는 매우 희박하지만, 그래도 선공자(firstTurn) 우선.
  * @param {GameState} game
- * @param {'p1'|'p2'} playerId
- * @returns {{player:string, month:number}|null}
+ * @returns {{player:'p1'|'p2', month:number}|null}
  */
-function checkShakeOpportunity(game, playerId) {
-  const hand = game.hands[playerId];
-  const monthCount = {};
-  for (const c of hand) monthCount[c.month] = (monthCount[c.month] || 0) + 1;
-  for (const m of Object.keys(monthCount)) {
-    if (monthCount[m] === 3) {
-      return { player: playerId, month: parseInt(m, 10) };
+function checkSangtongOpportunity(game) {
+  const candidates = [game.turn, game.turn === 'p1' ? 'p2' : 'p1'];
+  for (const pid of candidates) {
+    const hand = game.hands[pid];
+    const monthCount = {};
+    for (const c of hand) monthCount[c.month] = (monthCount[c.month] || 0) + 1;
+    for (const m of Object.keys(monthCount)) {
+      if (monthCount[m] === 4) {
+        return { player: pid, month: parseInt(m, 10) };
+      }
     }
   }
   return null;
@@ -233,9 +260,15 @@ export function chooseFloor(g, playerId, cardId) {
 /**
  * chooseFloor의 단계별 generator 버전.
  * yield 값:
- *   { step: 'choice_made' }   — 선택한 바닥 카드 + srcCard 모두 captured로
- *   { step: 'deck_flipped' }  — (손패에서 온 경우만) 덱 뒤집기 + 매칭
- *   { step: 'turn_finished' } — 점수 평가 + 턴 마무리
+ *   { step: 'choice_made' }       — 선택한 바닥 카드 + srcCard 모두 captured로
+ *   { step: 'deck_flipped' }      — (손패에서 온 경우만) 덱 뒤집기 + 매칭
+ *   { step: 'bomb_extra_flipped' } — 폭탄 2회차 뒤집기 (bombExtraDraw 플래그 분기)
+ *   { step: 'turn_finished' }     — 점수 평가 + 턴 마무리
+ *
+ * 폭탄 2회차 처리:
+ *   bombSteps의 첫 번째 drawAndResolve가 awaiting_floor_choice에 빠지면 (g.bombExtraDraw=true)
+ *   사용자가 바닥 카드를 선택한 뒤 chooseFloorSteps에서 두 번째 drawAndResolve를 이어 실행한다.
+ *   두 번째 drawAndResolve 후 즉시 g.bombExtraDraw=false로 복원 → 무한 루프 차단.
  */
 export function* chooseFloorSteps(g, playerId, cardId) {
   if (g.phase !== 'awaiting_floor_choice') { yield { error: '지금은 선택할 수 없다' }; return; }
@@ -250,6 +283,8 @@ export function* chooseFloorSteps(g, playerId, cardId) {
   g.floor = g.floor.filter((c) => c.id !== cardId);
   g.captured[playerId].push(pending.srcCard, chosen);
   const wasFromHand = pending.fromHand;
+  // 폭탄 2회차 뒤집기 권리가 남아 있는지 — pending.fromHand=false라 하더라도 한 번 더 뒤집어야 한다.
+  const needBombExtra = !!g.bombExtraDraw;
   g.pendingFloorChoice = null;
   g.phase = 'awaiting_play';
   g.lastAction = { kind: 'choice_made', player: playerId, srcCard: pending.srcCard, chosen };
@@ -259,6 +294,14 @@ export function* chooseFloorSteps(g, playerId, cardId) {
     // 단계 2: 덱 뒤집기 (손패에서 온 매칭이었던 경우만)
     drawAndResolve(g, playerId, pending.srcCard);
     yield { step: 'deck_flipped' };
+    if (g.phase === 'awaiting_floor_choice') return;
+  }
+
+  if (needBombExtra) {
+    // 단계 2-bomb: 폭탄 2회차 뒤집기 (덱에서 한 번 더). 무한 루프 방지를 위해 먼저 플래그 복원.
+    g.bombExtraDraw = false;
+    drawAndResolve(g, playerId, pending.srcCard);
+    yield { step: 'bomb_extra_flipped' };
     if (g.phase === 'awaiting_floor_choice') return;
   }
 
@@ -386,7 +429,11 @@ function drawAndResolve(g, playerId, handCard) {
         captured.splice(b, 1);
         g.floor.push(handCard, pair, flipped);
         g.ppeokFlags[handCard.month] = playerId;
-        g.lastAction = { kind: 'ppeok', player: playerId, month: handCard.month };
+        g.ppeokCount = g.ppeokCount || { p1: 0, p2: 0 };
+        g.ppeokCount[playerId] = (g.ppeokCount[playerId] || 0) + 1;
+        // 첫뻑 트래킹: 라운드 최초 뻑 생성자 기록 (이후 뻑은 갱신하지 않음)
+        if (g.firstPpeokBy == null) g.firstPpeokBy = playerId;
+        g.lastAction = { kind: 'ppeok', player: playerId, month: handCard.month, count: g.ppeokCount[playerId] };
         return;
       }
       // 비정상(가져간 카드 못 찾음) — 안전망: flipped만 바닥에
@@ -409,7 +456,11 @@ function drawAndResolve(g, playerId, handCard) {
       // 바닥에 같은 월 2장 (handCard가 0매칭/뻑 풀기 등 변형 시나리오) → 뻑 형성
       g.floor.push(flipped);
       g.ppeokFlags[flipped.month] = playerId;
-      g.lastAction = { kind: 'ppeok', player: playerId, month: flipped.month };
+      g.ppeokCount = g.ppeokCount || { p1: 0, p2: 0 };
+      g.ppeokCount[playerId] = (g.ppeokCount[playerId] || 0) + 1;
+      // 첫뻑 트래킹
+      if (g.firstPpeokBy == null) g.firstPpeokBy = playerId;
+      g.lastAction = { kind: 'ppeok', player: playerId, month: flipped.month, count: g.ppeokCount[playerId] };
       return;
     }
   }
@@ -496,6 +547,13 @@ function stealPi(g, taker, victim, count) {
  * @param {'p1'|'p2'} playerId
  */
 function finishTurn(g, playerId) {
+  // 3뻑 즉시 승리 — 한 사람이 한 라운드에 뻑 3개 만들면 즉시 라운드 승.
+  // (한국 일반 룰; ×2^3=8배 점수 multiplier도 endRoundWin에서 함께 적용)
+  if (g.ppeokCount && g.ppeokCount[playerId] >= 3) {
+    g.lastAction = { kind: 'three_ppeok', player: playerId, count: g.ppeokCount[playerId] };
+    endRoundWin(g, playerId);
+    return;
+  }
   // 9월 술잔 카드를 가져왔는데 아직 끗/쌍피 선택 안 했으면 선택 단계로 이동
   if (!g.kkeutChoiceMade[playerId] && g.captured[playerId].some((c) => c.id === 'm09_kkeut')) {
     g.pendingKkeutChoice = { player: playerId };
@@ -623,8 +681,9 @@ export function* selectKkeutTypeSteps(g, playerId, choice) {
  * 승자가 결정된 라운드 종료 처리.
  * @param {GameState} g
  * @param {'p1'|'p2'} winnerId
+ * @param {object} [extraFlags] - 사통 등 부가 flags (applyFinalMultipliers에 그대로 전달).
  */
-function endRoundWin(g, winnerId) {
+function endRoundWin(g, winnerId, extraFlags = {}) {
   const loserId = winnerId === 'p1' ? 'p2' : 'p1';
   const winner = calculateScore(g.captured[winnerId], { kkeutAsSsangpi: g.kkeutAsSsangpi[winnerId] });
   const loser  = calculateScore(g.captured[loserId],  { kkeutAsSsangpi: g.kkeutAsSsangpi[loserId] });
@@ -638,6 +697,11 @@ function endRoundWin(g, winnerId) {
     winnerShake: g.shaking[winnerId],
     loserShake: g.shaking[loserId],
     gobakApplies,
+    winnerPpeokCount: g.ppeokCount?.[winnerId] || 0,
+    // 첫뻑 보너스: 라운드 첫 뻑을 만든 사람이 승자와 일치 시 +7 가산.
+    firstPpeokBonus: g.firstPpeokBy === winnerId,
+    // 사통 보너스: 라운드 시작 시 사통 선언으로 종료된 경우 +7 가산.
+    sangtongBonus: !!extraFlags.sangtongBonus,
   });
 
   const totalMoney = result.finalScore * g.perPoint;
@@ -659,6 +723,9 @@ function endRoundWin(g, winnerId) {
     goCount: { ...g.goCount },
     shaking: { ...g.shaking },
     gobakApplies,
+    // 5건 룰 보강 (2026-05-31) — UI/QA 검증용 부가 필드
+    firstPpeokBy: g.firstPpeokBy,
+    sangtongBonusApplied: !!extraFlags.sangtongBonus,
   };
   g.lastAction = { kind: 'round_end_win', winner: winnerId };
 }
@@ -686,27 +753,97 @@ function endRoundDraw(g) {
   g.lastAction = { kind: 'round_end_draw' };
 }
 
+// ── 사통(같은 월 4장 손) 결정 ───────────────────────────────
+/**
+ * 사통 선언/포기 처리. 라운드 시작 시 손 10장 중 같은 월 4장 보유 시 모달이 뜬다.
+ *
+ * - declare: 즉시 라운드 승 + 7점 보너스 (multiplier 없이 base 가산).
+ * - continue: 그대로 정상 진행 (awaiting_play 복귀).
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ * @param {'declare'|'continue'} choice
+ * @returns {{ok:boolean, error?:string}}
+ */
+export function sangtongDecision(g, playerId, choice) {
+  for (const step of sangtongSteps(g, playerId, choice)) {
+    if (step && step.error) return { ok: false, error: step.error };
+  }
+  return { ok: true };
+}
+
+/**
+ * sangtongDecision의 단계별 generator 버전.
+ * yield: { step: 'sangtong_decided' } (선언/포기 공통), { step: 'turn_finished' } (선언 시만)
+ */
+export function* sangtongSteps(g, playerId, choice) {
+  if (g.phase !== 'awaiting_sangtong') {
+    yield { error: '지금은 사통 결정 단계가 아니다' }; return;
+  }
+  if (!g.pendingSangtong || g.pendingSangtong.player !== playerId) {
+    yield { error: '네가 사통을 결정할 차례가 아니다' }; return;
+  }
+  if (choice !== 'declare' && choice !== 'continue') {
+    yield { error: '선택은 declare 또는 continue' }; return;
+  }
+
+  const month = g.pendingSangtong.month;
+
+  if (choice === 'continue') {
+    // 정상 진행 — pendingSangtong 해제, awaiting_play로.
+    g.pendingSangtong = null;
+    g.phase = 'awaiting_play';
+    g.lastAction = { kind: 'sangtong_decline', player: playerId, month };
+    yield { step: 'sangtong_decided' };
+    return;
+  }
+
+  // declare: 즉시 라운드 종료 — 사통 선언자가 승자, +7점 보너스.
+  g.pendingSangtong = null;
+  g.lastAction = { kind: 'sangtong', player: playerId, month };
+  yield { step: 'sangtong_decided' };
+
+  endRoundWin(g, playerId, { sangtongBonus: true });
+  yield { step: 'turn_finished' };
+}
+
 // ── 흔들기 결정 ─────────────────────────────────────────────
 /**
- * 흔들기 결정 처리 (라운드 시작 직후 자동 검사).
+ * 흔들기 결정 처리. 클라이언트가 카드 클릭 시점 모달에서 결정을 전송한다.
+ *
+ * 2026-05-31 변경: shake_decision phase 자체를 제거. 클라이언트가 같은 월 3장 손
+ * 보유 상태에서 그 월 카드를 처음 낼 때 모달을 띄우고, 결과를 SHAKE 메시지로 보낸
+ * 뒤 곧바로 PLAY_CARD를 이어 전송한다. 서버는 phase 무관하게 g.shaking 플래그만
+ * 갱신한다. 라운드 당 1회 제한은 g.shakeAsked로 관리.
+ *
  * @param {GameState} g
  * @param {'p1'|'p2'} playerId
  * @param {'shake'|'normal'} decision
+ * @param {number} [month] - 클라이언트가 보낸 그 월 (lastAction 기록용)
  * @returns {{ok:boolean, error?:string}}
  */
-export function shakeDecision(g, playerId, decision) {
-  if (g.phase !== 'shake_decision') return { ok: false, error: '지금은 흔들기 결정 단계가 아니다' };
-  if (!g.pendingShake || g.pendingShake.player !== playerId) {
-    return { ok: false, error: '네가 결정할 단계가 아니다' };
+export function shakeDecision(g, playerId, decision, month) {
+  if (g.turn !== playerId) {
+    return { ok: false, error: '네 차례가 아니다' };
+  }
+  if (g.shakeAsked && g.shakeAsked[playerId]) {
+    return { ok: false, error: '이미 흔들기 결정함' };
   }
   if (decision === 'shake') {
     g.shaking[playerId] = true;
-    g.lastAction = { kind: 'shake', player: playerId, month: g.pendingShake.month };
+    g.lastAction = { kind: 'shake', player: playerId, month: month ?? null };
   } else {
     g.lastAction = { kind: 'shake_decline', player: playerId };
   }
+  // 라운드 당 1회 제한
+  g.shakeAsked = g.shakeAsked || { p1: false, p2: false };
+  g.shakeAsked[playerId] = true;
   g.pendingShake = null;
-  g.phase = 'awaiting_play';
+  // 레거시 호환: shake_decision phase를 사용하는 inject 테스트나 옛 흐름에서
+  // 호출된 경우 phase를 awaiting_play로 복원해 카드 플레이를 이어갈 수 있게 한다.
+  if (g.phase === 'shake_decision') {
+    g.phase = 'awaiting_play';
+  }
   return { ok: true };
 }
 
@@ -729,7 +866,11 @@ export function bomb(g, playerId, month) {
 
 /**
  * bomb의 단계별 generator 버전.
- * yield: { step: 'bomb_played' }, { step: 'deck_flipped' }, { step: 'turn_finished' }
+ * yield: { step: 'bomb_played' }, { step: 'deck_flipped_1' }, { step: 'deck_flipped_2' }, { step: 'turn_finished' }
+ *
+ * 표준 룰: 폭탄 발동 시 덱 2장 연속 뒤집기 권리가 있다. 두 번째 뒤집기 결과로
+ * awaiting_floor_choice에 빠지면 chooseFloorSteps가 bombExtraDraw 플래그를 보고
+ * 한 번 더 drawAndResolve를 이어 실행한다.
  */
 export function* bombSteps(g, playerId, month) {
   if (g.phase !== 'awaiting_play') { yield { error: '지금은 폭탄을 낼 수 없다' }; return; }
@@ -753,9 +894,20 @@ export function* bombSteps(g, playerId, month) {
   g.lastAction = { kind: 'bomb', player: playerId, month, stoleFromOpp: 1 };
   yield { step: 'bomb_played' };
 
-  // 단계 2: 덱에서 1장 뒤집기
+  // 단계 2-1: 덱에서 첫 번째 뒤집기 + 매칭 처리
+  // 다음 뒤집기가 한 번 더 남았음을 chooseFloorSteps에 알리기 위해 bombExtraDraw=true 설정.
+  g.bombExtraDraw = true;
   drawAndResolve(g, playerId, handSame[0]);
-  yield { step: 'deck_flipped' };
+  yield { step: 'deck_flipped_1' };
+  if (g.phase === 'awaiting_floor_choice') {
+    // 사용자 선택 대기 — chooseFloorSteps에서 bombExtraDraw를 보고 두 번째 뒤집기를 이어서 실행한다.
+    return;
+  }
+
+  // 단계 2-2: 덱에서 두 번째 뒤집기 (폭탄 권리)
+  g.bombExtraDraw = false;
+  drawAndResolve(g, playerId, handSame[0]);
+  yield { step: 'deck_flipped_2' };
   if (g.phase === 'awaiting_floor_choice') return;
 
   // 단계 3: 점수 평가 + 턴 마무리
@@ -786,6 +938,9 @@ export function snapshotForPlayer(g, playerId) {
   const bombableMonths = Object.keys(handMonthCount)
     .filter((m) => handMonthCount[m] === 3 && floorMonthCount[m] === 1)
     .map(Number);
+  // 사통 결정이 자기 차례인 경우만 pendingSangtong 노출 (라운드 시작 시 모달 트리거).
+  const mySangtong = g.pendingSangtong && g.pendingSangtong.player === playerId
+    ? g.pendingSangtong : null;
   return {
     type: 'STATE',
     you: playerId,
@@ -801,6 +956,7 @@ export function snapshotForPlayer(g, playerId) {
     },
     goCount: { ...g.goCount },
     shaking: { ...g.shaking },
+    shakeAsked: { ...(g.shakeAsked || { p1: false, p2: false }) },
     ppeokFlags: { ...g.ppeokFlags },
     kkeutAsSsangpi: { ...(g.kkeutAsSsangpi || { p1: false, p2: false }) },
     pendingKkeutChoice: g.pendingKkeutChoice && g.pendingKkeutChoice.player === playerId
@@ -809,7 +965,9 @@ export function snapshotForPlayer(g, playerId) {
     phase: g.phase,
     pendingChoice: myChoice ? { month: myChoice.month, candidates: myChoice.candidates } : null,
     pendingShake: myShake ? { month: myShake.month } : null,
+    pendingSangtong: mySangtong ? { player: mySangtong.player, month: mySangtong.month } : null,
     bombableMonths,
+    firstPpeokBy: g.firstPpeokBy || null,
     lastAction: g.lastAction,
     money: { ...g.money },
     perPoint: g.perPoint,

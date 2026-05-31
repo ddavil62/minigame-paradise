@@ -100,6 +100,9 @@ export function calculateScore(captured, opts = {}) {
  * @param {boolean} flags.winnerShake    - 승자 흔들기 여부
  * @param {boolean} flags.loserShake     - 패자 흔들기 여부 (스톱한 측 입장의 추가 케이스 — 보통 미사용)
  * @param {boolean} flags.gobakApplies   - 고박 발동 여부 (고 부른 사람이 결국 패배)
+ * @param {number}  flags.winnerPpeokCount - 승자가 라운드 동안 만든 뻑 개수 (×2^N 배수)
+ * @param {boolean} [flags.firstPpeokBonus] - 첫뻑 보너스: 라운드 첫 뻑 생성자가 승자이면 +7 가산.
+ * @param {boolean} [flags.sangtongBonus]   - 사통 보너스: 사통 선언으로 라운드 종료 시 +7 가산.
  * @returns {{ finalScore:number, multiplier:number, reasons:string[] }}
  */
 export function applyFinalMultipliers(winner, loser, flags) {
@@ -146,11 +149,32 @@ export function applyFinalMultipliers(winner, loser, flags) {
     reasons.push('흔들기 ×2');
   }
 
+  // 뻑 배수: 1뻑 ×2, 2뻑 ×4, 3뻑은 즉시 승리(game.js)에서 처리되지만 다른 경로로
+  // 라운드가 끝날 때(상대 스톱 등)도 ppeokCount만큼 ×2^N 적용.
+  const ppCount = flags.winnerPpeokCount || 0;
+  if (ppCount > 0) {
+    const ppMult = Math.pow(2, ppCount);
+    mult *= ppMult;
+    reasons.push(`뻑 ${ppCount}개 ×${ppMult}`);
+  }
+
   // 고박: 고를 불렀는데 결국 패배 → 점수 ×2 (해당 사람이 더 잃음)
   // 본 구현에서는 승자측 점수에 ×2로 부과한다 (패자가 그만큼 더 지불).
   if (flags.gobakApplies) {
     mult *= 2;
     reasons.push('고박 ×2');
+  }
+
+  // ── 5건 룰 보강 (2026-05-31) ──
+  // 첫뻑 보너스: 라운드 첫 뻑을 만든 사람이 승자이면 +7점 base 가산 (multiplier 없이).
+  if (flags.firstPpeokBonus) {
+    base += 7;
+    reasons.push('첫뻑 +7');
+  }
+  // 사통 보너스: 사통 선언으로 즉시 라운드 종료 시 +7점 base 가산.
+  if (flags.sangtongBonus) {
+    base += 7;
+    reasons.push('사통 +7');
   }
 
   const finalScore = base * mult;

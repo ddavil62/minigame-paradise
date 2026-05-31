@@ -1,5 +1,63 @@
 # Changelog
 
+## [2026-05-31] - 룰 보강 5건 (사통/흔들기·폭탄 시점/첫뻑/폭탄 2뒤집기/floor 위치 고정)
+
+사용자 실플레이 피드백 5건을 표준 한국 맞고 룰에 맞게 구현. 룰 로직(`game.js`, `score.js`) 3건 + UI 흐름(`public/client.js`, `public/index.html`) 2건 + 서버 라우터(`server.js`) 1건.
+
+### 추가
+
+#### `game.js`
+- `sangtongSteps(g, playerId, choice)` 신규 export 함수 — 사통 선언/포기 처리. `choice === 'declare'` 시 `endRoundWin` 호출 + `sangtongBonus: 7` flag 전달. `choice === 'continue'` 시 `g.pendingSangtong = null`, `g.phase = 'awaiting_play'` 복귀
+- `startRound` 사통 검사: 양 플레이어 손 10장 중 같은 월 4장 포함 시 `g.pendingSangtong = { player, month }` + `g.phase = 'awaiting_sangtong'`
+- `g.firstPpeokBy` 신규 상태(`'p1' | 'p2' | null`) — 라운드 첫 뻑 생성자 추적. `drawAndResolve` 내 `g.ppeokFlags[month] = playerId` 직후 `if (g.firstPpeokBy === null) g.firstPpeokBy = playerId`
+- `g.bombExtraDraw` 플래그 — 폭탄 후 2회차 뒤집기 대기 표시. `bombSteps`가 `drawAndResolve` 2회 연속 실행. 2회차에서 `awaiting_floor_choice` 진입 시 `chooseFloorSteps`의 `wasFromHand` 분기를 `wasFromHand || g.bombExtraDraw`로 확장
+- `g.shakeAsked = { p1: false, p2: false }` — 라운드당 흔들기 모달 1회 제한
+
+#### `score.js`
+- `applyFinalMultipliers`의 `flags`에 두 신규 필드:
+  - `firstPpeokBonus: boolean` — true 시 `base += 7`, reasons에 `첫뻑 +7`
+  - `sangtongBonus: 7` — base 가산 7점, reasons에 `사통 +7`
+- `endRoundWin`에서 `applyFinalMultipliers` 호출 시 `firstPpeokBonus: g.firstPpeokBy === winnerId` 전달
+
+#### `server.js`
+- `sangtongSteps` import 추가
+- `isPauseForUserInput`에 `'awaiting_sangtong'` 추가 (사통 대기 중 봇 턴 진행 차단)
+- 메시지 라우터 `SELECT_SANGTONG` 케이스 신설 — `runSteps(sangtongSteps(game, player.id, msg.choice), player)`
+
+#### `public/index.html`
+- `#sangtong-modal` 신규 모달 — 타이틀 "사통!", 선언/포기 버튼 (`#btn-sangtong-declare`, `#btn-sangtong-continue`)
+- `#bomb-confirm-modal` 신규 모달 — `window.confirm` 대체 (`#btn-bomb-confirm`, `#btn-bomb-cancel`)
+- 캐시 버스터: `client.js?v=13` → `v=14`
+
+#### `public/client.js`
+- 사통 모달 핸들러 — phase `awaiting_sangtong` && `pendingSangtong.player === me` 시 모달 show, 선언/포기 버튼에서 `SELECT_SANGTONG` 송신
+- 흔들기 카드 클릭 시점 모달 — `sendPlay(cardId)` 진입 시 같은 월 3장 보유 + 그 월 첫 카드 + `!shakeAskedThisRound` 검사 → 모달 후 `SHAKE` → `PLAY_CARD` 송신 순서 보장
+- 폭탄 카드 클릭 시점 모달 — `window.confirm` 제거, `bomb-confirm-modal` 호출
+- `floorSlotMap = new Map()` — 카드 ID → 슬롯 인덱스 캐시. `renderFloor` 재구현: 신규 카드 ID에만 빈 슬롯 배정, 사라진 카드 ID 캐시 제거. `groupSlotIdx`를 그 월 첫 카드의 슬롯으로 대체
+- `ROUND_START`/`GAME_START` 수신 시 `floorSlotMap.clear()` + `shakeAskedThisRound = false`
+- `snapshotForPlayer`에 `pendingSangtong` 필드 추가 (본인 플레이어 차례인 경우만)
+
+### 변경
+
+- **`shake_decision` phase 제거** — 흔들기 결정을 서버 phase에서 클라이언트 모달로 완전 이전. `SHAKE` 메시지 타입은 유지 (페이로드 동일)
+- **첫뻑 보너스 점수 모델** — 기존 `뻑 multiplier ×2^N`은 그대로(룰북 §13 해소 항목), 추가로 첫뻑한 사람이 승리하면 base에 +7. multiplier가 아닌 base 가산이라 박/고와 곱셈 누적
+- **사통 점수 모델** — multiplier 없이 base 7점 가산 후 즉시 라운드 종료
+
+### 알려진 후속 작업
+
+- 기존 e2e `E-13/E-15/E-16` 시나리오가 `shake_decision` phase의 `/test/inject` 케이스에 의존 → 별도 수정 필요
+- Playwright nested `node_modules` 충돌로 자동 회귀 미실행 (별도 인프라 이슈)
+- 추가 단위 케이스(사통/첫뻑/폭탄 2턴/floor 캐시) 작성 권고
+
+### 참고
+
+- 목적 정의서: `.claude/specs/2026-05-31-matgo-rule-boost-scope.md`
+- 스펙: `.claude/specs/2026-05-31-matgo-rule-boost-plan.md`
+- Coder 리포트: `.claude/specs/2026-05-31-matgo-rule-boost-coder-report.md`
+- 룰북: `C:/antigravity/.claude/specs/2026-05-30-matgo-rulebook.md` §13 (별도 머신)
+
+---
+
 ## [2026-05-28] - v8 UI 시안 이식
 
 studio-mockup의 `matgo/redesign-mockup-v8.html` 시안을 실제 게임 클라이언트에 그대로 이식. 게임 로직(server.js, game.js, cards.js, score.js, bot.js)은 일절 수정하지 않고 클라이언트 3개 파일만 전면 재작성.

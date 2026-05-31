@@ -21,6 +21,7 @@ import { WebSocketServer } from 'ws';
 import {
   createGame, startRound, playCard, chooseFloor, goStop, shakeDecision, bomb, selectKkeutType,
   playCardSteps, chooseFloorSteps, bombSteps, selectKkeutTypeSteps,
+  sangtongSteps,
   snapshotForPlayer,
 } from './game.js';
 
@@ -69,11 +70,13 @@ export function createApp(opts = {}) {
   // 단계 사이 지연(ms). 클라이언트 카드 fly(0.32s) + 약간의 여유.
   const STEP_DELAY_MS = 600;
   // 사용자 입력 대기 phase — 단계 시퀀스를 여기서 끊고 다음 메시지를 기다린다.
+  // shake_decision은 2026-05-31에 제거 (흔들기는 클라이언트 모달이 카드 클릭 시점에 처리).
+  // awaiting_sangtong은 라운드 시작 시 같은 월 4장 보유자 모달 대기.
   function isPauseForUserInput(phase) {
     return phase === 'awaiting_floor_choice'
         || phase === 'awaiting_kkeut_choice'
         || phase === 'awaiting_go_stop'
-        || phase === 'shake_decision';
+        || phase === 'awaiting_sangtong';
   }
   // 단계 진행 중이면 새 액션 메시지를 거부하는 락. fly 중 중복 입력 방지.
   let stepInProgress = false;
@@ -93,8 +96,12 @@ export function createApp(opts = {}) {
    * @param {object} g 게임 상태
    * @returns {boolean}
    */
-  function shouldDeferBroadcast(g) {
+  function shouldDeferBroadcast(g, step) {
     if (!g || !g.lastAction) return false;
+    // 마지막 단계('turn_finished')는 항상 broadcast. finishTurn이 lastAction.kind를
+    // 갱신하지 않으므로 단계 1의 'kkeut_choice'가 그대로 남아 단계 2도 보류되어
+    // generator가 끝까지 송신 없이 종료되는 버그를 방지한다.
+    if (step && step.step === 'turn_finished') return false;
     const k = g.lastAction.kind;
     // 'kkeut_choice'도 보류 — selectKkeutTypeSteps의 단계 1 시점에 phase가 여전히
     // 'awaiting_kkeut_choice'라서, broadcastState 직후 isPauseForUserInput true로
@@ -153,7 +160,7 @@ export function createApp(opts = {}) {
           return;
         }
         const lastKind = game?.lastAction?.kind;
-        const defer = shouldDeferBroadcast(game);
+        const defer = shouldDeferBroadcast(game, step);
         console.log(`[matgo] step=${step.step} lastAction=${lastKind} phase=${game?.phase} defer=${defer}`);
         // 뻑 가능 단계는 broadcast 보류 — 다음 단계에서 뻑/정상 확정 후 통합 송신.
         if (defer) {
@@ -238,9 +245,10 @@ export function createApp(opts = {}) {
       return;
     }
     console.log(`[matgo] 봇 spawn: ${url}`);
+    // 봇 stdout/stderr를 부모(launcher) 콘솔로 inherit — 디버깅 (9월 술잔 멈춤 등 추적)
     botChild = spawn(process.execPath, [botPath, '--url', url], {
       detached: false,
-      stdio: 'ignore',
+      stdio: 'inherit',
     });
     botChild.on('exit', (code) => {
       console.log(`[matgo] 봇 종료 (code=${code})`);
@@ -354,10 +362,19 @@ export function createApp(opts = {}) {
 
         case 'SHAKE': {
           if (!game) break;
-          const r = shakeDecision(game, player.id, msg.decision);
+          // 흔들기는 클라이언트 모달에서 카드 클릭 시점에 결정한다. msg.month는 카드 월 (lastAction 기록용).
+          const r = shakeDecision(game, player.id, msg.decision, msg.month);
           if (!r.ok) { sendTo(player, { type: 'ERROR', message: r.error }); break; }
-          console.log(`[matgo] SHAKE: ${player.id} → ${msg.decision}`);
+          console.log(`[matgo] SHAKE: ${player.id} → ${msg.decision} (month=${msg.month})`);
           broadcastState();
+          break;
+        }
+
+        case 'SELECT_SANGTONG': {
+          if (!game) break;
+          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          console.log(`[matgo] SELECT_SANGTONG: ${player.id} → ${msg.choice}`);
+          runSteps(sangtongSteps(game, player.id, msg.choice), player);
           break;
         }
 

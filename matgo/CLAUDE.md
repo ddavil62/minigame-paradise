@@ -6,9 +6,20 @@
 
 **QA 및 기능 개발 시 반드시 룰북을 기준으로 삼는다.**
 
-- 위치: `C:/antigravity/.claude/specs/2026-05-30-matgo-rulebook.md`
+- 위치: `C:/antigravity/.claude/specs/2026-05-30-matgo-rulebook.md` (별도 머신, 본 레포에서 직접 수정 불가)
 - 출처: 나무위키 맞고·고스톱 + 게임 코드 교차검증
 - 포함 내용: 화투 48장 구성, 족보 점수표, 박 기준, 고배수 공식, QA 체크리스트, 구현 버그 목록
+
+### 룰북 §13 보강 (2026-05-31, 본 레포 기준 5건 신규)
+
+| 항목 | 내용 |
+|---|---|
+| 사통 (대통령) | 라운드 시작 시 손패 10장에 같은 월 4장이 포함되면 사통 모달 표시 → 선언 시 즉시 라운드 승 + **7점 보너스** (multiplier 없는 base 가산), 포기 시 정상 진행. phase: `awaiting_sangtong`, 메시지: `SELECT_SANGTONG { choice: 'declare' \| 'continue' }` |
+| 흔들기 시점 변경 | **`shake_decision` phase 제거.** 라운드 시작 시 일괄 검사 → 같은 월 첫 카드를 낼 때 클라이언트 모달(`shake-modal`)로 이전. 흔들기 모달은 라운드당 1회 (`g.shakeAsked`) |
+| 폭탄 확인 모달 | `window.confirm` → 전용 모달(`bomb-confirm-modal`)로 교체. 같은 월 두 번째 카드 낼 때 + 바닥 1장 조건에서 표시 |
+| 첫뻑 보너스 | `g.firstPpeokBy` 신규 상태. 라운드 첫 뻑을 만든 플레이어가 승리 시 `applyFinalMultipliers`에서 `firstPpeokBonus` flag로 **+7점** 가산. reasons에 `첫뻑 +7` |
+| 폭탄 후 덱 2턴 | `bombSteps`가 `drawAndResolve` **2회 연속** 실행. 2회차에서 `awaiting_floor_choice` 진입 가능 (`g.bombExtraDraw` 플래그로 `chooseFloorSteps` 분기 확장). 마지막 턴 멈춤 없음 |
+| floor 위치 고정 | 클라이언트 `floorSlotMap` (Map: 카드 ID → 슬롯 인덱스) 신규 캐시. 한 번 떨어진 위치 ID 기반 고정, 다른 카드 매칭으로 인덱스 당김 없음. `ROUND_START`/`GAME_START` 수신 시 `floorSlotMap.clear()` |
 
 ### QA 필수 준수 사항
 
@@ -99,8 +110,20 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 |------|-----|
 | 흔들기 모달 | `shake-modal` (⚠️ shake-panel 아님) |
 | 폭탄 패널 | `bomb-panel` |
+| 폭탄 확인 모달 | `bomb-confirm-modal` (2026-05-31 신설, 카드 클릭 시점 모달) |
+| 사통 모달 | `sangtong-modal` (2026-05-31 신설, 라운드 시작 시 같은 월 4장) |
 | 고/스톱 오버레이 | `go-stop-overlay` |
 | 9월 술잔 모달 | `kkeut-modal` |
 | 라운드 결과 모달 | `round-modal` |
 | 배너 상태 | `banner-status` |
 | 배너 배수 | `banner-multiplier` |
+
+## 변경 시 자주 깨지는 함정
+
+1. **`shake_decision` phase는 더 이상 존재하지 않는다.** (2026-05-31 제거) 흔들기는 클라이언트 모달로만 처리. 서버 phase·메시지에서 참조하지 말 것. 기존 e2e `E-13/E-15/E-16` inject 시나리오가 의존했으므로 후속 정리 필요.
+2. **사통 phase `awaiting_sangtong`은 `isPauseForUserInput()`이 true를 반환해야 한다.** (`server.js`) 누락 시 사통 모달 표시 중에도 서버가 봇 턴을 진행해 상태 깨짐.
+3. **첫뻑 보너스(`firstPpeokBonus`)는 base 가산 7점이지 multiplier가 아니다.** `applyFinalMultipliers`에서 base에 +7 후 박/고 multiplier가 곱해진다. 순서 바뀌면 점수 폭주.
+4. **폭탄 후 `g.bombExtraDraw` 플래그는 두 번째 `drawAndResolve` 직후 반드시 false로 리셋.** 미리셋 시 `chooseFloorSteps`에서 무한 3회차 진입 가능.
+5. **`floorSlotMap`은 클라이언트 클로저 변수.** 서버 STATE에 슬롯 정보를 싣지 말 것. `ROUND_START`/`GAME_START` 수신 시 반드시 `clear()`.
+6. **`g.firstPpeokBy`/`g.pendingSangtong`/`g.shakeAsked`/`g.bombExtraDraw`는 `startRound`에서 초기화.** 누락 시 라운드 간 상태 누수.
+7. **사통과 흔들기는 같은 라운드에 동시 충족 가능** (같은 월 4장 ⊃ 같은 월 3장). 사통 우선, `continue` 선택 시에만 흔들기 검사가 카드 클릭 시점에 작동.

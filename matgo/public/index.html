@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>맞고 - LAN 1:1 대전</title>
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=13" />
 </head>
 <body>
   <main class="play-area">
@@ -131,15 +131,41 @@
     </div>
   </div>
 
-  <!-- 흔들기 결정 모달 (라운드 시작 시 같은 월 3장 보유) -->
+  <!-- 흔들기 결정 모달 (그 월 첫 카드 클릭 시점) -->
   <div id="shake-modal" class="modal hidden">
     <div class="modal-inner">
       <h2>흔들기</h2>
-      <p><b id="shake-month-text">같은 월</b> 카드 3장을 받았다 — 흔들겠는가?</p>
+      <p><b id="shake-month-text">같은 월</b> 카드 3장 보유 — 흔들겠는가?</p>
       <p class="modal-hint">흔들면 라운드 점수 ×2. 단 패배 시 손해도 ×2 (보수적이면 일반).</p>
       <div class="modal-actions">
         <button id="btn-shake" class="primary">흔들기 (×2)</button>
         <button id="btn-shake-no" class="secondary">일반</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사통 모달 (라운드 시작 시 같은 월 4장 손패) -->
+  <div id="sangtong-modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2>사통!</h2>
+      <p><b id="sangtong-month-text">같은 월</b> 카드 4장을 받았다 — 사통을 선언하겠는가?</p>
+      <p class="modal-hint">사통 선언: 즉시 라운드 승리 + 7점 보너스. 포기하면 정상 진행.</p>
+      <div class="modal-actions">
+        <button id="btn-sangtong-declare" class="primary">사통 선언 (+7점)</button>
+        <button id="btn-sangtong-continue" class="secondary">포기 (정상 진행)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 폭탄 확인 모달 (폭탄 가능 월 카드 클릭 시점) -->
+  <div id="bomb-confirm-modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2>폭탄!</h2>
+      <p><b id="bomb-confirm-month-text">?월</b> 카드 3장 보유 + 바닥 1장 — 폭탄을 투하하겠는가?</p>
+      <p class="modal-hint">4장 모두 가져가고 상대 피 1장 추가. 덱 2장 추가 뒤집기 권리.</p>
+      <div class="modal-actions">
+        <button id="btn-bomb-confirm" class="primary">폭탄 투하</button>
+        <button id="btn-bomb-cancel" class="secondary">한 장만 내기</button>
       </div>
     </div>
   </div>
@@ -158,6 +184,6 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="client.js?v=9"></script>
+  <script src="client.js?v=14"></script>
 </body>
 </html>
