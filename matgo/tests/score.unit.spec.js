@@ -442,3 +442,40 @@ test('M-21: 모든 박(광+피+멍+흔들기+고박) 1고 → mult=32, finalScor
   expect(r.multiplier).toBe(32);
   expect(r.finalScore).toBe(8 * 32);
 });
+
+// ============================================================
+// §10 첫뻑/사통 보너스 — 2026-05-31 신규
+// ============================================================
+
+test('M-22: 첫뻑 보너스 +7 → base에 가산, reasons에 "첫뻑 +7"', () => {
+  const r = applyFinalMultipliers(mkW({ score: 7 }), mkL(), { ...noF, firstPpeokBonus: true });
+  expect(r.finalScore).toBe(7 + 7);
+  expect(r.multiplier).toBe(1);
+  expect(r.reasons).toContain('첫뻑 +7');
+});
+
+test('M-23: 첫뻑 + 피박 → base=7+7=14, mult=2, final=28', () => {
+  const r = applyFinalMultipliers(
+    mkW({ score: 7 }),
+    mkL({ piCount: 5, kkeut: 5 }),
+    { ...noF, firstPpeokBonus: true },
+  );
+  expect(r.multiplier).toBe(2);
+  expect(r.finalScore).toBe(14 * 2);
+});
+
+test('M-24: 사통 보너스 +7 → base 가산, reasons에 "사통 +7"', () => {
+  const r = applyFinalMultipliers(mkW({ score: 0 }), mkL({ score: 0 }), { ...noF, sangtongBonus: true });
+  expect(r.finalScore).toBe(7);
+  expect(r.multiplier).toBe(1);
+  expect(r.reasons).toContain('사통 +7');
+});
+
+test('M-25: 첫뻑 + 사통 동시 → 둘 다 가산 (base = score+7+7)', () => {
+  const r = applyFinalMultipliers(mkW({ score: 0 }), mkL(), {
+    ...noF, firstPpeokBonus: true, sangtongBonus: true,
+  });
+  expect(r.finalScore).toBe(14);
+  expect(r.reasons).toContain('첫뻑 +7');
+  expect(r.reasons).toContain('사통 +7');
+});

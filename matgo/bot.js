@@ -24,6 +24,11 @@ console.log(`[bot] 서버에 접속 시도: ${URL}`);
 
 let myId = null;
 let lastActedFor = null; // 같은 phase에서 두 번 행동 안 하도록 추적
+// 새 STATE가 도착하면 기존 보류 중인 act 타이머를 취소해서 항상 최신 STATE 기준으로
+// 행동한다. 이전엔 단계 1(pair_from_hand) 보류 + 단계 2(STEP_DELAY 600ms 후 단계 3)
+// 사이에 봇이 단계 2 STATE에 반응해 doPlay → 단계 3 phase 변경 후 도착 → 서버 거절
+// → 봇 멈춤 케이스가 있었다.
+let pendingActTimer = null;
 
 const ws = new WebSocket(URL);
 
@@ -97,9 +102,20 @@ function handleState(s) {
   if (key === lastActedFor) return;
   lastActedFor = key;
 
+  // 새 STATE가 도착했으므로 직전 보류 중이던 act 타이머를 취소.
+  // (서버가 단계 1 보류 → 단계 2 broadcast → STEP_DELAY 600ms → 단계 3 broadcast
+  //  하는 중간 STATE에서 봇이 행동을 보내면 phase 불일치로 거절되어 멈춘다.)
+  if (pendingActTimer) {
+    clearTimeout(pendingActTimer);
+    pendingActTimer = null;
+  }
+
   // 사람스러운 지연 (0.6~1.4초)
   const delay = 600 + Math.floor(Math.random() * 800);
-  setTimeout(() => act(s), delay);
+  pendingActTimer = setTimeout(() => {
+    pendingActTimer = null;
+    act(s);
+  }, delay);
 }
 
 /**

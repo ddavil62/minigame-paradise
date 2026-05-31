@@ -29,6 +29,15 @@
   --felt-edge:  #0c2a18;
 }
 
+/* ── 해상도 적응: 1280x800 고정 디자인을 창 크기에 맞춰 transform: scale로 자동 스케일 ─── */
+html {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-deep) 0%, #000 100%);
+}
 body {
   margin: 0;
   font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -36,11 +45,17 @@ body {
     radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,175,55,0.04) 0%, transparent 65%),
     linear-gradient(180deg, var(--bg-base) 0%, var(--bg-deep) 100%);
   color: #ece6d6;
-  height: 100vh;
+  /* 1280×800 고정 캔버스. JS(client.js의 fitToWindow)가 transform: scale로 창에 맞춤. */
+  width: 1280px;
+  height: 800px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   font-weight: 500;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
 }
 
 /* ── 플레이 영역 (3 col × 3 row grid) ─────────────────────── */

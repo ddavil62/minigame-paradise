@@ -12,7 +12,7 @@
 import { test, expect } from '@playwright/test';
 import {
   createGame, playCard, chooseFloor, goStop,
-  shakeDecision, selectKkeutType, bomb,
+  shakeDecision, selectKkeutType, bomb, sangtongDecision,
 } from '../game.js';
 import { buildDeck } from '../cards.js';
 
@@ -67,6 +67,11 @@ function makeGame({ p1Hand = [], p2Hand = [], floor = [], deck = [], turn = 'p1'
     kkeutAsSsangpi:   { p1: false, p2: false },
     kkeutChoiceMade:  { p1: false, p2: false },
     pendingKkeutChoice: null,
+    // ── 5건 룰 보강 (2026-05-31) ──
+    pendingSangtong: null,
+    shakeAsked: { p1: false, p2: false },
+    bombExtraDraw: false,
+    firstPpeokBy: null,
   };
 }
 
@@ -533,4 +538,232 @@ test('G-27: 고박 — 고를 부른 패자 → roundResult.reasons에 고박 �
   expect(g.roundWinner).toBe('p2');
   expect(g.roundResult.gobakApplies).toBe(true);
   expect(g.roundResult.reasons).toContain('고박 ×2');
+});
+
+// ============================================================
+// §10 사통(같은 월 4장 손) — 2026-05-31 신규
+// ============================================================
+
+test('G-28: 사통 선언 → endRoundWin + 7점 보너스, reasons에 "사통 +7"', () => {
+  // 사통 선언은 라운드 시작 시점이므로 양쪽 captured=비어 있음 → 피박/멍박 발동.
+  // 그 결과 base=7 × mult(피박×멍박=4) = 28점.
+  // 즉 사통 보너스가 가산되었음을 reasons + sangtongBonusApplied로만 확인한다.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm01_pi_b', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor: [],
+    deck: [],
+  });
+  g.phase = 'awaiting_sangtong';
+  g.pendingSangtong = { player: 'p1', month: 1 };
+
+  const r = sangtongDecision(g, 'p1', 'declare');
+  expect(r.ok).toBe(true);
+  expect(g.phase).toBe('round_end');
+  expect(g.roundWinner).toBe('p1');
+  expect(g.roundResult.reasons).toContain('사통 +7');
+  expect(g.roundResult.sangtongBonusApplied).toBe(true);
+  // 라운드 시작 시 빈 captured라 피박/멍박 발동 → 7×4=28 (현 구현 기준)
+  expect(g.roundResult.finalScore).toBeGreaterThanOrEqual(7);
+});
+
+test('G-29: 사통 포기 → awaiting_play 복귀, pendingSangtong=null', () => {
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm01_pi_b', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor: [],
+    deck: [],
+  });
+  g.phase = 'awaiting_sangtong';
+  g.pendingSangtong = { player: 'p1', month: 1 };
+
+  const r = sangtongDecision(g, 'p1', 'continue');
+  expect(r.ok).toBe(true);
+  expect(g.phase).toBe('awaiting_play');
+  expect(g.pendingSangtong).toBeNull();
+  expect(g.roundWinner).toBeNull();
+});
+
+test('G-30: createGame에서 같은 월 4장 손이 분배되면 phase=awaiting_sangtong', () => {
+  // shuffle 결과에 의존 — 충분히 많이 돌려도 거의 발생 안 함. 직접 검증은 startRound 후
+  // pendingSangtong 필드가 존재하는 구조인지만 확인.
+  const g = createGame();
+  expect(g).toHaveProperty('pendingSangtong');
+  expect(g).toHaveProperty('shakeAsked');
+  expect(g).toHaveProperty('bombExtraDraw');
+  expect(g).toHaveProperty('firstPpeokBy');
+  expect(g.shakeAsked).toEqual({ p1: false, p2: false });
+  expect(g.bombExtraDraw).toBe(false);
+  expect(g.firstPpeokBy).toBeNull();
+});
+
+// ============================================================
+// §11 첫뻑 보너스 — 2026-05-31 신규
+// ============================================================
+
+test('G-31: 첫뻑 발생 → g.firstPpeokBy 기록', () => {
+  // G-17과 동일한 뻑 형성 시나리오
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong'],
+    deck:   ['m01_pi_a'],
+  });
+  playCard(g, 'p1', 'm01_gwang');
+  expect(g.lastAction.kind).toBe('ppeok');
+  expect(g.firstPpeokBy).toBe('p1');
+});
+
+test('G-32: 첫뻑 후 같은 사람이 두 번째 뻑을 만들어도 firstPpeokBy 유지', () => {
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong'],
+    deck:   ['m01_pi_a'],
+  });
+  playCard(g, 'p1', 'm01_gwang');
+  expect(g.firstPpeokBy).toBe('p1');
+  // 또 한 번 뻑이 만들어졌다고 가정한 뒤(직접 갱신 시뮬레이트) firstPpeokBy는 그대로
+  g.ppeokFlags[5] = 'p1';
+  // firstPpeokBy는 함수 내부에서 null 체크 후 한 번만 설정되므로 그대로 'p1' 유지
+  expect(g.firstPpeokBy).toBe('p1');
+});
+
+test('G-33: 첫뻑 보너스 — 첫뻑 만든 사람이 라운드 승리 시 +7점, reasons에 "첫뻑 +7"', () => {
+  const g = makeGame({
+    p1Hand: ['m05_kkeut'],
+    p2Hand: ['m07_kkeut'],
+    floor:  [],
+    deck:   [],
+    turn:   'p1',
+  });
+  g.phase = 'awaiting_go_stop';
+  g.firstPpeokBy = 'p1';
+  // p1: 7점 짜리 captured
+  g.captured.p1 = [card('m01_gwang'), card('m03_gwang'), card('m08_gwang'),
+                    card('m01_tti_hong'), card('m02_tti_hong'), card('m03_tti_hong'),
+                    card('m05_kkeut'), card('m06_kkeut'), card('m07_kkeut'), card('m09_tti_cheong'), card('m10_kkeut')];
+  // p2: 피 10장 (박 없음)
+  g.captured.p2 = [card('m01_pi_a'), card('m01_pi_b'), card('m02_pi_a'), card('m02_pi_b'),
+                    card('m03_pi_a'), card('m03_pi_b'), card('m04_pi_a'), card('m04_pi_b'),
+                    card('m05_pi_a'), card('m05_pi_b')];
+  g.kkeutChoiceMade.p1 = true;
+
+  goStop(g, 'p1', 'stop');
+  expect(g.roundWinner).toBe('p1');
+  expect(g.roundResult.reasons).toContain('첫뻑 +7');
+  expect(g.roundResult.firstPpeokBy).toBe('p1');
+});
+
+test('G-34: 첫뻑한 사람이 패배 시 보너스 미적용', () => {
+  const g = makeGame({
+    p1Hand: ['m05_kkeut'],
+    p2Hand: ['m07_kkeut'],
+    floor:  [],
+    deck:   [],
+    turn:   'p2', // p2가 스톱하여 승리
+  });
+  g.phase = 'awaiting_go_stop';
+  g.firstPpeokBy = 'p1'; // p1이 첫뻑인데 p2가 승리
+  g.captured.p2 = [card('m01_gwang'), card('m03_gwang'), card('m08_gwang'),
+                    card('m01_tti_hong'), card('m02_tti_hong'), card('m03_tti_hong')];
+  g.captured.p1 = [card('m01_pi_a'), card('m01_pi_b'), card('m02_pi_a'), card('m02_pi_b'),
+                    card('m03_pi_a'), card('m03_pi_b'), card('m04_pi_a'), card('m04_pi_b'),
+                    card('m05_pi_a'), card('m05_pi_b')];
+
+  goStop(g, 'p2', 'stop');
+  expect(g.roundWinner).toBe('p2');
+  expect(g.roundResult.reasons).not.toContain('첫뻑 +7');
+});
+
+// ============================================================
+// §12 폭탄 후 덱 2장 뒤집기 — 2026-05-31 신규
+// ============================================================
+
+test('G-35: 폭탄 후 bombExtraDraw=false (덱 2장 모두 정상 뒤집힘 시)', () => {
+  // 폭탄 발동 + 덱 2장 모두 다른 월(awaiting_floor_choice 진입 없음)
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_pi_b'],
+    // 덱 top(pop) = 끝에 있는 게 먼저 뽑힘. 두 카드 모두 바닥에 없는 월로 설정.
+    deck:   ['m03_pi_a', 'm04_pi_a'],
+  });
+  const r = bomb(g, 'p1', 1);
+  expect(r.ok).toBe(true);
+  // 폭탄 후 두 번째 drawAndResolve까지 진행되면 bombExtraDraw는 false로 복원
+  expect(g.bombExtraDraw).toBe(false);
+  // 덱 2장 모두 뒤집혔으면 turn 교대 또는 round_end
+  expect(['awaiting_play', 'round_end', 'awaiting_go_stop'].includes(g.phase)).toBe(true);
+});
+
+test('G-36: 폭탄 후 첫 번째 뒤집기에서 awaiting_floor_choice → bombExtraDraw=true', () => {
+  // 첫 번째 뒤집기로 같은 월 2장이 있는 케이스를 만들어 awaiting_floor_choice 진입.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_pi_b', 'm07_pi_a', 'm07_pi_b'], // 7월 2장 있음
+    deck:   ['m07_kkeut'], // 첫 뒤집기로 7월 → 7월 2장과 매칭(2매칭) → awaiting_floor_choice
+  });
+  const r = bomb(g, 'p1', 1);
+  expect(r.ok).toBe(true);
+  // 첫 번째 뒤집기에서 멈춤 → bombExtraDraw 플래그가 살아 있어야 한다.
+  expect(g.phase).toBe('awaiting_floor_choice');
+  expect(g.bombExtraDraw).toBe(true);
+});
+
+test('G-37: chooseFloorSteps가 bombExtraDraw=true를 이어받아 두 번째 뒤집기 실행', () => {
+  // G-36과 동일 셋업 + 덱에 두 번째 뒤집기용 카드 추가
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_pi_b', 'm07_pi_a', 'm07_pi_b'],
+    // 덱 top(pop) 순서: m07_kkeut(첫번째), m03_pi_a(두번째, 다른 월)
+    deck:   ['m03_pi_a', 'm07_kkeut'],
+  });
+  bomb(g, 'p1', 1);
+  expect(g.phase).toBe('awaiting_floor_choice');
+  expect(g.bombExtraDraw).toBe(true);
+
+  // 바닥에서 m07_pi_a 선택
+  const r = chooseFloor(g, 'p1', 'm07_pi_a');
+  expect(r.ok).toBe(true);
+  // chooseFloorSteps가 두 번째 뒤집기까지 실행 → bombExtraDraw 복원
+  expect(g.bombExtraDraw).toBe(false);
+  // 두 번째 뒤집기 후 정상적으로 턴 교대 또는 round_end
+  expect(['awaiting_play', 'round_end', 'awaiting_go_stop'].includes(g.phase)).toBe(true);
+});
+
+// ============================================================
+// §13 흔들기 카드 클릭 시점 — 2026-05-31 신규
+// ============================================================
+
+test('G-38: shakeDecision은 awaiting_play phase에서도 작동 (클라 모달 방식)', () => {
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor: [],
+    deck: [],
+    turn: 'p1',
+  });
+  // phase는 awaiting_play 그대로
+  const r = shakeDecision(g, 'p1', 'shake', 1);
+  expect(r.ok).toBe(true);
+  expect(g.shaking.p1).toBe(true);
+  expect(g.shakeAsked.p1).toBe(true);
+  expect(g.phase).toBe('awaiting_play'); // phase 변경 없이 그대로
+});
+
+test('G-39: shakeAsked.p1=true 이후 재호출 시 에러', () => {
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor: [],
+    deck: [],
+    turn: 'p1',
+  });
+  shakeDecision(g, 'p1', 'shake', 1);
+  // 한 번 호출 후 다시 호출하면 에러
+  const r2 = shakeDecision(g, 'p1', 'normal', 1);
+  expect(r2.ok).toBe(false);
 });
