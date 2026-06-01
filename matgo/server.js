@@ -21,7 +21,7 @@ import { WebSocketServer } from 'ws';
 import {
   createGame, startRound, playCard, chooseFloor, goStop, shakeDecision, bomb, selectKkeutType,
   playCardSteps, chooseFloorSteps, bombSteps, selectKkeutTypeSteps,
-  sangtongSteps,
+  sangtongSteps, bonusFlipSteps,
   snapshotForPlayer,
 } from './game.js';
 
@@ -68,7 +68,7 @@ export function createApp(opts = {}) {
 
   // ── 단계별 STATE 송신 (generator runner) ─────────────────────────
   // 단계 사이 지연(ms). 클라이언트 카드 fly(0.32s) + 약간의 여유.
-  const STEP_DELAY_MS = 600;
+  const STEP_DELAY_MS = 800;
   // 사용자 입력 대기 phase — 단계 시퀀스를 여기서 끊고 다음 메시지를 기다린다.
   // shake_decision은 2026-05-31에 제거 (흔들기는 클라이언트 모달이 카드 클릭 시점에 처리).
   // awaiting_sangtong은 라운드 시작 시 같은 월 4장 보유자 모달 대기.
@@ -98,20 +98,16 @@ export function createApp(opts = {}) {
    */
   function shouldDeferBroadcast(g, step) {
     if (!g || !g.lastAction) return false;
-    // 마지막 단계('turn_finished')는 항상 broadcast. finishTurn이 lastAction.kind를
-    // 갱신하지 않으므로 단계 1의 'kkeut_choice'가 그대로 남아 단계 2도 보류되어
-    // generator가 끝까지 송신 없이 종료되는 버그를 방지한다.
+    // 마지막 단계('turn_finished')는 항상 broadcast.
     if (step && step.step === 'turn_finished') return false;
     const k = g.lastAction.kind;
-    // 'kkeut_choice'도 보류 — selectKkeutTypeSteps의 단계 1 시점에 phase가 여전히
+    // 'kkeut_choice' 보류 — selectKkeutTypeSteps의 단계 1 시점에 phase가 여전히
     // 'awaiting_kkeut_choice'라서, broadcastState 직후 isPauseForUserInput true로
-    // runSteps가 종료되어 단계 2(finishTurn)가 영영 호출되지 않는다. 보류하면
-    // 즉시 단계 2로 넘어가 phase가 정상 갱신된 뒤 통합 송신된다.
+    // runSteps가 종료되어 단계 2(finishTurn)가 영영 호출되지 않는다.
     //
-    // 'choice_made'는 이전에 보류했으나 단계 2 drawAndResolve가 flip_choice_pending로
-    // 다시 awaiting_floor_choice에 진입할 때 두 번째 모달 표시가 누락되는 케이스가
-    // 있어 보류 대상에서 제외한다. 단계 1을 정상 송신해서 클라가 phase 변화를 정확히
-    // 추적하게 한다.
+    // 'pair_from_hand' 보류 — 단계 1(손→captured)과 단계 2(덱 뒤집기)가 통합 STATE로
+    // 송신되어 뻑(ppeok) 형성 시 client가 captured 도착 fly 후 floor 되돌리기 fly를
+    // 발동하는 어색한 흐름을 방지. client는 통합 STATE 1회에 단계 분리 fly로 시각화.
     return k === 'pair_from_hand' || k === 'kkeut_choice';
   }
 
@@ -150,30 +146,39 @@ export function createApp(opts = {}) {
       try {
         const r = gen.next();
         if (r.done) {
+          console.log(`[matgo:STEP] gen done — release (phase=${game?.phase} turn=${game?.turn} hands=p1:${game?.hands?.p1?.length}/p2:${game?.hands?.p2?.length} credit=${JSON.stringify(game?.bombDeckCredit)})`);
           release();
+          // 안전망: generator 종료 후 STATE를 한 번 더 broadcast해서 봇/클라가
+          // 최신 상태로 동기화되도록 한다. release 직후 stepInProgress=false이므로
+          // 봇이 stepInProgress 거절로 stuck됐어도 이 STATE로 재시도 가능.
+          if (game && !isPauseForUserInput(game.phase) && game.phase !== 'round_end') {
+            broadcastState();
+          }
           return;
         }
         const step = r.value || {};
         if (step.error) {
+          console.log(`[matgo:STEP] yield error="${step.error}" — release`);
           release();
           sendTo(player, { type: 'ERROR', message: step.error });
           return;
         }
         const lastKind = game?.lastAction?.kind;
         const defer = shouldDeferBroadcast(game, step);
-        console.log(`[matgo] step=${step.step} lastAction=${lastKind} phase=${game?.phase} defer=${defer}`);
-        // 뻑 가능 단계는 broadcast 보류 — 다음 단계에서 뻑/정상 확정 후 통합 송신.
+        console.log(`[matgo:STEP] yield step=${step.step} lastAction=${lastKind} phase=${game?.phase} turn=${game?.turn} defer=${defer}`);
         if (defer) {
           setImmediate(next);
           return;
         }
         broadcastState();
         if (game && game.phase === 'round_end') {
+          console.log(`[matgo:STEP] round_end → ROUND_END broadcast`);
           broadcastAll({ type: 'ROUND_END', result: game.roundResult });
           release();
           return;
         }
         if (!game || isPauseForUserInput(game.phase)) {
+          console.log(`[matgo:STEP] pause for user input (phase=${game?.phase}) — release`);
           release();
           return;
         }
@@ -330,6 +335,7 @@ export function createApp(opts = {}) {
         console.warn('[matgo] JSON 파싱 실패:', data.toString());
         return;
       }
+      console.log(`[matgo:RECV] ${player.id}(isBot=${ws._mode === 'bot'}) ${JSON.stringify(msg)} (phase=${game?.phase} turn=${game?.turn} stepInProgress=${stepInProgress})`);
 
       switch (msg.type) {
         case 'PLAY_CARD': {
@@ -394,9 +400,22 @@ export function createApp(opts = {}) {
           break;
         }
 
+        case 'BONUS_FLIP': {
+          if (!game) break;
+          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          console.log(`[matgo] BONUS_FLIP: ${player.id}`);
+          runSteps(bonusFlipSteps(game, player.id), player);
+          break;
+        }
+
         case 'NEW_ROUND': {
           if (players.length < 2) {
             sendTo(player, { type: 'ERROR', message: '상대방이 없어 새 라운드를 시작할 수 없다' });
+            break;
+          }
+          // 게임 종료(잔고 음수) 상태에서는 새 라운드 불가 — 새 게임으로만 진행 가능.
+          if (game && game.gameOver) {
+            sendTo(player, { type: 'ERROR', message: '게임이 종료되었다. 새 게임으로 시작해라.' });
             break;
           }
           if (!game) {
@@ -446,8 +465,8 @@ export function createApp(opts = {}) {
       }
     });
 
-    ws.on('close', () => {
-      console.log(`[matgo] ${player.id} 연결 해제 (mode=${ws._mode})`);
+    ws.on('close', (code, reason) => {
+      console.log(`[matgo] ${player.id} 연결 해제 (mode=${ws._mode} code=${code} reason="${reason?.toString() || ''}" phase=${game?.phase} turn=${game?.turn})`);
       players = players.filter((p) => p.id !== player.id);
       // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
       // 새 사용자가 다시 들어오면 새 봇이 spawn된다.

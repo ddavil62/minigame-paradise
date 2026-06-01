@@ -24,11 +24,11 @@ console.log(`[bot] 서버에 접속 시도: ${URL}`);
 
 let myId = null;
 let lastActedFor = null; // 같은 phase에서 두 번 행동 안 하도록 추적
-// 새 STATE가 도착하면 기존 보류 중인 act 타이머를 취소해서 항상 최신 STATE 기준으로
-// 행동한다. 이전엔 단계 1(pair_from_hand) 보류 + 단계 2(STEP_DELAY 600ms 후 단계 3)
-// 사이에 봇이 단계 2 STATE에 반응해 doPlay → 단계 3 phase 변경 후 도착 → 서버 거절
-// → 봇 멈춤 케이스가 있었다.
 let pendingActTimer = null;
+// 가장 최근 수신한 STATE — 예약된 act가 fire될 때 최신 STATE 기준으로 행동하도록 사용.
+// (예약 시점 closure 캡처된 STATE를 그대로 쓰면, 예약과 fire 사이에 도착한 STATE 변경을
+//  반영 못해 stale 결정 → 서버 거절 → stuck 케이스가 발생한다.)
+let lastState = null;
 
 const ws = new WebSocket(URL);
 
@@ -74,6 +74,15 @@ ws.on('message', (data) => {
         ws.close();
       } else {
         console.warn('[bot] 서버 에러:', msg.message);
+        // server가 직전 액션을 거절했으므로 lastActedFor를 리셋해서 다음 STATE에 재행동.
+        // 그렇지 않으면 직후 도착하는 release-broadcast STATE를 duplicate key로 skip하고
+        // 봇이 무한 대기에 빠진다 (stuck).
+        lastActedFor = null;
+        // 보류 중인 act 타이머도 취소 (stale STATE 기반 재시도 방지)
+        if (pendingActTimer) {
+          clearTimeout(pendingActTimer);
+          pendingActTimer = null;
+        }
       }
       break;
     default:
@@ -88,33 +97,66 @@ ws.on('message', (data) => {
  * @param {object} s
  */
 function handleState(s) {
+  lastState = s;
+  const handSize = (s.yourHand || []).length;
+  const credit = s.bombDeckCredit?.[myId] || 0;
+  console.log(`[bot:STATE] phase=${s.phase} turn=${s.turn} myId=${myId} hand=${handSize} credit=${credit} deck=${s.deckCount} lastAction=${s.lastAction?.kind || ''}/${s.lastAction?.player || ''}`);
   if (s.turn !== myId) {
-    // 단, 자기에게 온 pending(shake/kkeut)은 자기 차례 아니어도 처리해야 할 수 있음
-    if (s.phase === 'shake_decision' && s.pendingShake) {
-      // pendingShake는 자기 시점에서만 옴
-    } else if (s.phase === 'awaiting_kkeut_choice' && s.pendingKkeutChoice && s.pendingKkeutChoice.player === myId) {
-      // 끗 선택은 자기에게만 오니까 처리
+    // 자기 차례 아니어도 자기에게 온 pending 모달은 처리해야 한다.
+    if (s.phase === 'awaiting_kkeut_choice' && s.pendingKkeutChoice && s.pendingKkeutChoice.player === myId) {
+      // 9월 술잔 끗/쌍피 선택은 자기에게만 옴
+    } else if (s.phase === 'awaiting_sangtong' && s.pendingSangtong && s.pendingSangtong.player === myId) {
+      // 사통 모달은 자기에게만 옴 (자기 손에 같은 월 4장이면 turn과 무관)
     } else {
+      // 자기 차례 아니어도 이전에 예약된 act 타이머는 반드시 취소.
+      // 그렇지 않으면 turn 바뀌기 직전 STATE 기준으로 예약된 act가 fire되어
+      // 잘못된 turn에 PLAY_CARD를 보내고 서버에 거절당해 봇이 무한 대기에 빠진다.
+      if (pendingActTimer) {
+        console.log(`[bot:STATE] cancel pending act timer (not my turn)`);
+        clearTimeout(pendingActTimer);
+        pendingActTimer = null;
+      }
+      console.log(`[bot:STATE] skip (not my turn, no pending modal for me)`);
       return;
     }
   }
   const key = `${s.phase}|${s.turn}|${s.lastAction ? s.lastAction.kind : ''}|${s.lastAction ? (s.lastAction.player || '') : ''}|${s.deckCount}`;
-  if (key === lastActedFor) return;
+  if (key === lastActedFor) {
+    console.log(`[bot:STATE] skip (duplicate key=${key})`);
+    return;
+  }
   lastActedFor = key;
 
   // 새 STATE가 도착했으므로 직전 보류 중이던 act 타이머를 취소.
-  // (서버가 단계 1 보류 → 단계 2 broadcast → STEP_DELAY 600ms → 단계 3 broadcast
-  //  하는 중간 STATE에서 봇이 행동을 보내면 phase 불일치로 거절되어 멈춘다.)
   if (pendingActTimer) {
+    console.log(`[bot:STATE] cancel pending act timer`);
     clearTimeout(pendingActTimer);
     pendingActTimer = null;
   }
 
   // 사람스러운 지연 (0.6~1.4초)
   const delay = 600 + Math.floor(Math.random() * 800);
+  console.log(`[bot:STATE] schedule act in ${delay}ms`);
   pendingActTimer = setTimeout(() => {
     pendingActTimer = null;
-    act(s);
+    // 예약 시점이 아니라 fire 시점의 최신 STATE 기준으로 행동.
+    const cur = lastState;
+    if (!cur) {
+      console.log(`[bot:STATE] fire skipped (no current state)`);
+      return;
+    }
+    // turn 검증 — fire 사이에 turn이 바뀌었으면 무행동 (자기에게 온 pending 모달만 처리).
+    if (cur.turn !== myId) {
+      const ok =
+        (cur.phase === 'awaiting_kkeut_choice' && cur.pendingKkeutChoice?.player === myId) ||
+        (cur.phase === 'awaiting_sangtong' && cur.pendingSangtong?.player === myId);
+      if (!ok) {
+        console.log(`[bot:STATE] fire skipped (turn=${cur.turn} no longer mine)`);
+        return;
+      }
+    }
+    console.log(`[bot:STATE] fire act phase=${cur.phase} turn=${cur.turn}`);
+    act(cur);
   }, delay);
 }
 
@@ -123,14 +165,26 @@ function handleState(s) {
  * @param {object} s
  */
 function act(s) {
+  console.log(`[bot:act] phase=${s.phase} turn=${s.turn}`);
   switch (s.phase) {
     case 'awaiting_play':           return doPlay(s);
     case 'awaiting_floor_choice':   return doChooseFloor(s);
     case 'awaiting_go_stop':        return doGoStop(s);
-    case 'shake_decision':          return send({ type: 'SHAKE', decision: 'normal' });
     case 'awaiting_kkeut_choice':   return doKkeutChoice(s);
     case 'awaiting_self_reveal':    return doSelfReveal(s);
-    default: /* 다른 단계는 가만히 있음 */ break;
+    // 사통 phase (2026-05-31 신규): 자기 손에 같은 월 4장 분배 시 라운드 시작 모달.
+    // 봇은 단순화로 선언(즉시 +7) — 패가 갈리는 운이라 사통 발동 자체가 작은 보상.
+    case 'awaiting_sangtong': {
+      // 사통 모달은 pendingSangtong.player가 자기일 때만 응답해야 한다.
+      if (s.pendingSangtong && s.pendingSangtong.player === myId) {
+        console.log('[bot] SANGTONG declare');
+        return send({ type: 'SELECT_SANGTONG', choice: 'declare' });
+      }
+      return;
+    }
+    default:
+      console.log(`[bot:act] no handler for phase=${s.phase} — idle`);
+      break;
   }
 }
 
@@ -143,7 +197,15 @@ function act(s) {
  */
 function doPlay(s) {
   const hand = s.yourHand;
-  if (!hand || hand.length === 0) return;
+  // 손 0인데 보너스 뒤집기 권리가 남아 있으면 BONUS_FLIP. 손 > 0이면 카드 내기 우선.
+  const credit = s.bombDeckCredit?.[myId] || 0;
+  if (!hand || hand.length === 0) {
+    if (credit > 0) {
+      console.log('[bot] BONUS_FLIP (hand empty, credit > 0)');
+      send({ type: 'BONUS_FLIP' });
+    }
+    return;
+  }
   const floorMonths = new Set(s.floor.map((c) => c.month));
   const matching = hand.filter((c) => floorMonths.has(c.month));
   let pick;
@@ -200,6 +262,10 @@ function doSelfReveal(s) {
  * 서버에 JSON 메시지 전송.
  */
 function send(msg) {
-  if (ws.readyState !== 1) return;
+  if (ws.readyState !== 1) {
+    console.log(`[bot:SEND] DROP (ws not open, readyState=${ws.readyState}) msg=${JSON.stringify(msg)}`);
+    return;
+  }
+  console.log(`[bot:SEND] ${JSON.stringify(msg)}`);
   ws.send(JSON.stringify(msg));
 }

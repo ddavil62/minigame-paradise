@@ -95,6 +95,12 @@ export function createGame(firstTurn = 'p1', opts = {}) {
     lastAction: null,
     pendingShake: null,
     roundResult: null,
+    // 게임 종료(잔고 음수 도달) 상태. NEW_ROUND가 거부되고 NEW_GAME만 허용된다.
+    gameOver: false,
+    gameWinner: null,
+    // 폭탄 보너스 뒤집기 권리. 폭탄 1회당 +2 누적, 자기 차례에 손 0이면 1씩 차감하며 자동 뒤집기.
+    // "기회 보존의 법칙": 손 + bombDeckCredit 합이 매 턴 -1로 진행 (양쪽 동기).
+    bombDeckCredit: { p1: 0, p2: 0 },
     // ── 5건 룰 보강 (2026-05-31) ──
     pendingSangtong: null,
     shakeAsked: { p1: false, p2: false },
@@ -147,9 +153,9 @@ export function startRound(game, firstTurn) {
   // shakeAsked로 라운드 당 흔들기 모달 1회 표시 제한.
   game.pendingShake = null;
   game.shakeAsked = { p1: false, p2: false };
-  // 폭탄 후 덱 2장 연속 뒤집기 권리 플래그. 첫 번째 drawAndResolve 직후 true로 설정,
-  // 두 번째 drawAndResolve 직후 false로 복원.
-  game.bombExtraDraw = false;
+  // 폭탄 보너스 뒤집기 권리. 폭탄 1회당 +2 누적, 자기 차례에 손 0이면 1씩 차감하며 자동 뒤집기.
+  // "기회 보존의 법칙": 손 + bombDeckCredit 합이 매 턴 -1로 진행 (양쪽 동기).
+  game.bombDeckCredit = { p1: 0, p2: 0 };
   // 라운드 첫 뻑을 만든 사람 — applyFinalMultipliers에서 첫뻑 보너스 판정에 사용.
   game.firstPpeokBy = null;
   // 사통(같은 월 4장 손패) 검사 — 자기 차례 선플레이어부터 검사. 동시 충돌 시 선공자 우선.
@@ -224,6 +230,9 @@ export function* playCardSteps(g, playerId, cardId) {
 
   // 단계 1: 손패에서 카드 제거 + 바닥 매칭 처리
   hand.splice(idx, 1);
+  // 손 origin 추적 — defer로 단계 1+2 통합 STATE 시 client가 손에서 낸 카드 식별용.
+  // turn_finished에서 reset.
+  g.lastHandPlayed = { player: playerId, card };
   resolveCardOnFloor(g, playerId, card, true);
   yield { step: 'hand_played', card };
 
@@ -260,15 +269,12 @@ export function chooseFloor(g, playerId, cardId) {
 /**
  * chooseFloor의 단계별 generator 버전.
  * yield 값:
- *   { step: 'choice_made' }       — 선택한 바닥 카드 + srcCard 모두 captured로
- *   { step: 'deck_flipped' }      — (손패에서 온 경우만) 덱 뒤집기 + 매칭
- *   { step: 'bomb_extra_flipped' } — 폭탄 2회차 뒤집기 (bombExtraDraw 플래그 분기)
- *   { step: 'turn_finished' }     — 점수 평가 + 턴 마무리
+ *   { step: 'choice_made' }   — 선택한 바닥 카드 + srcCard 모두 captured로
+ *   { step: 'deck_flipped' }  — (손패에서 온 경우만) 덱 뒤집기 + 매칭
+ *   { step: 'turn_finished' } — 점수 평가 + 턴 마무리
  *
- * 폭탄 2회차 처리:
- *   bombSteps의 첫 번째 drawAndResolve가 awaiting_floor_choice에 빠지면 (g.bombExtraDraw=true)
- *   사용자가 바닥 카드를 선택한 뒤 chooseFloorSteps에서 두 번째 drawAndResolve를 이어 실행한다.
- *   두 번째 drawAndResolve 후 즉시 g.bombExtraDraw=false로 복원 → 무한 루프 차단.
+ * 폭탄/보너스 뒤집기로 인한 awaiting_floor_choice도 동일 경로. fromHand=false인 경우
+ * 단계 2(덱 뒤집기)를 건너뛰고 바로 turn_finished로 이동.
  */
 export function* chooseFloorSteps(g, playerId, cardId) {
   if (g.phase !== 'awaiting_floor_choice') { yield { error: '지금은 선택할 수 없다' }; return; }
@@ -283,8 +289,6 @@ export function* chooseFloorSteps(g, playerId, cardId) {
   g.floor = g.floor.filter((c) => c.id !== cardId);
   g.captured[playerId].push(pending.srcCard, chosen);
   const wasFromHand = pending.fromHand;
-  // 폭탄 2회차 뒤집기 권리가 남아 있는지 — pending.fromHand=false라 하더라도 한 번 더 뒤집어야 한다.
-  const needBombExtra = !!g.bombExtraDraw;
   g.pendingFloorChoice = null;
   g.phase = 'awaiting_play';
   g.lastAction = { kind: 'choice_made', player: playerId, srcCard: pending.srcCard, chosen };
@@ -294,14 +298,6 @@ export function* chooseFloorSteps(g, playerId, cardId) {
     // 단계 2: 덱 뒤집기 (손패에서 온 매칭이었던 경우만)
     drawAndResolve(g, playerId, pending.srcCard);
     yield { step: 'deck_flipped' };
-    if (g.phase === 'awaiting_floor_choice') return;
-  }
-
-  if (needBombExtra) {
-    // 단계 2-bomb: 폭탄 2회차 뒤집기 (덱에서 한 번 더). 무한 루프 방지를 위해 먼저 플래그 복원.
-    g.bombExtraDraw = false;
-    drawAndResolve(g, playerId, pending.srcCard);
-    yield { step: 'bomb_extra_flipped' };
     if (g.phase === 'awaiting_floor_choice') return;
   }
 
@@ -570,11 +566,10 @@ function finishTurn(g, playerId) {
     // 첫 발생이거나, 마지막 고 시점 점수보다 늘었으면 결정 단계로 이동
     const lastGoScore = g.lastGoScore?.[playerId] ?? null;
     if (lastGoScore === null || breakdown.score > lastGoScore) {
-      // 자기 손패가 비었으면 더 이상 카드를 낼 수 없으므로 자동 스톱으로 라운드 승.
-      // 덱이 남아 있어도 다음 턴에 손에서 낼 카드가 없으면 의미가 없다.
-      // (이전엔 deck.length === 0까지 요구했는데, hand는 0인데 deck만 남은 케이스에서
-      //  awaiting_go_stop으로 빠지고 '고' 선택 시 무승부로 끝나는 버그가 있었다.)
-      if (g.hands[playerId].length === 0) {
+      // 자기 손패가 비고 + 보너스 권리도 0이면 더 이상 진행 불가 → 자동 스톱.
+      // 폭탄 권리(bombDeckCredit > 0)가 남아 있으면 손 0이어도 고/스톱 결정 가능.
+      const remainingCredit = g.bombDeckCredit?.[playerId] || 0;
+      if (g.hands[playerId].length === 0 && remainingCredit === 0) {
         endRoundWin(g, playerId);
         return;
       }
@@ -584,17 +579,20 @@ function finishTurn(g, playerId) {
     }
   }
 
-  // 라운드 종료 조건: 손패 모두 소진 (양쪽 모두) — 무승부 종료
-  if (g.hands.p1.length === 0 && g.hands.p2.length === 0) {
+  // 라운드 종료 조건: 양쪽 모두 손 0 && 보너스 권리 0 — 무승부 종료
+  // "기회 보존의 법칙"에 의해 양쪽 잔여는 항상 동기화되어 동시에 0에 도달.
+  const p1Remaining = g.hands.p1.length + (g.bombDeckCredit?.p1 || 0);
+  const p2Remaining = g.hands.p2.length + (g.bombDeckCredit?.p2 || 0);
+  if (p1Remaining === 0 && p2Remaining === 0) {
     endRoundDraw(g);
     return;
   }
 
   // 다음 턴으로
   g.turn = playerId === 'p1' ? 'p2' : 'p1';
-  // 새 턴 시작 시 흔들기 기회 검사 (라운드 첫 손패 전 아닌 한 무시)
-  // 단순화: 라운드 시작 시점 한번만 검사하므로 여기선 생략.
   g.phase = 'awaiting_play';
+  // 턴 종료 시 손 origin 정보 reset (다음 턴 시각화에 잔존하면 잘못된 fly 발동).
+  g.lastHandPlayed = null;
 }
 
 // ── 고/스톱 ─────────────────────────────────────────────────
@@ -610,11 +608,11 @@ export function goStop(g, playerId, decision) {
   if (g.turn !== playerId)            return { ok: false, error: '네 차례가 아니다' };
 
   if (decision === 'go') {
-    // 안전망: 손패가 비어 다음 턴에 낼 카드가 없으면 고 거절 (스톱만 가능).
-    // 정상 플레이에선 evaluateScoreAndMaybeGoStop에서 이미 endRoundWin으로 처리되므로
-    // 이 분기에 도달하지 않지만, 외부 호출 경로를 대비한 방어.
-    if (g.hands[playerId].length === 0) {
-      return { ok: false, error: '손패가 비어 더 이상 진행할 수 없다 — 스톱만 가능' };
+    // 안전망: 손패와 보너스 권리가 모두 0이면 다음 턴에 할 수 있는 행동이 없으므로 고 거절.
+    // 폭탄 권리(bombDeckCredit > 0)가 남아 있으면 손 0이어도 고 가능.
+    const remainingCredit = g.bombDeckCredit?.[playerId] || 0;
+    if (g.hands[playerId].length === 0 && remainingCredit === 0) {
+      return { ok: false, error: '손패와 보너스 뒤집기 권리가 모두 없어 더 진행 불가 — 스톱만 가능' };
     }
     g.goCount[playerId] = (g.goCount[playerId] || 0) + 1;
     g.lastGoScore = g.lastGoScore || {};
@@ -708,6 +706,14 @@ function endRoundWin(g, winnerId, extraFlags = {}) {
   g.money[winnerId] += totalMoney;
   g.money[loserId]  -= totalMoney;
 
+  // 패자 잔고가 음수가 되면 게임 자체가 종료된다 (제로섬이므로 음수는 항상 loser 쪽).
+  // 게임 승자는 라운드 승자(winnerId)와 동일.
+  const gameOver = g.money[loserId] < 0;
+  if (gameOver) {
+    g.gameOver = true;
+    g.gameWinner = winnerId;
+  }
+
   g.roundWinner = winnerId;
   g.stoppedBy = winnerId;
   g.phase = 'round_end';
@@ -720,12 +726,16 @@ function endRoundWin(g, winnerId, extraFlags = {}) {
     multiplier: result.multiplier,
     reasons: result.reasons,
     money: totalMoney,
+    moneyAfter: { ...g.money },
     goCount: { ...g.goCount },
     shaking: { ...g.shaking },
     gobakApplies,
     // 5건 룰 보강 (2026-05-31) — UI/QA 검증용 부가 필드
     firstPpeokBy: g.firstPpeokBy,
     sangtongBonusApplied: !!extraFlags.sangtongBonus,
+    // 게임 종료 (잔고 음수 도달, 2026-05-31)
+    gameOver,
+    gameWinner: gameOver ? winnerId : null,
   };
   g.lastAction = { kind: 'round_end_win', winner: winnerId };
 }
@@ -800,6 +810,10 @@ export function* sangtongSteps(g, playerId, choice) {
 
   // declare: 즉시 라운드 종료 — 사통 선언자가 승자, +7점 보너스.
   g.pendingSangtong = null;
+  // phase를 awaiting_play로 잠깐 변경 — yield 직후 server runSteps의 isPauseForUserInput
+  // 검사에서 false가 되어 다음 단계(endRoundWin)가 정상 실행되도록 한다. endRoundWin이
+  // 곧바로 phase를 'round_end'로 바꾼다.
+  g.phase = 'awaiting_play';
   g.lastAction = { kind: 'sangtong', player: playerId, month };
   yield { step: 'sangtong_decided' };
 
@@ -866,11 +880,12 @@ export function bomb(g, playerId, month) {
 
 /**
  * bomb의 단계별 generator 버전.
- * yield: { step: 'bomb_played' }, { step: 'deck_flipped_1' }, { step: 'deck_flipped_2' }, { step: 'turn_finished' }
+ * yield: { step: 'bomb_played' }, { step: 'deck_flipped' }, { step: 'turn_finished' }
  *
- * 표준 룰: 폭탄 발동 시 덱 2장 연속 뒤집기 권리가 있다. 두 번째 뒤집기 결과로
- * awaiting_floor_choice에 빠지면 chooseFloorSteps가 bombExtraDraw 플래그를 보고
- * 한 번 더 drawAndResolve를 이어 실행한다.
+ * 표준 룰 (2026-05-31 정정): 폭탄 발동 시 같은 월 4장(손 3 + 바닥 1) + 상대 피 1장
+ * 가져가기 + 통상 뒤집기 1회. 추가로 보너스 뒤집기 권리 +2 누적 (g.bombDeckCredit).
+ * 보너스 뒤집기는 자기 차례에 손 0일 때 자동 발동 (bonusFlipSteps).
+ * "기회 보존의 법칙": 손 -3 + 보너스 +2 = 순 -1 (정상 1턴과 동등).
  */
 export function* bombSteps(g, playerId, month) {
   if (g.phase !== 'awaiting_play') { yield { error: '지금은 폭탄을 낼 수 없다' }; return; }
@@ -885,34 +900,99 @@ export function* bombSteps(g, playerId, month) {
     yield { error: `${month}월 카드 1장이 바닥에 있어야 한다` }; return;
   }
 
-  // 단계 1: 폭탄 실행 (손 3장 + 바닥 1장 모두 captured + 상대 피 1장)
+  // 단계 1: 폭탄 실행 (손 3장 + 바닥 1장 모두 captured + 상대 피 1장 + 보너스 권리 +2)
   g.hands[playerId] = hand.filter((c) => c.month !== month);
   g.floor          = g.floor.filter((c) => c.month !== month);
   g.captured[playerId].push(...handSame, ...floorSame);
   const opp = playerId === 'p1' ? 'p2' : 'p1';
   stealPi(g, playerId, opp, 1);
+  g.bombDeckCredit[playerId] = (g.bombDeckCredit[playerId] || 0) + 2;
+  // 손 origin 추적 — 폭탄은 손에서 3장 + 바닥 1장 모두 가져감. handSame이 손 origin.
+  g.lastHandPlayed = { player: playerId, card: handSame[0], cards: handSame, month };
   g.lastAction = { kind: 'bomb', player: playerId, month, stoleFromOpp: 1 };
   yield { step: 'bomb_played' };
 
-  // 단계 2-1: 덱에서 첫 번째 뒤집기 + 매칭 처리
-  // 다음 뒤집기가 한 번 더 남았음을 chooseFloorSteps에 알리기 위해 bombExtraDraw=true 설정.
-  g.bombExtraDraw = true;
+  // 단계 2: 통상 덱 뒤집기 1회 (폭탄 당 턴의 통상 뒤집기)
   drawAndResolve(g, playerId, handSame[0]);
-  yield { step: 'deck_flipped_1' };
-  if (g.phase === 'awaiting_floor_choice') {
-    // 사용자 선택 대기 — chooseFloorSteps에서 bombExtraDraw를 보고 두 번째 뒤집기를 이어서 실행한다.
-    return;
-  }
-
-  // 단계 2-2: 덱에서 두 번째 뒤집기 (폭탄 권리)
-  g.bombExtraDraw = false;
-  drawAndResolve(g, playerId, handSame[0]);
-  yield { step: 'deck_flipped_2' };
+  yield { step: 'deck_flipped' };
   if (g.phase === 'awaiting_floor_choice') return;
 
   // 단계 3: 점수 평가 + 턴 마무리
   finishTurn(g, playerId);
   yield { step: 'turn_finished' };
+}
+
+/**
+ * 보너스 뒤집기 단계별 generator. 자기 차례에 손 0이고 bombDeckCredit > 0일 때 발동.
+ * yield: { step: 'bonus_flipped' }, { step: 'turn_finished' }
+ *
+ * 표준 룰: 덱에서 한 장 뒤집기 → 바닥 매칭 처리 (단순 매칭만).
+ *   - 동월 1장: 둘 다 가져가기 (쪽 보너스 없음 — 손패에서 낸 게 아니므로)
+ *   - 동월 0장: 그냥 바닥에 놓기
+ *   - 동월 2장: 사용자 1장 선택 (awaiting_floor_choice)
+ *   - 동월 3장(뻑 풀이): 4장 모두 가져가기 + 상대 피 1장
+ *   뻑/따닥/쪽은 발생하지 않음 (모두 손패에서 낸 카드를 전제로 함).
+ */
+export function* bonusFlipSteps(g, playerId) {
+  if (g.phase !== 'awaiting_play') { yield { error: '지금은 보너스 뒤집기를 할 수 없다' }; return; }
+  if (g.turn !== playerId)         { yield { error: '네 차례가 아니다' }; return; }
+  // 손패 잔여와 무관하게 권리만 있으면 사용 가능 (사용자 선택 가능한 액션).
+  if (!g.bombDeckCredit?.[playerId] || g.bombDeckCredit[playerId] <= 0) {
+    yield { error: '보너스 뒤집기 권리가 없다' }; return;
+  }
+  if (g.deck.length === 0) {
+    yield { error: '덱이 비었다' }; return;
+  }
+
+  // 단계 1: 덱에서 한 장 뒤집기, 단순 매칭 처리
+  flipDeckBonus(g, playerId);
+  g.bombDeckCredit[playerId]--;
+  yield { step: 'bonus_flipped' };
+  if (g.phase === 'awaiting_floor_choice') return;
+
+  // 단계 2: 점수 평가 + 턴 마무리
+  finishTurn(g, playerId);
+  yield { step: 'turn_finished' };
+}
+
+/**
+ * 보너스 뒤집기 매칭 처리 (손패 없음). 쪽/뻑/따닥 형성 X — 단순 매칭만.
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ */
+function flipDeckBonus(g, playerId) {
+  const flipped = g.deck.pop();
+  const sameMonth = g.floor.filter((c) => c.month === flipped.month);
+  const opp = playerId === 'p1' ? 'p2' : 'p1';
+
+  if (sameMonth.length === 0) {
+    g.floor.push(flipped);
+    g.lastAction = { kind: 'bonus_flip_place', player: playerId, card: flipped };
+    return;
+  }
+  if (sameMonth.length === 1) {
+    g.floor = g.floor.filter((c) => c.id !== sameMonth[0].id);
+    g.captured[playerId].push(flipped, sameMonth[0]);
+    g.lastAction = { kind: 'bonus_match', player: playerId, flipped, pair: sameMonth[0] };
+    return;
+  }
+  if (sameMonth.length === 2) {
+    // 두 장 중 한 장 선택 — 통상 chooseFloorSteps 분기 활용 (fromHand=false 처리)
+    g.floor.push(flipped);
+    g.pendingFloorChoice = {
+      player: playerId, month: flipped.month, candidates: sameMonth, srcCard: flipped, fromHand: false,
+    };
+    g.phase = 'awaiting_floor_choice';
+    g.lastAction = { kind: 'bonus_flip_2match', player: playerId, flipped };
+    return;
+  }
+  // 동월 3장 (뻑 풀이): 4장 모두 가져가기 + 상대 피 1장
+  g.floor = g.floor.filter((c) => c.month !== flipped.month);
+  g.captured[playerId].push(flipped, ...sameMonth);
+  // 뻑이 풀렸으므로 ppeokFlags에서 제거
+  if (g.ppeokFlags[flipped.month]) delete g.ppeokFlags[flipped.month];
+  stealPi(g, playerId, opp, 1);
+  g.lastAction = { kind: 'bonus_ppeok_sweep', player: playerId, flipped, count: sameMonth.length, stoleFromOpp: 1 };
 }
 
 // ── 스냅샷 (시점별) ─────────────────────────────────────────
@@ -968,6 +1048,9 @@ export function snapshotForPlayer(g, playerId) {
     pendingSangtong: mySangtong ? { player: mySangtong.player, month: mySangtong.month } : null,
     bombableMonths,
     firstPpeokBy: g.firstPpeokBy || null,
+    bombDeckCredit: { ...(g.bombDeckCredit || { p1: 0, p2: 0 }) },
+    // 손 origin 추적: 단계 1+2 통합 STATE 시 client가 손에서 낸 카드를 식별하기 위함.
+    lastHandPlayed: g.lastHandPlayed || null,
     lastAction: g.lastAction,
     money: { ...g.money },
     perPoint: g.perPoint,

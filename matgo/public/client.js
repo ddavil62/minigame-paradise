@@ -34,6 +34,14 @@
     document.fonts.ready.then(fitToWindow);
   }
 
+  // ── fly 오버레이: body transform 컨테이너 밖에 두어 fixed 좌표가 viewport 기준으로 동작하도록.
+  // (body에 transform이 있으면 position:fixed 자식은 body containing block 기준으로 위치가 잡혀
+  //  getBoundingClientRect()의 viewport 좌표와 어긋난다.)
+  const flyOverlay = document.createElement('div');
+  flyOverlay.id = 'fly-overlay';
+  flyOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999;';
+  document.documentElement.appendChild(flyOverlay);
+
   // ── DOM 참조 (v8 신규/이전 ID 반영) ────────────────────────
   const youTagEl       = document.getElementById('you-tag');
   const perPointEl     = document.getElementById('per-point');
@@ -434,6 +442,9 @@
     for (const el of floorCardsEl.querySelectorAll('[data-card-id]')) {
       prevFloorRects.set(el.dataset.cardId, el.getBoundingClientRect());
     }
+    // 덱 뒤집기 fly 시작 좌표 — 더미 카드 DOM 위치
+    const deckElForFly = floorCardsEl.querySelector('.deck-card');
+    const deckRectForFly = deckElForFly ? deckElForFly.getBoundingClientRect() : null;
 
     // 애니메이션 diff 계산
     const curFloorIds = new Set(s.floor.map((c) => c.id));
@@ -475,6 +486,16 @@
 
     // 더미 카운트
     deckCountBigEl.textContent = String(s.deckCount);
+    // 보너스 뒤집기 가능 표시 — 자기 턴 + awaiting_play + bombDeckCredit > 0
+    const canBonusFlip = s.turn === me
+      && s.phase === 'awaiting_play'
+      && (s.bombDeckCredit?.[me] || 0) > 0
+      && s.deckCount > 0;
+    const deckCardEl = floorCardsEl.querySelector('.deck-card');
+    if (deckCardEl) {
+      deckCardEl.classList.toggle('clickable', canBonusFlip);
+      deckCardEl.classList.toggle('bonus-available', canBonusFlip);
+    }
 
     // 손패 장수 extras
     myExtraEl.textContent  = `손 ${s.yourHand.length}장`;
@@ -492,10 +513,68 @@
       (s.score[me] || 0) >= 7 || (s.score[oppId] || 0) >= 7,
     );
 
-    // 손패 / 바닥 / 점수판 렌더
-    renderOppHand(s);
-    renderMyHand(s);
-    renderFloor(s);
+    // 손 fly에 이미 있는 카드 ID — 덱/상대손 fly 후보에서 제외
+    const flyHandIds = new Set(pendingFlies.map((f) => f.cardId));
+    // 직전 floor에서 사라진 카드 ID — 짝 카드(매칭으로 captured 이동)는 hasPair 흐름의
+    // spawnPairCloneOnce로 처리되므로 덱 fly 후보에서 제외해야 한다.
+    // (그렇지 않으면 짝 카드가 newCapIds에 포함돼 drewIds로 분류되고 startFlyFromDeck가
+    //  호출되어 시각상 더미덱에서 짝이 다시 나오는 잘못된 fly가 발동된다.)
+    const removedFloorSet = new Set(removedFloorIds);
+    // 이번 STATE에서 새로 등장한 카드 ID (손 fly도 아니고 직전 floor 출신도 아님)
+    const newCardIds = new Set();
+    for (const id of [...newFloorIds, ...newCapIds.p1, ...newCapIds.p2]) {
+      if (flyHandIds.has(id)) continue;
+      if (removedFloorSet.has(id)) continue;
+      newCardIds.add(id);
+    }
+    // chooseFloorSteps 단계 1 (choice_made): srcCard가 captured에 등장하는데, 이건
+    // 사용자가 모달 선택 직전에 던진 자기 카드다. 덱 origin이 아니므로 drewIds에서 제외.
+    // (그렇지 않으면 자기가 던진 카드가 더미에서 다시 등장하는 잘못된 fly가 발동된다.)
+    if (la && la.kind === 'choice_made' && la.srcCard) {
+      newCardIds.delete(la.srcCard.id);
+    }
+
+    // 상대 손에서 나온 카드 ID 식별 — lastAction이 상대의 손 origin 단서일 때.
+    // 단계 1 (hand_played): place_on_floor / pair_from_hand / sweep_from_hand → 상대 손
+    // 단계 2 (deck_flipped): flip_place / pair_from_flip / jjok / ttadak / ppeok → 덱
+    // 폭탄(bomb)도 손에서 3장 + 바닥 1장 captured → 상대 손 origin으로 묶음
+    const la = s.lastAction;
+    const oppHandOriginIds = new Set();
+    const HAND_ORIGIN_KINDS = new Set(['place_on_floor', 'pair_from_hand', 'sweep_from_hand', 'choice_made', 'choice_pending']);
+    // 1) server snapshot의 lastHandPlayed로 단계 1 손 origin 식별 (defer 통합 STATE 대응)
+    const lhp = s.lastHandPlayed;
+    if (lhp && lhp.player === oppId && la?.kind !== 'round_start') {
+      if (lhp.card && newCardIds.has(lhp.card.id)) oppHandOriginIds.add(lhp.card.id);
+      if (Array.isArray(lhp.cards)) {
+        for (const c of lhp.cards) if (newCardIds.has(c.id)) oppHandOriginIds.add(c.id);
+      }
+    }
+    // 2) lastAction 기반 fallback (chooseFloor 등 별도 broadcast 케이스)
+    if (la && la.player === oppId && la.kind !== 'round_start') {
+      if (HAND_ORIGIN_KINDS.has(la.kind)) {
+        if (la.card && newCardIds.has(la.card.id)) oppHandOriginIds.add(la.card.id);
+        if (la.pair && newCardIds.has(la.pair.id)) oppHandOriginIds.add(la.pair.id);
+        if (Array.isArray(la.trio)) {
+          for (const t of la.trio) if (newCardIds.has(t.id)) oppHandOriginIds.add(t.id);
+        }
+      } else if (la.kind === 'bomb' && la.month != null) {
+        for (const c of (s.captured[oppId] || [])) {
+          if (c.month === la.month && newCardIds.has(c.id)) oppHandOriginIds.add(c.id);
+        }
+      }
+    }
+    // 라운드/게임 시작 STATE — 손 8장 분배 + floor 8장 초기 등장. 이 카드들에 대해
+    // 덱 fly를 발동하면 "더미에서 나오는" 인상이 되어 어색하다 (사용자 보고).
+    // lastAction.kind === 'round_start'이면 fly 보류.
+    const isRoundStart = la && la.kind === 'round_start';
+    const drewIds = new Set();
+    if (!isRoundStart) {
+      // 덱 fly 대상 = 새 카드 중 상대 손 origin이 아닌 것
+      for (const id of newCardIds) {
+        if (!oppHandOriginIds.has(id)) drewIds.add(id);
+      }
+    }
+
     // 매칭 fly 대상 카드는 captured에 처음 그려질 때부터 visibility:hidden + 등장 애니메이션 보류.
     // 그렇지 않으면 fly clone이 손→captured 이동 중에 도착지 카드의 fly-in-captured 애니메이션이
     // 먼저 보여서 "바닥 패가 붙는 애니메이션이 손 카드 fly보다 먼저 나오는" 현상이 생긴다.
@@ -508,15 +587,41 @@
         flyTargetIds.add(id);
       }
     }
+    // 덱에서 뒤집힌 카드도 fly 대상 — appear 애니메이션 끄고 시작 위치를 deck으로
+    for (const id of drewIds) flyTargetIds.add(id);
+    // 상대 손에서 나온 카드도 fly 대상
+    for (const id of oppHandOriginIds) flyTargetIds.add(id);
+
+    // 손패 / 바닥 / 점수판 렌더
+    renderOppHand(s);
+    renderMyHand(s);
+    renderFloor(s, flyTargetIds);
     renderCaptured('p1', s, flyTargetIds);
     renderCaptured('p2', s, flyTargetIds);
+
+    // 매칭 가능 표시: 자기 턴 + awaiting_play 시 손패와 바닥 양쪽에 has-match 클래스를 토글한다.
+    // (손패 has-match는 renderMyHand에서 이미 처리, 바닥 has-match는 여기서 처리)
+    updateFloorMatchHints(s);
+
+    // 덱 뒤집기 fly 시작 — 도착지(floor 또는 captured) DOM이 그려진 후 클론
+    if (deckRectForFly && drewIds.size > 0) {
+      for (const id of drewIds) {
+        startFlyFromDeck(id, deckRectForFly);
+      }
+    }
+    // 상대 손에서 나온 카드 fly 시작
+    if (oppHandOriginIds.size > 0) {
+      const oppHandRect = oppCardsEl.getBoundingClientRect();
+      for (const id of oppHandOriginIds) {
+        startFlyFromOppHand(id, oppHandRect);
+      }
+    }
 
     // 액션 패널
     updateActionPanel(s);
 
-    // 클릭한 손패 카드의 클론을 새 위치로 보간 이동
-    // (매칭 시 짝 위치를 거쳐 함께 먹은 패로 가는 2단계 연출을 위해 사라진 카드 정보 전달)
-    resolvePendingFlies(removedFloorIds, prevFloorRects);
+    // 3단계 fly: 손→짝 옆 → 멈춤 → 덱→짝 옆 → 멈춤 → 모두 captured (매칭 시)
+    resolvePendingFlies(s, removedFloorIds, prevFloorRects);
   }
 
   /**
@@ -582,6 +687,13 @@
       b.textContent = `${s.goCount[pid]}고`;
       el.appendChild(b);
     }
+    // 폭탄 보너스 뒤집기 권리 잔여 표시.
+    if (s.bombDeckCredit && s.bombDeckCredit[pid] > 0) {
+      const b = document.createElement('span');
+      b.className = 'profile-badge';
+      b.textContent = `보너스 뒤집기 ${s.bombDeckCredit[pid]}`;
+      el.appendChild(b);
+    }
   }
 
   /**
@@ -605,6 +717,7 @@
     el.classList.add(card.type);
     if (card.subtype) el.classList.add(card.subtype);
     if (card.id) el.dataset.cardId = card.id;
+    if (card.month) el.dataset.cardMonth = String(card.month);
 
     // PixelLab/SVG 일러스트 (있으면). 이미지 로드 실패 시 텍스트 라벨로 폴백.
     if (card.imagePath) {
@@ -702,13 +815,50 @@
       if (ta !== tb) return ta - tb;
       return (a.id || '').localeCompare(b.id || '');
     });
+    // 바닥에 존재하는 월 집합 — 매칭 가능 손패 표시 + hover 하이라이트용
+    const floorMonths = new Set((s.floor || []).map((c) => c.month));
     sorted.forEach((card) => {
       const el = makeCardEl(card);
+      const hasMatch = canPlay && floorMonths.has(card.month);
       if (canPlay) {
         el.classList.add('clickable');
+        if (hasMatch) el.classList.add('has-match');
         el.addEventListener('click', () => sendPlay(card.id));
+        // hover로 같은 월의 바닥 카드에 매칭 하이라이트 토글
+        el.addEventListener('mouseenter', () => highlightMatch(card.month, true));
+        el.addEventListener('mouseleave', () => highlightMatch(card.month, false));
       }
       myCardsEl.appendChild(el);
+    });
+  }
+
+  /**
+   * 바닥에서 month와 같은 월의 카드들에 match-highlight 클래스를 토글한다.
+   * @param {number} month
+   * @param {boolean} on
+   */
+  function highlightMatch(month, on) {
+    const els = floorCardsEl.querySelectorAll('[data-card-month]');
+    els.forEach((el) => {
+      if (Number(el.dataset.cardMonth) === month) {
+        el.classList.toggle('match-highlight', on);
+      }
+    });
+  }
+
+  /**
+   * 바닥 카드 중 내 손에 같은 월 카드가 있는 것들에 has-match 클래스를 적용한다.
+   * 자기 턴 + awaiting_play일 때만 활성, 그 외엔 모두 제거.
+   * @param {object} s
+   */
+  function updateFloorMatchHints(s) {
+    const canPlay = s.turn === me && s.phase === 'awaiting_play';
+    const handMonths = canPlay ? new Set((s.yourHand || []).map((c) => c.month)) : null;
+    const els = floorCardsEl.querySelectorAll('[data-card-month]');
+    els.forEach((el) => {
+      const m = Number(el.dataset.cardMonth);
+      const on = canPlay && handMonths.has(m);
+      el.classList.toggle('has-match', on);
     });
   }
 
@@ -721,7 +871,7 @@
    * 그대로 유지된다. 새 카드가 바닥에 추가되면 비어 있는 슬롯 중 가장 작은
    * 인덱스부터 배정한다.
    */
-  function renderFloor(s) {
+  function renderFloor(s, flyTargetIds = new Set()) {
     // deck-card / floor-mission / go-stop-overlay 외 카드 제거
     Array.from(floorCardsEl.children).forEach((ch) => {
       if (!ch.classList.contains('deck-card')
@@ -732,10 +882,16 @@
     });
     const deckEl = floorCardsEl.querySelector('.deck-card');
 
-    // 바닥에서 사라진 카드는 슬롯 캐시에서 제거 (다음 새 카드가 그 슬롯을 차지하게 한다).
+    // 바닥에서 사라진 카드는 슬롯 캐시에서 제거. 단 그 슬롯은 이번 STATE 한정으로
+    // "최근 비워진" 표시 — 새 카드가 같은 슬롯을 차지하면 시각상 "방금 매칭된 카드 자리로
+    // 새 카드가 들어가는" 어색함이 발생한다(사용자 보고).
     const curFloorIdSet = new Set(s.floor.map((c) => c.id));
+    const justFreedSlots = new Set();
     for (const id of Array.from(floorSlotMap.keys())) {
-      if (!curFloorIdSet.has(id)) floorSlotMap.delete(id);
+      if (!curFloorIdSet.has(id)) {
+        justFreedSlots.add(floorSlotMap.get(id));
+        floorSlotMap.delete(id);
+      }
     }
 
     // 같은 월 그룹화 (등장 순서 유지)
@@ -760,7 +916,8 @@
     function nextFreeSlot() {
       const used = new Set(floorSlotMap.values());
       let i = 0;
-      while (used.has(i)) i++;
+      // justFreedSlots(이번 STATE에 비워진 슬롯)는 새 카드 할당 후보에서 제외.
+      while (used.has(i) || justFreedSlots.has(i)) i++;
       return i;
     }
 
@@ -788,7 +945,8 @@
       const center = (stackSize - 1) / 2;
 
       cards.forEach((card, cardIdxInGroup) => {
-        const anim = newFloorIds.has(card.id) ? 'appear' : null;
+        // fly 대상은 fly clone이 도착할 때까지 정지 상태(클론이 보임). appear 애니메이션은 끔.
+        const anim = (newFloorIds.has(card.id) && !flyTargetIds.has(card.id)) ? 'appear' : null;
         const el = makeCardEl(card, { ppeok: isPpeok, anim });
 
         if (stackSize > 1) {
@@ -833,7 +991,19 @@
     const thresholds = { gwang: 3, kkeut: 5, tti: 5, pi: 10 };
 
     for (const type of ['gwang', 'kkeut', 'tti', 'pi']) {
-      const count   = groups[type].length;
+      // 피는 쌍피를 2장으로 환산해서 카운트한다. (점수 계산과 동일 기준)
+      // - 명시적 쌍피(subtype='ssangpi'): 11월/12월 카드
+      // - 9월 술잔(m09_kkeut): kkeutAsSsangpi 선택 시 쌍피
+      let count;
+      if (type === 'pi') {
+        count = groups.pi.reduce((sum, c) => {
+          if (c.subtype === 'ssangpi') return sum + 2;
+          if (c.id === 'm09_kkeut' && ssangpi) return sum + 2;
+          return sum + 1;
+        }, 0);
+      } else {
+        count = groups[type].length;
+      }
       const reached = count >= thresholds[type];
 
       // captured-summary 카운트 줄 갱신
@@ -930,10 +1100,80 @@
     clone.style.top    = `${rect.top}px`;
     clone.style.width  = `${rect.width}px`;
     clone.style.height = `${rect.height}px`;
-    document.body.appendChild(clone);
+    // 던지는 카드는 짝(가만 있는 카드) 위로 와야 한다. z-index 10.
+    clone.style.zIndex = '10';
+    flyOverlay.appendChild(clone);
     void clone.offsetHeight;
     src.style.visibility = 'hidden';
     pendingFlies.push({ cardId, clone, startedAt: Date.now() });
+  }
+
+  /**
+   * 상대 손에서 나온 카드의 fly 클론 생성. 시작 좌표를 상대 손 영역 중앙으로 설정.
+   * @param {string} cardId
+   * @param {DOMRect} oppHandRect 상대 손 영역 DOM의 viewport 좌표
+   */
+  function startFlyFromOppHand(cardId, oppHandRect) {
+    const target =
+      floorCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
+    if (!target) return;
+    // 카드 크기는 도착지 기준 — 상대 손 카드 크기와 비슷. 시작은 손 중앙.
+    const targetRect = target.getBoundingClientRect();
+    const w = targetRect.width || 60;
+    const h = targetRect.height || 85;
+    const startLeft = oppHandRect.left + (oppHandRect.width / 2) - (w / 2);
+    const startTop  = oppHandRect.top  + (oppHandRect.height / 2) - (h / 2);
+    const clone = target.cloneNode(true);
+    clone.classList.add('flying-card');
+    clone.classList.remove('clickable');
+    clone.style.position = 'fixed';
+    clone.style.margin = '0';
+    clone.style.transition = 'none';
+    clone.style.left   = `${startLeft}px`;
+    clone.style.top    = `${startTop}px`;
+    clone.style.width  = `${w}px`;
+    clone.style.height = `${h}px`;
+    clone.style.visibility = 'visible';
+    clone.style.zIndex = '10';
+    flyOverlay.appendChild(clone);
+    void clone.offsetHeight;
+    target.style.visibility = 'hidden';
+    pendingFlies.push({ cardId, clone, startedAt: Date.now(), origin: 'opp-hand' });
+  }
+
+  /**
+   * 덱에서 뒤집힌 카드의 fly 클론 생성. 도착지(floor 또는 captured) DOM을 클론해
+   * 시작 좌표를 deckRect로 설정 → resolvePendingFlies가 도착지로 보간 이동.
+   * @param {string} cardId
+   * @param {DOMRect} deckRect 덱 카드의 viewport 좌표
+   */
+  function startFlyFromDeck(cardId, deckRect) {
+    const target =
+      floorCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
+    if (!target) return;
+    const clone = target.cloneNode(true);
+    clone.classList.add('flying-card');
+    clone.classList.remove('clickable');
+    clone.style.position = 'fixed';
+    clone.style.margin = '0';
+    clone.style.transition = 'none';
+    clone.style.left   = `${deckRect.left}px`;
+    clone.style.top    = `${deckRect.top}px`;
+    clone.style.width  = `${deckRect.width}px`;
+    clone.style.height = `${deckRect.height}px`;
+    // DECK_FLIP state 진입 시점에 보이도록 — HAND_THROW/LAND 동안에는 hidden.
+    // (그렇지 않으면 손 fly 진행 중에 deck 위치에 뒷면 카드가 미리 보여 "동시에
+    //  더미 뒤집기 시작"하는 인상을 준다.)
+    clone.style.visibility = 'hidden';
+    clone.style.zIndex = '10';
+    flyOverlay.appendChild(clone);
+    void clone.offsetHeight;
+    target.style.visibility = 'hidden';
+    pendingFlies.push({ cardId, clone, startedAt: Date.now(), origin: 'deck' });
   }
 
   /**
@@ -953,7 +1193,7 @@
     clone.style.top    = `${rect.top}px`;
     clone.style.width  = `${rect.width}px`;
     clone.style.height = `${rect.height}px`;
-    document.body.appendChild(clone);
+    flyOverlay.appendChild(clone);
     src.style.visibility = 'hidden';
     // 초기 위치 강제 반영
     void clone.offsetHeight;
@@ -984,129 +1224,240 @@
   }
 
   /**
-   * renderState 직후 호출 — pendingFlies의 카드 각각을 새 위치로 이동.
+   * renderState 직후 호출 — 3단계 fly 시퀀스.
    *
-   * 매칭으로 손→먹은 패가 일어난 경우, 바닥을 거치지 않고 직선으로 가면 어색하다.
-   * 그래서 사라진 짝(이전 floor에 있었으나 이번 STATE에서 빠진 카드들)이 있으면:
-   *   1) 손에서 낸 카드가 짝의 이전 바닥 위치까지 fly (만남 지점)
-   *   2) 짝 카드들도 그 자리에 잠깐 모임 (이전 위치에서 클론으로 띄워둠)
-   *   3) 모든 카드가 함께 각자의 먹은 패 자리로 fly
-   * 짝이 없으면(=피우는 경우) 기존처럼 단일 fly로 바닥에 도착시킨다.
+   * STAGE 1: 손 카드 + 상대 손 카드 fly → 만남 지점(짝 prev 위치) 또는 cur floor 위치
+   *   - 매칭 시: 짝 클론을 prev 위치에 띄워둠 (가만히 머묾)
+   *   - 비매칭/뻑: 손 카드가 floor의 cur 위치로 정착
+   *   ── 멈춤 200ms ──
+   * STAGE 2: 덱 카드 fly → 만남 지점 또는 cur floor 위치
+   *   ── 멈춤 200ms ──
+   * STAGE 3: cur captured에 있는 카드들 모두 captured DOM 위치로 이동 (매칭 시만)
    *
-   * @param {string[]} removedFloorIds 이번 STATE에서 floor에서 사라진 카드 ID 목록
-   * @param {Map<string, DOMRect>} prevFloorRects 직전 STATE의 floor 카드 DOM 위치 캐시
+   * @param {object} s 현재 STATE 스냅샷
+   * @param {string[]} removedFloorIds 이번 STATE에서 floor에서 사라진 카드 ID
+   * @param {Map<string, DOMRect>} prevFloorRects 직전 STATE의 floor 카드 viewport 좌표
    */
-  function resolvePendingFlies(removedFloorIds = [], prevFloorRects = new Map()) {
-    if (pendingFlies.length === 0) return;
-    // fly 시작 — 이 동안 새 STATE/ROUND_END는 큐에 쌓아두고 완료 후 처리한다.
+  function resolvePendingFlies(s, removedFloorIds = [], prevFloorRects = new Map()) {
+    // 짝 카드 클론 생성 — cur captured에 있는 removedFloorIds (매칭으로 captured 간 짝)
+    const pairEntries = [];
+    for (const id of removedFloorIds) {
+      const inMyCap  = (s.captured?.[me] || []).find((c) => c.id === id);
+      const oppKey   = me === 'p1' ? 'p2' : 'p1';
+      const inOppCap = (s.captured?.[oppKey] || []).find((c) => c.id === id);
+      if (!inMyCap && !inOppCap) continue;
+      const target = (inMyCap ? myCapturedZoneEl : oppCapturedZoneEl)
+        .querySelector(`[data-card-id="${id}"]`);
+      const startRect = prevFloorRects.get(id);
+      if (!target || !startRect) continue;
+      const clone = spawnCardClone(target, startRect);
+      clone.style.visibility = 'visible';
+      // 짝(가만 있는 카드)은 던지는 카드보다 아래. 부딪힐 때 손/덱이 위로 와야 자연스럽다.
+      clone.style.zIndex = '1';
+      pairEntries.push({ cardId: id, clone, finalEl: target, origin: 'pair' });
+    }
+
+    if (pendingFlies.length === 0 && pairEntries.length === 0) return;
     isAnimating = true;
-    const totalFlies = pendingFlies.length;
-    let completedCount = 0;
-    const markFlyDone = () => {
-      completedCount++;
-      if (completedCount >= totalFlies) {
-        isAnimating = false;
-        flushStateQueue();
-      }
-    };
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        // 짝 클론은 fly당 1회만 만들면 안 되고, 한 STATE에 여러 fly가 동시에 있을 수
-        // 있으므로 짝 카드 ID별로 클론을 1회 생성해 공유한다.
-        const pairClones = new Map(); // cardId -> { clone, target }
-        function spawnPairCloneOnce(cardId) {
-          if (pairClones.has(cardId)) return pairClones.get(cardId);
-          const target =
-            myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
-            oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
-          const rect = prevFloorRects.get(cardId);
-          if (!target || !rect) return null;
-          const clone = spawnCardClone(target, rect);
-          const entry = { clone, target };
-          pairClones.set(cardId, entry);
-          return entry;
-        }
 
-        for (const fly of pendingFlies) {
-          // v8: 먹은 패 zone은 my-captured-zone / opp-captured-zone (card-stack 내부)
-          const target =
-            floorCardsEl.querySelector(`[data-card-id="${fly.cardId}"]`) ||
-            myCapturedZoneEl.querySelector(`[data-card-id="${fly.cardId}"]`) ||
-            oppCapturedZoneEl.querySelector(`[data-card-id="${fly.cardId}"]`);
-          if (!target) {
-            // 어느 영역에서도 못 찾으면(사라짐) 페이드 아웃 정리
-            fly.clone.style.transition = 'opacity 0.4s';
-            fly.clone.style.opacity = '0';
-            setTimeout(() => { fly.clone.remove(); markFlyDone(); }, 430);
-            continue;
-          }
+    // 카드 ID에서 month 추출 (m{NN}_... 패턴).
+    function getCardMonth(cardId) {
+      const m = /^m(\d{2})_/.exec(cardId);
+      return m ? parseInt(m[1], 10) : null;
+    }
 
-          const wentToCaptured = target.closest('.captured-zone') !== null;
-          const hasPair = wentToCaptured && removedFloorIds.length > 0;
+    // 짝 entry들을 month별로 인덱싱 — 손/덱 fly가 자기 month의 짝으로 가도록.
+    const pairsByMonth = new Map();
+    for (const pe of pairEntries) {
+      const month = getCardMonth(pe.cardId);
+      pe.month = month;
+      if (!pairsByMonth.has(month)) pairsByMonth.set(month, []);
+      pairsByMonth.get(month).push(pe);
+    }
 
-          if (hasPair) {
-            // 만남 지점 = 사라진 짝 중 첫 번째 카드의 이전 바닥 위치
-            const meetRect = prevFloorRects.get(removedFloorIds[0]);
-            // 짝 카드들 클론을 그 자리에 잠깐 띄움 (각자 자기 이전 위치에서 시작)
-            const spawned = removedFloorIds.map(spawnPairCloneOnce).filter(Boolean);
+    // cardId와 같은 month의 짝의 prev floor 위치 반환 (만남 지점). 없으면 null.
+    function findMeetRectFor(cardId) {
+      const month = getCardMonth(cardId);
+      if (month == null) return null;
+      const pairs = pairsByMonth.get(month);
+      if (!pairs || pairs.length === 0) return null;
+      return prevFloorRects.get(pairs[0].cardId);
+    }
 
-            // 1단계: 손 카드 → 만남 지점
-            fly.clone.style.transition = 'all 0.3s ease-out';
-            fly.clone.style.left   = `${meetRect.left}px`;
-            fly.clone.style.top    = `${meetRect.top}px`;
-            fly.clone.style.width  = `${meetRect.width}px`;
-            fly.clone.style.height = `${meetRect.height}px`;
+    function locateCard(cardId) {
+      let el = floorCardsEl.querySelector(`[data-card-id="${cardId}"]`);
+      if (el) return { zone: 'floor', el };
+      el = myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
+      if (el) return { zone: 'cap', el };
+      el = oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
+      if (el) return { zone: 'cap', el };
+      return null;
+    }
 
-            // 2단계: 잠깐 멈춘 뒤 손 카드 + 짝 카드들 모두 각자의 captured 위치로
-            const handFinal = target.getBoundingClientRect();
-            setTimeout(() => {
-              fly.clone.style.transition = 'all 0.35s ease-in';
-              fly.clone.style.left   = `${handFinal.left}px`;
-              fly.clone.style.top    = `${handFinal.top}px`;
-              fly.clone.style.width  = `${handFinal.width}px`;
-              fly.clone.style.height = `${handFinal.height}px`;
-              target.style.visibility = 'hidden';
-
-              for (const { clone, target: pairTarget } of spawned) {
-                const dst = pairTarget.getBoundingClientRect();
-                clone.style.transition = 'all 0.35s ease-in';
-                clone.style.left   = `${dst.left}px`;
-                clone.style.top    = `${dst.top}px`;
-                clone.style.width  = `${dst.width}px`;
-                clone.style.height = `${dst.height}px`;
-              }
-
-              // 정리: 이동 끝난 뒤 원본 가시화 + 클론 제거
-              setTimeout(() => {
-                target.style.visibility = '';
-                fly.clone.remove();
-                for (const { clone, target: pairTarget } of spawned) {
-                  pairTarget.style.visibility = '';
-                  clone.remove();
-                }
-                markFlyDone();
-              }, 380);
-            }, 340);
-          } else {
-            // 매칭 없음 = 피우는 경우(floor에 손 카드가 그대로 놓임) 또는 짝 정보 없음
-            const dst = target.getBoundingClientRect();
-            fly.clone.style.transition = '';
-            void fly.clone.offsetHeight;
-            fly.clone.style.left   = `${dst.left}px`;
-            fly.clone.style.top    = `${dst.top}px`;
-            fly.clone.style.width  = `${dst.width}px`;
-            fly.clone.style.height = `${dst.height}px`;
-            target.style.visibility = 'hidden';
-            setTimeout(() => {
-              target.style.visibility = '';
-              fly.clone.remove();
-              markFlyDone();
-            }, 360);
-          }
-        }
-        pendingFlies = [];
+    const entries = [];
+    const fadeEntries = [];
+    for (const fly of pendingFlies) {
+      const loc = locateCard(fly.cardId);
+      if (!loc) { fadeEntries.push(fly); continue; }
+      const finalRect = loc.el.getBoundingClientRect();
+      const isCap = loc.zone === 'cap';
+      // midRect = 같은 month 짝의 prev 위치(cap 도착이면). 없으면 finalRect.
+      const meetForThis = findMeetRectFor(fly.cardId);
+      const midRect = (isCap && meetForThis) ? meetForThis : finalRect;
+      entries.push({
+        clone: fly.clone, cardId: fly.cardId, origin: fly.origin || 'hand',
+        midRect, finalEl: loc.el, finalRect, isCap,
       });
-    });
+    }
+    for (const pe of pairEntries) {
+      const finalRect = pe.finalEl.getBoundingClientRect();
+      // 짝은 자기 prev 위치에 머물다가 captured로 — midRect = prev 위치
+      const midRect = prevFloorRects.get(pe.cardId) || finalRect;
+      entries.push({
+        clone: pe.clone, cardId: pe.cardId, origin: 'pair',
+        midRect, finalEl: pe.finalEl, finalRect, isCap: true,
+      });
+    }
+
+    // 도착지 DOM visibility hidden — 클론이 도착할 때까지 가림
+    for (const e of entries) {
+      if (e.finalEl) e.finalEl.style.visibility = 'hidden';
+    }
+
+    // ─────────── 턴 fly state machine ───────────
+    // 각 state는 "한 턴 안에서 일어나는 단계적 사건"을 명시한다.
+    //   HAND_THROW : A가 던진다 (손→짝 옆 or 빈 공간)
+    //   HAND_LAND  : 손 카드 도착, 매칭 시 짝 강조
+    //   DECK_FLIP  : 더미 뒷면→앞면 회전
+    //   DECK_THROW : 뒤집은 덱 카드 던지기 (덱→매칭 위치 or 빈 공간)
+    //   DECK_LAND  : 덱 카드 도착, 매칭 강조
+    //   RESOLVE    : 매칭 카드 captured로 (없으면 skip)
+    //   CLEANUP    : 클론 제거 + 도착지 복원
+    const T = {
+      HAND_THROW: 280, HAND_LAND: 240,  // HAND_LAND 늘려 손이 바닥에 붙은 후 잠시 머묾
+      DECK_FLIP:  240, DECK_THROW: 260, DECK_LAND: 180,
+      RESOLVE:    320, CLEANUP:    220,
+    };
+    const hasCapMove = entries.some((e) => e.isCap);
+    const deckEntries = entries.filter((e) => e.origin === 'deck');
+    const handLikeEntries = entries.filter((e) => e.origin === 'hand' || e.origin === 'opp-hand');
+    const pairOnlyEntries = entries.filter((e) => e.origin === 'pair');
+
+    function flyTo(clone, rect, durMs) {
+      clone.style.transition = `all ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1)`;
+      clone.style.left   = `${rect.left}px`;
+      clone.style.top    = `${rect.top}px`;
+      clone.style.width  = `${rect.width}px`;
+      clone.style.height = `${rect.height}px`;
+    }
+    function flashMeet(clone) {
+      const orig = clone.style.boxShadow;
+      clone.style.boxShadow = '0 0 18px 5px rgba(255, 209, 102, 0.85), 0 0 32px 10px rgba(255, 209, 102, 0.45)';
+      setTimeout(() => { clone.style.boxShadow = orig; }, 220);
+    }
+
+    // fadeEntries: 도착지 못 찾은 경우 — opacity 0 후 제거
+    for (const f of fadeEntries) {
+      f.clone.style.transition = 'opacity 0.3s';
+      f.clone.style.opacity = '0';
+      setTimeout(() => f.clone.remove(), 350);
+    }
+
+    // 덱 클론 뒷면 표시 준비 — DECK_FLIP에서 앞면으로 회전
+    for (const e of deckEntries) {
+      e.clone.style.transformStyle = 'preserve-3d';
+      e.clone.style.perspective = '600px';
+      e.clone.style.backfaceVisibility = 'hidden';
+      e.clone.style.transform = 'rotateY(-180deg)';
+      const back = document.createElement('div');
+      back.style.cssText = 'position:absolute; inset:0; background: repeating-linear-gradient(45deg, #5a3a1a 0 6px, #4a2a0a 6px 12px); border-radius:6px; transform: rotateY(180deg); backface-visibility:hidden; border: 2px solid var(--gold);';
+      e.clone.appendChild(back);
+      e.flipBack = back;
+    }
+
+    let stateTimer = null;
+    function transition(name) {
+      console.log(`[turn-fly] state=${name} (hand=${handLikeEntries.length} deck=${deckEntries.length} pair=${pairOnlyEntries.length} cap=${hasCapMove})`);
+      if (stateTimer) { clearTimeout(stateTimer); stateTimer = null; }
+      switch (name) {
+        case 'HAND_THROW': {
+          // A가 던진다 — 손/상대손 → midRect (짝 prev 위치 or cur floor 위치).
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            for (const e of handLikeEntries) flyTo(e.clone, e.midRect, T.HAND_THROW);
+          }));
+          stateTimer = setTimeout(() => transition('HAND_LAND'), T.HAND_THROW);
+          break;
+        }
+        case 'HAND_LAND': {
+          // 손 카드 도착 — 손 fly가 짝을 만난 케이스면 해당 짝 강조.
+          // 손/덱이 다른 month의 짝과 매칭될 수 있으므로 entry별로 검사.
+          for (const e of handLikeEntries) {
+            if (!e.isCap) continue;
+            const month = getCardMonth(e.cardId);
+            const pairs = pairsByMonth.get(month) || [];
+            for (const pe of pairs) flashMeet(pe.clone);
+          }
+          stateTimer = setTimeout(() => transition('DECK_FLIP'), T.HAND_LAND);
+          break;
+        }
+        case 'DECK_FLIP': {
+          // 더미 뒷면→앞면 회전 (덱 클론을 이제 visible로 + rotateY 전환).
+          for (const e of deckEntries) {
+            e.clone.style.visibility = 'visible';
+            e.clone.style.transition = `transform ${T.DECK_FLIP / 1000}s ease-in-out`;
+            e.clone.style.transform = 'rotateY(0deg)';
+          }
+          stateTimer = setTimeout(() => transition('DECK_THROW'), T.DECK_FLIP);
+          break;
+        }
+        case 'DECK_THROW': {
+          // 뒤집은 덱 카드 던지기 — 덱 → midRect.
+          for (const e of deckEntries) {
+            if (e.flipBack) { e.flipBack.remove(); e.flipBack = null; }
+            e.clone.style.transition = 'none';
+            e.clone.style.transform = '';
+            void e.clone.offsetHeight;
+            flyTo(e.clone, e.midRect, T.DECK_THROW);
+          }
+          stateTimer = setTimeout(() => transition('DECK_LAND'), T.DECK_THROW);
+          break;
+        }
+        case 'DECK_LAND': {
+          // 덱 도착 — 덱 fly가 짝을 만난 케이스면 해당 짝과 덱 강조.
+          for (const e of deckEntries) {
+            if (!e.isCap) continue;
+            flashMeet(e.clone);
+            const month = getCardMonth(e.cardId);
+            const pairs = pairsByMonth.get(month) || [];
+            for (const pe of pairs) flashMeet(pe.clone);
+          }
+          stateTimer = setTimeout(
+            () => transition(hasCapMove ? 'RESOLVE' : 'CLEANUP'),
+            T.DECK_LAND,
+          );
+          break;
+        }
+        case 'RESOLVE': {
+          // 매칭 카드 captured로 이동.
+          for (const e of entries) if (e.isCap) flyTo(e.clone, e.finalRect, T.RESOLVE);
+          stateTimer = setTimeout(() => transition('CLEANUP'), T.RESOLVE);
+          break;
+        }
+        case 'CLEANUP': {
+          // 정리.
+          for (const e of entries) {
+            if (e.finalEl) e.finalEl.style.visibility = '';
+            e.clone.remove();
+          }
+          pendingFlies = [];
+          isAnimating = false;
+          flushStateQueue();
+          break;
+        }
+      }
+    }
+
+    transition('HAND_THROW');
   }
 
   function sendPlay(cardId) {
@@ -1153,6 +1504,18 @@
 
     startFlyFromHand(cardId);
     ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
+  }
+
+  /**
+   * 보너스 뒤집기 요청. 자기 턴 + awaiting_play + bombDeckCredit > 0일 때만 가능.
+   * 더미 카드 클릭으로 발동.
+   */
+  function sendBonusFlip() {
+    if (!ws || ws.readyState !== 1) return;
+    if (!lastState || lastState.turn !== me || lastState.phase !== 'awaiting_play') return;
+    if ((lastState.bombDeckCredit?.[me] || 0) <= 0) return;
+    if (isAnimating) return;
+    ws.send(JSON.stringify({ type: 'BONUS_FLIP' }));
   }
 
   /**
@@ -1288,7 +1651,19 @@
     });
   }
   btnNewRound.addEventListener('click', sendNewRound);
-  btnNewRoundMod.addEventListener('click', () => { hideRoundModal(); sendNewRound(); });
+  // 더미 카드 클릭 시 보너스 뒤집기 요청 (renderState에서 bonus-available 클래스 토글)
+  floorCardsEl.addEventListener('click', (ev) => {
+    const dc = ev.target.closest('.deck-card');
+    if (!dc) return;
+    if (!dc.classList.contains('bonus-available')) return;
+    sendBonusFlip();
+  });
+  btnNewRoundMod.addEventListener('click', () => {
+    const mode = btnNewRoundMod.dataset.mode || 'new-round';
+    hideRoundModal();
+    if (mode === 'new-game') sendNewGame();
+    else sendNewRound();
+  });
 
   // "← 다른 종목" 버튼 핸들러 — 로비로 복귀
   const returnLobbyBtn = document.getElementById('btn-return-lobby');
@@ -1339,7 +1714,12 @@
    */
   function showRoundResult(result) {
     if (!result) return;
-    if (result.winner === null) {
+    // 게임 종료(잔고 음수 도달) — 라운드 결과 모달을 게임 종료 모달로 전환.
+    const isGameOver = !!result.gameOver;
+    if (isGameOver) {
+      const won = result.gameWinner === me;
+      roundModalTitle.textContent = won ? '게임 승리!' : '게임 패배';
+    } else if (result.winner === null) {
       roundModalTitle.textContent = '무승부';
     } else {
       const won = result.winner === me;
@@ -1360,6 +1740,19 @@
       html += `<div class="reasons">${result.reasons.join(' · ')}</div>`;
     } else if (result.winner === null) {
       html += `<div class="reasons">${result.reasons?.join(' · ') || '무승부'}</div>`;
+    }
+    // 게임 종료 시 최종 잔고 표시 + "새 게임" 버튼 모드로 전환.
+    if (isGameOver) {
+      const myFinal = result.moneyAfter?.[me] ?? 0;
+      const oppFinal = result.moneyAfter?.[me === 'p1' ? 'p2' : 'p1'] ?? 0;
+      html += `<div class="row"><span>내 최종 잔고</span><span>${formatMoney(myFinal)}원</span></div>`;
+      html += `<div class="row"><span>상대 최종 잔고</span><span>${formatMoney(oppFinal)}원</span></div>`;
+      html += `<div class="reasons">상대 잔고가 마이너스 — 게임 종료. 새 게임으로 시작해라.</div>`;
+      btnNewRoundMod.textContent = '새 게임';
+      btnNewRoundMod.dataset.mode = 'new-game';
+    } else {
+      btnNewRoundMod.textContent = '새 라운드';
+      btnNewRoundMod.dataset.mode = 'new-round';
     }
     roundModalBody.innerHTML = html;
     roundModalEl.classList.remove('hidden');
