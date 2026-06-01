@@ -10,7 +10,7 @@
 - 출처: 나무위키 맞고·고스톱 + 게임 코드 교차검증
 - 포함 내용: 화투 48장 구성, 족보 점수표, 박 기준, 고배수 공식, QA 체크리스트, 구현 버그 목록
 
-### 룰북 §13 보강 (2026-05-31, 본 레포 기준 5건 신규)
+### 룰북 §13 보강 (2026-05-31 신규 5건 + 2026-06-02 폭탄 룰 정정·확정)
 
 | 항목 | 내용 |
 |---|---|
@@ -18,7 +18,7 @@
 | 흔들기 시점 변경 | **`shake_decision` phase 제거.** 라운드 시작 시 일괄 검사 → 같은 월 첫 카드를 낼 때 클라이언트 모달(`shake-modal`)로 이전. 흔들기 모달은 라운드당 1회 (`g.shakeAsked`) |
 | 폭탄 확인 모달 | `window.confirm` → 전용 모달(`bomb-confirm-modal`)로 교체. 같은 월 두 번째 카드 낼 때 + 바닥 1장 조건에서 표시 |
 | 첫뻑 보너스 | `g.firstPpeokBy` 신규 상태. 라운드 첫 뻑을 만든 플레이어가 승리 시 `applyFinalMultipliers`에서 `firstPpeokBonus` flag로 **+7점** 가산. reasons에 `첫뻑 +7` |
-| 폭탄 후 덱 2턴 | `bombSteps`가 `drawAndResolve` **2회 연속** 실행. 2회차에서 `awaiting_floor_choice` 진입 가능 (`g.bombExtraDraw` 플래그로 `chooseFloorSteps` 분기 확장). 마지막 턴 멈춤 없음 |
+| 폭탄 보너스 뒤집기 권리 (기회 보존의 법칙) | **표준 룰 — 2026-06-02 정정·확정.** 폭탄 발동 = 같은 월 4장(손 3 + 바닥 1) 가져가기 + 상대 피 1장 + 통상 덱 뒤집기 1회. 추가로 **보너스 뒤집기 권리 +2** 누적(`g.bombDeckCredit`). 자기 차례에 **손이 0이어도** 권리가 남아 있으면 `bonusFlipSteps`로 덱 1장 뒤집기(단순 매칭만 — 쪽/뻑/따닥 미형성) + 고/스톱 결정 가능. 권리 사용 시 −1. **라운드 종료 조건** = 양쪽 모두 `손패 + bombDeckCredit` 합이 0 (기회 보존의 법칙으로 양쪽 잔여가 동기화되어 동시에 0 도달). 손 −3 + 보너스 +2 = 순 −1로 정상 1턴과 동등. **이전 'drawAndResolve 2회 연속(`bombExtraDraw`)' 모델은 본 모델로 대체됨.** 구현: `game.js` `bombSteps`/`bonusFlipSteps`, `bombDeckCredit` 상태 |
 | floor 위치 고정 | 클라이언트 `floorSlotMap` (Map: 카드 ID → 슬롯 인덱스) 신규 캐시. 한 번 떨어진 위치 ID 기반 고정, 다른 카드 매칭으로 인덱스 당김 없음. `ROUND_START`/`GAME_START` 수신 시 `floorSlotMap.clear()` |
 
 ### QA 필수 준수 사항

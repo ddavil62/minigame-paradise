@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-06-02] - 폭탄 룰 표준화: 보너스 뒤집기 권리(기회 보존의 법칙)
+
+폭탄 메커니즘을 **표준 한국 맞고 룰에 맞게 정정·확정**. 이전 [2026-05-31] 'drawAndResolve 2회 연속(`bombExtraDraw`)' 모델을 **`bombDeckCredit` 보너스 뒤집기 권리 모델**로 대체. 룰북 §13(레포 측 기록: `CLAUDE.md`) 갱신 — 해당 행을 새 표준 룰로 개정.
+
+### 변경 (`game.js`)
+- `g.bombDeckCredit = { p1: 0, p2: 0 }` 상태 신규 — "기회 보존의 법칙"(손 + 권리 합이 매 턴 −1로 진행, 양쪽 동기).
+- `bombSteps` 정정: 폭탄 발동 = 같은 월 4장(손 3 + 바닥 1) 가져가기 + 상대 피 1장 + 통상 덱 뒤집기 1회 + **보너스 뒤집기 권리 +2**. (손 −3 + 보너스 +2 = 순 −1, 정상 1턴과 동등)
+- `bonusFlipSteps(g, playerId)` generator 신규 — 자기 차례에 손 0이어도 권리가 남아 있으면 덱 1장 뒤집기(단순 매칭만, 쪽/뻑/따닥 미형성) + 고/스톱 결정 가능. 사용 시 권리 −1.
+- 라운드 종료 조건 = 양쪽 모두 `손패 + bombDeckCredit` 합이 0.
+- `sangtongSteps` / `bonusFlipSteps` 단계 generator를 `server.js`에 통합, `client.js` 연출·`bot.js` 대응 (커밋 `50b3ed6`).
+
+### 비고
+- 권위 룰북 파일(`2026-05-30-matgo-rulebook.md` §13)은 별도 머신에 있어 본 레포에서 직접 수정 불가. 레포 측 룰북 기록(`matgo/CLAUDE.md` §13 보강 표)을 본 표준 룰로 개정함. 데스크톱 머신의 원본 §13에도 동일 반영 필요.
+- 검증: 변경 4개 JS `node --check` 통과. Playwright 러너는 matgo↔minigames 루트 playwright 중복 설치 충돌로 미실행(코드 무관 환경 이슈).
+
 ## [2026-05-31] - 룰 보강 5건 (사통/흔들기·폭탄 시점/첫뻑/폭탄 2뒤집기/floor 위치 고정)
 
 사용자 실플레이 피드백 5건을 표준 한국 맞고 룰에 맞게 구현. 룰 로직(`game.js`, `score.js`) 3건 + UI 흐름(`public/client.js`, `public/index.html`) 2건 + 서버 라우터(`server.js`) 1건.
