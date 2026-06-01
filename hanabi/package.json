@@ -1,0 +1,30 @@
+{
+  "name": "hanabi",
+  "version": "0.1.0",
+  "description": "LAN 1:1 협력 카드게임 하나비 (서버 권위형, 손패 가림)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "hanabi",
+    "cooperative",
+    "cardgame",
+    "lan",
+    "multiplayer",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}

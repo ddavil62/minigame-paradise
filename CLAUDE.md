@@ -1,6 +1,6 @@
 # 미니게임 천국 (minigame-paradise)
 
-LAN 1:1 미니게임 6종 통합 패키지. 단일 포트(3000) 통합 라우터 구조.
+LAN 1:1 미니게임 7종 통합 패키지. 단일 포트(3000) 통합 라우터 구조. (하나비는 2인 협력 게임)
 
 ## 게임 목록
 
@@ -12,6 +12,7 @@ LAN 1:1 미니게임 6종 통합 패키지. 단일 포트(3000) 통합 라우터
 | `/yutnori/` | 윷놀이 | `yutnori/server.js` | X |
 | `/codenames-duet/` | 코드네임 듀엣 | `codenames-duet/server.js` | X |
 | `/janggi/` | 장기 (한국식 표준 KJA 2009) | `janggi/server.js` | O |
+| `/hanabi/` | 하나비 (협력 불꽃 카드게임) | `hanabi/server.js` | X |
 
 AI 봇 지원 게임은 1/2 AI 모드 진입 시 server.js가 `bot.js`를 child_process로 자동 spawn한다 (`getBotUrl` 옵션 패턴).
 
@@ -32,10 +33,11 @@ node matgo/server.js --port 3013
 - **장기 (janggi)**: 룰북 `janggi/docs/RULEBOOK.md` (KJA 2009, §1~§13 + 부록 A/B) + 룰북 기반 Playwright 시나리오 111개(`tests/rulebook-c1~c12-*.spec.js`, JR-C1~C12, §11 11/11 커버리지) 완비 (2026-05-31).
 - **맞고 (matgo)**: 룰북 + 단위/E2E 104개. 2026-05-31 룰 보강 5건 — 사통(같은 월 4장 모달 +7), 흔들기/폭탄 카드 클릭 시점 모달(`shake_decision` phase 제거, `awaiting_sangtong` 신설), 첫뻑 +7 base 가산, 폭탄 후 덱 2턴 연속 뒤집기, floor 카드 ID 기반 `floorSlotMap` 위치 고정.
 - **윷놀이 (yutnori)**: 룰북 `yutnori/docs/RULEBOOK.md` (한국 표준 + 본 구현 비교, §1~§13 + 부록, 2026-05-31) + 룰북 기반 Playwright 시나리오 168개(`tests/rulebook-c1~c14-*.spec.js`, YR-C1~C14, §13 11/11 커버리지) 완비 (2026-05-31). §13 구현 vs 표준 차이 **11건** (미해소 8 + 해소 3) — **§13-1 [HIGH]** 모서리 강제 지름길 / **§13-2 [HIGH]** centerExitB 즉시 완주는 사용자 의심 후보 1·2순위로 미해소. 2026-05-31 해소: §13-9 HOME 시각 통일 / §13-10 HOME → 칸 N 정통 매핑 / §13-11 capturedBonus 리셋(+THROW_YUT 보너스 진입 보강). 테스트: Playwright 273 (유닛 65 + WS 20 + 룰북 168 + E2E 25) + smoke 18.
+- **하나비 (hanabi)**: 룰북 `hanabi/docs/RULEBOOK.md` (Antoine Bauza 표준 Hanabi + 본 구현 비교, §1~§13, 2026-06-01) + 룰북 기반 Playwright 시나리오 61개(`tests/rulebook-c1~c11-*.spec.js`, HR-C1~C11) 완비 (2026-06-01). 2인 완전 협력 카드게임 — 서버 권위 + **손패 가림**(`snapshotForPlayer`가 본인 손패 color/number null 마스킹)이 정체성. §13 구현 vs 표준 차이 **8건 전부 confirmed**. 회귀 게이트: 손패 누설(HR-C6-001/HR-C7-001), §13-7 오프바이원(HR-C7-003/004, 2026-06-01 giveClue checkGameEnd 누락 HIGH 버그 수정). 테스트: 유닛 31 + WS 7 + QA엣지 8 + E2E 6 + 가이드 슬라이더 9. **대기 화면 룰 가이드 슬라이더**(인포그래픽 7장 `public/assets/guide/`, 버튼·키보드·스와이프, HR-C11, 2026-06-01 추가 — game.js/WS 무변경). E2E(C8~C11)는 `node server.js --port 3095` 사전 구동 필요. **AI 봇 미지원.**
 
 ## 런처 로비
 
-단일 화면에서 게임 카드 6개를 즉시 표시하고, 호스트가 카드를 클릭하여 게임을 선택한다. 스타트 버튼이나 별도의 종목 선택 단계는 없다.
+단일 화면에서 게임 카드 7개를 즉시 표시하고, 호스트가 카드를 클릭하여 게임을 선택한다. 스타트 버튼이나 별도의 종목 선택 단계는 없다.
 
 - 1/2: 호스트가 카드 클릭 시 AI 모드로 게임 시작 (봇 미지원 게임은 비활성)
 - 2/2: 호스트가 카드 클릭 시 인간 대전으로 양쪽 동시 이동

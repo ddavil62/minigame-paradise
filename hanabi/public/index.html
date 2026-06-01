@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>하나비 - LAN 1:1 협력 불꽃놀이</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="game-header">
+    <h1>🎇 하나비</h1>
+    <div class="status-bar">
+      <span id="player-label">접속 중...</span>
+      <span class="status-divider">|</span>
+      <span id="status-msg">서버 연결 중</span>
+      <span class="status-divider">|</span>
+      <span>턴: <span id="turn-label">-</span></span>
+      <span class="status-divider">|</span>
+      <span>점수: <span id="score-label">0</span></span>
+    </div>
+    <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+  </header>
+
+  <!-- 대기 화면 -->
+  <section id="screen-waiting" class="screen screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+      <div id="invite-panel" class="invite-panel hidden">
+        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
+        <div class="invite-url-row">
+          <code id="invite-url" class="invite-url">http://...</code>
+          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
+        </div>
+        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      </div>
+      <!-- 가이드 슬라이더 (7장 인포그래픽 룰 설명) -->
+      <div class="guide-slider" id="guide-slider" aria-label="하나비 룰 가이드">
+        <div class="guide-slider-viewport">
+          <img
+            id="guide-img"
+            class="guide-slide-img"
+            src="assets/guide/1.png"
+            alt="하나비 룰 가이드 1/7"
+            draggable="false"
+          />
+        </div>
+        <div class="guide-slider-controls">
+          <button id="guide-prev" class="guide-nav-btn" type="button" aria-label="이전" disabled>&#8592;</button>
+          <span id="guide-indicator" class="guide-indicator">1 / 7</span>
+          <button id="guide-next" class="guide-nav-btn" type="button" aria-label="다음">&#8594;</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 게임 화면 -->
+  <main id="screen-game" class="screen screen-game hidden">
+    <!-- 상대 손패 (공개) -->
+    <section class="zone zone-opponent">
+      <div class="zone-title">상대 손패 <span class="zone-sub">(색·숫자 공개 — 힌트로 알려주세요)</span></div>
+      <div id="opponent-hand" class="hand"></div>
+    </section>
+
+    <!-- 게임 정보 행 -->
+    <section class="zone zone-info">
+      <div class="info-group">
+        <div class="info-box">
+          <div class="info-box-label">덱</div>
+          <div class="info-box-value"><span id="deck-count">0</span><span class="info-box-unit">장</span></div>
+        </div>
+        <div class="info-box">
+          <div class="info-box-label">버림 더미</div>
+          <div class="info-box-value"><span id="discard-count">0</span><span class="info-box-unit">장</span></div>
+        </div>
+      </div>
+      <div class="info-group tokens-group">
+        <div class="token-block">
+          <span class="token-block-label">힌트</span>
+          <div id="clue-tokens" class="token-row"></div>
+        </div>
+        <div class="token-block">
+          <span class="token-block-label">폭탄</span>
+          <div id="fuse-tokens" class="token-row"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5색 불꽃 진행 -->
+    <section class="zone zone-fireworks">
+      <div class="zone-title">불꽃 진행</div>
+      <div id="fireworks-area" class="fireworks"></div>
+    </section>
+
+    <!-- 버림 더미 상세 -->
+    <section class="zone zone-discard">
+      <div class="zone-title">버림 더미 <span class="zone-sub">(공개)</span></div>
+      <div id="discard-pile" class="discard-pile"></div>
+    </section>
+
+    <!-- 내 손패 (가림 + 힌트 마킹) -->
+    <section class="zone zone-mine">
+      <div class="zone-title">내 손패 <span class="zone-sub">(내 카드는 내가 볼 수 없습니다 — 받은 힌트만 표시)</span></div>
+      <div id="my-hand" class="hand"></div>
+    </section>
+
+    <!-- 행동 버튼 -->
+    <section class="zone zone-actions">
+      <div id="action-hint" class="action-hint">상대 턴입니다. 잠시 기다려 주세요.</div>
+      <div class="action-buttons">
+        <button id="btn-play" class="action-btn action-btn--play" type="button">카드 내기</button>
+        <button id="btn-discard" class="action-btn action-btn--discard" type="button">버리기</button>
+        <button id="btn-clue" class="action-btn action-btn--clue" type="button">힌트 주기</button>
+        <button id="btn-cancel" class="action-btn action-btn--cancel hidden" type="button">취소</button>
+      </div>
+      <!-- 힌트 입력 패널 -->
+      <div id="clue-panel" class="clue-panel hidden">
+        <div class="clue-panel-title">힌트로 알려줄 속성을 고르세요 (상대 손패에 표시됩니다)</div>
+        <div class="clue-row">
+          <span class="clue-row-label">색</span>
+          <div class="clue-color-buttons">
+            <button class="clue-color-btn card--white"  data-clue-type="color" data-clue-value="white">흰</button>
+            <button class="clue-color-btn card--red"    data-clue-type="color" data-clue-value="red">빨</button>
+            <button class="clue-color-btn card--blue"   data-clue-type="color" data-clue-value="blue">파</button>
+            <button class="clue-color-btn card--green"  data-clue-type="color" data-clue-value="green">초</button>
+            <button class="clue-color-btn card--yellow" data-clue-type="color" data-clue-value="yellow">노</button>
+          </div>
+        </div>
+        <div class="clue-row">
+          <span class="clue-row-label">숫자</span>
+          <div class="clue-number-buttons">
+            <button class="clue-number-btn" data-clue-type="number" data-clue-value="1">1</button>
+            <button class="clue-number-btn" data-clue-type="number" data-clue-value="2">2</button>
+            <button class="clue-number-btn" data-clue-type="number" data-clue-value="3">3</button>
+            <button class="clue-number-btn" data-clue-type="number" data-clue-value="4">4</button>
+            <button class="clue-number-btn" data-clue-type="number" data-clue-value="5">5</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 게임 종료 오버레이 -->
+  <div id="screen-game-over" class="result-overlay hidden">
+    <div class="result-card">
+      <div id="result-outcome" class="result-outcome">결과</div>
+      <div id="result-score" class="result-score">0점</div>
+      <div id="result-grade" class="result-grade">-</div>
+      <div id="result-reason" class="result-reason"></div>
+      <button id="rematch-btn" class="primary-btn rematch-btn" type="button">재대결</button>
+      <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
+      <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

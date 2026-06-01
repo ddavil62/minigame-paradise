@@ -64,5 +64,16 @@
     "color": "#C8102E",
     "emoji": "♟",
     "botAvailable": true
+  },
+  {
+    "id": "hanabi",
+    "name": "하나비",
+    "description": "불꽃을 함께 완성하라! 손패를 숨긴 채 협력하는 카드게임",
+    "port": 3007,
+    "httpPath": "/hanabi/",
+    "wsPath": "/hanabi/ws",
+    "color": "#FF6B35",
+    "emoji": "🎇",
+    "botAvailable": false
   }
 ]
