@@ -10,7 +10,7 @@
 - 출처: 나무위키 맞고·고스톱 + 게임 코드 교차검증
 - 포함 내용: 화투 48장 구성, 족보 점수표, 박 기준, 고배수 공식, QA 체크리스트, 구현 버그 목록
 
-### 룰북 §13 보강 (2026-05-31 신규 5건 + 2026-06-02 폭탄 룰 정정·확정)
+### 룰북 §13 보강 (2026-05-31 신규 5건 + 2026-06-02 폭탄 룰 정정·확정 + 2026-06-03 쓸 룰 추가 + 2026-06-03 조커 2장 룰 + 2026-06-03 바닥 조커 선공 자동 획득 정정 + 2026-06-08 조커 라운드 종료 불가 수정)
 
 | 항목 | 내용 |
 |---|---|
@@ -20,6 +20,10 @@
 | 첫뻑 보너스 | `g.firstPpeokBy` 신규 상태. 라운드 첫 뻑을 만든 플레이어가 승리 시 `applyFinalMultipliers`에서 `firstPpeokBonus` flag로 **+7점** 가산. reasons에 `첫뻑 +7` |
 | 폭탄 보너스 뒤집기 권리 (기회 보존의 법칙) | **표준 룰 — 2026-06-02 정정·확정.** 폭탄 발동 = 같은 월 4장(손 3 + 바닥 1) 가져가기 + 상대 피 1장 + 통상 덱 뒤집기 1회. 추가로 **보너스 뒤집기 권리 +2** 누적(`g.bombDeckCredit`). 자기 차례에 **손이 0이어도** 권리가 남아 있으면 `bonusFlipSteps`로 덱 1장 뒤집기(단순 매칭만 — 쪽/뻑/따닥 미형성) + 고/스톱 결정 가능. 권리 사용 시 −1. **라운드 종료 조건** = 양쪽 모두 `손패 + bombDeckCredit` 합이 0 (기회 보존의 법칙으로 양쪽 잔여가 동기화되어 동시에 0 도달). 손 −3 + 보너스 +2 = 순 −1로 정상 1턴과 동등. **이전 'drawAndResolve 2회 연속(`bombExtraDraw`)' 모델은 본 모델로 대체됨.** 구현: `game.js` `bombSteps`/`bonusFlipSteps`, `bombDeckCredit` 상태 |
 | floor 위치 고정 | 클라이언트 `floorSlotMap` (Map: 카드 ID → 슬롯 인덱스) 신규 캐시. 한 번 떨어진 위치 ID 기반 고정, 다른 카드 매칭으로 인덱스 당김 없음. `ROUND_START`/`GAME_START` 수신 시 `floorSlotMap.clear()` |
+| 쓸 (2026-06-03) | 바닥에 같은 월 카드 **2장**에서 손패 1장을 내어 `awaiting_floor_choice` → 1장 선택 → 더미 뒤집기에서 또 같은 월이 나와 남은 1장과 매치 → 그 월 4장 전부 본인 captured + **상대 피 1장**(쪽 메커니즘 재사용). lastAction.kind=`sseul` 신규. 효과는 따닥과 동일하나 식별 분리(따닥은 손패 1매칭+더미 1매칭의 같은 월 4장 케이스로, 실제 코드 경로상 chooseFloor 이후의 ttadak은 모두 sseul로 재라벨링됨). 토스트 `"${month}월 쓸!"`. 사실상 `drawAndResolve` 라인 441~449의 ttadak 분기는 chooseFloor 경로에서만 도달 가능 → 전부 쓸. 기존 `sweep_from_flip`(뻑 풀이) 토스트는 "쓸!" → "뻑 풀이!"로 정정 |
+| 조커 2장 (2026-06-03) | 화투 48장 + **조커 2장**(`m00_joker_a/b`, `type='joker'`, `month=0`) → 덱 50장. **어떤 월과도 매치 안 됨**. captured 진입 시 피 더미에 추가되며 **1장당 피 2장 가치**(쌍피 동일). 셔플에 포함 → 손/바닥/더미 어디든. **케이스 A** (손 조커 내기): 상대 피 1장(없으면 스킵) + 조커 본인 captured + 매치/덱뒤집기 단계 완전 스킵 + 더미 위 1장 손 보충(뒤집기 아님, 더미 빈 경우 스킵) → 턴 종료. **케이스 B** (더미 뒤집은 게 조커): 상대 피 1장 + 조커 본인 손 + 더미 한 번 더 뒤집기(재귀). `flipDeckBonus` 보너스 뒤집기도 동일. `lastAction.kind`: `joker_play`/`joker_flip`. 토스트 "조커! (피 +2)" / "조커! (손으로)". 사통/폭탄 트리거 자연 차단(month=0, 2장뿐) + month=0 명시 안전망. `client.js` 시각화: 검은 배경 + 골드 ★ + JOKER 라벨(`.joker-card`). `score.js`: `piCount += joker.length * 2` |
+| 바닥 조커 선공 자동 획득 (2026-06-03 정정) | **이전 "데드 슬롯" 해석 폐기.** 분배 직후 바닥(`floor`)에 깔린 조커 N장(0/1/2)을 **선공자(firstTurn) `captured.pi` 더미로 즉시 이동**. 점수는 score.js의 기존 계산 그대로(1장당 피 +2). **추가 보너스 없음**: 더미 뒤집기 X, 보너스 턴 X, 상대 피 뺏기 X. 첫 턴은 정상 진행. 구현: `applyFloorJokerToFirst(game, firstTurn)` export (`game.js`) → `startRound`에서 분배 직후·사통 검사 직전 1회 호출. `lastAction = { kind: 'floor_joker_to_first', player, count, jokers }` → 클라이언트 토스트 "선공 바닥 조커 N장 획득!". `createGame` 결과의 `floor.length`는 8 → **6~8 가변**(조커 N장만큼 감소), `captured` 총합 = `8 - floor.length`, 카드 총합 50 일관 유지. 단위 테스트 JOKER-010~013 (조커 0/1/2/보너스없음). |
+| 조커 라운드 종료 불가 수정 (2026-06-08) | **사용자 신고: 케이스 B로 조커가 손에 추가되면 양쪽 손 수가 비대칭(+1 누적) → "기회 보존의 법칙"이 깨져 양쪽 0 동시 도달 불가능 → 라운드 영구 종료 불가.** `finishTurn` 종료 조건 변경: **한쪽의 `손+credit=0`이고 상대의 `credit=0`이면 자동 종료** (폭탄 권리 우선 — 한쪽 0이어도 상대 credit > 0이면 보너스 뒤집기 끝까지 진행). 종료 직전 `flushHandsToCaptured(g)` 헬퍼로 양쪽 잔여 손 카드를 각자 본인 `captured`로 자동 이동 (조커는 `type='joker'` 그대로 → `score.js`가 피 +2 자동 처리, 일반 카드는 type별 분류). 정산 후 점수 비교: 7+ 쪽이 있으면 승자, 둘 다 7 미만이면 무승부. `finishTurn`의 자동 스톱 조건(7점 도달)에도 `oppStuckAndSelfNoCredit` 분기 추가. **`score.js` 무수정**. 회귀 테스트 JOKER-014~017 (joker-adhoc 19/19 PASS). |
 
 ### QA 필수 준수 사항
 
@@ -127,3 +131,8 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 5. **`floorSlotMap`은 클라이언트 클로저 변수.** 서버 STATE에 슬롯 정보를 싣지 말 것. `ROUND_START`/`GAME_START` 수신 시 반드시 `clear()`.
 6. **`g.firstPpeokBy`/`g.pendingSangtong`/`g.shakeAsked`/`g.bombExtraDraw`는 `startRound`에서 초기화.** 누락 시 라운드 간 상태 누수.
 7. **사통과 흔들기는 같은 라운드에 동시 충족 가능** (같은 월 4장 ⊃ 같은 월 3장). 사통 우선, `continue` 선택 시에만 흔들기 검사가 카드 클릭 시점에 작동.
+8. **조커(`type='joker'`)는 month=0이라 화투 매치 로직에 자연 차단되지만, 새 기능 추가 시 month 기반 카운트(`monthCount[c.month]`)에 들어가면 의도치 않은 결과 가능**. 사통 검사(`checkSangtongOpportunity`)와 폭탄 검사(`bombableMonths`)는 month=0 제외 안전망 적용 또는 자연 차단(조커 2장뿐) 검증됨. 신규 month 기반 검사는 명시적으로 `c.type !== 'joker'`로 거르거나 `c.month > 0` 가드 추가.
+9. **덱은 50장**(화투 48 + 조커 2). 기존 테스트의 `g.deck.length === 20` 같은 상수는 모두 22로 갱신됨. 새 단위 테스트 작성 시 50/22 기준.
+10. **조커는 폭탄 대상이 아니다.** 폭탄 매치 카운트(`handMonthCount[m] === 3 && floorMonthCount[m] === 1`)에서 m='0' 제외. 또한 4장 도달 자체가 불가능(조커 2장뿐) — 이중 안전망.
+11. **`createGame()`/`startRound()` 후 `floor.length`는 더 이상 항상 8이 아니다** (2026-06-03 룰 정정). 바닥에 조커가 떨어졌으면 `applyFloorJokerToFirst`가 선공자 `captured`로 옮겨 floor가 6~8 가변, captured 총합 = `8 - floor.length`. 새 테스트는 `total === 50` 일관성 기준으로 검증할 것. `deck.length === 22`는 불변(분배 후 잔여).
+12. **라운드 종료 조건은 양쪽 모두 0이 아니어도 트리거된다** (2026-06-08 조커 라운드 종료 불가 수정). `finishTurn`은 "한쪽의 `손+credit=0`이고 상대의 `credit=0`"이면 자동 종료한다. 조커 케이스 B로 한쪽 손이 +1 누적되어도 영구히 막히지 않도록 보장. 종료 직전 `flushHandsToCaptured(g)`가 양쪽 잔여 손을 각자 captured로 이동(조커는 `type='joker'` 그대로 → `score.js`가 피 +2 자동 처리, 일반 카드는 type별 분류). **양쪽 모두 0+0+0+0 케이스에서도 동일하게 endRoundDraw 호출되어 기존 동작 회귀 보장** (JOKER-017). 폭탄 권리(credit > 0) 우선이므로 한쪽 손+credit=0이어도 상대 credit > 0이면 종료 X. `score.js` 무수정.

@@ -703,6 +703,51 @@ body {
   transform: translate(-50%, -50%) scale(1.06);
 }
 
+/* ── 조커 카드 (2026-06-03) ──────────────────────────────────── */
+/* 검은 배경 + 골드 별 + JOKER 글자. 화투(나무·꽃 일러스트)와 명확히 구별. */
+.card.joker-card {
+  background: linear-gradient(135deg, #1a0a1a 0%, #000 50%, #100020 100%);
+  border: 1.5px solid var(--gold-hi);
+  color: var(--gold-hi);
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,209,102,0.3),
+    inset 0 0 12px rgba(255,209,102,0.15);
+}
+.card.joker-card .joker-star {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--gold-hi);
+  text-shadow:
+    0 0 6px rgba(255,209,102,0.85),
+    0 1px 2px rgba(0,0,0,0.9);
+  margin-bottom: 2px;
+}
+.card.joker-card .joker-label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: var(--gold-soft);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+/* 손에 든 조커: 매치 가능 카드 표시(.has-match)와 무관하게 약한 골드 펄스로 강조 */
+.my-hand-zone .card.joker-card {
+  animation: joker-pulse 2.2s ease-in-out infinite;
+}
+@keyframes joker-pulse {
+  0%, 100% { box-shadow:
+    0 4px 12px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,209,102,0.3),
+    inset 0 0 12px rgba(255,209,102,0.15);
+  }
+  50% { box-shadow:
+    0 4px 12px rgba(0,0,0,0.7),
+    0 0 0 2px rgba(255,209,102,0.6),
+    0 0 14px rgba(255,209,102,0.5),
+    inset 0 0 14px rgba(255,209,102,0.25);
+  }
+}
+
 /* 뻑 표시 (바닥 카드 위 우측 상단 빨간 라벨) */
 .card.ppeok-mark::after {
   content: '뻑';

@@ -233,7 +233,18 @@
       case 'ppeok':           text = `${la.month}월 뻑!`; break;
       case 'ttadak':          text = '따닥!'; break;
       case 'bomb':            text = `${la.month}월 폭탄!`; break;
-      case 'sweep_from_flip': text = '쓸!'; break;
+      // 조커 (2026-06-03): 손에서 조커를 냈을 때 / 더미에서 조커가 뒤집혔을 때
+      case 'joker_play':      text = '조커! (피 +2)'; break;
+      case 'joker_flip':      text = '조커! (손으로)'; break;
+      // 바닥 조커 선공 자동 획득 (2026-06-03 룰 정정): 라운드 시작 시 바닥에 깔린 조커는
+      // 선공자 captured로 자동 이동. 추가 보너스 없음. count는 1 또는 2.
+      case 'floor_joker_to_first':
+        text = `선공 바닥 조커 ${la.count}장 획득!`;
+        break;
+      // 쓸: chooseFloor 후 더미 매칭으로 그 월 4장 전부 가져간 케이스 (한국 표준 룰).
+      // sweep_from_flip은 뻑 풀이(바닥 3장+더미 1장) — 효과는 같지만 의미가 다르므로 표시 분리.
+      case 'sseul':           text = la.month ? `${la.month}월 쓸!` : '쓸!'; break;
+      case 'sweep_from_flip': text = '뻑 풀이!'; break;
       case 'go':              text = `${la.count}고!`; break;
       case 'shake':           text = `${la.month}월 흔들기!`; break;
       case 'kkeut_choice':    text = la.choice === 'ssangpi' ? '술잔 → 쌍피' : '술잔 → 끗'; break;
@@ -527,6 +538,10 @@
       if (removedFloorSet.has(id)) continue;
       newCardIds.add(id);
     }
+    // lastAction 캡처 — 아래의 choice_made 분기와 상대 손 origin 식별 양쪽에서 사용.
+    // (선언이 사용 뒤에 있으면 TDZ ReferenceError로 첫 STATE 렌더 자체가 멈춘다.)
+    const la = s.lastAction;
+
     // chooseFloorSteps 단계 1 (choice_made): srcCard가 captured에 등장하는데, 이건
     // 사용자가 모달 선택 직전에 던진 자기 카드다. 덱 origin이 아니므로 drewIds에서 제외.
     // (그렇지 않으면 자기가 던진 카드가 더미에서 다시 등장하는 잘못된 fly가 발동된다.)
@@ -538,7 +553,6 @@
     // 단계 1 (hand_played): place_on_floor / pair_from_hand / sweep_from_hand → 상대 손
     // 단계 2 (deck_flipped): flip_place / pair_from_flip / jjok / ttadak / ppeok → 덱
     // 폭탄(bomb)도 손에서 3장 + 바닥 1장 captured → 상대 손 origin으로 묶음
-    const la = s.lastAction;
     const oppHandOriginIds = new Set();
     const HAND_ORIGIN_KINDS = new Set(['place_on_floor', 'pair_from_hand', 'sweep_from_hand', 'choice_made', 'choice_pending']);
     // 1) server snapshot의 lastHandPlayed로 단계 1 손 origin 식별 (defer 통합 STATE 대응)
@@ -719,6 +733,21 @@
     if (card.id) el.dataset.cardId = card.id;
     if (card.month) el.dataset.cardMonth = String(card.month);
 
+    // ── 조커 시각화 (2026-06-03) ──────────────────────────────
+    // imagePath 없음 → 별 + JOKER 라벨로 다른 카드와 명확히 구별. type-badge도 별도 라벨.
+    if (card.type === 'joker') {
+      el.classList.add('joker-card');
+      const star = document.createElement('span');
+      star.className = 'joker-star';
+      star.textContent = '★';
+      el.appendChild(star);
+      const label = document.createElement('span');
+      label.className = 'joker-label';
+      label.textContent = 'JOKER';
+      el.appendChild(label);
+      return el;
+    }
+
     // PixelLab/SVG 일러스트 (있으면). 이미지 로드 실패 시 텍스트 라벨로 폴백.
     if (card.imagePath) {
       const img = document.createElement('img');
@@ -784,6 +813,7 @@
     }
     if (card.type === 'kkeut')   return card.subtype === 'godori' ? '고도리' : '끗';
     if (card.type === 'pi')      return card.subtype === 'ssangpi' ? '쌍피' : '피';
+    if (card.type === 'joker')   return '조커';
     return '?';
   }
 

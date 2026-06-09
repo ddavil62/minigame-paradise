@@ -1,5 +1,175 @@
 # Changelog
 
+## [2026-06-08] - 조커 라운드 종료 불가 수정 — 손+credit 비대칭 시 한쪽 종료 + 잔여 자동 정산
+
+사용자 신고: 본인 시작 손에 조커 1장 + 게임 중 더미 뒤집기로 조커 1장 더 받음(케이스 B). 막판에 본인 손 3장 / 상대 손 0장 상태로 **라운드 종료가 트리거되지 않아 게임 진행 불가**(상대가 카드 낼 수 없어 멈춤).
+
+### 진짜 원인
+`game.js` `finishTurn` 라운드 종료 조건이 양쪽 모두 `손+credit=0`이어야만 발동. 폭탄 보너스 권리(`bombDeckCredit`)의 "기회 보존의 법칙"이 양쪽 잔여 동기화를 전제로 설계됐는데, **조커 케이스 B로 한쪽 손이 +1 누적되면 동기화가 영구히 깨져 라운드 종료가 영구 불가능**.
+
+### 수정 (`game.js`)
+- `finishTurn` 종료 조건 변경 — **한쪽의 `손+credit=0`이고 상대의 `credit=0`이면 자동 종료**. 폭탄 권리 우선이라 한쪽 0이어도 상대 credit > 0이면 보너스 뒤집기 끝까지 진행.
+- 라운드 종료 시 잔여 손 카드를 본인 captured로 자동 이동하는 `flushHandsToCaptured(g)` 신규 헬퍼. 조커(`type='joker'`)는 그대로 push되어 `score.js`가 `piCount += joker.length * 2`로 자동 처리, 일반 카드는 type별로 자동 분류. **`score.js` 무수정**.
+- 종료 분기에서 정산 후 점수 비교: 7점 이상인 쪽이 있으면 승자, 둘 다 7점 미만이면 무승부.
+- `finishTurn` 자동 스톱 조건(7점 도달 시) 보정: 상대 손+credit=0 + 본인 credit=0 케이스도 자동 스톱 후보(`oppStuckAndSelfNoCredit`).
+
+### 변경 (`public/index.html`)
+- 캐시 버스터 `client.js?v=37` → `v=38` (라운드 종료 트리거 변경에 따른 클라이언트 강제 새로고침 신호).
+
+### 추가 (`tests/joker-adhoc.mjs`)
+- **JOKER-014**: p1 손 0 + p2 손 3장(조커 2 + 일반 1) + credit 0 → 라운드 자동 종료, 잔여 captured 이동, 무승부.
+- **JOKER-015**: 케이스 B 조커 잔여 → 라운드 종료 시 captured 이동 후 `piCount` +2 반영.
+- **JOKER-016**: p1 손 0 + credit 2 + p2 손 0 + credit 0 → 종료 X (폭탄 권리 우선), turn=p2로 이동.
+- **JOKER-017**: 양쪽 손+credit 모두 0 → 정상 무승부 종료 (기존 동작 회귀).
+
+### 검증
+- `node tests/joker-adhoc.mjs`: **19/19 PASS** (JOKER-001~017 + REG-DIST + REG-BOMB-SANGTONG).
+- `node tests/sseul-adhoc.mjs`: **11/11 PASS** (회귀 게이트).
+- `node tests/bombdup-adhoc.mjs`: **7/7 PASS** (회귀 게이트).
+- `node tests/floor-joker-smoke.mjs 3098`: **5/5 PASS** (attempt#3,#4에서 실제 조커 자동 획득 케이스 관찰).
+- 합계: **42/42 PASS** (조커 19 + 쓸 11 + 폭탄복제 7 + 통합 smoke 5).
+- 사용자 실서버(포트 3000, PID 61956)는 본 작업 중 건드리지 않음. 작업용 서버는 3098에서 별도 기동·종료. 사용자가 다음 라운드 사이에 launcher 재시작 + 친구 Ctrl+F5.
+
+### 비고
+- 신규 종료 조건은 폭탄 권리(credit)를 명시적으로 우선시 — 한쪽이 손+credit=0이어도 상대가 보너스 뒤집기 권리를 갖고 있으면 그 권리 소모를 끝까지 보장.
+- 양쪽 모두 0+0+0+0 케이스에서도 이전과 동일하게 `endRoundDraw` 호출 (JOKER-017 회귀 보장).
+- `flushHandsToCaptured`는 손 0이면 no-op이라 양쪽 모두 0 정상 종료 케이스에서 부작용 없음.
+
+---
+
+## [2026-06-03] - 조커 룰 정정 — 바닥 조커는 선공자 자동 획득 (데드 슬롯 → 선공 몫)
+
+직전 조커 2장 룰 추가 시 "바닥 깔린 조커 = 데드 슬롯" 보수적 해석을 사용했으나, 사용자가 정확한 룰을 확정: **바닥에 깔린 조커는 선공자 몫**. 게임 시작 직후 분배 단계에서 즉시 선공(currentTurn 첫 플레이어) captured로 이동.
+
+### 룰 (사용자 확정)
+- 분배 직후 바닥(`floor`)에 깔린 조커 N장(0/1/2)을 **선공자(firstTurn) `captured.pi` 더미로 자동 이동**.
+- 점수는 score.js의 기존 계산 그대로 — 1장당 피 2장 가치.
+- **추가 보너스 없음**: 더미 뒤집기 X, 보너스 턴 X, 상대 피 뺏기 X. 첫 턴은 정상 진행.
+- 케이스: 0장(변동 없음) / 1장(선공 +1) / 2장(선공 +2).
+
+### 변경 (`game.js`)
+- `applyFloorJokerToFirst(game, firstTurn)` 신규 export — `startRound`에서 분배 직후, 사통 검사 직전 호출.
+- 0장이면 무동작(lastAction 미변경). 1장 이상이면 floor에서 제거 + `captured[firstTurn]`에 push + `lastAction = { kind: 'floor_joker_to_first', player, count, jokers }`.
+
+### 변경 (`public/client.js`, `public/index.html`)
+- `maybeShowActionToast`에 `floor_joker_to_first` 분기 추가 → 토스트 "선공 바닥 조커 N장 획득!".
+- 캐시 버스터 `client.js?v=36` → `v=37`.
+
+### 추가 (`tests/`)
+- `tests/joker-adhoc.mjs`에 JOKER-010~013 4건 추가 (조커 0/1/2장 + 보너스 없음 검증). 11 → **15건 전부 PASS**.
+- `tests/sseul-adhoc.mjs` REG-G-01 갱신 — `floor.length === 8` → `6 ≤ floor ≤ 8` + 카드 총 50장 일관성 + captured 일치 검증.
+- `tests/game.unit.spec.js` G-01 동일 갱신 (Playwright spec).
+- `tests/floor-joker-smoke.mjs` 신규 — WebSocket 5회 시도, 1회 이상 실제 조커 자동 획득 케이스 관찰(STATE 검증).
+
+### 검증
+- `node tests/joker-adhoc.mjs`: **15/15 PASS** (JOKER-001~013 + REG-DIST + REG-BOMB-SANGTONG).
+- `node tests/sseul-adhoc.mjs`: **11/11 PASS** (회귀 게이트).
+- `node tests/bombdup-adhoc.mjs`: **7/7 PASS** (회귀 게이트).
+- `node tests/floor-joker-smoke.mjs 3098`: **5/5 PASS** (attempt#5에서 실제 `cap.p1=1(m00_joker_b)` 관찰).
+- 합계: **38/38 PASS** (조커 15 + 쓸 11 + 폭탄복제 7 + 통합 smoke 5).
+- 사용자 실서버(포트 3000, PID 73716)는 본 작업 중 건드리지 않음. 사용자가 다음 라운드 사이에 재시작하면 적용. 친구는 Ctrl+F5.
+
+### 비고
+- `applyFloorJokerToFirst`는 export로 분리해 단위 테스트의 결정성을 확보(셔플 mock 불필요). 운영 로직은 `startRound`에서 1회만 호출.
+- `lastAction.kind = 'floor_joker_to_first'`는 사통 검사로 phase가 `awaiting_sangtong`으로 바뀌어도 보존됨. 클라이언트가 STATE 수신 즉시 토스트 1회 표시.
+- 양쪽이 바닥 조커를 받지 않으므로(선공만) 공정성은 선공 선택 알고리즘(직전 라운드 패자 선공)이 보장.
+
+---
+
+## [2026-06-03] - 조커 2장 룰 추가 (덱 50장 + 케이스 A/B + 피 +2)
+
+표준 화투 48장에 **조커 2장**을 추가하여 덱 50장 룰을 신설. 룰북 §13 보강 7건째.
+
+### 정의
+- **조커 2장** (`m00_joker_a`, `m00_joker_b`, `type='joker'`, `month=0`): 어떤 월과도 매치되지 않음. captured 진입 시 **피 더미에 추가되며 1장당 피 2장 가치**(쌍피와 동일). 광/끗/띠 묶음에는 영향 없음.
+- **셔플 분배**: 조커도 셔플에 포함 → 손/바닥/더미 어디든 갈 수 있음.
+- **케이스 A (손에서 조커 내기)**: ① 상대 피 1장 → 본인 captured(없으면 스킵) ② 조커 → 본인 captured ③ 더미 매치 단계 완전 스킵 ④ 더미 위 1장을 본인 손에 보충(뒤집기 아님 — 손 갯수 유지, 더미 빈 경우 스킵) ⑤ 턴 종료, 보너스 턴 없음.
+- **케이스 B (더미 뒤집은 게 조커)**: ① 상대 피 1장 → 본인 captured ② 조커 → 본인 손 ③ 더미 한 번 더 뒤집기(재귀 — 또 조커면 또 케이스 B). 보너스 뒤집기(`flipDeckBonus`) 경로도 동일.
+- **바닥 깔린 조커**: 매치 대상 아니므로 게임 끝까지 바닥에 잔존(데드 슬롯). 사용자 명세 시 후속 수정.
+
+### 변경 (`cards.js`)
+- `buildDeck`: 화투 48장 빌드 후 `m00_joker_a`, `m00_joker_b` 2장 push.
+- `deckStats.byType`에 `joker` 키 추가.
+- `typeLabel`에 `joker → '조커'` 매핑.
+
+### 변경 (`game.js`)
+- `playCardSteps`: 손에서 낸 카드가 `type === 'joker'`이면 케이스 A 분기로 단축 처리(매치/덱뒤집기 스킵).
+- `drawAndResolve`: 더미에서 뽑은 카드가 조커이면 케이스 B 처리(피 빼앗기 + 손에 추가 + 재귀 뒤집기).
+- `flipDeckBonus`: 보너스 뒤집기 경로에서도 동일 케이스 B 처리.
+- `snapshotForPlayer.bombableMonths`: month=0(조커) 제외 안전망.
+- 신규 `lastAction.kind`: `joker_play`(케이스 A), `joker_flip`(케이스 B).
+
+### 변경 (`score.js`)
+- `calculateScore`: `joker = pool.filter(c => c.type === 'joker')` 추출 후 `piCount += joker.length * 2`. 광/끗/띠 점수에는 영향 없음.
+
+### 변경 (`public/client.js`, `public/style.css`, `public/index.html`)
+- `makeCardEl`: `card.type === 'joker'` 시 검은 배경 + 골드 별(★) + JOKER 라벨 전용 시각화(`.joker-card`, `.joker-star`, `.joker-label`).
+- `typeLabel(card)`: joker → '조커' 매핑 추가.
+- `maybeShowActionToast`: `joker_play` → "조커! (피 +2)", `joker_flip` → "조커! (손으로)" 토스트 추가.
+- `style.css`: `.joker-card` 다크 배경 + 골드 펄스 애니메이션(손에 있을 때 약한 펄스로 시선 유도).
+- 캐시 버스터 `client.js?v=35` → `v=36`, `style.css?v=18` → `v=19`.
+
+### 추가 (`tests/`)
+- `tests/joker-adhoc.mjs` 신규 — JOKER-001~009 + REG-DIST + REG-BOMB-SANGTONG 11건. Playwright nested `node_modules` 충돌 회피용 ad-hoc Node 직접 실행 스크립트.
+- `tests/sseul-adhoc.mjs` REG-G-01 갱신: 더미 20 → 22장 (50-10-10-8).
+- `tests/game.unit.spec.js` G-01 갱신: 더미 20 → 22장.
+- `smoke-test.js` 갱신: 카드 총합 검증 48 → 50, 포트 3003 → 3099.
+
+### 검증
+- `node tests/joker-adhoc.mjs`: **11/11 PASS** (덱분포/케이스A/케이스A피0/케이스B/케이스B재귀/매치차단/점수/보너스경로/더미빈경우/회귀분포/회귀안전망).
+- `node tests/sseul-adhoc.mjs`: **11/11 PASS** (회귀 게이트).
+- `node tests/bombdup-adhoc.mjs`: **7/7 PASS** (회귀 게이트).
+- 서버 통합(작업용 3099 포트 smoke): **STATE 카드 총합 50/50 정상**, 손 10+10/바닥 8/덱 22.
+- 시각 확인: 조커 카드 검은 배경 + ★ + JOKER 라벨로 화투와 명확히 구별 (스크린샷 `tests/screenshots/joker-p1-hand.png`).
+- 사용자 실서버(포트 3000, PID 73716)는 본 작업 중 건드리지 않음. 사용자가 다음 라운드 사이에 재시작 시 적용. 친구는 Ctrl+F5.
+
+### 비고
+- 조커는 2장뿐이라 사통(같은 월 4장 손) 트리거 자연 차단.
+- 폭탄 검사도 month=0 제외 안전망 추가(자연 차단 + 명시).
+- **바닥에 떨어진 조커는 게임 끝까지 잔존(데드 슬롯)** — 가장 보수적 해석. 사용자 다른 처리 원하면 후속.
+- 9월 술잔 끗/쌍피 선택과 별개로 동작(서로 영향 없음).
+
+### 참고
+- 룰북 §13 7건째 항목: `minigames/matgo/CLAUDE.md` 갱신 동반.
+
+---
+
+## [2026-06-03] - 쓸(쓸어버리기) 룰 추가 (한국 표준 한 가지 보강)
+
+기존에 누락되었던 한국 표준 맞고의 "쓸" 룰을 추가. 효과는 따닥과 동일(상대 피 1장)이나 식별·표시를 분리. 룰북 §13 보강 6건째.
+
+### 정의
+- **쓸**: 바닥에 같은 월 카드 2장이 있는 상태에서 손패로 1장을 내어 `awaiting_floor_choice` → 1장 선택(2장 점수판으로) → 더미 뒤집기에서 또 같은 월이 나와 남은 1장과 매치 → 그 월 4장 전부 본인 captured + 상대 피 1장.
+- **vs 따닥**: 따닥은 손패 1매칭 + 더미 1매칭이 한 턴에 발생하는 케이스. 쓸과 효과(피 1장)는 같으나 시작 조건(바닥 같은 월 카드 개수)이 다름.
+- **vs 뻑 풀이(sweep_from_flip)**: 뻑 풀이는 더미 뒤집기에서 바닥 같은 월 3장이 있을 때 4장 한꺼번에 가져가는 케이스. 토스트 텍스트 "쓸!" → "뻑 풀이!"로 분리.
+
+### 변경 (`game.js`)
+- `chooseFloorSteps`의 단계 2(`drawAndResolve`) 직후 분기: `lastAction.kind === 'ttadak' && player === playerId`이면 `kind = 'sseul'`로 재라벨 + `month = pending.month` 부가. 사실상 chooseFloor 경로에서 발생하는 따닥은 모두 쓸로 분류된다(같은 월 ttadak이 도달 가능한 코드 경로는 chooseFloor뿐).
+- 파일 상단 `@fileoverview` 특수 이벤트 목록에 "쓸" 항목 추가, "따닥" 정의 정확성 보강(같은 월 4장 명시).
+
+### 변경 (`public/client.js`, `public/index.html`)
+- `maybeShowActionToast`: 신규 `case 'sseul'` 추가 — 토스트 텍스트 `"${month}월 쓸!"` (month 없으면 "쓸!"). 기존 `sweep_from_flip`은 "뻑 풀이!"로 변경(의미 정확성).
+- 캐시 버스터 `client.js?v=33` → `v=34`.
+
+### 추가 (`tests/`)
+- `tests/game.unit.spec.js` G-40~G-44 5건 신규 — 쓸 발동/피 0장/따닥 구분/다른 월 더미/바닥 3장 시작 시 sseul 아님 등 경계 케이스.
+- `tests/sseul-adhoc.mjs` 신규 — Playwright nested `node_modules` 충돌 회피용 ad-hoc 단위 검증 스크립트. Node 직접 실행 (`node tests/sseul-adhoc.mjs`). 11/11 PASS(신규 5 + 회귀 6: 쪽/1매칭/2매칭+choose/뻑/폭탄/createGame). 회귀 인프라 안정화 시 정식 spec으로 흡수.
+
+### 검증
+- 단위(ad-hoc Node 직접 실행): 11/11 PASS
+- 서버 통합(작업용 3099 포트 라운드트립, WS PLAY_CARD + CHOOSE_FLOOR + STATE 검사): 7/7 PASS
+- 사용자 실서버(포트 3000, PID 73716)는 본 작업 중 건드리지 않음. 사용자가 다음 라운드 사이에 재시작 시 적용.
+
+### 비고
+- 사용자 명세("바닥 같은 월 2장 + 손패 1 + 더미 1 = 4장 + 피 1장, 쪽 메커니즘 재사용")에 부합. 보너스 턴 없음(기존 ttadak과 동일).
+- score.js, server.js는 변경 없음(피 빼앗기는 game.js `stealPi`가 이미 처리).
+- 사용자 정의에 따른 "쪽" 검증: 기존 `jjok` 분기(`drawAndResolve` 라인 403~409)가 명세와 일치 — 변경 불필요.
+
+### 참고
+- 룰북 §13 6건째 항목: `minigames/matgo/CLAUDE.md` 갱신 동반.
+
+---
+
 ## [2026-06-02] - 폭탄 룰 표준화: 보너스 뒤집기 권리(기회 보존의 법칙)
 
 폭탄 메커니즘을 **표준 한국 맞고 룰에 맞게 정정·확정**. 이전 [2026-05-31] 'drawAndResolve 2회 연속(`bombExtraDraw`)' 모델을 **`bombDeckCredit` 보너스 뒤집기 권리 모델**로 대체. 룰북 §13(레포 측 기록: `CLAUDE.md`) 갱신 — 해당 행을 새 표준 룰로 개정.

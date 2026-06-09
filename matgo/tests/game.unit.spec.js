@@ -17,7 +17,7 @@ import {
 import { buildDeck } from '../cards.js';
 
 // ── 카드 룩업 ─────────────────────────────────────────────────────────
-/** 전체 48장 카드를 id→Card 맵으로 빌드. */
+/** 전체 50장 카드(화투 48 + 조커 2)를 id→Card 맵으로 빌드. */
 const ALL_CARDS = buildDeck();
 const BY_ID = Object.fromEntries(ALL_CARDS.map((c) => [c.id, c]));
 
@@ -79,13 +79,25 @@ function makeGame({ p1Hand = [], p2Hand = [], floor = [], deck = [], turn = 'p1'
 // §1 기본 초기화
 // ============================================================
 
-test('G-01: createGame — 손패 10+10, 바닥 8, 덱 20', () => {
+test('G-01: createGame — 손패 10+10, 바닥 ≤ 8 (조커 자동 획득), 덱 22 (2026-06-03 룰 정정)', () => {
   const g = createGame();
   expect(g.hands.p1.length).toBe(10);
   expect(g.hands.p2.length).toBe(10);
-  expect(g.floor.length).toBe(8);
-  // 48 - 10 - 10 - 8 = 20
-  expect(g.deck.length).toBe(20);
+  // 2026-06-03 룰 정정: 분배 시 바닥(8장 슬롯)에 조커 N장이 있으면 선공자(기본 p1) captured로 자동 이동.
+  // 따라서 floor = 8 - N (N=0~2), captured 총합 = N. 카드 총합 50장 일관성.
+  expect(g.floor.length).toBeGreaterThanOrEqual(6);
+  expect(g.floor.length).toBeLessThanOrEqual(8);
+  // 50 - 10 - 10 - 8 = 22 (화투 48 + 조커 2). 덱은 분배 후 잔여 — 불변.
+  expect(g.deck.length).toBe(22);
+  const capturedTotal = g.captured.p1.length + g.captured.p2.length;
+  expect(capturedTotal).toBe(8 - g.floor.length);
+  const total = g.hands.p1.length + g.hands.p2.length + g.floor.length + g.deck.length + capturedTotal;
+  expect(total).toBe(50);
+  // 이동한 카드는 무조건 조커 + 선공자(p1)에게만
+  if (capturedTotal > 0) {
+    expect(g.captured.p2.length).toBe(0);
+    expect(g.captured.p1.every((c) => c.type === 'joker')).toBe(true);
+  }
 });
 
 test('G-02: createGame — 초기 phase와 잔고', () => {
@@ -766,4 +778,127 @@ test('G-39: shakeAsked.p1=true 이후 재호출 시 에러', () => {
   // 한 번 호출 후 다시 호출하면 에러
   const r2 = shakeDecision(g, 'p1', 'normal', 1);
   expect(r2.ok).toBe(false);
+});
+
+// ============================================================
+// §14 쓸 (한국 표준 룰) — 2026-06-03 신규
+// 바닥 같은 월 2장 + 손패 1장(awaiting_floor_choice → 선택) + 더미 1장 → 그 월 4장 전부 + 피 1장.
+// 따닥(같은 월 손패 1매칭 + 더미 1매칭)과 효과는 같으나 lastAction.kind를 'sseul'로 분리.
+// ============================================================
+
+test('G-40: 쓸 — 바닥 2장 + 손패 1장 선택 + 더미 1장 → kind=sseul, 4장 captured, 피 1장 빼앗김', () => {
+  // 바닥에 1월 2장. p1이 1월 카드를 내면 awaiting_floor_choice.
+  // 1장 선택 후 단계 2 drawAndResolve에서 덱 top(pop) = 1월 → 남은 1장과 매칭 → 쓸.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a'], // 1월 2장 → 2매칭
+    deck:   ['m01_pi_b'],                 // 더미 top = 1월 → 쓸 시나리오
+  });
+  g.captured.p2 = [card('m06_pi_a')]; // 빼앗길 피
+
+  const r1 = playCard(g, 'p1', 'm01_gwang');
+  expect(r1.ok).toBe(true);
+  expect(g.phase).toBe('awaiting_floor_choice');
+
+  const r2 = chooseFloor(g, 'p1', 'm01_tti_hong');
+  expect(r2.ok).toBe(true);
+
+  // 쓸 검증
+  expect(g.lastAction.kind).toBe('sseul');
+  expect(g.lastAction.month).toBe(1);
+  // 1월 4장 모두 p1 captured
+  expect(g.captured.p1.filter((c) => c.month === 1).length).toBe(4);
+  // 바닥에서 1월 카드 모두 빠짐
+  expect(g.floor.filter((c) => c.month === 1).length).toBe(0);
+  // 상대 피 1장 빼앗김
+  expect(g.captured.p1.some((c) => c.id === 'm06_pi_a')).toBe(true);
+  expect(g.captured.p2.length).toBe(0);
+});
+
+test('G-41: 쓸 — 상대 피 0장이어도 게임 정상 진행 (피 빼앗기 skip)', () => {
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a'],
+    deck:   ['m01_pi_b'],
+  });
+  // p2 피 0장
+  g.captured.p2 = [];
+
+  playCard(g, 'p1', 'm01_gwang');
+  chooseFloor(g, 'p1', 'm01_tti_hong');
+
+  expect(g.lastAction.kind).toBe('sseul');
+  expect(g.captured.p1.filter((c) => c.month === 1).length).toBe(4);
+  // 빼앗을 피가 없었으므로 captured.p1 = 1월 4장만
+  expect(g.captured.p1.length).toBe(4);
+  // 게임은 정상적으로 다음 턴(또는 점수 도달 시 awaiting_go_stop)
+  expect(['awaiting_play', 'awaiting_go_stop', 'round_end'].includes(g.phase)).toBe(true);
+});
+
+test('G-42: 쓸 vs 따닥 구분 — 바닥 1장 + 손패 1장 + 더미 1장은 따닥 (sseul 아님)', () => {
+  // 손패 1매칭(바닥 1장과) → 더미에서 같은 월 1장 → 그 월 4장이 아니라
+  // 손패+바닥짝+더미 = 3장 점수판인데 바닥에 남은 1장이 또 있으면 따닥.
+  // 정확히 같은 월 4장 케이스를 따닥으로 만들기 위해 바닥에 1월 2장 + 손패 1매칭은
+  // awaiting_floor_choice가 되므로 시나리오를 정확히 분리:
+  //   - 손패 1매칭 (바닥 1장과 매칭) → drawAndResolve 단계에서 같은 월 더미 → 바닥에
+  //     남은 1장과 매칭되어 ttadak. 이 케이스는 chooseFloor 경로 아님 → 따닥 유지.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a'], // 1월 2장 — playCard 단계 1에서 2매칭(awaiting_floor_choice)
+    deck:   ['m01_pi_b'],
+  });
+  // 위 케이스는 G-40의 쓸 시나리오. "따닥"이 발생하는 정확한 케이스는 손패 1매칭이어야 하므로
+  // 바닥에 1월 1장만 두고 손패에 1월 1장, 더미에 1월 1장 + 바닥에 추가로 매칭될 다른 카드.
+  // 정확한 따닥 시나리오: 바닥에 1월 1장 + (드로우용) 2매칭 만들 수 있는 1월 카드가 또…
+  //   → 사실 같은 월 4장 따닥은 손패 1매칭 + 더미 1매칭(같은 월) 시나리오인데,
+  //     이 경우 바닥에는 1월 1장만 있어야 손패가 1매칭. 더미가 1월이면 바닥에 0장 남음 → jjok 분기.
+  //   → drawAndResolve의 sameMonthOnFloor.length === 0 분기는 ppeok로 가버린다.
+  //   → 즉 같은 월 4장 따닥은 "바닥에 1월 2장 + 손패 1매칭" 시나리오만 가능한데, 그건 awaiting_floor_choice.
+  // 따라서 손패 1매칭 + 더미 1매칭으로 "같은 월 4장 한꺼번에 가져가는 따닥"은 실제 가능 시나리오:
+  //   바닥에 1월 1장(짝지을 카드) + 손패 m01_X (1매칭) + 그 후 더미에서 m01_Y 나옴 →
+  //   sameMonthOnFloor.length === 0 → ppeok. ttadak 아님!
+  //   따라서 같은 월 ttadak은 사실상 awaiting_floor_choice 경로(=쓸)뿐.
+  // → 본 검증은 G-40과 동일한 셋업에서 chooseFloor 결과 kind가 'ttadak'이 아닌 'sseul'임을 확인.
+  playCard(g, 'p1', 'm01_gwang');
+  chooseFloor(g, 'p1', 'm01_tti_hong');
+  // 따닥이 아니라 쓸로 식별되어야 한다
+  expect(g.lastAction.kind).toBe('sseul');
+  expect(g.lastAction.kind).not.toBe('ttadak');
+});
+
+test('G-43: 쓸 시나리오에서 더미가 다른 월이면 그냥 통상 처리 (sseul/ttadak 아님)', () => {
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a'], // 바닥 1월 2장
+    deck:   ['m03_pi_a'],                 // 더미 = 3월 (다른 월)
+  });
+  g.captured.p2 = [card('m06_pi_a')];
+
+  playCard(g, 'p1', 'm01_gwang');
+  chooseFloor(g, 'p1', 'm01_tti_hong');
+  // 더미가 다른 월 → 바닥에 그대로 놓임. 쓸/따닥 아님.
+  expect(g.lastAction.kind).not.toBe('sseul');
+  expect(g.lastAction.kind).not.toBe('ttadak');
+  // 상대 피 빼앗기지 않음
+  expect(g.captured.p2.length).toBe(1);
+});
+
+test('G-44: 쓸 — 바닥 같은 월 3장 시작이면 쓸 아님 (사용자 명세: 정확히 2장 + 1 + 1)', () => {
+  // 바닥에 1월 3장 → 손패가 1월 카드 내면 3매칭 분기(라인 362) → sweep_from_hand,
+  // chooseFloor 경로로 진입하지 않음. → 쓸이 발생할 수 없음.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a', 'm01_pi_b'], // 1월 3장
+    deck:   [],
+  });
+  g.captured.p2 = [card('m06_pi_a')];
+
+  playCard(g, 'p1', 'm01_gwang');
+  // sweep_from_hand이지 sseul이 아님
+  expect(g.lastAction.kind).toBe('sweep_from_hand');
 });

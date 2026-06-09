@@ -53,6 +53,9 @@ export function calculateScore(captured, opts = {}) {
   const tti   = pool.filter((c) => c.type === 'tti');
   const kkeut = pool.filter((c) => c.type === 'kkeut');
   const pi    = pool.filter((c) => c.type === 'pi');
+  // 조커: 2026-06-03 추가. captured에 들어가면 피 2장 가치 (쌍피 동일).
+  // 광/끗/띠 묶음·고도리·홍단·청단·초단·비단에는 영향 없음.
+  const joker = pool.filter((c) => c.type === 'joker');
 
   // ── 광 ─────────────────────────────────────────────────────
   const hasBigwang = gwang.some((c) => c.subtype === 'bigwang');
@@ -76,7 +79,9 @@ export function calculateScore(captured, opts = {}) {
   if (hasGodori) score += 5;
 
   // ── 피 ─────────────────────────────────────────────────────
-  const piCount = pi.reduce((sum, c) => sum + (c.subtype === 'ssangpi' ? 2 : 1), 0);
+  // 조커는 쌍피와 동일하게 1장당 +2 가치로 piCount에 합산 (2026-06-03).
+  const piCount = pi.reduce((sum, c) => sum + (c.subtype === 'ssangpi' ? 2 : 1), 0)
+                + (joker.length * 2);
   if (piCount >= 10) score += 1 + (piCount - 10);
 
   return {

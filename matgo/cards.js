@@ -1,21 +1,24 @@
 /**
- * @fileoverview 한국 표준 화투 48장 정의.
+ * @fileoverview 한국 표준 화투 48장 + 조커 2장 정의 (총 50장).
  *
  * 카드 객체 구조:
  *   { id, month, type, subtype?, name }
  *
- * type: 'gwang'(광) | 'tti'(띠) | 'kkeut'(끗) | 'pi'(피)
+ * type: 'gwang'(광) | 'tti'(띠) | 'kkeut'(끗) | 'pi'(피) | 'joker'(조커)
  * subtype:
  *   - 광:  'bigwang' (12월 비광만)
  *   - 띠:  'hong'(홍단) | 'cheong'(청단) | 'cho'(초단) | 'bi'(비단, 12월만)
  *   - 끗:  'godori' (2/4/8월의 끗만)
  *   - 피:  'ssangpi' (9/11/12월에 1장씩)
+ *   - 조커: 없음 (id로만 구분 — m00_joker_a, m00_joker_b)
  *
  * 분포 (스펙 검증 표 그대로):
  *   광 5장 : 1, 3, 8, 11, 12
  *   끗 9장 : 2, 4, 5, 6, 7, 8, 9, 10, 12
  *   띠 10장: 1(홍), 2(홍), 3(홍), 4(초), 5(초), 6(청), 7(초), 9(청), 10(청), 12(비)
  *   피 24장: 나머지 (쌍피 3장: 9월, 11월, 12월 — 일반 피 21장)
+ *   조커 2장: 어떤 월과도 매치되지 않음. captured 진입 시 피 2장 가치.
+ *           (2026-06-03 추가, month=0으로 표기 — 매치는 type==='joker' 차단으로 처리)
  */
 
 // ── 월별 카드 정의 (스펙 표 그대로 — 절대 변형 금지) ───────────
@@ -55,6 +58,7 @@ function typeLabel(type, subtype) {
   }
   if (type === 'kkeut')   return subtype === 'godori' ? '고도리' : '끗';
   if (type === 'pi')      return subtype === 'ssangpi' ? '쌍피' : '피';
+  if (type === 'joker')   return '조커';
   return '?';
 }
 
@@ -130,6 +134,11 @@ export function buildDeck() {
       deck.push({ id, month, type, ...(subtype ? { subtype } : {}), name, imagePath });
     }
   }
+  // ── 조커 2장 추가 (2026-06-03) ────────────────────────────
+  // month=0 — 어떤 화투 월과도 매치되지 않음을 표현. 실제 매치 차단은 type==='joker' 검사로 한다.
+  // imagePath 비움 — 클라이언트(client.js)가 type==='joker'를 보고 전용 시각화 분기 사용.
+  deck.push({ id: 'm00_joker_a', month: 0, type: 'joker', name: '조커 A', imagePath: '' });
+  deck.push({ id: 'm00_joker_b', month: 0, type: 'joker', name: '조커 B', imagePath: '' });
   return deck;
 }
 
@@ -153,7 +162,7 @@ export function shuffle(arr) {
  * @returns {{ total:number, byType:object, byMonth:object }}
  */
 export function deckStats(deck) {
-  const byType = { gwang: 0, tti: 0, kkeut: 0, pi: 0, ssangpi: 0, bigwang: 0, godori: 0 };
+  const byType = { gwang: 0, tti: 0, kkeut: 0, pi: 0, joker: 0, ssangpi: 0, bigwang: 0, godori: 0 };
   const byMonth = {};
   for (const c of deck) {
     byType[c.type] = (byType[c.type] || 0) + 1;

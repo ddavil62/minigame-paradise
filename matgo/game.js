@@ -10,7 +10,10 @@
  * 특수 이벤트:
  *   쪽    : 손패→바닥 0매칭 후, 더미 뒤집기에서 그 카드와 같은 월이 나옴 → 모두 가져감 + 상대 피 1장
  *   뻑    : 손패+바닥 1장 매칭 직전 더미 뒤집기에서 같은 월 또 나옴 → 3장 바닥에 쌓임 (못 가져감)
- *   따닥  : 한 턴에 같은 월 4장을 모두 가져가는 케이스 → 상대 피 1장
+ *   따닥  : 한 턴에 두 번의 매치가 모두 1매칭으로 발생(같은 월 4장 한꺼번에) → 상대 피 1장
+ *   쓸    : 바닥 같은 월 2장에서 손패로 1장 매치(awaiting_floor_choice → 선택) 후
+ *           더미 뒤집기가 같은 월 → 남은 바닥 1장과 매치되어 그 월 4장 전부 가져감 + 상대 피 1장.
+ *           (효과는 따닥과 동일하나 식별·표시가 다르다 — 한국 표준 룰)
  *   자뻑  : 자기 뻑을 자기가 푸는 것 → 동일 처리 (보너스 없음, 일반 뻑 풀이와 동일)
  *   흔들기: 손패 10장 중 같은 월 3장 보유 시 선언 가능 → 점수 ×2 (선언자측만)
  *           라운드 시작 일괄 검사가 아니라, 그 월 첫 카드를 낼 때 클라이언트 모달로 선언.
@@ -158,12 +161,47 @@ export function startRound(game, firstTurn) {
   game.bombDeckCredit = { p1: 0, p2: 0 };
   // 라운드 첫 뻑을 만든 사람 — applyFinalMultipliers에서 첫뻑 보너스 판정에 사용.
   game.firstPpeokBy = null;
+  // ── 바닥 조커 → 선공자 자동 획득 (2026-06-03 룰 정정) ──
+  // 분배 직후 바닥에 깔린 조커는 선공자(firstTurn) 몫이다. 즉시 captured로 이동.
+  applyFloorJokerToFirst(game, firstTurn);
+
   // 사통(같은 월 4장 손패) 검사 — 자기 차례 선플레이어부터 검사. 동시 충돌 시 선공자 우선.
   game.pendingSangtong = checkSangtongOpportunity(game);
   if (game.pendingSangtong) {
     game.phase = 'awaiting_sangtong';
   }
   return game;
+}
+
+/**
+ * 라운드 시작 직후 바닥에 깔린 조커를 선공자(firstTurn) captured로 이동한다.
+ *
+ * 룰 (2026-06-03 정정·확정):
+ *   - 바닥(floor)에 깔린 조커 N장(0/1/2) 전부 선공자 captured.pi 더미로 이동.
+ *   - 점수에서는 score.js가 `c.type === 'joker'`를 피 더미로 계산(쌍피와 동일, 1장당 +2).
+ *   - 추가 보너스 일체 없음: 더미 뒤집기/턴 변경/상대 피 뺏기/보너스 권리 모두 발생 X.
+ *   - 0장이면 무동작(lastAction 변경 X).
+ *
+ * lastAction에 `floor_joker_to_first`를 기록해 클라이언트가 한 번 토스트로 표시한다.
+ * 호출 시점: startRound에서 deck/floor/hands 분배 직후, 사통 검사 직전.
+ *
+ * @param {GameState} game
+ * @param {'p1'|'p2'} firstTurn
+ * @returns {number} 이동한 조커 수 (테스트 편의)
+ */
+export function applyFloorJokerToFirst(game, firstTurn) {
+  const floorJokers = game.floor.filter((c) => c.type === 'joker');
+  if (floorJokers.length === 0) return 0;
+  game.floor = game.floor.filter((c) => c.type !== 'joker');
+  for (const j of floorJokers) game.captured[firstTurn].push(j);
+  // lastAction 덮어씌움 — round_start 자리에 표시. 사통 검사로 phase가 바뀌어도 lastAction은 유지.
+  game.lastAction = {
+    kind: 'floor_joker_to_first',
+    player: firstTurn,
+    count: floorJokers.length,
+    jokers: floorJokers,
+  };
+  return floorJokers.length;
 }
 
 /**
@@ -233,6 +271,34 @@ export function* playCardSteps(g, playerId, cardId) {
   // 손 origin 추적 — defer로 단계 1+2 통합 STATE 시 client가 손에서 낸 카드 식별용.
   // turn_finished에서 reset.
   g.lastHandPlayed = { player: playerId, card };
+
+  // ── 케이스 A: 손에서 조커를 냈을 때 (2026-06-03) ──────────
+  // 1) 조커 → 본인 captured (피 더미, 피 2장 가치는 score.js에서)
+  // 2) 상대 피 1장 → 본인 captured (쪽과 동일 메커니즘, 상대 피 0장이면 스킵)
+  // 3) 바닥 매칭 단계 완전 스킵 (조커는 어떤 월과도 매치되지 않음)
+  // 4) 더미 위 1장을 본인 손에 추가 (뒤집기/매치 X — 손 갯수 유지). 더미 비었으면 스킵.
+  // 5) 턴 종료, 보너스 턴 없음
+  if (card.type === 'joker') {
+    const opp = playerId === 'p1' ? 'p2' : 'p1';
+    g.captured[playerId].push(card);
+    stealPi(g, playerId, opp, 1);
+    // 더미 위 1장 손 보충 (뒤집기 아님 — pop 후 hand에 add)
+    let refilled = null;
+    if (g.deck.length > 0) {
+      refilled = g.deck.pop();
+      g.hands[playerId].push(refilled);
+    }
+    g.lastAction = {
+      kind: 'joker_play', player: playerId, card,
+      stoleFromOpp: 1, refilled,
+    };
+    yield { step: 'hand_played', card };
+    // 매치 단계 + 더미 뒤집기 단계 모두 스킵 — 곧바로 턴 마무리
+    finishTurn(g, playerId);
+    yield { step: 'turn_finished' };
+    return;
+  }
+
   resolveCardOnFloor(g, playerId, card, true);
   yield { step: 'hand_played', card };
 
@@ -297,6 +363,18 @@ export function* chooseFloorSteps(g, playerId, cardId) {
   if (wasFromHand) {
     // 단계 2: 덱 뒤집기 (손패에서 온 매칭이었던 경우만)
     drawAndResolve(g, playerId, pending.srcCard);
+    // ── 쓸 재라벨링 (한국 표준 룰) ──
+    // 직전 단계 1이 awaiting_floor_choice → 선택(손패 매칭) 후 더미 뒤집기에서 같은 월이
+    // 또 매칭되어 그 월 4장 전부 가져간 케이스 = 쓸. drawAndResolve가 이를 'ttadak'으로
+    // 라벨링하지만, 사용자 정의상 따닥과 쓸은 별개. 효과(피 1장)는 동일하나 표시만 분리.
+    // 조건: drawAndResolve 결과 kind === 'ttadak' + 직전 chooseFloor의 wasFromHand=true.
+    if (g.lastAction && g.lastAction.kind === 'ttadak' && g.lastAction.player === playerId) {
+      g.lastAction = {
+        ...g.lastAction,
+        kind: 'sseul',
+        month: pending.month,
+      };
+    }
     yield { step: 'deck_flipped' };
     if (g.phase === 'awaiting_floor_choice') return;
   }
@@ -387,6 +465,21 @@ function drawAndResolve(g, playerId, handCard) {
   }
   const flipped = g.deck.pop();
   const opp = playerId === 'p1' ? 'p2' : 'p1';
+
+  // ── 케이스 B: 더미 뒤집은 게 조커 (2026-06-03) ─────────────
+  // 1) 상대 피 1장 → 본인 captured (상대 피 0장이면 스킵)
+  // 2) 조커 → 본인 손 (다음 턴에 케이스 A로 사용 가능)
+  // 3) 더미에서 한 번 더 뒤집기 (재귀 — 그 카드는 평소대로 처리, 또 조커면 또 케이스 B)
+  if (flipped.type === 'joker') {
+    stealPi(g, playerId, opp, 1);
+    g.hands[playerId].push(flipped);
+    g.lastAction = {
+      kind: 'joker_flip', player: playerId, card: flipped, stoleFromOpp: 1,
+    };
+    // 재귀: 한 번 더 뒤집기 (handCard는 그대로 유지 — 첫 뒤집기 의도와 같이 동일 컨텍스트)
+    drawAndResolve(g, playerId, handCard);
+    return;
+  }
 
   // 손패카드와 동일 월인 경우 — 쪽/뻑/따닥 판정 분기
   if (flipped.month === handCard.month) {
@@ -538,6 +631,36 @@ function stealPi(g, taker, victim, count) {
 
 // ── 턴 마무리: 점수 평가 + 고/스톱 분기 ─────────────────────
 /**
+ * 라운드 종료 직전, 양쪽 손에 남은 카드를 각자 본인 captured로 이동한다.
+ *
+ * 배경 (2026-06-08 조커 라운드 종료 불가 수정):
+ *   조커 케이스 B로 한쪽 손이 +1 누적되면 "기회 보존의 법칙"에 의한 양쪽 잔여
+ *   동기화가 깨져 양쪽 손이 동시에 0이 되지 않는다. 신규 종료 조건(한쪽이 손+credit=0
+ *   이고 상대 credit=0)로 라운드를 종료하더라도 한쪽 손에는 잔여 카드가 남는다.
+ *   이 잔여 카드들은 룰상 본인이 가져간 것으로 간주(점수에 반영)하여 정산한다.
+ *
+ * 처리:
+ *   - 양쪽 손에 남은 모든 카드를 각자 본인 captured에 push (type 그대로).
+ *   - 조커는 captured에 들어가면 score.js가 `c.type === 'joker'`를 피 더미로
+ *     계산하므로 별도 변환 불필요 (1장당 피 2장 가치).
+ *   - 일반 카드도 type 그대로 들어가면 score.js가 자동 분류(광/끗/띠/피).
+ *   - 손은 비운다.
+ *
+ * @param {GameState} g
+ * @returns {{p1:number, p2:number}} 양쪽 이동 장수
+ */
+function flushHandsToCaptured(g) {
+  const moved = { p1: 0, p2: 0 };
+  for (const pid of ['p1', 'p2']) {
+    if (g.hands[pid].length === 0) continue;
+    moved[pid] = g.hands[pid].length;
+    g.captured[pid].push(...g.hands[pid]);
+    g.hands[pid] = [];
+  }
+  return moved;
+}
+
+/**
  * 턴 끝에서 점수 평가 + 고/스톱 결정 단계로 이동 또는 다음 턴.
  * @param {GameState} g
  * @param {'p1'|'p2'} playerId
@@ -566,10 +689,21 @@ function finishTurn(g, playerId) {
     // 첫 발생이거나, 마지막 고 시점 점수보다 늘었으면 결정 단계로 이동
     const lastGoScore = g.lastGoScore?.[playerId] ?? null;
     if (lastGoScore === null || breakdown.score > lastGoScore) {
-      // 자기 손패가 비고 + 보너스 권리도 0이면 더 이상 진행 불가 → 자동 스톱.
-      // 폭탄 권리(bombDeckCredit > 0)가 남아 있으면 손 0이어도 고/스톱 결정 가능.
+      // 자기가 더 진행할 수 없는 상황이면 자동 스톱.
+      // (a) 자기 손 0 + 보너스 권리 0 → 다음 자기 차례에 할 수 있는 행동 없음.
+      // (b) 상대 손+credit = 0 + 자기 credit = 0 (2026-06-08 보강) → 자기는
+      //     상대 턴을 기다릴 수 없고(상대도 아무것도 못함) 본인 손/credit이 다 떨어진
+      //     시점에 라운드 종료가 트리거되므로 본인이 결국 종료자. 이 시점에 7점이면
+      //     자동 승, 미만이면 일반 라운드 종료(아래 종료 조건에서 처리).
+      // 폭탄 권리(bombDeckCredit > 0)가 본인에 남아 있으면 손 0이어도 고/스톱 결정 가능.
       const remainingCredit = g.bombDeckCredit?.[playerId] || 0;
-      if (g.hands[playerId].length === 0 && remainingCredit === 0) {
+      const opp = playerId === 'p1' ? 'p2' : 'p1';
+      const oppRemaining = g.hands[opp].length + (g.bombDeckCredit?.[opp] || 0);
+      const selfStuck = g.hands[playerId].length === 0 && remainingCredit === 0;
+      const oppStuckAndSelfNoCredit = oppRemaining === 0 && remainingCredit === 0;
+      if (selfStuck || oppStuckAndSelfNoCredit) {
+        // 잔여 손은 본인 captured로 이동 후 승리 처리 (점수는 이미 7점 이상 도달)
+        flushHandsToCaptured(g);
         endRoundWin(g, playerId);
         return;
       }
@@ -579,12 +713,32 @@ function finishTurn(g, playerId) {
     }
   }
 
-  // 라운드 종료 조건: 양쪽 모두 손 0 && 보너스 권리 0 — 무승부 종료
-  // "기회 보존의 법칙"에 의해 양쪽 잔여는 항상 동기화되어 동시에 0에 도달.
-  const p1Remaining = g.hands.p1.length + (g.bombDeckCredit?.p1 || 0);
-  const p2Remaining = g.hands.p2.length + (g.bombDeckCredit?.p2 || 0);
-  if (p1Remaining === 0 && p2Remaining === 0) {
-    endRoundDraw(g);
+  // 라운드 종료 조건 (2026-06-08 보강):
+  //   "한쪽의 손+credit = 0 이고 상대의 credit = 0"이면 라운드 자동 종료.
+  //   - 폭탄 권리(bombDeckCredit) 우선: 한쪽이 0이어도 상대 credit > 0이면 보너스 뒤집기
+  //     끝까지 진행. (예: 사용자 0+0, 상대 0+2 → 종료 X)
+  //   - 조커 케이스 B로 한쪽 손이 +1 누적되어도 상대가 먼저 0에 도달 + 본인 credit=0이면
+  //     상대는 더 진행 불가 → 본인 잔여를 본인 captured로 정산 후 종료.
+  //   양쪽 모두 0 + 양쪽 credit 0이면 기존과 동일하게 무승부.
+  const p1Hand = g.hands.p1.length;
+  const p2Hand = g.hands.p2.length;
+  const p1Credit = g.bombDeckCredit?.p1 || 0;
+  const p2Credit = g.bombDeckCredit?.p2 || 0;
+  const p1Done = (p1Hand + p1Credit) === 0;
+  const p2Done = (p2Hand + p2Credit) === 0;
+  if ((p1Done && p2Credit === 0) || (p2Done && p1Credit === 0)) {
+    // 잔여 손 카드는 각자 본인 captured로 자동 정산 (조커 + 일반 카드)
+    flushHandsToCaptured(g);
+    // 정산 후 7점 이상인 쪽이 있으면 승리, 둘 다 7점 미만이면 무승부.
+    const p1Final = calculateScore(g.captured.p1, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p1 }).score;
+    const p2Final = calculateScore(g.captured.p2, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p2 }).score;
+    if (p1Final >= SCORE_THRESHOLD_GO_STOP && p1Final >= p2Final) {
+      endRoundWin(g, 'p1');
+    } else if (p2Final >= SCORE_THRESHOLD_GO_STOP && p2Final > p1Final) {
+      endRoundWin(g, 'p2');
+    } else {
+      endRoundDraw(g);
+    }
     return;
   }
 
@@ -962,8 +1116,25 @@ export function* bonusFlipSteps(g, playerId) {
  */
 function flipDeckBonus(g, playerId) {
   const flipped = g.deck.pop();
-  const sameMonth = g.floor.filter((c) => c.month === flipped.month);
   const opp = playerId === 'p1' ? 'p2' : 'p1';
+
+  // ── 케이스 B (보너스 뒤집기 경로, 2026-06-03) ─────────────
+  // 일반 케이스 B와 동일 메커니즘. 단, 보너스 뒤집기는 재귀 시 한 번 더 뒤집기 권리가 별도로
+  // 소모되지 않는다 (이미 bonusFlipSteps에서 -1 처리). 재귀 처리를 위해 flipDeckBonus 재호출.
+  // 단 deck 빈 경우 안전 가드 필요.
+  if (flipped.type === 'joker') {
+    stealPi(g, playerId, opp, 1);
+    g.hands[playerId].push(flipped);
+    g.lastAction = {
+      kind: 'joker_flip', player: playerId, card: flipped, stoleFromOpp: 1,
+    };
+    if (g.deck.length > 0) {
+      flipDeckBonus(g, playerId);
+    }
+    return;
+  }
+
+  const sameMonth = g.floor.filter((c) => c.month === flipped.month);
 
   if (sameMonth.length === 0) {
     g.floor.push(flipped);
@@ -977,8 +1148,13 @@ function flipDeckBonus(g, playerId) {
     return;
   }
   if (sameMonth.length === 2) {
-    // 두 장 중 한 장 선택 — 통상 chooseFloorSteps 분기 활용 (fromHand=false 처리)
-    g.floor.push(flipped);
+    // 두 장 중 한 장 선택 — 통상 chooseFloorSteps 분기 활용 (fromHand=false 처리).
+    //
+    // BUGFIX-DUP (2026-06-03): flipped를 floor에 push하면 안 된다. chooseFloorSteps는
+    // 선택된 1장만 floor에서 제거하고 srcCard(=flipped)는 captured에 push하는데,
+    // 여기서 미리 floor에 두면 floor에 srcCard가 잔존 → captured에도 들어가 복제 발생.
+    // (drawAndResolve의 동일 케이스 라인 500~511, resolveCardOnFloor 라인 362~373는
+    //  모두 floor에 push하지 않으므로 일관된 처리.)
     g.pendingFloorChoice = {
       player: playerId, month: flipped.month, candidates: sameMonth, srcCard: flipped, fromHand: false,
     };
@@ -1016,7 +1192,8 @@ export function snapshotForPlayer(g, playerId) {
   const floorMonthCount = {};
   for (const c of g.floor)            floorMonthCount[c.month] = (floorMonthCount[c.month] || 0) + 1;
   const bombableMonths = Object.keys(handMonthCount)
-    .filter((m) => handMonthCount[m] === 3 && floorMonthCount[m] === 1)
+    // month=0(조커)은 폭탄 대상에서 제외 (2026-06-03)
+    .filter((m) => m !== '0' && handMonthCount[m] === 3 && floorMonthCount[m] === 1)
     .map(Number);
   // 사통 결정이 자기 차례인 경우만 pendingSangtong 노출 (라운드 시작 시 모달 트리거).
   const mySangtong = g.pendingSangtong && g.pendingSangtong.player === playerId

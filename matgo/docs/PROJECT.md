@@ -1,6 +1,6 @@
 # 맞고 (Matgo) — LAN 1:1 대전 기획서
 
-> 최종 업데이트: 2026-05-31
+> 최종 업데이트: 2026-06-03
 
 ## 프로젝트 개요
 
@@ -14,7 +14,7 @@
 | 통신 | WebSocket (`ws`) |
 | 클라이언트 | 바닐라 JS + HTML + CSS (프레임워크 없음) |
 | 테스트 | Playwright (1280×800 Chromium 비주얼 리그레션) |
-| 정적 자산 | SVG 화투 48장 (`public/assets/cards-svg/`) + PNG 폴백 (`public/assets/cards/`) |
+| 정적 자산 | SVG 화투 48장 (`public/assets/cards-svg/`) + PNG 폴백 (`public/assets/cards/`). **조커 2장**(2026-06-03)은 이미지 없이 CSS 전용 시각화(`.joker-card`) |
 
 ## 아키텍처
 
@@ -24,7 +24,7 @@
 matgo/
 ├── server.js        # WebSocket 서버 + 방 매칭 + heartbeat
 ├── game.js          # 게임 상태/페이즈/룰 흐름 (권위적)
-├── cards.js         # 화투 48장 정의 + 셔플
+├── cards.js         # 화투 48장 + 조커 2장 정의 (총 50장) + 셔플
 ├── score.js         # 점수·고/박/배수 계산
 ├── bot.js           # 단일 클라이언트 테스트용 봇
 ├── smoke-test.js    # 비-Playwright 라운드트립 스모크
@@ -45,7 +45,7 @@ matgo/
 |---|---|---|
 | 서버 | `server.js` | WebSocket 수락, 방(2인) 매칭, heartbeat 30s, 좀비 슬롯 청소 |
 | 게임 상태기 | `game.js` | 페이즈 전이(`awaiting_play` / `awaiting_floor_choice` / `awaiting_go_stop` / `awaiting_kkeut_choice` / `awaiting_sangtong`), 룰 검증, STATE 브로드캐스트. `shake_decision` phase는 2026-05-31 제거(클라이언트 모달로 이전) |
-| 카드 | `cards.js` | 48장 카드 정의 + 셔플 + 손/바닥/덱 분배 |
+| 카드 | `cards.js` | 50장 카드 정의(화투 48 + 조커 2, 2026-06-03) + 셔플 + 손/바닥/덱 분배 |
 | 점수 | `score.js` | 광·끗·띠·피 카운트, 고도리/단/박/고 배수, 흔들기 ×2 |
 | 봇 | `bot.js` | 자동 입력으로 단일 클라이언트 라운드트립 검증 |
 | 클라이언트 | `public/client.js` | STATE 수신 → DOM 갱신, 카드 클릭 → 송신, fly 애니메이션 보간 |
@@ -170,5 +170,8 @@ matgo/
 
 | 날짜 | 변경 |
 |---|---|
+| 2026-06-03 | 조커 2장 룰 추가 — 덱 50장(화투 48 + `m00_joker_a/b`), 케이스 A(손 조커 → 매치 스킵 + 상대 피 1 + 더미 1장 손 보충) / 케이스 B(더미 뒤집은 게 조커 → 상대 피 1 + 손에 추가 + 재귀 뒤집기). `piCount += joker × 2`. JOKER-001~009 회귀 9건 |
+| 2026-06-03 | 쓸 룰 추가 — 바닥 같은 월 2장 + 손 1 + 더미 1 = 4장 + 상대 피 1장. `lastAction.kind=sseul` 신규, `sweep_from_flip` 토스트 "쓸!" → "뻑 풀이!"로 정정 |
+| 2026-06-02 | 폭탄 룰 표준화 — `bombDeckCredit` 보너스 뒤집기 권리(+2) 모델로 정정. "기회 보존의 법칙"으로 양쪽 잔여 동기 |
 | 2026-05-31 | 룰 보강 5건 — 사통/흔들기·폭탄 카드 클릭 시점/첫뻑 +7/폭탄 후 덱 2턴/floor 위치 고정. `shake_decision` phase 제거, `awaiting_sangtong` phase 신설 |
 | 2026-05-28 | v8 UI 시안 이식 — 한국 고스톱 담요 톤, 3×3 grid, 허니콤 바닥 배치, 고/스톱 floor overlay |
