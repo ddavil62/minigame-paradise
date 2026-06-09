@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>port harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+<style>.dev{position:fixed;top:8px;right:8px;z-index:200;display:flex;gap:6px}.dev button{font:12px sans-serif;padding:6px 10px;cursor:pointer}</style>
+</head>
+<body class="theme-wood">
+  <div class="dev">
+    <button onclick="window.__screen('waiting')">대기</button>
+    <button onclick="window.__screen('game')">게임</button>
+    <button onclick="window.__roll()">굴리기(컵)</button>
+    <button onclick="window.__screen('gameover')">결과</button>
+  </div>
+
+  <header class="game-header">
+    <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+    <h1>🎲 요트 다이스</h1>
+    <div class="header-center"><div class="status-bar">
+      <span id="player-label">P1 (나)</span><span class="status-divider">·</span>
+      <span id="status-msg">내 턴</span><span class="status-divider">·</span>
+      <span>턴 <span id="turn-label">14</span>/26</span>
+    </div></div>
+    <div class="score-bar">
+      <span class="score-bar-side"><span class="score-bar-name" id="hdr-p1-name">P1</span><span class="score-bar-total" id="hdr-p1-total">0</span></span>
+      <span class="score-bar-vs">VS</span>
+      <span class="score-bar-side"><span class="score-bar-total" id="hdr-p2-total">0</span><span class="score-bar-name" id="hdr-p2-name">P2</span></span>
+    </div>
+  </header>
+
+  <section id="screen-waiting" class="screen screen-waiting hidden">
+    <div class="waiting-card">
+      <div class="waiting-logo">🎲</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+      <div id="invite-panel" class="invite-panel">
+        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
+        <div class="invite-url-row"><code id="invite-url" class="invite-url">http://192.168.0.12:3098</code><button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button></div>
+        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      </div>
+      <div id="ready-panel" class="ready-panel">
+        <div class="ready-status"><span class="ready-slot">P1 <span id="p1-ready-mark" class="ready-mark ready">✓ 준비</span></span><span class="ready-divider">/</span><span class="ready-slot">P2 <span id="p2-ready-mark" class="ready-mark">대기</span></span></div>
+        <button id="ready-btn" class="primary-btn ready-btn" type="button">준비 완료</button>
+        <div class="ready-hint">양쪽 모두 준비를 누르면 게임이 시작됩니다.</div>
+        <div id="ai-panel" class="ai-panel"><div class="ai-divider"><span>또는</span></div><button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button><div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div></div>
+      </div>
+      <div class="rules-summary"><h3>요트 다이스 규칙 요약</h3><ul>
+        <li>1턴 = <strong>최대 3번 굴림</strong>. 유지할 주사위를 클릭(KEEP)하고 나머지만 다시 굴림.</li>
+        <li>1턴 마무리 시 <strong>13 카테고리 중 1개</strong> 선택해서 점수 기록.</li>
+        <li>각자 13턴 = 총 26턴 후 점수 합산.</li>
+        <li><strong>상단 합 63 이상 → +35 보너스</strong>.</li>
+        <li><strong>야츠 50점 기록 후 추가 야츠 → +100점</strong> 누적.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <main id="screen-game" class="screen screen-game hidden">
+    <section class="zone zone-dice">
+      <div class="zone-title"><span>🎲 다이스</span><span class="roll-count">굴림 <span id="roll-count">0</span>/3</span></div>
+      <div id="dice-area" class="dice-area"></div>
+      <div class="action-row"><button id="btn-roll" class="primary-btn btn-roll" type="button">주사위 굴리기</button><span id="action-hint" class="action-hint">힌트</span></div>
+    </section>
+    <section class="zone zone-scoreboard">
+      <table class="scoreboard">
+        <thead><tr><th class="col-cat">카테고리</th><th class="col-p1" id="tbl-p1-name">P1</th><th class="col-p2" id="tbl-p2-name">P2</th></tr></thead>
+        <tbody id="scoreboard-body"></tbody>
+        <tfoot>
+          <tr class="subtotal-row"><td class="col-cat">상단 합 <span class="cond">(≥63 → +35)</span></td><td class="col-p1" id="p1-upper-sum">0</td><td class="col-p2" id="p2-upper-sum">0</td></tr>
+          <tr class="subtotal-row"><td class="col-cat">상단 보너스</td><td class="col-p1" id="p1-upper-bonus">0</td><td class="col-p2" id="p2-upper-bonus">0</td></tr>
+          <tr class="subtotal-row"><td class="col-cat">추가 야츠 보너스</td><td class="col-p1" id="p1-yahtzee-bonus">0</td><td class="col-p2" id="p2-yahtzee-bonus">0</td></tr>
+          <tr class="total-row"><td class="col-cat"><strong>총점</strong></td><td class="col-p1" id="p1-total">0</td><td class="col-p2" id="p2-total">0</td></tr>
+        </tfoot>
+      </table>
+    </section>
+  </main>
+
+  <div id="screen-game-over" class="result-overlay hidden">
+    <div class="result-card">
+      <div id="result-outcome" class="result-outcome">결과</div>
+      <div class="result-scores">
+        <div class="result-side"><div class="result-name" id="result-p1-name">P1</div><div class="result-total" id="result-p1-total">0</div></div>
+        <div class="result-vs">VS</div>
+        <div class="result-side"><div class="result-name" id="result-p2-name">P2</div><div class="result-total" id="result-p2-total">0</div></div>
+      </div>
+      <div id="result-breakdown" class="result-breakdown"></div>
+      <div class="result-actions"><button id="rematch-btn" class="primary-btn rematch-btn" type="button">재대결</button><button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button></div>
+      <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { setState } from './js/game.js';
+    import { renderDice } from './js/dice.js';
+    import { renderScoreboard } from './js/scoreboard.js';
+    import { renderHud, renderActionBar, renderGameOver } from './js/ui.js';
+
+    const $ = (id)=>document.getElementById(id);
+    const els = {
+      screenWaiting:$('screen-waiting'), screenGame:$('screen-game'), screenGameOver:$('screen-game-over'),
+      playerLabel:$('player-label'), statusMsg:$('status-msg'), turnLabel:$('turn-label'),
+      hdrP1Name:$('hdr-p1-name'), hdrP2Name:$('hdr-p2-name'), hdrP1Total:$('hdr-p1-total'), hdrP2Total:$('hdr-p2-total'),
+      tblP1Name:$('tbl-p1-name'), tblP2Name:$('tbl-p2-name'),
+      diceArea:$('dice-area'), rollCount:$('roll-count'), btnRoll:$('btn-roll'), actionHint:$('action-hint'),
+      scoreboard:document.querySelector('.scoreboard'), scoreboardBody:$('scoreboard-body'),
+      p1UpperSum:$('p1-upper-sum'), p2UpperSum:$('p2-upper-sum'), p1UpperBonus:$('p1-upper-bonus'), p2UpperBonus:$('p2-upper-bonus'),
+      p1YahtzeeBonus:$('p1-yahtzee-bonus'), p2YahtzeeBonus:$('p2-yahtzee-bonus'), p1Total:$('p1-total'), p2Total:$('p2-total'),
+      resultOutcome:$('result-outcome'), resultP1Name:$('result-p1-name'), resultP2Name:$('result-p2-name'),
+      resultP1Total:$('result-p1-total'), resultP2Total:$('result-p2-total'),
+      resultP1Side:document.querySelectorAll('.result-side')[0], resultP2Side:document.querySelectorAll('.result-side')[1],
+      resultBreakdown:$('result-breakdown'), toast:$('toast'),
+    };
+    const myId='p1';
+    let keepLocal=[true,true,false,true,false];
+    const P1={aces:3,twos:6,threes:9,fours:null,fives:null,sixes:18,threeOfAKind:22,fourOfAKind:null,fullHouse:25,smallStraight:30,largeStraight:null,yahtzee:50,chance:null};
+    const P2={aces:2,twos:4,threes:null,fours:12,fives:15,sixes:null,threeOfAKind:null,fourOfAKind:19,fullHouse:25,smallStraight:30,largeStraight:40,yahtzee:0,chance:24};
+    const state={
+      phase:'playing', currentTurn:'p1', turnNumber:14, dice:[5,5,2,5,3], keep:keepLocal.slice(), rollCount:2,
+      sheets:{p1:P1,p2:P2}, upper:{p1:{sum:36,bonus:0},p2:{sum:33,bonus:0}}, yahtzeeBonus:{p1:0,p2:0}, totals:{p1:163,p2:171},
+    };
+    setState(state);
+
+    function renderAll(){
+      renderHud(els,state,myId);
+      const selectable = state.currentTurn===myId && state.phase==='playing' && state.rollCount>=1 && state.rollCount<3;
+      const draw=()=>renderDice(els.diceArea,{dice:state.dice,keep:keepLocal,selectable,onToggle:(i)=>{keepLocal[i]=!keepLocal[i];draw();}});
+      draw();
+      renderActionBar(els,state,myId);
+      renderScoreboard(els.scoreboardBody,{myId,currentTurn:state.currentTurn,rollCount:state.rollCount,dice:state.dice,sheets:state.sheets,phase:state.phase,onCategoryClick:(c)=>console.log('pick',c)});
+    }
+
+    window.__screen=(name)=>{
+      els.screenWaiting.classList.toggle('hidden',name!=='waiting');
+      els.screenGame.classList.toggle('hidden',name!=='game');
+      els.screenGameOver.classList.toggle('hidden',name!=='gameover');
+      if(name==='game') renderAll();
+      if(name==='gameover'){
+        const breakdown={p1:{sheet:P1,upperSum:36,upperBonus:0,yahtzeeBonus:0,total:163},p2:{sheet:P2,upperSum:33,upperBonus:0,yahtzeeBonus:0,total:171}};
+        renderGameOver(els,{winner:'p2',p1Total:163,p2Total:171,breakdown},myId);
+      }
+    };
+    window.__roll=()=>{
+      // 굴림 시뮬레이션: 비유지 주사위만 새 값 → renderDice가 컵 애니메이션 감지
+      state.dice = state.dice.map((v,i)=> keepLocal[i]? v : 1+Math.floor(Math.random()*6));
+      state.rollCount = Math.min(3, state.rollCount+1);
+      setState(state); renderAll();
+    };
+
+    window.__screen('game');
+  </script>
+</body>
+</html>

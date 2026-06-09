@@ -1,0 +1,27 @@
+{
+  "name": "yahtzee",
+  "version": "0.1.0",
+  "description": "LAN 1:1 요트 다이스 (Yahtzee, 서버 권위형, 턴 교대)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node tests/smoke.test.js"
+  },
+  "keywords": [
+    "yahtzee",
+    "dice",
+    "lan",
+    "multiplayer",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

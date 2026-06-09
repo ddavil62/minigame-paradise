@@ -32,6 +32,7 @@ import { createApp as createYutnoriApp }   from '../yutnori/server.js';
 import { createApp as createTetrisApp }    from '../tetris-battle/server.js';
 import { createApp as createJanggiApp }   from '../janggi/server.js';
 import { createApp as createHanabiApp }   from '../hanabi/server.js';
+import { createApp as createYahtzeeApp }  from '../yahtzee/server.js';
 
 // ── 경로 및 인자 파싱 ──────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -80,6 +81,10 @@ const GAME_APPS = {
   }),
   // 하나비는 봇 미지원(§13-8) — getBotUrl 옵션 불필요. setHostUrl만 사용.
   'hanabi':         createHanabiApp(),
+  // 요트 다이스 — 봇 지원 (2026-06-08 추가).
+  'yahtzee':        createYahtzeeApp({
+    getBotUrl: () => `ws://localhost:${PORT}/yahtzee/ws?mode=bot`,
+  }),
 };
 
 /**
@@ -535,7 +540,7 @@ function printBanner(port, lanIps) {
     console.log(ANSI.cyan + line(`    ${ANSI.dim}(LAN IP 미감지 — ipconfig로 확인)${ANSI.reset}`) + ANSI.reset);
   }
   console.log(ANSI.cyan + empty + ANSI.reset);
-  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/ /hanabi/${ANSI.reset}`) + ANSI.reset);
+  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/ /hanabi/ /yahtzee/${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + line(`  ${ANSI.dim}종료: Ctrl+C${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + top + ANSI.reset);
   console.log('');

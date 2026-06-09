@@ -75,5 +75,16 @@
     "color": "#FF6B35",
     "emoji": "🎇",
     "botAvailable": false
+  },
+  {
+    "id": "yahtzee",
+    "name": "요트 다이스",
+    "description": "5개 다이스를 굴려 13 카테고리에 점수를 채워라! 1:1 점수표 게임",
+    "port": 3010,
+    "httpPath": "/yahtzee/",
+    "wsPath": "/yahtzee/ws",
+    "color": "#E84A5F",
+    "emoji": "🎲",
+    "botAvailable": true
   }
 ]

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>요트 다이스 - LAN 1:1</title>
+  <!-- 우드 테마 폰트 (Jua: 헤드라인, Gowun Dodum: 본문) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="theme-wood">
+  <header class="game-header">
+    <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+    <h1>🎲 요트 다이스</h1>
+    <!-- 음소거 토글 (Web Audio API 동적 효과음 on/off). 상태는 localStorage 영속. -->
+    <button id="btn-mute" class="btn-mute" type="button" aria-label="효과음 켜기/끄기" title="효과음 켜기/끄기">🔊</button>
+    <div class="header-center">
+      <div class="status-bar">
+        <span id="player-label">접속 중...</span>
+        <span class="status-divider">·</span>
+        <span id="status-msg">서버 연결 중</span>
+        <span class="status-divider">·</span>
+        <span>턴 <span id="turn-label">-</span>/26</span>
+      </div>
+    </div>
+    <div class="score-bar">
+      <span class="score-bar-side">
+        <span class="score-bar-name" id="hdr-p1-name">P1</span>
+        <span class="score-bar-total" id="hdr-p1-total">0</span>
+      </span>
+      <span class="score-bar-vs">VS</span>
+      <span class="score-bar-side">
+        <span class="score-bar-total" id="hdr-p2-total">0</span>
+        <span class="score-bar-name" id="hdr-p2-name">P2</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- 대기 화면 -->
+  <section id="screen-waiting" class="screen screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">🎲</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+
+      <div id="invite-panel" class="invite-panel hidden">
+        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
+        <div class="invite-url-row">
+          <code id="invite-url" class="invite-url">http://...</code>
+          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
+        </div>
+        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      </div>
+
+      <!-- READY -->
+      <div id="ready-panel" class="ready-panel hidden">
+        <div class="ready-status">
+          <span class="ready-slot">P1 <span id="p1-ready-mark" class="ready-mark">대기</span></span>
+          <span class="ready-divider">/</span>
+          <span class="ready-slot">P2 <span id="p2-ready-mark" class="ready-mark">대기</span></span>
+        </div>
+        <button id="ready-btn" class="primary-btn ready-btn" type="button">준비 완료</button>
+        <div class="ready-hint">양쪽 모두 준비를 누르면 게임이 시작됩니다.</div>
+
+        <!-- AI 진입 -->
+        <div id="ai-panel" class="ai-panel hidden">
+          <div class="ai-divider"><span>또는</span></div>
+          <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
+          <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+        </div>
+      </div>
+
+      <!-- 룰 요약 -->
+      <div class="rules-summary">
+        <h3>요트 다이스 규칙 요약</h3>
+        <ul>
+          <li>1턴 = <strong>최대 3번 굴림</strong>. 유지할 주사위를 클릭(KEEP)하고 나머지만 다시 굴림.</li>
+          <li>1턴 마무리 시 <strong>13 카테고리 중 1개</strong> 선택해서 점수 기록 (이미 쓴 칸은 사용 불가).</li>
+          <li>각자 13턴 = 총 26턴 후 점수 합산.</li>
+          <li><strong>상단 합 63 이상 → +35 보너스</strong>.</li>
+          <li><strong>야츠 50점 기록 후 추가 야츠 → +100점</strong> 누적.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 게임 화면 (좌: 다이스 / 우: 점수표) -->
+  <main id="screen-game" class="screen screen-game hidden">
+    <!-- 다이스 영역 -->
+    <section class="zone zone-dice">
+      <div class="zone-title">
+        <span>🎲 다이스</span>
+        <span class="roll-count">굴림 <span id="roll-count">0</span>/3</span>
+      </div>
+      <div id="dice-area" class="dice-area"></div>
+      <div class="action-row">
+        <button id="btn-roll" class="primary-btn btn-roll" type="button">주사위 굴리기</button>
+        <span id="action-hint" class="action-hint">상대 턴입니다. 잠시 기다려 주세요.</span>
+      </div>
+    </section>
+
+    <!-- 점수표 (카테고리 / P1 / P2 — 두 플레이어 인접) -->
+    <section class="zone zone-scoreboard">
+      <table class="scoreboard">
+        <thead>
+          <tr>
+            <th class="col-cat">카테고리</th>
+            <th class="col-p1" id="tbl-p1-name">P1</th>
+            <th class="col-p2" id="tbl-p2-name">P2</th>
+          </tr>
+        </thead>
+        <tbody id="scoreboard-body"></tbody>
+        <tfoot>
+          <tr class="subtotal-row">
+            <td class="col-cat">상단 합 <span class="cond">(≥63 → +35)</span></td>
+            <td class="col-p1" id="p1-upper-sum">0</td>
+            <td class="col-p2" id="p2-upper-sum">0</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td class="col-cat">상단 보너스</td>
+            <td class="col-p1" id="p1-upper-bonus">0</td>
+            <td class="col-p2" id="p2-upper-bonus">0</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td class="col-cat">추가 야츠 보너스</td>
+            <td class="col-p1" id="p1-yahtzee-bonus">0</td>
+            <td class="col-p2" id="p2-yahtzee-bonus">0</td>
+          </tr>
+          <tr class="total-row">
+            <td class="col-cat"><strong>총점</strong></td>
+            <td class="col-p1" id="p1-total">0</td>
+            <td class="col-p2" id="p2-total">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+  </main>
+
+  <!-- 게임 종료 오버레이 -->
+  <div id="screen-game-over" class="result-overlay hidden">
+    <div class="result-card">
+      <div id="result-outcome" class="result-outcome">결과</div>
+      <div class="result-scores">
+        <div class="result-side">
+          <div class="result-name" id="result-p1-name">P1</div>
+          <div class="result-total" id="result-p1-total">0</div>
+        </div>
+        <div class="result-vs">VS</div>
+        <div class="result-side">
+          <div class="result-name" id="result-p2-name">P2</div>
+          <div class="result-total" id="result-p2-total">0</div>
+        </div>
+      </div>
+      <div id="result-breakdown" class="result-breakdown"></div>
+      <div class="result-actions">
+        <button id="rematch-btn" class="primary-btn rematch-btn" type="button">재대결</button>
+        <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
+      </div>
+      <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
