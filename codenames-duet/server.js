@@ -90,6 +90,32 @@ export function createApp() {
     }
   }
 
+  /**
+   * 게임 종료 페이로드를 만든다.
+   * 복기 모드를 위해 양쪽 시점 전체 키 카드(keyCardP1/p2)와 보드 단어를 함께 보낸다.
+   * (게임이 끝났으므로 양쪽 정보를 공개해도 안전하다.)
+   * @param {'won'|'lost'} outcome
+   * @param {string} [reason]
+   * @returns {object}
+   */
+  function buildGameEndPayload(outcome, reason) {
+    /** @type {object} */
+    const payload = { type: 'GAME_END', outcome };
+    if (reason !== undefined) payload.reason = reason;
+    if (game) {
+      // p1 시점 색상 = keyCard[i].left, p2 시점 색상 = keyCard[i].right
+      payload.review = {
+        words: game.words.slice(),
+        keyCardP1: game.keyCard.map((c) => c.left),
+        keyCardP2: game.keyCard.map((c) => c.right),
+        revealed: game.revealed.slice(),
+        greenFound: { p1: game.greenFound.p1, p2: game.greenFound.p2 },
+        tokensLeft: game.tokens,
+      };
+    }
+    return payload;
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
@@ -166,13 +192,9 @@ export function createApp() {
           console.log(`[codenames] GUESS: ${player.id} → 카드 ${msg.index} = ${result.result}`);
           broadcastState();
           if (result.win) {
-            broadcastAll({ type: 'GAME_END', outcome: 'won' });
+            broadcastAll(buildGameEndPayload('won'));
           } else if (result.lose) {
-            broadcastAll({
-              type: 'GAME_END',
-              outcome: 'lost',
-              reason: game.lostReason,
-            });
+            broadcastAll(buildGameEndPayload('lost', game.lostReason));
           }
           break;
         }
@@ -187,7 +209,7 @@ export function createApp() {
           console.log(`[codenames] PASS: ${player.id}`);
           broadcastState();
           if (result.lose) {
-            broadcastAll({ type: 'GAME_END', outcome: 'lost', reason: game.lostReason });
+            broadcastAll(buildGameEndPayload('lost', game.lostReason));
           }
           break;
         }

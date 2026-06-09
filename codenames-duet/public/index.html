@@ -43,6 +43,19 @@
     </div>
   </header>
 
+  <!-- 복기 모드 상단 패널: 결과 + 종료 버튼 (모달과 별개로 보드 위에 떠 있음) -->
+  <div id="review-banner" class="review-banner hidden">
+    <div class="review-banner-left">
+      <span class="review-tag">복기 모드</span>
+      <span id="review-summary" class="review-summary"></span>
+    </div>
+    <div class="review-banner-right">
+      <button id="btn-review-new-game" type="button">🔄 새 게임</button>
+      <button id="btn-review-return-lobby" type="button">← 다른 종목</button>
+      <button id="btn-review-close" type="button" title="결과 화면으로 돌아가기">결과 다시 보기</button>
+    </div>
+  </div>
+
   <main class="board-wrap">
     <div id="board" class="board"></div>
   </main>
@@ -61,6 +74,7 @@
     <div class="modal-inner">
       <h2 id="modal-title">결과</h2>
       <p id="modal-message"></p>
+      <button id="btn-review" class="btn-review" type="button">🔍 복기 보기</button>
       <button id="btn-new-game">새 게임 시작</button>
       <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
     </div>
