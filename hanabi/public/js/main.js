@@ -401,6 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
       state = s;
       // 종료 상태로 STATE가 와도 게임 화면을 먼저 갱신(점수 반영).
       renderGame();
+      // 카운터 모달이 열려있으면 새 STATE 기준으로 즉시 재렌더(HR-C12-008).
+      if (typeof window.__hanabiRefreshCounter === 'function') {
+        window.__hanabiRefreshCounter();
+      }
       if (s.phase === 'ended' && s.result) {
         renderGameOver(s.result);
       }
@@ -514,9 +518,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (current < TOTAL - 1) { current++; updateSlider(); }
     });
 
-    // 키보드 탐색 — 대기 화면이 보일 때만 동작.
+    // 키보드 탐색 — 대기 화면이 보이고 모달이 닫혀 있을 때만 동작.
+    // (모달이 열려 있으면 modal의 키 가드가 처리하므로 인라인 슬라이더는 중복 이동을 회피한다.)
     document.addEventListener('keydown', (e) => {
       if (els.screenWaiting.classList.contains('hidden')) return;
+      const modalEl = document.getElementById('guide-modal');
+      if (modalEl && !modalEl.classList.contains('hidden')) return;
       if (e.key === 'ArrowLeft' && current > 0) {
         current--; updateSlider();
       } else if (e.key === 'ArrowRight' && current < TOTAL - 1) {
@@ -536,6 +543,253 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
 
     updateSlider(); // 초기 렌더
+  })();
+
+  // ── 가이드 모달 초기화 ─────────────────────────────────────────
+  /**
+   * 헤더의 📖 가이드 버튼으로 호출되는 모달 슬라이더를 초기화한다.
+   * 대기 화면의 인라인 슬라이더(`initGuideSlider`)와 **독립된 인덱스**를 가지며,
+   * 게임 진행 중에도 룰 가이드를 다시 볼 수 있게 해준다.
+   *
+   * 키보드 가드:
+   *  - 인라인 슬라이더: "대기 화면이 보이고 모달이 닫혀 있을 때"만 ←/→ 동작 (기존 가드에 모달 추가 가드 병합).
+   *  - 모달 슬라이더: "모달이 열려 있을 때"만 ←/→ 동작 + ESC로 닫힘.
+   */
+  (function initGuideModal() {
+    const TOTAL = 7;
+    let current = 0; // 0-based 인덱스 (모달 독립 상태)
+
+    const modalEl   = document.getElementById('guide-modal');
+    const openBtn   = document.getElementById('btn-open-guide');
+    const closeBtn  = document.getElementById('guide-modal-close');
+    const imgEl     = document.getElementById('guide-modal-img');
+    const prevBtn   = document.getElementById('guide-modal-prev');
+    const nextBtn   = document.getElementById('guide-modal-next');
+    const indicator = document.getElementById('guide-modal-indicator');
+
+    if (!modalEl || !openBtn || !closeBtn || !imgEl || !prevBtn || !nextBtn || !indicator) return;
+
+    /** 모달 슬라이더 UI를 현재 인덱스에 맞게 갱신한다. */
+    function updateModal() {
+      imgEl.src = `assets/guide/${current + 1}.png`;
+      imgEl.alt = `하나비 룰 가이드 ${current + 1}/${TOTAL}`;
+      indicator.textContent = `${current + 1} / ${TOTAL}`;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === TOTAL - 1;
+    }
+
+    /** 모달을 연다 — 인덱스를 1페이지로 리셋한다. */
+    function openModal() {
+      current = 0;
+      updateModal();
+      modalEl.classList.remove('hidden');
+    }
+
+    /** 모달을 닫는다. */
+    function closeModal() {
+      modalEl.classList.add('hidden');
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // 백드롭 클릭(카드 외부)으로 닫기 — 카드 내부 클릭은 modalEl이 아닌 자식에서 stop된다.
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) closeModal();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (current > 0) { current--; updateModal(); }
+    });
+    nextBtn.addEventListener('click', () => {
+      if (current < TOTAL - 1) { current++; updateModal(); }
+    });
+
+    // 키보드 — 모달이 열려있을 때만 동작 (게임 중 키 누수 방지).
+    document.addEventListener('keydown', (e) => {
+      if (modalEl.classList.contains('hidden')) return;
+      if (e.key === 'Escape') {
+        closeModal();
+      } else if (e.key === 'ArrowLeft' && current > 0) {
+        current--; updateModal();
+      } else if (e.key === 'ArrowRight' && current < TOTAL - 1) {
+        current++; updateModal();
+      }
+    });
+  })();
+
+  // ── 카운터 모달 초기화 ─────────────────────────────────────────
+  /**
+   * 헤더의 🃏 분포 버튼으로 호출되는 "안 보이는 카드 분포 카운터" 모달을 초기화한다.
+   *
+   * 표시 대상:
+   *  - **안 보이는 영역(덱 + 본인 손패)** 에 남아 있는 색×숫자별 카드 수
+   *  - 보이는 영역(상대 손패 · 불꽃 · 버림 더미)을 표준 분포에서 차감한 값
+   *
+   * 정보 공정성(§1, §13 손패 가림 원칙):
+   *  - 본인 손패의 색·숫자를 직접 표시하지 않으므로 가림 정체성이 깨지지 않는다.
+   *  - 표준 하나비 디지털 도구(BoardGameArena, Hanab.live 등)에서도 동일 정보를 제공한다.
+   *
+   * 재계산 트리거:
+   *  - 모달을 열 때(초기 렌더)
+   *  - STATE 수신 시(`renderGame()`에서 호출). 모달이 열려있지 않으면 비용 없이 종료.
+   */
+  (function initCounterModal() {
+    /** 표준 하나비 1색당 분포(§2-1): 1→3, 2→2, 3→2, 4→2, 5→1. 색당 10장 × 5색 = 50장. */
+    const INITIAL_COUNTS = { 1: 3, 2: 2, 3: 2, 4: 2, 5: 1 };
+
+    const modalEl     = document.getElementById('counter-modal');
+    const openBtn     = document.getElementById('btn-open-counter');
+    const closeBtn    = document.getElementById('counter-modal-close');
+    const gridEl      = document.getElementById('counter-grid');
+    const deckCountEl = document.getElementById('counter-deck-count');
+    const totalEl     = document.getElementById('counter-hidden-total');
+
+    if (!modalEl || !openBtn || !closeBtn || !gridEl || !deckCountEl || !totalEl) return;
+
+    /**
+     * 안 보이는 영역(덱 + 본인 손패)의 색×숫자별 카운트를 계산한다.
+     *
+     * 알고리즘:
+     *  1) `INITIAL_COUNTS`로 5색 × 5숫자 격자를 초기화(각 색당 합 10장).
+     *  2) `state.fireworks[color]`(완성 숫자 max) → 1..max까지 각 1장씩 차감.
+     *  3) `state.discardPile` 전체 차감(공개 카드).
+     *  4) `state.opponentHand` 차감(공개 카드 — 본인은 상대 손패의 색·숫자를 안다).
+     *
+     * 본인 손패(`state.myHand`)는 색·숫자가 마스킹돼 있으므로 차감하지 않는다 →
+     * 결과 = "내 손패 + 덱"에 분포된 카드 수의 합과 정확히 일치.
+     *
+     * @param {object} st 서버에서 받은 STATE(snapshotForPlayer)
+     * @returns {{counts: object, totalHidden: number, deckSize: number}} 색별 카운트 + 합계 + 덱 크기
+     */
+    function computeHiddenCounts(st) {
+      const counts = {};
+      for (const c of COLORS) {
+        counts[c] = {};
+        for (let n = 1; n <= 5; n++) counts[c][n] = INITIAL_COUNTS[n];
+      }
+      // fireworks: 색별 완성 숫자(max). 1~max까지 각 1장씩 보이는 카드.
+      const fw = st.fireworks || {};
+      for (const c of COLORS) {
+        const max = fw[c] || 0;
+        for (let n = 1; n <= max; n++) {
+          counts[c][n] = Math.max(0, counts[c][n] - 1);
+        }
+      }
+      // discardPile: 모든 카드 색·숫자 공개.
+      for (const card of (st.discardPile || [])) {
+        if (card && card.color && card.number) {
+          counts[card.color][card.number] = Math.max(0, counts[card.color][card.number] - 1);
+        }
+      }
+      // opponentHand: 상대 손패는 본인이 색·숫자 안다.
+      for (const card of (st.opponentHand || [])) {
+        if (card && card.color && card.number) {
+          counts[card.color][card.number] = Math.max(0, counts[card.color][card.number] - 1);
+        }
+      }
+      // 합계 계산.
+      let total = 0;
+      for (const c of COLORS) {
+        for (let n = 1; n <= 5; n++) total += counts[c][n];
+      }
+      return { counts, totalHidden: total, deckSize: st.deckSize || 0 };
+    }
+
+    /**
+     * 카운터 그리드 DOM을 현재 STATE 기반으로 다시 그린다.
+     * 모달이 열려 있지 않으면 호출되지 않는다(외부 가드).
+     */
+    function renderCounterGrid() {
+      if (!state) {
+        // STATE 수신 전이면 그리드는 비워두고 합계만 0으로 표시.
+        gridEl.innerHTML = '';
+        deckCountEl.textContent = '0';
+        totalEl.textContent = '0';
+        return;
+      }
+      const { counts, totalHidden, deckSize } = computeHiddenCounts(state);
+
+      // 그리드 재구성 — DOM 단순 재생성(50셀 + 헤더, 비용 무시 가능).
+      gridEl.innerHTML = '';
+
+      // 1행: 헤더(빈칸 + 숫자 1..5)
+      const corner = document.createElement('div');
+      corner.className = 'counter-grid-head';
+      corner.textContent = '';
+      gridEl.appendChild(corner);
+      for (let n = 1; n <= 5; n++) {
+        const h = document.createElement('div');
+        h.className = 'counter-grid-head';
+        h.textContent = n;
+        gridEl.appendChild(h);
+      }
+
+      // 색 행 5개 × 숫자 셀 5개
+      for (const color of COLORS) {
+        const label = document.createElement('div');
+        label.className = 'counter-grid-rowlabel card--' + color;
+        label.textContent = COLOR_KO[color] || color;
+        label.title = COLOR_KO_FULL[color] || color;
+        gridEl.appendChild(label);
+
+        for (let n = 1; n <= 5; n++) {
+          const cell = document.createElement('div');
+          cell.className = 'counter-cell' + (counts[color][n] === 0 ? ' counter-cell--zero' : '');
+          cell.dataset.color = color;
+          cell.dataset.number = String(n);
+          cell.dataset.count = String(counts[color][n]);
+
+          const cnt = document.createElement('div');
+          cnt.className = 'counter-cell-count';
+          cnt.textContent = counts[color][n];
+          cell.appendChild(cnt);
+
+          // 초기 분포 표기 (예: "/3") — 디지털 도구 관례.
+          const init = document.createElement('div');
+          init.className = 'counter-cell-initial';
+          init.textContent = '/ ' + INITIAL_COUNTS[n];
+          cell.appendChild(init);
+
+          gridEl.appendChild(cell);
+        }
+      }
+
+      deckCountEl.textContent = String(deckSize);
+      totalEl.textContent = String(totalHidden);
+    }
+
+    /** 모달을 연다 — 최신 STATE 기준으로 즉시 재계산. */
+    function openModal() {
+      renderCounterGrid();
+      modalEl.classList.remove('hidden');
+    }
+
+    /** 모달을 닫는다. */
+    function closeModal() {
+      modalEl.classList.add('hidden');
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // 백드롭(카드 외부) 클릭으로 닫기 — 가이드 모달과 동일 패턴(HR-C11B-004).
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) closeModal();
+    });
+
+    // ESC 키로 닫기 — 모달이 열려있을 때만 동작(게임 중 키 누수 방지, HR-C11B 패턴).
+    document.addEventListener('keydown', (e) => {
+      if (modalEl.classList.contains('hidden')) return;
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // STATE 수신 시 자동 재렌더를 위해 전역 핸들 노출.
+    // (외부 onState 콜백에서 호출 — 모달이 닫혀 있으면 비용 없이 종료.)
+    window.__hanabiRefreshCounter = function refreshCounterIfOpen() {
+      if (modalEl.classList.contains('hidden')) return;
+      renderCounterGrid();
+    };
   })();
 
   // ── 시작 ──

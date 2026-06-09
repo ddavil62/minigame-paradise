@@ -85,6 +85,41 @@ body {
 }
 .btn-back-to-lobby:hover { background: var(--panel); }
 
+/* ── 헤더 가이드 버튼 (게임 중에도 룰 가이드 모달 호출) ───────── */
+.btn-open-guide {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-open-guide:hover { background: var(--panel); }
+
+/* ── 헤더 카운터 버튼 (안 보이는 카드 분포 모달 호출) ─────────── */
+.btn-open-counter {
+  position: absolute;
+  top: 12px;
+  /* 가이드 버튼(right:12px, 약 78px 폭) 옆에 자리잡도록 우측 여백 산정 */
+  right: 100px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-open-counter:hover { background: var(--panel); }
+@media (max-width: 480px) {
+  /* 모바일에서는 두 버튼이 겹치지 않도록 분포 버튼을 가이드 버튼 위에 쌓는다. */
+  .btn-open-counter { right: 12px; top: 48px; }
+}
+
 /* ── 화면 전환 ──────────────────────────────────────────────── */
 .screen { flex: 1; }
 .hidden { display: none !important; }
@@ -608,3 +643,191 @@ body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.error { border-color: var(--token-fuse); color: #ff9b8d; }
+
+/* ── 가이드 모달 (헤더 📖 가이드 버튼으로 호출) ─────────────── */
+.guide-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.guide-modal-card {
+  position: relative;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 36px 24px 20px;
+  max-width: 720px;
+  width: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+.guide-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.1s, color 0.1s;
+}
+.guide-modal-close:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+/* 모달 내부의 viewport/controls/nav-btn/indicator는 기존 .guide-slider-* 스타일을 그대로 재사용한다. */
+
+/* ── 카운터 모달 (헤더 🃏 분포 버튼으로 호출) ────────────────── */
+/* 가이드 모달과 동일한 풀스크린 백드롭 + 카드 패턴(HR-C11B 일관성) */
+.counter-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.counter-modal-card {
+  position: relative;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 36px 24px 20px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.counter-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.1s, color 0.1s;
+}
+.counter-modal-close:hover { background: var(--panel); color: var(--text); }
+.counter-modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+}
+.counter-modal-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+/* 5색×5숫자 그리드 — 첫 열은 색 라벨, 1행은 헤더(빈칸+1~5) */
+.counter-grid {
+  display: grid;
+  /* 색 라벨 열(고정 폭) + 숫자 5열 (균등) */
+  grid-template-columns: 36px repeat(5, 1fr);
+  gap: 4px;
+}
+.counter-grid-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 4px 0;
+}
+.counter-grid-rowlabel {
+  /* 색 라벨 — 카드 색과 일치 (가독성을 위해 흰색은 글자 진하게) */
+  font-size: 14px;
+  font-weight: 800;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,0,0,0.25);
+}
+.counter-grid-rowlabel.card--white  { background: var(--card-white);  color: #2b2b2b; }
+.counter-grid-rowlabel.card--red    { background: var(--card-red);    color: #fff; }
+.counter-grid-rowlabel.card--blue   { background: var(--card-blue);   color: #fff; }
+.counter-grid-rowlabel.card--green  { background: var(--card-green);  color: #fff; }
+.counter-grid-rowlabel.card--yellow { background: var(--card-yellow); color: #5a4a00; }
+
+.counter-cell {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+.counter-cell-count {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+.counter-cell-initial {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+/* 0인 셀 — 해당 색·숫자 완전 소진. 시각적으로 약하게 + 줄긋기. */
+.counter-cell--zero {
+  opacity: 0.4;
+}
+.counter-cell--zero .counter-cell-count {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+.counter-modal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+  padding: 8px 0 0;
+}
+.counter-modal-summary strong {
+  color: var(--accent);
+  font-size: 18px;
+  margin: 0 2px;
+}
+.counter-summary-divider { color: var(--text-dim); opacity: 0.5; }
+.counter-modal-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* 모바일: 셀 폰트/패딩 축소 */
+@media (max-width: 480px) {
+  .counter-grid { gap: 3px; grid-template-columns: 30px repeat(5, 1fr); }
+  .counter-cell { min-height: 38px; padding: 4px 2px; }
+  .counter-cell-count { font-size: 17px; }
+}

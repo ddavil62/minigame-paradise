@@ -18,6 +18,8 @@
       <span class="status-divider">|</span>
       <span>점수: <span id="score-label">0</span></span>
     </div>
+    <button id="btn-open-counter" class="btn-open-counter" type="button" aria-label="안 보이는 카드 분포 카운터 열기">🃏 분포</button>
+    <button id="btn-open-guide" class="btn-open-guide" type="button" aria-label="룰 가이드 보기">📖 가이드</button>
     <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
   </header>
 
@@ -154,6 +156,42 @@
 
   <!-- 토스트 -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- 가이드 모달 (게임 진행 중에도 룰 가이드를 다시 볼 수 있도록 헤더 버튼으로 호출) -->
+  <div id="guide-modal" class="guide-modal hidden" role="dialog" aria-modal="true" aria-label="하나비 룰 가이드">
+    <div class="guide-modal-card">
+      <button id="guide-modal-close" class="guide-modal-close" type="button" aria-label="닫기">✕</button>
+      <div class="guide-slider-viewport">
+        <img id="guide-modal-img" class="guide-slide-img" src="assets/guide/1.png" alt="하나비 룰 가이드 1/7" draggable="false" />
+      </div>
+      <div class="guide-slider-controls">
+        <button id="guide-modal-prev" class="guide-nav-btn" type="button" aria-label="이전" disabled>&#8592;</button>
+        <span id="guide-modal-indicator" class="guide-indicator">1 / 7</span>
+        <button id="guide-modal-next" class="guide-nav-btn" type="button" aria-label="다음">&#8594;</button>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    안 보이는 카드 분포 카운터 모달 (헤더 🃏 분포 버튼으로 호출).
+    안 보이는 영역(덱 + 본인 손패)에 남아 있는 색×숫자별 카운트를 보여준다.
+    본인 손패의 색/숫자를 직접 표시하지 않으므로 §1/§13 손패 가림 원칙을 깨지 않는다.
+  -->
+  <div id="counter-modal" class="counter-modal hidden" role="dialog" aria-modal="true" aria-label="안 보이는 카드 분포">
+    <div class="counter-modal-card">
+      <button id="counter-modal-close" class="counter-modal-close" type="button" aria-label="닫기">✕</button>
+      <div class="counter-modal-title">안 보이는 카드 분포 <span class="counter-modal-sub">(덱 + 내 손패)</span></div>
+      <div id="counter-grid" class="counter-grid" aria-label="색·숫자별 남은 카드 수"></div>
+      <div class="counter-modal-summary">
+        <span>남은 덱 <strong id="counter-deck-count">0</strong>장</span>
+        <span class="counter-summary-divider">/</span>
+        <span>안 보이는 합계 <strong id="counter-hidden-total">0</strong>장</span>
+      </div>
+      <div class="counter-modal-hint">
+        보이는(상대 손패 · 불꽃 · 버림) 카드를 표준 분포에서 차감해 표시합니다. 내 손패의 색·숫자는 노출하지 않습니다.
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>
