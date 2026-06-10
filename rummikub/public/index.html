@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>루미큐브 - LAN 1:1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="theme-rummikub">
+  <header class="game-header">
+    <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+    <h1>🀄 루미큐브</h1>
+    <button id="btn-mute" class="btn-mute" type="button" aria-label="효과음 켜기/끄기" title="효과음 켜기/끄기">🔊</button>
+    <div class="header-center">
+      <div class="status-bar">
+        <span id="player-label">접속 중...</span>
+        <span class="status-divider">·</span>
+        <span id="status-msg">서버 연결 중</span>
+        <span class="status-divider">·</span>
+        <span>턴 <span id="turn-label">-</span></span>
+        <span class="status-divider">·</span>
+        <span>더미 <span id="deck-label">0</span>장</span>
+      </div>
+    </div>
+    <div class="score-bar">
+      <span class="score-bar-side">
+        <span class="score-bar-name" id="hdr-p1-name">P1</span>
+        <span class="score-bar-total" id="hdr-p1-hand">14</span>
+        <span class="score-bar-sub" id="hdr-p1-played">·미등판</span>
+      </span>
+      <span class="score-bar-vs">VS</span>
+      <span class="score-bar-side">
+        <span class="score-bar-sub" id="hdr-p2-played">·미등판</span>
+        <span class="score-bar-total" id="hdr-p2-hand">14</span>
+        <span class="score-bar-name" id="hdr-p2-name">P2</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- 대기 화면 -->
+  <section id="screen-waiting" class="screen screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">🀄</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+
+      <div id="invite-panel" class="invite-panel hidden">
+        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
+        <div class="invite-url-row">
+          <code id="invite-url" class="invite-url">http://...</code>
+          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
+        </div>
+        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      </div>
+
+      <div id="ready-panel" class="ready-panel hidden">
+        <div class="ready-status">
+          <span class="ready-slot">P1 <span id="p1-ready-mark" class="ready-mark">대기</span></span>
+          <span class="ready-divider">/</span>
+          <span class="ready-slot">P2 <span id="p2-ready-mark" class="ready-mark">대기</span></span>
+        </div>
+        <button id="ready-btn" class="primary-btn ready-btn" type="button">준비 완료</button>
+        <div class="ready-hint">양쪽 모두 준비를 누르면 게임이 시작됩니다.</div>
+
+        <div id="ai-panel" class="ai-panel hidden">
+          <div class="ai-divider"><span>또는</span></div>
+          <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
+          <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+        </div>
+      </div>
+
+      <div class="rules-summary">
+        <h3>루미큐브 규칙 요약</h3>
+        <ul>
+          <li>타일 106장(1~13 × 4색 × 2 + 조커 2). 각자 손에 <strong>14장</strong>.</li>
+          <li><strong>그룹</strong>: 같은 숫자 + 다른 색 3~4장. <strong>런</strong>: 같은 색 + 연속 숫자 3장 이상.</li>
+          <li><strong>첫 등판</strong>: 본인이 내는 모든 세트의 숫자 합 <strong>30점 이상</strong>.</li>
+          <li>등판 후엔 보드 재조합 자유. 턴 종료 시 보드의 모든 세트가 valid여야 함.</li>
+          <li>못 내면 <strong>더미 1장 뽑기</strong>. 손 0장이면 즉시 승리.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 게임 화면 -->
+  <main id="screen-game" class="screen screen-game hidden">
+    <!-- 보드 영역 -->
+    <section class="zone zone-board">
+      <div class="zone-title">
+        <span>🀄 보드</span>
+        <span id="meld-hint" class="meld-hint"></span>
+      </div>
+      <div id="board-area" class="board-area"></div>
+      <div class="board-toolbar">
+        <button id="btn-new-set" class="secondary-btn" type="button">＋ 새 세트</button>
+        <button id="btn-end-turn" class="primary-btn" type="button">턴 종료</button>
+        <span id="action-hint" class="action-hint">상대 턴입니다.</span>
+      </div>
+    </section>
+
+    <!-- 손 영역 -->
+    <section class="zone zone-hand">
+      <div class="zone-title">
+        <span>🃏 내 손 (<span id="hand-count">0</span>장)</span>
+        <span id="selection-info" class="selection-info"></span>
+      </div>
+      <div id="hand-area" class="hand-area"></div>
+    </section>
+  </main>
+
+  <!-- 게임 종료 오버레이 -->
+  <div id="screen-game-over" class="result-overlay hidden">
+    <div class="result-card">
+      <div id="result-outcome" class="result-outcome">결과</div>
+      <div class="result-scores">
+        <div class="result-side">
+          <div class="result-name" id="result-p1-name">P1</div>
+          <div class="result-total" id="result-p1-hand">0</div>
+          <div class="result-sub">잔여 타일</div>
+        </div>
+        <div class="result-vs">VS</div>
+        <div class="result-side">
+          <div class="result-name" id="result-p2-name">P2</div>
+          <div class="result-total" id="result-p2-hand">0</div>
+          <div class="result-sub">잔여 타일</div>
+        </div>
+      </div>
+      <div class="result-reason" id="result-reason"></div>
+      <div class="result-actions">
+        <button id="rematch-btn" class="primary-btn rematch-btn" type="button">재대결</button>
+        <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
+      </div>
+      <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

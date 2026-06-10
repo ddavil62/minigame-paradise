@@ -86,5 +86,16 @@
     "color": "#E84A5F",
     "emoji": "🎲",
     "botAvailable": true
+  },
+  {
+    "id": "rummikub",
+    "name": "루미큐브",
+    "description": "타일 그룹/런을 만들어 손을 비우는 1:1 두뇌 대결!",
+    "port": 3011,
+    "httpPath": "/rummikub/",
+    "wsPath": "/rummikub/ws",
+    "color": "#3FA7D6",
+    "emoji": "🀄",
+    "botAvailable": true
   }
 ]

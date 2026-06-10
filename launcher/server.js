@@ -33,6 +33,7 @@ import { createApp as createTetrisApp }    from '../tetris-battle/server.js';
 import { createApp as createJanggiApp }   from '../janggi/server.js';
 import { createApp as createHanabiApp }   from '../hanabi/server.js';
 import { createApp as createYahtzeeApp }  from '../yahtzee/server.js';
+import { createApp as createRummikubApp } from '../rummikub/server.js';
 
 // ── 경로 및 인자 파싱 ──────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -84,6 +85,10 @@ const GAME_APPS = {
   // 요트 다이스 — 봇 지원 (2026-06-08 추가).
   'yahtzee':        createYahtzeeApp({
     getBotUrl: () => `ws://localhost:${PORT}/yahtzee/ws?mode=bot`,
+  }),
+  // 루미큐브 — 봇 지원 (2026-06-10 추가).
+  'rummikub':       createRummikubApp({
+    getBotUrl: () => `ws://localhost:${PORT}/rummikub/ws?mode=bot`,
   }),
 };
 
@@ -540,7 +545,7 @@ function printBanner(port, lanIps) {
     console.log(ANSI.cyan + line(`    ${ANSI.dim}(LAN IP 미감지 — ipconfig로 확인)${ANSI.reset}`) + ANSI.reset);
   }
   console.log(ANSI.cyan + empty + ANSI.reset);
-  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/ /hanabi/ /yahtzee/${ANSI.reset}`) + ANSI.reset);
+  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/ /hanabi/ /yahtzee/ /rummikub/${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + line(`  ${ANSI.dim}종료: Ctrl+C${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + top + ANSI.reset);
   console.log('');
