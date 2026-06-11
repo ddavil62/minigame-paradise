@@ -986,9 +986,12 @@ section('STATIC-019: 보드 → 같은 보드 세트 이동 (순서 변경)');
     { p1: [], p2: g.hands.p2.slice() }
   );
   // a를 같은 세트 안 다른 위치로 이동.
+  // (2026-06-11 갱신, 룰 수정 #6) to.index는 "이동 전 배열의 슬롯 위치" 의미로 통일.
+  // index 2 = b와 c 사이 → [b, a, c]. 옛 단정 [b, c, a]는 from 제거 후 인덱스가
+  // 한 칸 밀리는 off-by-one 버그 동작이었음 (오른쪽 이동 시 index-1 보정 추가됨).
   const r = moveTile(g, 'p1', { kind: 'set', setId: 'set_a', tileId: 'a' }, { kind: 'set', setId: 'set_a', index: 2 });
   assertEq(r.ok, true, '같은 세트 내 이동 ok');
-  assertEq(g.board[0].tiles, ['b', 'c', 'a'], '순서 [b, c, a]');
+  assertEq(g.board[0].tiles, ['b', 'a', 'c'], '순서 [b, a, c] (슬롯 의미 보정)');
 }
 
 // ── STATIC-020: createApp HTTP 경로 traversal 방어 ────────────────
@@ -1212,7 +1215,10 @@ section('INT-004/005: disconnect 시 OPPONENT_LEFT 송신 + game 초기화');
 }
 
 // ── INT-006: rematch 흐름 ────────────────────────────────────────
-section('INT-006: REMATCH 흐름 — 양쪽 REMATCH → 새 게임 시작');
+// (2026-06-11 갱신) QA pass2 MED-P2-1 수정으로 게임 진행 중 REMATCH는 거부된다.
+// 옛 단정("진행 중 REMATCH → 새 게임 시작")은 진행 중 게임을 강제 리셋하는
+// 사보타주 경로라 폐기. 종료 후 정상 REMATCH 흐름은 qa-pass2-rematch.test.js가 커버.
+section('INT-006: REMATCH 흐름 — 게임 진행 중 REMATCH는 거부');
 {
   const PORT = 3102;
   const { server } = await setupServer(PORT);
@@ -1227,17 +1233,17 @@ section('INT-006: REMATCH 흐름 — 양쪽 REMATCH → 새 게임 시작');
   c1.send({ type: 'READY' });
   c2.send({ type: 'READY' });
   await c1.waitFor('START', 5000);
-  // 이전 게임이 진행 중인 상태에서도 REMATCH 보내봄.
+  // 게임 진행 중 REMATCH → ERROR 거부 기대.
+  // c2 수신 큐에는 첫 게임의 START가 남아있으므로 관찰 전에 비운다.
+  c2.queue.length = 0;
   c1.send({ type: 'REMATCH' });
   c2.send({ type: 'REMATCH' });
-  // REMATCH_STATUS 수신.
-  const s1 = await c1.waitFor('REMATCH_STATUS', 3000);
-  assertTrue(s1 && (s1.p1Ready || s1.p2Ready), 'REMATCH_STATUS 수신');
-  // 양쪽 REMATCH → START 다시.
-  // 게임 진행 중에도 REMATCH 양쪽 → startNewGame 호출됨. ready 초기화.
-  const start2 = await c1.waitFor('START', 5000).catch(() => null);
-  if (start2) assertTrue(true, '새 게임 START 수신');
-  else assertTrue(false, 'REMATCH 후 START 미수신');
+  const err1 = await c1.waitFor('ERROR', 3000);
+  assertTrue(err1 && /진행 중/.test(err1.message || ''), '진행 중 REMATCH → ERROR 거부');
+  // 거부 후 새 게임이 시작되면 안 된다 — 1.2초 관찰 후 c2 수신 큐에 START 없음 확인.
+  await new Promise((r) => setTimeout(r, 1200));
+  const restarted = c2.queue.some((m) => m.type === 'START');
+  assertTrue(!restarted, '진행 중 REMATCH로 새 게임 시작 안 됨');
   c1.ws.close();
   c2.ws.close();
   await new Promise((r) => setTimeout(r, 100));

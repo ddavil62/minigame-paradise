@@ -216,7 +216,10 @@ export function createApp(opts = {}) {
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
 
-    const playerId = players.length === 0 ? 'p1' : 'p2';
+    // 슬롯 ID 배정: 빈 슬롯을 명시적으로 탐색한다. (MED-P2-2 fix)
+    // 이전 구현은 `players.length`만으로 결정해서, p1이 disconnect한 직후 새 접속자가
+    // 무조건 p2로 배정되어 기존 ws2(p2)와 ID 충돌이 났다. 빈 슬롯 ID로 채운다.
+    const playerId = players.find((p) => p.id === 'p1') ? 'p2' : 'p1';
     /** @type {Player} */
     const player = {
       id: playerId,
@@ -241,6 +244,14 @@ export function createApp(opts = {}) {
         msg = JSON.parse(data.toString());
       } catch (e) {
         console.warn('[rummikub] JSON 파싱 실패:', data.toString());
+        return;
+      }
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (HIGH-P2-1 fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
         return;
       }
 
@@ -355,6 +366,16 @@ export function createApp(opts = {}) {
             sendTo(player, { type: 'ERROR', message: '상대방이 없어 새 게임을 시작할 수 없습니다.' });
             break;
           }
+          // 게임 진행 중에는 REMATCH를 거부한다. (MED-P2-1 fix)
+          // 이전 구현은 game.phase 검사 없이 양쪽 rematchReady만 보고 startNewGame을 호출해서
+          // 진행 중인 게임이 강제 리셋되는 사보타주 경로가 있었다.
+          // game이 존재하고 phase가 'ended'가 아니면(=진행 중) 거부한다.
+          if (game && game.phase !== 'ended') {
+            sendTo(player, { type: 'ERROR', message: '게임 진행 중에는 재대결 요청을 보낼 수 없습니다.' });
+            break;
+          }
+          // 멱등성 가드: 이미 rematchReady=true면 broadcast 노이즈 없이 무시. (LOW-P2-1 fix)
+          if (player.rematchReady) break;
           player.rematchReady = true;
           broadcastAll({
             type: 'REMATCH_STATUS',
@@ -377,6 +398,11 @@ export function createApp(opts = {}) {
     ws.on('close', () => {
       console.log(`[rummikub] ${player.id} 연결 해제 (mode=${ws._mode})`);
       players = players.filter((p) => p.id !== player.id);
+      // [#7] 이탈 후 잔류 플레이어의 ready 리셋 — 재접속 시 한 명만 READY로 자동 게임 시작 방지.
+      for (const p of players) {
+        p.ready = false;
+        p.rematchReady = false;
+      }
       if (!ws._isBot) {
         killBotChild();
       }

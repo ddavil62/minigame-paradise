@@ -113,6 +113,43 @@ function lookupTile(state, tileId) {
 }
 
 /**
+ * 런 검증에서 결정된 "최선의 시작 슬롯"을 다시 계산한다.
+ * validateSet의 best score를 부여한 start 위치와 동일해야 한다.
+ * (swapJoker / computeInitialMeldScore가 호출하므로 헬퍼 섹션 상단에 둔다.)
+ *
+ * @param {Array<object>} tiles
+ * @returns {number} start (1~13) 또는 -1
+ */
+function findRunStart(tiles) {
+  const jokers = tiles.filter((t) => t.kind === 'joker');
+  const nums = tiles.filter((t) => t.kind === 'num');
+  if (nums.length === 0) return -1;
+  const minN = Math.min(...nums.map((t) => t.number));
+  const maxN = Math.max(...nums.map((t) => t.number));
+  const startMin = Math.max(1, maxN - tiles.length + 1);
+  const startMax = Math.min(minN, 13 - tiles.length + 1);
+  let bestScore = -1;
+  let bestStart = -1;
+  for (let start = startMin; start <= startMax; start++) {
+    const end = start + tiles.length - 1;
+    let ok = true;
+    for (const n of nums) {
+      if (n.number < start || n.number > end) { ok = false; break; }
+    }
+    if (!ok) continue;
+    const missing = tiles.length - nums.length;
+    if (missing !== jokers.length) continue;
+    let score = 0;
+    for (let v = start; v <= end; v++) score += v;
+    if (score > bestScore) {
+      bestScore = score;
+      bestStart = start;
+    }
+  }
+  return bestStart;
+}
+
+/**
  * 단일 세트의 valid 여부 + 합산 점수를 계산한다.
  * 조커 점수는 "대체한 타일의 값"으로 계산한다(첫 등판 30점 계산에도 동일 적용).
  *
@@ -354,6 +391,11 @@ export function createGame() {
 export function addNewSet(state, by) {
   if (state.phase !== 'playing') return { ok: false, error: '게임이 진행 중이 아닙니다.' };
   if (state.currentTurn !== by) return { ok: false, error: '지금은 당신의 턴이 아닙니다.' };
+  // [#8] 빈 세트(tiles.length === 0) 4개 이상이면 추가 거부 — 클라 UI 스크롤 폭주 방지.
+  const emptyCount = state.board.filter((s) => !s.tiles || s.tiles.length === 0).length;
+  if (emptyCount >= 4) {
+    return { ok: false, error: '빈 세트는 동시에 4개까지만 만들 수 있습니다.' };
+  }
   const setId = `set_${state.nextSetSeq}`;
   state.nextSetSeq += 1;
   state.board.push({ id: setId, type: 'group', tiles: [] });
@@ -414,6 +456,18 @@ export function moveTile(state, by, from, to) {
         return { ok: false, error: '첫 등판 전에는 보드의 다른 타일을 회수할 수 없습니다. 본인이 이번 턴에 낸 타일만 가능합니다.' };
       }
     }
+    // [#2] 첫 등판 전: 보드 타일을 다른 보드 세트로 이동하는 것도 차단.
+    // (기존 보드 타일을 본인 등판 세트에 결합해 30점 계산을 오염시키는 것을 막는다.
+    //  본인이 이번 턴에 손에서 낸 타일만 세트 이동을 허용한다.)
+    if (to.kind === 'set' && !state.played[by]) {
+      const wasInMyHand = state.turnSnapshot && state.turnSnapshot.hands[by].includes(tileId);
+      if (!wasInMyHand) {
+        return {
+          ok: false,
+          error: '첫 등판 전에는 본인이 이번 턴에 낸 타일로만 새 세트를 만들 수 있습니다.',
+        };
+      }
+    }
   } else {
     return { ok: false, error: '알 수 없는 from.kind' };
   }
@@ -441,11 +495,19 @@ export function moveTile(state, by, from, to) {
   if (to.kind === 'hand') {
     state.hands[by].push(tileId);
   } else { // 'set'
-    if (Number.isInteger(to.index) && to.index >= 0 && to.index <= toSet.tiles.length) {
-      toSet.tiles.splice(to.index, 0, tileId);
-    } else {
-      toSet.tiles.push(tileId);
+    // [#6] to.index는 "이동 전 배열" 기준 슬롯 위치다. 같은 세트면 위에서 from을
+    // 이미 splice해 길이가 1 줄었으므로, 유효 범위 판정도 이동 전 길이 기준이어야
+    // 끝 슬롯(index === 이동 전 length)이 잘못 클램프되지 않는다. (QA-ISSUE-1 fix)
+    const preLen = (toSet === fromSet) ? toSet.tiles.length + 1 : toSet.tiles.length;
+    let insertIdx = (Number.isInteger(to.index) && to.index >= 0 && to.index <= preLen)
+      ? to.index
+      : preLen;
+    // 같은 세트 내 오른쪽 이동: from 제거로 이후 인덱스가 1 당겨지므로 보정한다.
+    // (from.kind === 'hand'이면 fromSet === null이라 조건이 false → 보정 없음)
+    if (toSet === fromSet && insertIdx > fromSetIdx) {
+      insertIdx -= 1;
     }
+    toSet.tiles.splice(insertIdx, 0, tileId);
   }
 
   return { ok: true };
@@ -471,6 +533,10 @@ export function moveTile(state, by, from, to) {
 export function swapJoker(state, by, params) {
   if (state.phase !== 'playing') return { ok: false, error: '게임이 진행 중이 아닙니다.' };
   if (state.currentTurn !== by) return { ok: false, error: '지금은 당신의 턴이 아닙니다.' };
+  // [#4] 첫 등판 전에는 조커 회수 불가.
+  if (!state.played[by]) {
+    return { ok: false, error: '조커 회수는 첫 등판 후에만 가능합니다.' };
+  }
   if (!params || typeof params.setId !== 'string' || !Number.isInteger(params.jokerIndex) || typeof params.handTileId !== 'string') {
     return { ok: false, error: 'SWAP_JOKER 인자 누락' };
   }
@@ -491,6 +557,49 @@ export function swapJoker(state, by, params) {
 
   const handTile = lookupTile(state, handTileId);
   if (!handTile || handTile.kind !== 'num') return { ok: false, error: '조커 자리에는 숫자 타일만 넣을 수 있습니다.' };
+
+  // ── [#4] 1차: 정확 대체 타일 검증 (기존 "교체 후 valid" 검증보다 엄격) ──
+  const setResolved = set.tiles.map((tid) => lookupTile(state, tid));
+  if (setResolved.some((t) => !t)) return { ok: false, error: '세트 타일 lookup 실패' };
+  const setValidation = validateSet(setResolved);
+  if (!setValidation.valid) {
+    return { ok: false, error: '대상 세트가 현재 유효하지 않습니다.' };
+  }
+  if (setValidation.type === 'group') {
+    // 그룹: 같은 숫자 + 세트에 없는 색이어야 한다.
+    const groupNums = setResolved.filter((t) => t.kind === 'num');
+    const groupNumber = groupNums.length > 0 ? groupNums[0].number : null;
+    const usedColors = new Set(groupNums.map((t) => t.color));
+    if (handTile.number !== groupNumber || usedColors.has(handTile.color)) {
+      return {
+        ok: false,
+        error: '조커가 대체하던 타일과 일치하지 않습니다. 그룹: 같은 숫자 + 세트에 없는 색이어야 합니다.',
+      };
+    }
+  } else if (setValidation.type === 'run') {
+    // 런: 같은 색 + 빠진 슬롯 숫자 중 하나여야 한다.
+    const runNums = setResolved.filter((t) => t.kind === 'num');
+    if (runNums.length === 0) return { ok: false, error: '세트 타일 오류' };
+    const runColor = runNums[0].color;
+    if (handTile.color !== runColor) {
+      return { ok: false, error: '조커가 대체하던 타일과 일치하지 않습니다. 런: 같은 색이어야 합니다.' };
+    }
+    // 빠진 슬롯 집합 = [start..end] − {숫자타일 numbers}.
+    const start = findRunStart(setResolved);
+    if (start < 0) return { ok: false, error: '런 시작 슬롯 계산 실패' };
+    const end = start + setResolved.length - 1;
+    const numSet = new Set(runNums.map((t) => t.number));
+    const missingSlots = [];
+    for (let v = start; v <= end; v++) {
+      if (!numSet.has(v)) missingSlots.push(v);
+    }
+    if (!missingSlots.includes(handTile.number)) {
+      return {
+        ok: false,
+        error: `조커가 대체하던 타일과 일치하지 않습니다. 런에서 빠진 슬롯: [${missingSlots.join(',')}]`,
+      };
+    }
+  }
 
   // 조커를 손 타일로 가상 교체한 세트가 valid한지 + 손 타일이 정확히 그 슬롯에 들어맞는지 검증.
   const candidateTiles = set.tiles.map((tid, i) => i === jokerIndex ? handTile : lookupTile(state, tid));
@@ -537,7 +646,7 @@ export function swapJoker(state, by, params) {
  *   committed: boolean,
  *   drewTile?: string|null,
  *   gameOver?: boolean,
- *   reason?: 'invalid_board'|'no_change'|'initial_meld_short'|'committed'
+ *   reason?: 'invalid_board'|'no_change'|'initial_meld_short'|'joker_unused'|'no_tile_played'|'committed'
  * }}
  */
 export function endTurn(state, by) {
@@ -601,6 +710,23 @@ export function endTurn(state, by) {
         error: '회수한 조커는 그 턴 안에 다른 세트에 사용해야 합니다.',
       });
     }
+  }
+
+  // ── [#1] 손 타일 감소 검사: 보드에 최소 1장을 내야 commit 가능 ──
+  // 보드 변경이 있더라도 손에서 타일을 1장도 내지 않은 경우(순수 재배치)는 패스로 처리.
+  // (손이 줄지 않았다 = 손에서 보드로 옮긴 타일이 없다)
+  if (state.hands[by].length >= snap.hands[by].length) {
+    restoreFromSnapshot(state, snap);
+    const drewTile = drawOne(state, by);
+    if (drewTile === null && state.deck.length === 0) {
+      state.consecutivePassesAfterDeckEmpty = (state.consecutivePassesAfterDeckEmpty || 0) + 1;
+    }
+    return finishTurn(state, by, {
+      committed: false,
+      drewTile,
+      reason: 'no_tile_played',
+      error: '손에서 1장 이상 내지 않아 변경이 롤백되었습니다.',
+    });
   }
 
   // ── 첫 등판(Initial Meld) 검증 ──
@@ -801,59 +927,52 @@ function computeInitialMeldScore(state, snap, by) {
     }
     if (addedIndices.length === 0) continue;
 
+    // [#2-2] 방어선 2중화: 이 세트에 본인이 내지 않은 기존 보드 타일이 섞여 있으면 점수 기여 0.
+    // (moveTile 가드를 우회했을 때 30점 미달로 자동 롤백되도록)
+    const hasNonAdded = set.tiles.some(
+      (tid) => !beforeIds.has(tid) && !myHandBefore.has(tid),  // 이번 턴 생긴 보드 타일이지만 내 손에 없던 것
+    ) || set.tiles.some((tid) => beforeIds.has(tid));            // 또는 이전 턴부터 보드에 있던 타일
+    if (hasNonAdded) continue;
+
+    // 인덱스 오름차순 정렬(조커 점수 배정의 등장 순서 기준).
+    addedIndices.sort((a, b) => a - b);
+
     if (v.type === 'group') {
       // 그룹의 sampleNumber = 첫 num 타일의 number(조커는 대체값).
       const firstNum = resolved.find((t) => t.kind === 'num');
       const groupNumber = firstNum ? firstNum.number : 0;
       total += addedIndices.length * groupNumber;
     } else if (v.type === 'run') {
-      // 런: validateSet 내부에서 결정한 시작 슬롯을 재현해야 한다.
-      // validateSet는 점수 합만 반환하므로, 동일 로직 재실행으로 start를 찾는다.
+      // [#3] 런 점수 순서 독립 계산:
+      //   빠진 슬롯 집합 = [start..end] − {숫자타일 numbers}.
+      //   숫자 타일 → 자기 number, 조커 → 세트 내 조커 등장 순서대로 빠진 슬롯 값 오름차순 배정.
       const start = findRunStart(resolved);
       if (start < 0) continue; // 이론상 도달 불가.
-      // addedIndices의 각 인덱스 i에 대응하는 슬롯 숫자 = start + i.
+      const runEnd = start + set.tiles.length - 1;
+      const numSet = new Set(
+        resolved.filter((t) => t.kind === 'num').map((t) => t.number),
+      );
+      const missingSlots = [];
+      for (let v2 = start; v2 <= runEnd; v2++) {
+        if (!numSet.has(v2)) missingSlots.push(v2);
+      }
+      // missingSlots는 이미 오름차순.
+      let missingIdx = 0;
       for (const i of addedIndices) {
-        total += start + i;
+        const tile = resolved[i];
+        if (tile.kind === 'num') {
+          total += tile.number;
+        } else {
+          // 조커: 세트 내 조커 등장 순서대로 빠진 슬롯 배정.
+          if (missingIdx < missingSlots.length) {
+            total += missingSlots[missingIdx];
+          }
+          missingIdx += 1;
+        }
       }
     }
   }
   return total;
-}
-
-/**
- * 런 검증에서 결정된 "최선의 시작 슬롯"을 다시 계산한다.
- * validateSet의 best score를 부여한 start 위치와 동일해야 한다.
- *
- * @param {Array<object>} tiles
- * @returns {number} start (1~13) 또는 -1
- */
-function findRunStart(tiles) {
-  const jokers = tiles.filter((t) => t.kind === 'joker');
-  const nums = tiles.filter((t) => t.kind === 'num');
-  if (nums.length === 0) return -1;
-  const minN = Math.min(...nums.map((t) => t.number));
-  const maxN = Math.max(...nums.map((t) => t.number));
-  const startMin = Math.max(1, maxN - tiles.length + 1);
-  const startMax = Math.min(minN, 13 - tiles.length + 1);
-  let bestScore = -1;
-  let bestStart = -1;
-  for (let start = startMin; start <= startMax; start++) {
-    const end = start + tiles.length - 1;
-    let ok = true;
-    for (const n of nums) {
-      if (n.number < start || n.number > end) { ok = false; break; }
-    }
-    if (!ok) continue;
-    const missing = tiles.length - nums.length;
-    if (missing !== jokers.length) continue;
-    let score = 0;
-    for (let v = start; v <= end; v++) score += v;
-    if (score > bestScore) {
-      bestScore = score;
-      bestStart = start;
-    }
-  }
-  return bestStart;
 }
 
 /**

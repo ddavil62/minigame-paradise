@@ -735,6 +735,344 @@ try {
   console.log(`  FAIL  bot scenario 예외: ${err.message}`);
 }
 
+// ── RUMMI-023: #1 재배치만으로 commit 불가 (no_tile_played) ──────
+section('RUMMI-023: #1 재배치만으로 commit 불가 (no_tile_played)');
+{
+  const g = createGame();
+  const tiles = {
+    s1: { id: 's1', kind: 'num', color: 'red', number: 4 },
+    s2: { id: 's2', kind: 'num', color: 'red', number: 5 },
+    s3: { id: 's3', kind: 'num', color: 'red', number: 6 },
+    s4: { id: 's4', kind: 'num', color: 'red', number: 7 },
+  };
+  Object.assign(g.tiles, tiles);
+  g.board = [{ id: 'set_a', type: 'run', tiles: ['s1', 's2', 's3'] }];
+  g.hands.p1 = ['s4'];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: g.board.map((s) => ({ id: s.id, type: s.type, tiles: s.tiles.slice() })),
+    hands: { p1: ['s4'], p2: g.hands.p2.slice() },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 순서만 바뀐 재배치 — 손 크기 동일.
+  g.board = [
+    { id: 'set_a', type: 'run', tiles: ['s1', 's3', 's2'] },
+  ];
+  const er = endTurn(g, 'p1');
+  assertEq(er.committed, false, 'commit 안 됨');
+  assertEq(er.reason, 'no_tile_played', '이유: no_tile_played');
+  assertEq(g.hands.p1.length, 2, '손 = 1 + 더미 1 = 2장');
+}
+
+// ── RUMMI-024: #1 덱 빈 + no_tile_played → 패스 카운트 ──────────
+section('RUMMI-024: #1 덱 빈 + no_tile_played → consecutivePasses +1');
+{
+  const g = createGame();
+  g.deck = []; // 더미 비움.
+  const tiles = {
+    x1: { id: 'x1', kind: 'num', color: 'blue', number: 3 },
+    x2: { id: 'x2', kind: 'num', color: 'blue', number: 4 },
+    x3: { id: 'x3', kind: 'num', color: 'blue', number: 5 },
+  };
+  Object.assign(g.tiles, tiles);
+  g.board = [{ id: 'set_b', type: 'run', tiles: ['x1', 'x2', 'x3'] }];
+  g.hands.p1 = ['x1'];
+  g.played.p1 = true;
+  g.consecutivePassesAfterDeckEmpty = 0;
+  g.turnSnapshot = {
+    board: g.board.map((s) => ({ id: s.id, type: s.type, tiles: s.tiles.slice() })),
+    hands: { p1: g.hands.p1.slice(), p2: g.hands.p2.slice() },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 보드만 약간 변경 (타일 순서), 손 그대로.
+  g.board[0].tiles = ['x1', 'x3', 'x2'];
+  const er = endTurn(g, 'p1');
+  assertEq(er.reason, 'no_tile_played', 'no_tile_played 이유');
+  assertEq(g.consecutivePassesAfterDeckEmpty, 1, '패스 카운트 +1');
+}
+
+// ── RUMMI-025: #2 첫 등판 전 기존 보드 타일 이동 차단 ────────────
+section('RUMMI-025: #2 첫 등판 전 기존 보드 타일 이동 차단');
+{
+  const g = createGame();
+  const tiles = {
+    b1: { id: 'b1', kind: 'num', color: 'blue', number: 7 },
+    b2: { id: 'b2', kind: 'num', color: 'blue', number: 8 },
+    b3: { id: 'b3', kind: 'num', color: 'blue', number: 9 },
+    h1: { id: 'h1', kind: 'num', color: 'red', number: 10 },
+  };
+  Object.assign(g.tiles, tiles);
+  g.board = [{ id: 'set_c', type: 'run', tiles: ['b1', 'b2', 'b3'] }];
+  g.hands.p1 = ['h1'];
+  g.played.p1 = false; // 첫 등판 전.
+  g.turnSnapshot = {
+    board: g.board.map((s) => ({ id: s.id, type: s.type, tiles: s.tiles.slice() })),
+    hands: { p1: ['h1'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  const ns = addNewSet(g, 'p1');
+  const mv = moveTile(g, 'p1',
+    { kind: 'set', setId: 'set_c', tileId: 'b1' },
+    { kind: 'set', setId: ns.setId },
+  );
+  assertEq(mv.ok, false, '기존 보드 타일 이동 거부');
+  assertTrue(mv.error && mv.error.includes('첫 등판'), '에러 메시지에 "첫 등판" 포함');
+}
+
+// ── RUMMI-026: #3 뒤섞인 런 점수 순서 독립 계산 ─────────────────
+// 스펙 RUMMI-026 원안은 "기존 보드 타일(base1/base2)에 손 조커를 결합" 시나리오였으나,
+// 이는 #2-2 방어선(기존 보드 타일 섞인 세트 점수 0)과 충돌한다(표준 룰상 첫 등판에 기존 보드 타일 사용 불가).
+// 따라서 #3(순서 독립 런 점수)을 "전부 손에서 낸(all-fresh) 뒤섞인 런"으로 검증한다.
+// 보드 [JYt, r4, r5, r3] 순서로 저장 — 조커가 인덱스 0(뒤섞임). 전부 fresh.
+//   start=3 → [3,4,5,6]? nums={3,4,5}, len 4, 조커 1. start=3:[3,4,5,6] 조커=6, score=18.
+//   순서 독립: r3=3, r4=4, r5=5, 조커(빠진슬롯 6)=6 → 합 18 ≥ 30? 아님 → meld_short, 점수 18.
+//   인덱스 기반(오답)이면 조커(인덱스0)=start+0=3, 나머지 어긋남 → 합 다름.
+section('RUMMI-026: #3 뒤섞인 런 점수 순서 독립 계산 (all-fresh, 조커 인덱스 0)');
+{
+  const g = createGame();
+  const tiles = {
+    r3: { id: 'r3', kind: 'num', color: 'red', number: 3 },
+    r4: { id: 'r4', kind: 'num', color: 'red', number: 4 },
+    r5: { id: 'r5', kind: 'num', color: 'red', number: 5 },
+    JYt: { id: 'JYt', kind: 'joker', color: null, number: null },
+  };
+  Object.assign(g.tiles, tiles);
+  // 뒤섞인 순서: [JYt, r4, r3, r5] — 조커 인덱스 0. 전부 손에서 낸 fresh.
+  g.board = [{ id: 'set_h', type: 'run', tiles: ['JYt', 'r4', 'r3', 'r5'] }];
+  g.hands.p1 = [];
+  g.played.p1 = false;
+  g.turnSnapshot = {
+    board: [],
+    hands: { p1: ['JYt', 'r4', 'r3', 'r5'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  const er026 = endTurn(g, 'p1');
+  assertEq(er026.reason, 'initial_meld_short', '#3 초기 등판 미달(점수 부족)');
+  const scoreMatch = er026.error && er026.error.match(/현재 (\d+)점/);
+  const calcScore = scoreMatch ? parseInt(scoreMatch[1], 10) : -1;
+  // 빠진 슬롯 {6} → 조커=6. r3=3,r4=4,r5=5. 합 = 18. 순서 무관.
+  assertEq(calcScore, 18, '#3 순서 독립 런 점수 = 18 (조커→빠진슬롯 6)');
+}
+
+// ── RUMMI-026b: #2-2 방어선 — 기존 보드 타일 섞인 세트 점수 0 ────
+section('RUMMI-026b: #2-2 기존 보드 타일 섞인 세트는 첫 등판 점수 0');
+{
+  const g = createGame();
+  const tiles = {
+    base1: { id: 'base1', kind: 'num', color: 'red', number: 4 },
+    base2: { id: 'base2', kind: 'num', color: 'red', number: 6 },
+    JYt: { id: 'JYt', kind: 'joker', color: null, number: null },
+  };
+  Object.assign(g.tiles, tiles);
+  // 보드의 기존 런 [base1, base2]에 손 조커 JYt 삽입 — 첫 등판인데 기존 보드 타일 사용 → 점수 0.
+  g.board = [{ id: 'set_h2', type: 'run', tiles: ['JYt', 'base1', 'base2'] }];
+  g.hands.p1 = [];
+  g.played.p1 = false;
+  g.turnSnapshot = {
+    board: [{ id: 'set_h2', type: 'run', tiles: ['base1', 'base2'] }],
+    hands: { p1: ['JYt'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  const er = endTurn(g, 'p1');
+  assertEq(er.reason, 'initial_meld_short', '#2-2 첫 등판 미달');
+  const m = er.error && er.error.match(/현재 (\d+)점/);
+  assertEq(m ? parseInt(m[1], 10) : -1, 0, '#2-2 기존 보드 타일 섞인 세트 점수 0');
+}
+
+// ── RUMMI-027: #4 첫 등판 전 SWAP_JOKER 거부 ───────────────────
+section('RUMMI-027: #4 첫 등판 전 SWAP_JOKER 거부');
+{
+  const g = createGame();
+  const tiles = {
+    r3: { id: 'r3', kind: 'num', color: 'red', number: 3 },
+    r5: { id: 'r5', kind: 'num', color: 'red', number: 5 },
+    r4: { id: 'r4', kind: 'num', color: 'red', number: 4 },
+    JX: { id: 'JX', kind: 'joker', color: null, number: null },
+  };
+  Object.assign(g.tiles, tiles);
+  g.board = [{ id: 'set_j', type: 'run', tiles: ['r3', 'JX', 'r5'] }];
+  g.hands.p1 = ['r4'];
+  g.played.p1 = false; // 미등판.
+  g.turnSnapshot = {
+    board: g.board.map((s) => ({ id: s.id, type: s.type, tiles: s.tiles.slice() })),
+    hands: { p1: ['r4'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  const r = swapJoker(g, 'p1', { setId: 'set_j', jokerIndex: 1, handTileId: 'r4' });
+  assertEq(r.ok, false, '미등판 SWAP_JOKER 거부');
+  assertTrue(r.error && r.error.includes('첫 등판'), '에러: 첫 등판 후에만 가능');
+}
+
+// ── RUMMI-028: #4 부정확한 조커 대체 타일 거부 ──────────────────
+section('RUMMI-028: #4 부정확한 조커 대체 타일 거부');
+{
+  const g = createGame();
+  const tiles = {
+    r3: { id: 'r3', kind: 'num', color: 'red', number: 3 },
+    r5: { id: 'r5', kind: 'num', color: 'red', number: 5 },
+    b4: { id: 'b4', kind: 'num', color: 'blue', number: 4 }, // 잘못된 색
+    JX: { id: 'JX', kind: 'joker', color: null, number: null },
+  };
+  Object.assign(g.tiles, tiles);
+  g.board = [{ id: 'set_k', type: 'run', tiles: ['r3', 'JX', 'r5'] }];
+  g.hands.p1 = ['b4'];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: g.board.map((s) => ({ id: s.id, type: s.type, tiles: s.tiles.slice() })),
+    hands: { p1: ['b4'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 조커는 red 4 대체인데 blue 4를 제출 → 거부.
+  const r = swapJoker(g, 'p1', { setId: 'set_k', jokerIndex: 1, handTileId: 'b4' });
+  assertEq(r.ok, false, '잘못된 색 대체 타일 거부');
+}
+
+// ── RUMMI-029: #6 같은 세트 내 오른쪽 이동 off-by-one 보정 ───────
+section('RUMMI-029: #6 같은 세트 내 오른쪽 이동 off-by-one 보정');
+{
+  const g = createGame();
+  const tiles = {
+    a: { id: 'a', kind: 'num', color: 'red', number: 1 },
+    b: { id: 'b', kind: 'num', color: 'red', number: 2 },
+    c: { id: 'c', kind: 'num', color: 'red', number: 3 },
+    d: { id: 'd', kind: 'num', color: 'red', number: 4 },
+  };
+  Object.assign(g.tiles, tiles);
+  g.board = [{ id: 'set_m', type: 'run', tiles: ['a', 'b', 'c', 'd'] }];
+  g.hands.p1 = [];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: g.board.map((s) => ({ id: s.id, type: s.type, tiles: s.tiles.slice() })),
+    hands: { p1: [], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 'a'(인덱스 0)를 인덱스 2 위치로 이동. 기대 결과: [b, a, c, d].
+  moveTile(g, 'p1',
+    { kind: 'set', setId: 'set_m', tileId: 'a' },
+    { kind: 'set', setId: 'set_m', index: 2 },
+  );
+  assertEq(g.board[0].tiles, ['b', 'a', 'c', 'd'], '오른쪽 이동 off-by-one 보정 [b,a,c,d]');
+}
+
+// ── RUMMI-032: #6 같은 세트 내 "끝 슬롯" 이동 (QA-ISSUE-1 회귀) ──
+// to.index가 이동 전 배열 길이(=마지막 슬롯)일 때 제거 후 길이로 클램프되어
+// 오른쪽 이동 보정과 이중 차감되던 결함의 회귀 테스트.
+section('RUMMI-032: #6 같은 세트 내 끝 슬롯 이동 (경계값)');
+{
+  const g = createGame();
+  const tiles = {
+    a: { id: 'a', kind: 'num', color: 'red', number: 1 },
+    b: { id: 'b', kind: 'num', color: 'red', number: 2 },
+    c: { id: 'c', kind: 'num', color: 'red', number: 3 },
+    d: { id: 'd', kind: 'num', color: 'red', number: 4 },
+  };
+  Object.assign(g.tiles, tiles);
+  g.board = [{ id: 'set_m', type: 'run', tiles: ['a', 'b', 'c', 'd'] }];
+  g.hands.p1 = [];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: g.board.map((s) => ({ id: s.id, type: s.type, tiles: s.tiles.slice() })),
+    hands: { p1: [], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 'a'(인덱스 0)를 끝 슬롯(이동 전 좌표 4)으로 이동. 기대: [b, c, d, a].
+  moveTile(g, 'p1',
+    { kind: 'set', setId: 'set_m', tileId: 'a' },
+    { kind: 'set', setId: 'set_m', index: 4 },
+  );
+  assertEq(g.board[0].tiles, ['b', 'c', 'd', 'a'], '끝 슬롯 이동 [b,c,d,a]');
+  // 왼쪽 끝(슬롯 0)으로 되돌리기: 'a'(인덱스 3) → index 0. 기대: [a, b, c, d].
+  moveTile(g, 'p1',
+    { kind: 'set', setId: 'set_m', tileId: 'a' },
+    { kind: 'set', setId: 'set_m', index: 0 },
+  );
+  assertEq(g.board[0].tiles, ['a', 'b', 'c', 'd'], '왼쪽 끝 슬롯 이동 [a,b,c,d]');
+  // 범위 밖 인덱스(이동 전 길이 초과)는 끝으로 클램프: 'a'(인덱스 0) → index 99. 기대: [b, c, d, a].
+  moveTile(g, 'p1',
+    { kind: 'set', setId: 'set_m', tileId: 'a' },
+    { kind: 'set', setId: 'set_m', index: 99 },
+  );
+  assertEq(g.board[0].tiles, ['b', 'c', 'd', 'a'], '범위 밖 인덱스 끝 클램프 [b,c,d,a]');
+}
+
+// ── RUMMI-031: #8 빈 세트 상한 (4개 초과 거부) ─────────────────
+section('RUMMI-031: #8 빈 세트 상한 (4개 초과 거부)');
+{
+  const g = createGame();
+  for (let i = 0; i < 4; i++) {
+    const r = addNewSet(g, 'p1');
+    assertTrue(r.ok, `빈 세트 ${i + 1}번째 생성 ok`);
+  }
+  const r5 = addNewSet(g, 'p1');
+  assertEq(r5.ok, false, '5번째 빈 세트 생성 거부');
+  assertTrue(r5.error && r5.error.includes('4개'), '에러: 4개까지 제한');
+}
+
+// ── RUMMI-030: #7 이탈 후 ready 리셋 (WS 통합 테스트) ───────────
+section('RUMMI-030: #7 이탈 후 ready 리셋 — 재접속 시 자동 시작 방지');
+await (async () => {
+  try {
+    const app = createApp({ hostUrl: '' });
+    const server = http.createServer(app.handleHttp);
+    server.on('upgrade', app.handleUpgrade);
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const port = server.address().port;
+
+    const connect = () => new Promise((res) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+      ws.on('open', () => {
+        ws.send(JSON.stringify({ type: 'JOIN' }));
+        ws.send(JSON.stringify({ type: 'READY' }));
+        res(ws);
+      });
+    });
+
+    const ws1 = await connect();
+    const ws2 = await connect();
+
+    // 양쪽 READY → START 까지 잠시 대기.
+    await new Promise((r) => setTimeout(r, 300));
+
+    // ws1 이탈.
+    ws1.close();
+    await new Promise((r) => setTimeout(r, 200));
+
+    // ws3 새 접속 + READY → ws2 ready 리셋됐으면 자동 시작 X.
+    let autoStarted = false;
+    const ws3 = await new Promise((res) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+      ws.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'START') autoStarted = true;
+      });
+      ws.on('open', () => {
+        ws.send(JSON.stringify({ type: 'JOIN' }));
+        ws.send(JSON.stringify({ type: 'READY' }));
+        res(ws);
+      });
+    });
+
+    await new Promise((r) => setTimeout(r, 300));
+    assertEq(autoStarted, false, '#7 이탈 후 ws3만 READY → 자동 시작 X');
+
+    ws2.close(); ws3.close();
+    await new Promise((r) => server.close(r));
+  } catch (err) {
+    failed += 1;
+    failures.push(`RUMMI-030 예외: ${err.message}\n${err.stack}`);
+    console.log(`  FAIL  RUMMI-030 예외: ${err.message}`);
+  }
+})();
+
 // ── 요약 ────────────────────────────────────────────────────
 console.log('\n────────────────────────────────────────');
 console.log(`총 ${passed + failed}건, PASS=${passed}, FAIL=${failed}`);

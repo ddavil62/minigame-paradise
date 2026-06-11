@@ -1,6 +1,6 @@
 # Rummikub — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 루미큐브. Node.js + 바닐라 JS. **1차 코어 완료 + 한계 3건 해결 + 봇 강화 2건 (2026-06-10)**. 미니게임 천국 9번째 종목.
+> LAN 1:1 루미큐브. Node.js + 바닐라 JS. **1차 코어 완료 + 한계 3건 해결 + 봇 강화 2건 (2026-06-10) + 룰 정합 수정 10건 (2026-06-11)**. 미니게임 천국 9번째 종목.
 
 ## 정체성
 
@@ -43,7 +43,7 @@ rummikub/
 │       ├── ui.js            # HUD + 결과 + 토스트
 │       └── sounds.js        # 효과음 (Web Audio)
 └── tests/
-    └── smoke.test.js        # RUMMI-001~010
+    └── smoke.test.js        # RUMMI-001~032
 ```
 
 ## WebSocket 프로토콜
@@ -52,16 +52,16 @@ rummikub/
 |------|--------|---------|------|
 | C→S | `JOIN` | `{ playerName? }` | 입장 |
 | C→S | `READY` | `{}` | 준비 (양쪽 READY → START) |
-| C→S | `NEW_SET` | `{}` | 보드에 빈 세트 추가 |
+| C→S | `NEW_SET` | `{}` | 보드에 빈 세트 추가 (빈 세트 4개 초과 시 ERROR) |
 | C→S | `MOVE_TILE` | `{ from, to }` | 타일 이동 |
-| C→S | `SWAP_JOKER` | `{ setId, jokerIndex, handTileId }` | 보드 조커 ↔ 본인 손의 대체 타일 교환 |
+| C→S | `SWAP_JOKER` | `{ setId, jokerIndex, handTileId }` | 보드 조커 ↔ 본인 손의 대체 타일 교환 (첫 등판 전 시도 시 ERROR) |
 | C→S | `END_TURN` | `{}` | 턴 종료(서버가 검증) |
 | C→S | `REMATCH` | `{}` | 재대결 |
 | S→C | `JOINED` | `{ playerId, waiting, hostUrl }` | 입장 확인 |
 | S→C | `READY_STATUS` | `{ p1Ready, p2Ready }` | 준비 상태 |
 | S→C | `START` | `{}` | 게임 시작 |
 | S→C | `STATE` | `{ board, myHand, oppHandCount, deckSize, currentTurn, turnNumber, played, tileDict, jokerReturnedThisTurn }` | 상태 |
-| S→C | `TURN_RESULT` | `{ by, committed, drewTile, reason, error }` | END_TURN 결과 (`reason`: `committed`/`no_change`/`invalid_board`/`initial_meld_short`/`joker_unused`) |
+| S→C | `TURN_RESULT` | `{ by, committed, drewTile, reason, error }` | END_TURN 결과 (`reason`: `committed`/`no_change`/`invalid_board`/`initial_meld_short`/`joker_unused`/`no_tile_played`) |
 | S→C | `GAME_OVER` | `{ winner, reason, handCounts }` | 종료 (`reason`: `empty_hand`/`deck_empty_pass`. winner=`p1`/`p2`/`draw`) |
 | S→C | `OPPONENT_LEFT` / `REMATCH_STATUS` / `ERROR` | — | 기타 |
 
@@ -89,10 +89,10 @@ rummikub/
 
 ```powershell
 cd C:\LazySlimeStudio\minigames\rummikub
-node tests/smoke.test.js  # RUMMI-001~022
+node tests/smoke.test.js  # RUMMI-001~032
 ```
 
-기대: `총 113건, PASS=113, FAIL=0` (2026-06-10 봇 강화 2건 추가 후 기준).
+기대: `총 138건, PASS=138, FAIL=0` (2026-06-11 룰 정합 수정 10건 + 회귀 RUMMI-023~032 추가 후 기준).
 
 작업 포트: 봇 시나리오는 3096 사용 (사용자 launcher 3000과 다른 게임 무영향).
 
@@ -108,7 +108,13 @@ node tests/smoke.test.js  # RUMMI-001~022
 | 항목 | 함정 |
 |---|---|
 | **턴 롤백 정확성** | `endTurn`에서 invalid/first-meld 미달 시 `restoreFromSnapshot`으로 board + hands + nextSetSeq를 완전 복구해야 한다. nextSetSeq 누락 시 다음 NEW_SET ID가 충돌. |
-| **첫 등판 점수 안분** | `computeInitialMeldScore`는 본인이 이번 턴 손에서 보드로 옮긴 타일만 점수에 포함. 그룹은 sampleNumber × added 수, 런은 added 타일의 점유 슬롯 숫자 합. `findRunStart`가 `validateSet`의 best start와 일치해야 한다. |
+| **첫 등판 점수 안분** | `computeInitialMeldScore`는 본인이 이번 턴 손에서 보드로 옮긴 타일만 점수에 포함. 그룹은 sampleNumber × added 수, 런은 **순서 독립** 계산(숫자 타일은 자기 number, 조커는 빠진 슬롯 오름차순 배정 — 배열 인덱스 기준 금지). `findRunStart`가 `validateSet`의 best start와 일치해야 한다. 클라 `computeFreshMeldScore`도 동일 로직 유지. (2026-06-11 #3 fix) |
+| **턴 commit 조건 = 손 감소 필수** | `endTurn`은 보드 변경이 있어도 손 타일을 1장 이상 내지 않으면(`state.hands[by].length >= snap.hands[by].length`) commit 불가 → 롤백 + 더미 1장 + `reason='no_tile_played'`. 순수 재배치만으로 commit하면 `deck_empty_pass` 패스 카운터를 무한 우회할 수 있으므로 이 가드를 제거하지 말 것. 덱 빈 상태의 no_tile_played는 `consecutivePassesAfterDeckEmpty`를 +1. (2026-06-11 #1 fix) |
+| **첫 등판 전 보드 격리** | `moveTile`은 `!state.played[by]`이면 본인이 이번 턴 손에서 낸 타일(`turnSnapshot.hands[by]` 포함)로만 set→set 이동 허용. 기존 보드 타일 결합 시 첫 등판 30점이 오염되므로 차단. `computeInitialMeldScore`도 기존 보드 타일이 섞인 세트는 점수 기여 0으로 방어선 2중화. 첫 등판 후엔 가드 해제. (2026-06-11 #2 fix) |
+| **조커 회수 = 등판 후 + 정확 타일** | `swapJoker`는 `!state.played[by]`이면 거부("첫 등판 후에만 가능"). 대체 타일은 그룹=같은 숫자+세트에 없는 색, 런=같은 색+빠진 슬롯 숫자 중 하나여야 함(1차 정확 검증). 클라 `inferJokerReplacement`/`tryStartJokerSwap`도 빠진 슬롯 집합 기준 + 미등판 차단으로 동기화. (2026-06-11 #4 fix) |
+| **moveTile to.index는 이동 전 좌표** | 같은 세트 내 이동 시 `to.index`는 "from을 빼기 전 배열" 기준 슬롯이다. from splice 후 인덱스가 당겨지므로 `toSet === fromSet && insertIdx > fromSetIdx`이면 `insertIdx -= 1` 보정. **단 끝 슬롯(`to.index = 이동 전 length`) bounds-check는 `preLen`(splice 전 길이) 기준으로 해야 하며, splice 후 줄어든 length로 검사하면 보정과 이중 차감되어 한 칸 못 미친다.** (2026-06-11 #6 + QA-ISSUE-1 fix) |
+| **빈 세트 상한** | `addNewSet`은 보드의 빈 세트(tiles 0장)가 4개 이상이면 거부(서버 ERROR). 클라 UI 스크롤 폭주 방지. 빈 세트를 채워 3개 이하로 줄면 다시 생성 가능. (2026-06-11 #8 fix) |
+| **bot actionEpoch 체인 취소** | `bot.js`는 모듈 변수 `actionEpoch`로 진행 중 setTimeout 액션 체인을 무효화. `actTurn` 시작 시 +1 후 `myEpoch` 캡처, ERROR 수신·내 턴 아님 감지 시 +1. 체인 함수(`applySetsSequentially`/`applyBoardExtensions`/`applyReconstruction`) setTimeout 콜백 첫 줄에 `if (actionEpoch !== myEpoch) return;` 가드 필수. 누락 시 상대 턴에 MOVE_TILE 침범. (2026-06-11 #9 fix) |
 | **fresh 타일 추적(클라)** | main.js의 freshTileIds는 STATE 도착마다 (boardNow - turnStartBoardIds) ∩ turnStartHand로 재계산. 턴 전환 감지(lastTurnKey)가 잘못되면 fresh가 누적되어 다음 턴에 잘못된 점수가 보인다. |
 | **빈 세트 자동 제거** | END_TURN commit 시 + finishTurn(롤백 후) 양쪽에서 `removeEmptySets`. 안 하면 빈 세트가 계속 누적. |
 | **타일 lookup** | 클라는 `state.tileDict`로 lookup. 본인 손 + 보드 타일만 전송 — 상대 손은 갯수만이라 tileDict에 없음. |

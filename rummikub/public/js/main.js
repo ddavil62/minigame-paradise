@@ -95,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let turnStartHand = new Set();
   /** 턴 시작 시점의 보드 ID 집합 — fresh 판정 보조용. */
   let turnStartBoardIds = new Set();
+  /** 턴 시작 시점 보드 시그니처 맵 (setId → tiles.join(',')) — #5 재배치 감지용. */
+  let turnStartBoardSig = new Map();
   /** 직전 turnNumber·currentTurn — 턴 전환 감지. */
   let lastTurnKey = null;
   /**
@@ -148,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
       freshTileIds = new Set();
       turnStartHand = new Set();
       turnStartBoardIds = new Set();
+      turnStartBoardSig = new Map();
       lastTurnKey = null;
       showScreen('game');
       els.screenGameOver.classList.add('hidden');
@@ -162,8 +165,13 @@ document.addEventListener('DOMContentLoaded', () => {
           // 본인 턴 시작: turnStart 스냅샷 캡처.
           turnStartHand = new Set(state.myHand || []);
           turnStartBoardIds = new Set();
+          turnStartBoardSig = new Map();
           for (const set of state.board || []) {
             for (const tid of set.tiles) turnStartBoardIds.add(tid);
+            // #5: 비어있지 않은 세트만 시그니처 맵에 캡처.
+            if (set.tiles && set.tiles.length > 0) {
+              turnStartBoardSig.set(set.id, set.tiles.join(','));
+            }
           }
           freshTileIds = new Set();
         } else {
@@ -224,6 +232,13 @@ document.addEventListener('DOMContentLoaded', () => {
             playDraw();
           } else {
             showToast(els.toast, `${who} 조커 미사용 → 롤백`);
+          }
+        } else if (reason === 'no_tile_played') {
+          if (isMe) {
+            showToast(els.toast, error || '손에서 1장 이상 내지 않아 변경이 롤백되었습니다.', 'error');
+            playDraw();
+          } else {
+            showToast(els.toast, `${who} 재배치만 → 롤백 + 더미 뽑기`);
           }
         }
       }
@@ -303,6 +318,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasChanges = freshTileIds.size > 0 || boardChanged(state);
     renderActionBar(els, state, myId, freshScore, hasChanges);
 
+    // [#5] 재배치만(보드 변경 O + 손 타일 0장) 한 상태 경고 힌트 — #1 룰과 정합.
+    // renderActionBar가 actionHint를 먼저 설정하므로, 이 조건에서만 덮어쓴다.
+    const isMyTurn = state.currentTurn === myId && state.phase === 'playing';
+    if (isMyTurn && hasChanges && freshTileIds.size === 0 && els.actionHint) {
+      if (!state.played[myId]) {
+        // 첫 등판 중 재배치만 한 상태.
+        els.actionHint.textContent =
+          '보드 변경은 손 타일을 1장 이상 내야 적용됩니다 (아니면 롤백 + 더미 1장)';
+      } else {
+        // 등판 후 재배치만 한 상태.
+        els.actionHint.textContent =
+          '재배치만으로는 턴이 종료되지 않습니다. 손 타일을 1장 이상 내야 적용됩니다.';
+      }
+    }
+
     // 선택 정보.
     if (selectedSrc) {
       if (selectedSrc.kind === 'hand') {
@@ -372,6 +402,11 @@ document.addEventListener('DOMContentLoaded', () => {
    * @returns {boolean} 모드 진입 또는 swap 실행 시 true
    */
   function tryStartJokerSwap(state, setId, jokerTileId) {
+    // [#4] 첫 등판 전에는 조커 회수 불가.
+    if (!state.played || !state.played[myId]) {
+      showToast(els.toast, '조커 회수는 첫 등판 후에만 가능합니다.');
+      return false;
+    }
     const set = state.board.find((s) => s.id === setId);
     if (!set) return false;
     const jokerIndex = set.tiles.indexOf(jokerTileId);
@@ -516,18 +551,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * 현재 보드가 턴 시작과 비교해 변경되었는지 (단순화: fresh가 0이고 보드 set ID 갯수도 동일하면 변경 없음).
+   * 현재 보드가 턴 시작과 비교해 실질적으로 변경되었는지 판단.
+   * 빈 세트 존재 또는 비어있지 않은 세트의 타일 구성 변화 여부로 판정.
+   * 서버 boardsEqualIgnoringEmpty와 동등한 클라 구현 (#5 재배치 감지).
    * @param {object} state
    * @returns {boolean}
    */
   function boardChanged(state) {
-    const curSetIds = new Set((state.board || []).map((s) => s.id));
-    // turnStart 시점의 set ID 집합은 따로 저장 안 했지만, fresh가 0이면 손 → 보드 이동이 없었다는 뜻이므로
-    // 변경 가능성은 (a) 빈 세트만 새로 만든 경우 (b) 보드 내 재배치 — 둘 다 commit 시 의미 있음.
-    // 단순화: fresh.size > 0 이거나 빈 세트가 1개 이상이면 hasChange = true.
+    // freshTileIds가 있으면 분명히 손→보드 이동이 있었다.
     if (freshTileIds.size > 0) return true;
+    // 빈 세트가 있으면 NEW_SET을 한 적이 있다.
     for (const set of state.board || []) {
-      if (set.tiles.length === 0) return true; // 빈 세트만 있어도 NEW_SET을 한 적이 있음 → commit 시 빈 세트 제거.
+      if (!set.tiles || set.tiles.length === 0) return true;
+    }
+    // 현재 비어있지 않은 세트의 시그니처와 턴 시작 시 시그니처 비교.
+    const curNonEmpty = (state.board || []).filter((s) => s.tiles && s.tiles.length > 0);
+    if (curNonEmpty.length !== turnStartBoardSig.size) return true; // 세트 수가 다르면 변경.
+    for (const set of curNonEmpty) {
+      const sig = turnStartBoardSig.get(set.id);
+      if (sig === undefined) return true; // 이 턴에 새로 생긴 세트.
+      if (sig !== set.tiles.join(',')) return true; // 타일 구성(순서 포함) 변경.
     }
     return false;
   }

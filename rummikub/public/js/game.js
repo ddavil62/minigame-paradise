@@ -144,9 +144,28 @@ export function computeFreshMeldScore(state, freshTileIds) {
     } else if (v.type === 'run') {
       const start = findRunStart(resolved);
       if (start < 0) continue;
+      // [#3] 런 점수 순서 독립 계산 (서버 computeInitialMeldScore와 동일 로직).
+      //   빠진 슬롯 집합 = [start..end] − {숫자타일 numbers}.
+      //   숫자 타일 → 자기 number, 조커 → 세트 내 조커 등장 순서대로 빠진 슬롯 값 오름차순 배정.
+      const runEnd = start + set.tiles.length - 1;
+      const numSetR = new Set(resolved.filter((t) => t.kind === 'num').map((t) => t.number));
+      const missingSlotsR = [];
+      for (let v2 = start; v2 <= runEnd; v2++) {
+        if (!numSetR.has(v2)) missingSlotsR.push(v2);
+      }
+      // 조커 카운터 (세트 내 전체 조커 등장 순서 추적 — 조커가 fresh인 경우만 점수 산정).
+      let jokerCountInSet = 0;
       for (let i = 0; i < set.tiles.length; i++) {
-        const tid = set.tiles[i];
-        if (freshTileIds.has(tid)) total += start + i;
+        const tile = resolved[i];
+        const isFresh = freshTileIds.has(set.tiles[i]);
+        if (tile.kind === 'joker') {
+          if (isFresh && jokerCountInSet < missingSlotsR.length) {
+            total += missingSlotsR[jokerCountInSet];
+          }
+          jokerCountInSet += 1;
+        } else if (isFresh) {
+          total += tile.number;
+        }
       }
     }
   }
@@ -185,8 +204,26 @@ export function inferJokerReplacement(resolvedTiles, jokerIndex) {
     const color = nums[0].color;
     const start = findRunStart(resolvedTiles);
     if (start < 0) return [];
-    const slotNumber = start + jokerIndex;
-    if (slotNumber >= 1 && slotNumber <= 13) out.push({ color, number: slotNumber });
+    // [#4] 빠진 슬롯 집합 기준으로 이 조커가 점유하는 슬롯을 추론 (인덱스 기준 폐기).
+    const runEnd = start + resolvedTiles.length - 1;
+    const numSetInfer = new Set(
+      resolvedTiles.filter((t) => t && t.kind === 'num').map((t) => t.number),
+    );
+    const missingSlotsInfer = [];
+    for (let v2 = start; v2 <= runEnd; v2++) {
+      if (!numSetInfer.has(v2)) missingSlotsInfer.push(v2);
+    }
+    // 이 jokerIndex가 세트 내 몇 번째 조커인지 (0-based).
+    let jokersBeforeThis = 0;
+    for (let i = 0; i < jokerIndex; i++) {
+      if (resolvedTiles[i] && resolvedTiles[i].kind === 'joker') jokersBeforeThis += 1;
+    }
+    const slotNumber = jokersBeforeThis < missingSlotsInfer.length
+      ? missingSlotsInfer[jokersBeforeThis]
+      : null;
+    if (slotNumber !== null && slotNumber >= 1 && slotNumber <= 13) {
+      out.push({ color, number: slotNumber });
+    }
   }
   return out;
 }

@@ -55,6 +55,8 @@ let lastActedFor = null;
 let lastState = null;
 /** 행동 예약 타이머. */
 let pendingActTimer = null;
+/** [#9] 액션 체인 에포크. actTurn 시작 시 +1, 오래된 체인 콜백이 실행을 중단하는 기준. */
+let actionEpoch = 0;
 
 // 테스트 import 시 WS 연결을 만들지 않는다.
 const ws = __isMain ? new WebSocket(BOT_URL) : { readyState: 3, send: () => {}, close: () => {}, on: () => {} };
@@ -111,6 +113,7 @@ ws.on('message', (data) => {
         console.warn('[rummikub-bot] 서버 에러:', msg.message);
         // 직전 액션 거절 → 다음 STATE에 재시도.
         lastActedFor = null;
+        actionEpoch += 1; // [#9] 에러 → 진행 중 체인 취소.
         if (pendingActTimer) {
           clearTimeout(pendingActTimer);
           pendingActTimer = null;
@@ -135,6 +138,7 @@ function handleState(s) {
       clearTimeout(pendingActTimer);
       pendingActTimer = null;
     }
+    actionEpoch += 1; // [#9] 내 턴 아님 → 진행 중 체인 취소.
     return;
   }
 
@@ -161,6 +165,8 @@ function handleState(s) {
  * @param {object} s
  */
 function actTurn(s) {
+  actionEpoch += 1;            // [#9] 새 체인 시작.
+  const myEpoch = actionEpoch; // [#9] 이 체인의 에포크 캡처.
   const handIds = s.myHand || [];
   const handTiles = handIds.map((id) => s.tileDict[id]).filter(Boolean);
   const alreadyPlayed = !!(s.played && s.played[myId]);
@@ -174,7 +180,7 @@ function actTurn(s) {
       const extensions = findBoardExtensions(s, new Set());
       if (extensions.length > 0) {
         console.log(`[rummikub-bot] 새 세트 없음, 보드 확장 ${extensions.length}건 시도`);
-        applyBoardExtensions(extensions, 0);
+        applyBoardExtensions(extensions, 0, myEpoch);
         return;
       }
     }
@@ -193,7 +199,7 @@ function actTurn(s) {
   for (const setTiles of sets) {
     for (const t of setTiles) usedHandIds.add(t.id);
   }
-  applySetsSequentially(sets, 0, usedHandIds, alreadyPlayed);
+  applySetsSequentially(sets, 0, usedHandIds, alreadyPlayed, myEpoch);
 }
 
 /**
@@ -203,18 +209,19 @@ function actTurn(s) {
  * @param {Set<string>} usedHandIds 이미 새 세트로 보낸 손 타일 ID
  * @param {boolean} alreadyPlayed 이 턴 시작 시 첫 등판 완료 여부
  */
-function applySetsSequentially(sets, idx, usedHandIds, alreadyPlayed) {
+function applySetsSequentially(sets, idx, usedHandIds, alreadyPlayed, myEpoch) {
   if (idx >= sets.length) {
     // 등판 후라면 추가로 보드 확장/재구성 시도.
     // 첫 등판 턴(alreadyPlayed=false)에는 보드가 비어있을 가능성이 높지만 그래도 안전하게 시도.
     setTimeout(() => {
+      if (actionEpoch !== myEpoch) return; // [#9] 에포크 불일치 → 중단.
       const s = lastState;
       if (!s) { send({ type: 'END_TURN' }); return; }
       // 단순 확장 먼저 (가벼움).
       const extensions = findBoardExtensions(s, usedHandIds || new Set());
       if (extensions.length > 0) {
         console.log(`[rummikub-bot] 보드 확장 ${extensions.length}건 시도`);
-        applyBoardExtensions(extensions, 0);
+        applyBoardExtensions(extensions, 0, myEpoch);
         return;
       }
       // 깊은 재구성 시도 (등판 후 + 손 줄일 여지 있을 때만, 500ms 시간 제한).
@@ -222,7 +229,7 @@ function applySetsSequentially(sets, idx, usedHandIds, alreadyPlayed) {
         const recon = findBoardReconstruction(s, usedHandIds || new Set());
         if (recon && recon.actions.length > 0) {
           console.log(`[rummikub-bot] 보드 재구성 ${recon.actions.length}수 시도 (손 -${recon.handReduction}장)`);
-          applyReconstruction(recon.actions, 0);
+          applyReconstruction(recon.actions, 0, myEpoch);
           return;
         }
       }
@@ -235,17 +242,18 @@ function applySetsSequentially(sets, idx, usedHandIds, alreadyPlayed) {
   send({ type: 'NEW_SET' });
   // 2) 200ms 후 STATE 갱신을 기다리고 그 세트(=가장 큰 setId)에 타일들을 이동.
   setTimeout(() => {
+    if (actionEpoch !== myEpoch) return; // [#9] 에포크 불일치 → 중단.
     const s = lastState;
     if (!s || !s.board || s.board.length === 0) {
       // STATE가 아직 안 왔거나 보드 비어있음 → 다음으로 진행 시도.
-      setTimeout(() => applySetsSequentially(sets, idx + 1, usedHandIds, alreadyPlayed), 200);
+      setTimeout(() => applySetsSequentially(sets, idx + 1, usedHandIds, alreadyPlayed, myEpoch), 200);
       return;
     }
     // 방금 NEW_SET이 추가한 빈 세트 찾기 (마지막의 빈 세트).
     const emptySet = [...s.board].reverse().find((bs) => bs.tiles.length === 0);
     if (!emptySet) {
       console.warn('[rummikub-bot] 빈 세트 찾을 수 없음, 다음 세트로 진행');
-      setTimeout(() => applySetsSequentially(sets, idx + 1, usedHandIds, alreadyPlayed), 200);
+      setTimeout(() => applySetsSequentially(sets, idx + 1, usedHandIds, alreadyPlayed, myEpoch), 200);
       return;
     }
     const setId = emptySet.id;
@@ -253,6 +261,7 @@ function applySetsSequentially(sets, idx, usedHandIds, alreadyPlayed) {
     // 각 타일을 손→세트로 순차 이동.
     tilesToPlace.forEach((tile, i) => {
       setTimeout(() => {
+        if (actionEpoch !== myEpoch) return; // [#9] 에포크 불일치 → 중단.
         send({
           type: 'MOVE_TILE',
           from: { kind: 'hand', tileId: tile.id },
@@ -262,7 +271,7 @@ function applySetsSequentially(sets, idx, usedHandIds, alreadyPlayed) {
     });
     // 세트 다 옮기고 다음 세트로.
     const totalDelay = 50 + tilesToPlace.length * 30 + 200;
-    setTimeout(() => applySetsSequentially(sets, idx + 1, usedHandIds, alreadyPlayed), totalDelay);
+    setTimeout(() => applySetsSequentially(sets, idx + 1, usedHandIds, alreadyPlayed, myEpoch), totalDelay);
   }, 250);
 }
 
@@ -271,18 +280,19 @@ function applySetsSequentially(sets, idx, usedHandIds, alreadyPlayed) {
  * @param {Array<{setId: string, index: number, tileId: string}>} extensions
  * @param {number} idx
  */
-function applyBoardExtensions(extensions, idx) {
+function applyBoardExtensions(extensions, idx, myEpoch) {
   if (idx >= extensions.length) {
-    setTimeout(() => send({ type: 'END_TURN' }), 200);
+    setTimeout(() => { if (actionEpoch !== myEpoch) return; send({ type: 'END_TURN' }); }, 200);
     return;
   }
+  if (actionEpoch !== myEpoch) return; // [#9] 에포크 불일치 → 중단.
   const ext = extensions[idx];
   send({
     type: 'MOVE_TILE',
     from: { kind: 'hand', tileId: ext.tileId },
     to: { kind: 'set', setId: ext.setId, index: ext.index },
   });
-  setTimeout(() => applyBoardExtensions(extensions, idx + 1), 120);
+  setTimeout(() => applyBoardExtensions(extensions, idx + 1, myEpoch), 120);
 }
 
 /**
@@ -294,11 +304,12 @@ function applyBoardExtensions(extensions, idx) {
  * @param {Array<object>} actions
  * @param {number} idx
  */
-function applyReconstruction(actions, idx) {
+function applyReconstruction(actions, idx, myEpoch) {
   if (idx >= actions.length) {
-    setTimeout(() => send({ type: 'END_TURN' }), 250);
+    setTimeout(() => { if (actionEpoch !== myEpoch) return; send({ type: 'END_TURN' }); }, 250);
     return;
   }
+  if (actionEpoch !== myEpoch) return; // [#9] 에포크 불일치 → 중단.
   const a = actions[idx];
   if (a.kind === 'move_set_to_set') {
     send({
@@ -306,32 +317,34 @@ function applyReconstruction(actions, idx) {
       from: { kind: 'set', setId: a.fromSetId, tileId: a.tileId },
       to: { kind: 'set', setId: a.toSetId, index: a.index },
     });
-    setTimeout(() => applyReconstruction(actions, idx + 1), 120);
+    setTimeout(() => applyReconstruction(actions, idx + 1, myEpoch), 120);
   } else if (a.kind === 'move_hand_to_set') {
     send({
       type: 'MOVE_TILE',
       from: { kind: 'hand', tileId: a.tileId },
       to: { kind: 'set', setId: a.toSetId, index: a.index },
     });
-    setTimeout(() => applyReconstruction(actions, idx + 1), 120);
+    setTimeout(() => applyReconstruction(actions, idx + 1, myEpoch), 120);
   } else if (a.kind === 'new_set_with_tiles') {
     // 새 세트 1개 생성 후 STATE 갱신 대기 → 마지막 빈 세트에 타일 채우기.
     send({ type: 'NEW_SET' });
     setTimeout(() => {
+      if (actionEpoch !== myEpoch) return; // [#9] 에포크 불일치 → 중단.
       const s = lastState;
       if (!s || !s.board) {
-        setTimeout(() => applyReconstruction(actions, idx + 1), 200);
+        setTimeout(() => applyReconstruction(actions, idx + 1, myEpoch), 200);
         return;
       }
       const emptySet = [...s.board].reverse().find((bs) => bs.tiles.length === 0);
       if (!emptySet) {
         console.warn('[rummikub-bot:recon] 빈 세트 없음, 다음 액션으로');
-        setTimeout(() => applyReconstruction(actions, idx + 1), 200);
+        setTimeout(() => applyReconstruction(actions, idx + 1, myEpoch), 200);
         return;
       }
       const setId = emptySet.id;
       a.tiles.forEach((t, i) => {
         setTimeout(() => {
+          if (actionEpoch !== myEpoch) return; // [#9] 에포크 불일치 → 중단.
           if (t.source === 'hand') {
             send({
               type: 'MOVE_TILE',
@@ -348,11 +361,11 @@ function applyReconstruction(actions, idx) {
         }, 50 + i * 40);
       });
       const totalDelay = 50 + a.tiles.length * 40 + 200;
-      setTimeout(() => applyReconstruction(actions, idx + 1), totalDelay);
+      setTimeout(() => applyReconstruction(actions, idx + 1, myEpoch), totalDelay);
     }, 250);
   } else {
     // 알 수 없는 액션 — 건너뜀.
-    setTimeout(() => applyReconstruction(actions, idx + 1), 50);
+    setTimeout(() => applyReconstruction(actions, idx + 1, myEpoch), 50);
   }
 }
 
@@ -764,6 +777,8 @@ function findBoardExtensions(state, usedHandIds) {
  * @returns {Array<Array<object>>} 발견한 세트들의 타일 배열 (각 세트의 type 무관)
  */
 function findBestSetCombination(handTiles, targetThreshold) {
+  // 방어 가드: null/undefined/배열 아님 → 빈 결과. (LOW-P2-2 fix)
+  if (!Array.isArray(handTiles) || handTiles.length === 0) return [];
   // 가능한 모든 세트 후보 생성: 그룹 + 런.
   const candidates = enumerateCandidateSets(handTiles);
   if (candidates.length === 0) return [];
