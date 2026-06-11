@@ -137,13 +137,40 @@ const GOAL = 99;
 const HOME = -1;
 
 /**
+ * 모서리(5/10) 분기에서 지름길 진입을 의미하는 branchChoice인지 판정한다.
+ * 단독 'shortcut' 외에 복합값 'shortcut-top'/'shortcut-bottom'도 지름길 진입으로 본다.
+ * @param {string|null} branchChoice
+ * @returns {boolean}
+ */
+function isShortcutChoice(branchChoice) {
+  return branchChoice === 'shortcut'
+    || branchChoice === 'shortcut-top'
+    || branchChoice === 'shortcut-bottom';
+}
+
+/**
+ * 중앙(23) 출구 결정 시 centerExitB(아래쪽 출구)인지 판정한다.
+ * 'bottom' 또는 복합값 '...-bottom'으로 끝나면 centerExitB.
+ * @param {string|null} branchChoice
+ * @returns {boolean}
+ */
+function isBottomExit(branchChoice) {
+  return typeof branchChoice === 'string' && branchChoice.endsWith('bottom');
+}
+
+/**
  * 현재 칸에서 steps만큼 이동했을 때 도착하는 칸 인덱스를 계산한다.
  * 지름길 진입 여부는 fromCell에 진입할 때 결정되며, 본 함수는 한 번의 이동 결과만 반환.
  *
  * @param {number} fromCell  현재 칸 (HOME, 0~28, 또는 중앙23)
  * @param {number} steps     이동 칸 수 (1~5)
- * @param {string|null} branchChoice  중앙(23)에 도달한 후 분기 선택을 위해 사용. 'top'|'bottom'|null.
- *                                    null이면 분기 결정이 필요한 상태로 반환한다.
+ * @param {string|null} branchChoice  분기 선택값. null이면 분기 결정이 필요한 상태로 반환한다.
+ *   - 모서리(5/10) 분기: 'outer'(외곽 유지) | 'shortcut'(지름길 진입)
+ *   - 중앙(23) 분기: 'top'(centerExitA) | 'bottom'(centerExitB)
+ *   - 복합(모서리 지름길 진입 + 그 이동이 중앙을 통과해 중앙 출구까지 동시 결정):
+ *     'shortcut-top' | 'shortcut-bottom'. 모서리에 멈춘 말이 윷/모로 지름길을 타고
+ *     중앙을 통과할 때, 1차 모서리 선택('shortcut')과 2차 중앙 선택('top'/'bottom')을
+ *     한 값으로 합성하여 재호출하는 데 사용한다 (CHOOSE_PATH 2차 응답 합성).
  * @returns {{ toCell: number, awaitingBranch: boolean, passedStart: boolean }}
  *
  *   toCell: 도착 칸 (GOAL 가능)
@@ -175,6 +202,9 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
     if (fromCell === 26) return { toCell: 10, awaitingBranch: false, passedStart: false };
     if (fromCell === 27) return { toCell: 26, awaitingBranch: false, passedStart: false };
     if (fromCell === 23) return { toCell: 22, awaitingBranch: false, passedStart: false };
+    // FIX-3 (§9-2): centerExitB 중간 칸 백도 복귀 — 25 → 24, 24 → 23.
+    if (fromCell === 25) return { toCell: 24, awaitingBranch: false, passedStart: false };
+    if (fromCell === 24) return { toCell: 23, awaitingBranch: false, passedStart: false };
     return { toCell: fromCell, awaitingBranch: false, passedStart: false };
   }
 
@@ -202,21 +232,34 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
     // 출발선에서 이동 → 첫 칸은 0
     cell = -1; // advance 루프에서 첫 단계에서 0으로 진입
   } else if (cell === 5) {
-    // 좌상 모서리에 멈춰 있었음 → 다음 이동은 지름길A 진입
-    pathContext = 'shortcutA';
+    // FIX-2 (§10-2, §13-1 해소): 좌상 모서리에 멈춰 있었음 — 외곽/지름길 선택 분기.
+    // branchChoice가 없으면 분기 선택 요청(awaitingBranch)을 반환하고 piece는 이동하지 않는다.
+    // 'shortcut' → 지름길A 진입, 'outer'(그 외) → 외곽 유지.
+    if (!branchChoice) {
+      return { toCell: 5, awaitingBranch: true, passedStart: false };
+    }
+    // 모서리 지름길 판정: 'shortcut' 또는 복합값 'shortcut-top'/'shortcut-bottom' → 지름길A.
+    // 'outer'(그 외) → 외곽 유지.
+    pathContext = isShortcutChoice(branchChoice) ? 'shortcutA' : 'outer';
   } else if (cell === 10) {
-    // 우상 모서리 → 지름길B
-    pathContext = 'shortcutB';
+    // FIX-2 (§10-2, §13-1 해소): 우상 모서리 — 외곽/지름길B 선택 분기.
+    if (!branchChoice) {
+      return { toCell: 10, awaitingBranch: true, passedStart: false };
+    }
+    pathContext = isShortcutChoice(branchChoice) ? 'shortcutB' : 'outer';
   } else if (cell >= 21 && cell <= 22) {
     pathContext = 'shortcutA';
   } else if (cell >= 26 && cell <= 27) {
     pathContext = 'shortcutB';
+  } else if (cell === 24 || cell === 25) {
+    // FIX-3 (§10-4, §13-2 해소): centerExitB 중간 칸에서 출발 — 잔여 steps 소진.
+    pathContext = 'centerExitB';
   } else if (cell === 23) {
     // 중앙에서 출발 — branchChoice 필요
     if (!branchChoice) {
       return { toCell: 23, awaitingBranch: true, passedStart: false };
     }
-    pathContext = branchChoice === 'bottom' ? 'centerExitB' : 'centerExitA';
+    pathContext = isBottomExit(branchChoice) ? 'centerExitB' : 'centerExitA';
   }
 
   // 한 칸씩 진행
@@ -224,12 +267,18 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
     cell = advanceOneCell(cell, pathContext);
     // pathContext 갱신: 모서리/중앙에 도달했는지 체크
     if (cell === 23) {
-      // 중앙 도달 — 다음 칸 분기 필요 (남은 스텝이 있을 때만)
-      if (i < steps - 1 && !branchChoice) {
+      // 중앙 도달 — 다음 칸 분기 필요 (남은 스텝이 있을 때만).
+      // FIX-2: 중앙 출구는 중앙 선택값('top'|'bottom')으로 결정된다. 모서리 단독 선택('outer'|'shortcut')은
+      // 중앙 출구 정보가 없으므로, 그 값으로 진입한 이동이 중앙에 잔여 steps 있이 도달하면 중앙 분기를 새로 대기시킨다.
+      // 복합값('shortcut-top'|'shortcut-bottom')은 중앙 출구 정보를 이미 포함하므로 재대기 없이 즉시 출구로 진행한다.
+      const isCenterChoice =
+        branchChoice === 'top' || branchChoice === 'bottom'
+        || branchChoice === 'shortcut-top' || branchChoice === 'shortcut-bottom';
+      if (i < steps - 1 && !isCenterChoice) {
         return { toCell: 23, awaitingBranch: true, passedStart: false };
       }
-      if (branchChoice) {
-        pathContext = branchChoice === 'bottom' ? 'centerExitB' : 'centerExitA';
+      if (isCenterChoice) {
+        pathContext = isBottomExit(branchChoice) ? 'centerExitB' : 'centerExitA';
       }
     } else if (cell === GOAL) {
       passedStart = true;
@@ -280,9 +329,12 @@ function advanceOneCell(cell, pathContext) {
     return GOAL;
   }
   if (pathContext === 'centerExitB') {
-    // 중앙 → 좌하 시작점으로 직접 합류 = GOAL (단순화: 중앙에서 바로 완주)
-    // 정통 룰에서는 좌하 직전 칸을 거치지만 LAN 친구 게임은 단순화.
-    if (cell === 23) return GOAL;
+    // FIX-3 (§10-4, §13-2 해소): 중앙(23) → 24 → 25 → GOAL (날밭 2칸 거쳐 완주).
+    // 정통 룰의 중앙~좌하 출발점 사이 중간 칸 2개(24/25)를 거쳐 잔여 steps를 소진한다.
+    if (cell === 23) return 24;
+    if (cell === 24) return 25;
+    if (cell === 25) return GOAL;
+    if (cell === GOAL) return GOAL; // 이미 완주 — 잔여 steps 안전 흡수
     return GOAL;
   }
   return cell;
@@ -323,6 +375,7 @@ export function createApp(opts = {}) {
     }
     if (cfg.awaitingBranchAt !== undefined) game.awaitingBranchAt = cfg.awaitingBranchAt;
     if (cfg.awaitingBranchResult !== undefined) game.awaitingBranchResult = cfg.awaitingBranchResult;
+    if (cfg.awaitingBranchType !== undefined) game.awaitingBranchType = cfg.awaitingBranchType; // FIX-2
     if (cfg.capturedBonus !== undefined) game.capturedBonus = Boolean(cfg.capturedBonus);
     if (cfg.winner !== undefined) {
       game.winner = cfg.winner;
@@ -391,6 +444,9 @@ let game = {
   pendingResults: [],
   awaitingBranchAt: null,
   awaitingBranchResult: null,
+  // FIX-2: 분기 대기 유형. 'center'(중앙 23 분기) | 'corner'(모서리 5/10 분기) | null.
+  // 클라이언트가 동일 onBranchRequest 핸들러에서 모달 버튼 텍스트를 구분하는 데 사용.
+  awaitingBranchType: null,
   winner: null,
   // 잡기 보너스 권리 플래그 (룰북 §6-2, §13-11).
   // true면 큐가 비어도 추가 THROW_YUT 1회 허용. THROW 후 즉시 false로 소진.
@@ -410,6 +466,7 @@ function resetGame() {
   game.pendingResults = [];
   game.awaitingBranchAt = null;
   game.awaitingBranchResult = null;
+  game.awaitingBranchType = null; // FIX-2: 분기 유형 초기화
   game.winner = null;
   // §13-11: 이전 게임의 capturedBonus 잔류 방지 (REMATCH 경계 케이스).
   game.capturedBonus = false;
@@ -434,6 +491,7 @@ function softResetRoom() {
     pendingResults: [],
     awaitingBranchAt: null,
     awaitingBranchResult: null,
+    awaitingBranchType: null, // FIX-2: 분기 유형 초기화
     winner: null,
     // §13-11: 룸 전체 리셋 시 capturedBonus도 초기화 (잔류 방지).
     capturedBonus: false,
@@ -451,6 +509,7 @@ function broadcastState() {
     pendingResults: game.pendingResults.slice(),
     awaitingBranchAt: game.awaitingBranchAt,
     awaitingBranchResult: game.awaitingBranchResult,
+    awaitingBranchType: game.awaitingBranchType, // FIX-2: 분기 유형 전달
     winner: game.winner,
     players: players.map((p) => ({
       id: p.id,
@@ -494,6 +553,7 @@ function passTurn() {
   game.pendingResults = [];
   game.awaitingBranchAt = null;
   game.awaitingBranchResult = null;
+  game.awaitingBranchType = null; // FIX-2: 턴 종료 시 분기 유형 초기화
 }
 
 /**
@@ -654,7 +714,12 @@ wss.on('connection', (ws) => {
     return;
   }
 
-  const playerId = players.length === 0 ? 'p1' : 'p2';
+  // FIX-1: 미사용 ID를 배정 (재입장 데드락 방지).
+  // p1이 disconnect 후 재접속 시 players에는 p2만 남아 있으므로
+  // players.length === 0 ? 'p1' : 'p2' 방식은 'p2'를 중복 배정해 게임이 잠긴다.
+  // 현재 players 배열에 'p1'이 없으면 'p1', 있으면 'p2'를 배정한다.
+  const usedIds = new Set(players.map((p) => p.id));
+  const playerId = !usedIds.has('p1') ? 'p1' : 'p2';
   /** @type {PlayerState} */
   const player = {
     id: playerId,
@@ -728,12 +793,16 @@ wss.on('connection', (ws) => {
           }
         }
         const thrown = throwYutSticks();
-        // §13-11: 잡기 보너스 권리(capturedBonus)는 "한 턴 안 단 한 번"만 추가 THROW 보장.
-        // 이 시점이 capturedBonus 권리로 진입한 던지기였다면, 결과 산출 직후 즉시 false로 소진한다.
-        // (큐에 yut/mo가 남아 있어 보너스 던지기가 가능한 케이스와 무관하게 capturedBonus는 1회 소진)
+        // §13-11 + FIX-4 (§6): 잡기 보너스 권리(capturedBonus)는 "한 턴 안 단 한 번"만 추가 THROW 보장.
+        // FIX-4: capturedBonus 소진은 "큐가 비어 있어 capturedBonus 권리로 진입한 던지기"일 때만 1회 수행한다.
+        //   - 큐가 비어 있고 capturedBonus=true → 이 던지기는 capturedBonus 권리로 진입한 것 → 소진.
+        //   - 큐에 yut/mo가 남아 진입한 던지기(보너스 던지기 권리)에서는 capturedBonus를 보존한다.
+        //     (보너스 권리가 윷/모 던지기 권리에 의해 부당하게 소진되는 것을 방지)
         // 이 처리가 없으면 잡기 → 보너스 THROW(do 등) → MOVE 후에도 capturedBonus=true가 남아
         // 큐가 비어도 hasBonus=true로 평가되어 턴이 결정적으로 잠긴다 (QA-D2-001/002 재현).
-        if (game.capturedBonus === true) {
+        const enteredViaCapturedBonus =
+          game.pendingResults.length === 0 && game.capturedBonus === true;
+        if (enteredViaCapturedBonus) {
           game.capturedBonus = false;
         }
         // 백도인데 출발한 말이 하나도 없으면 자동 폐기 (큐에 넣지 않음).
@@ -806,10 +875,16 @@ wss.on('connection', (ws) => {
           // 분기 대기. pendingResults는 차감하지 않고 awaiting 표시.
           game.awaitingBranchAt = pieceIdx;
           game.awaitingBranchResult = useResult;
+          // FIX-2: 분기 유형 판별 — 출발 칸(아직 이동 전이므로 piece.cell이 fromCell)이
+          // 모서리(5/10)면 'corner', 그 외(중앙 23)면 'center'.
+          const branchFromCell = player.pieces[pieceIdx].cell;
+          game.awaitingBranchType =
+            branchFromCell === 5 || branchFromCell === 10 ? 'corner' : 'center';
           broadcastAll({
             type: 'BRANCH_REQUEST',
             pieceIndex: pieceIdx,
             playerId: player.id,
+            branchType: game.awaitingBranchType, // FIX-2
           });
           broadcastState();
           break;
@@ -856,15 +931,53 @@ wss.on('connection', (ws) => {
         if (!game.started || game.winner) break;
         if (game.currentTurn !== player.id) break;
         if (game.awaitingBranchAt === null) break;
-        const choice = msg.pathIndex === 1 || msg.pathChoice === 'bottom' ? 'bottom' : 'top';
+        // FIX-2: 'outer'|'shortcut'(모서리 분기) 신규 값 우선 처리.
+        // 기존 'top'|'bottom'(중앙 분기)은 그대로 유지하여 회귀 위험 차단.
+        let choice;
+        if (msg.pathChoice === 'outer') choice = 'outer';
+        else if (msg.pathChoice === 'shortcut') choice = 'shortcut';
+        else choice = msg.pathIndex === 1 || msg.pathChoice === 'bottom' ? 'bottom' : 'top';
         const pieceIdx = game.awaitingBranchAt;
         const useResult = game.awaitingBranchResult;
+
+        // FIX-2 중첩 분기 보정: 모서리(5/10)에 멈춘 말이 중앙 분기('top'/'bottom')를 기다리는 경우는
+        // 1차에서 이미 'shortcut'(지름길)을 선택해 중앙에 도달한 상태뿐이다 (외곽 선택은 중앙에 닿지 못함).
+        // 이때 수신한 'top'/'bottom'을 모서리 지름길 선택과 합성하여 'shortcut-top'/'shortcut-bottom'으로
+        // 변환해야 한다. 그래야 computeNextCell이 모서리에서 지름길로 진입한 뒤 중앙 출구까지 한 번에 결정한다.
+        // (별도 상태 필드 없이 piece의 현재 cell로 판별 — 모서리에서 중앙 분기 대기 = shortcut 진입 확정)
+        const branchPiece = player.pieces[pieceIdx];
+        if (
+          branchPiece
+          && (branchPiece.cell === 5 || branchPiece.cell === 10)
+          && (choice === 'top' || choice === 'bottom')
+        ) {
+          choice = 'shortcut-' + choice;
+        }
+
         game.awaitingBranchAt = null;
         game.awaitingBranchResult = null;
+        game.awaitingBranchType = null; // FIX-2: 분기 응답 후 유형 초기화
 
         const moveRes = movePiece(player, pieceIdx, useResult, choice);
         if (!moveRes.ok) {
           sendTo(player, { type: 'ERROR', message: moveRes.error || '분기 이동 실패' });
+          broadcastState();
+          break;
+        }
+        // FIX-2 중첩 분기 재무장: 모서리 지름길 진입 이동이 잔여 steps를 남긴 채 중앙(23)을 통과하면
+        // computeNextCell이 awaitingBranch=true를 반환한다 (예: 모서리5 + 윷4 + shortcut → 중앙 도달).
+        // 이때 큐를 차감하지 말고 중앙 분기를 새로 대기시킨 뒤 BRANCH_REQUEST(center)를 재발송한다.
+        // (MOVE_PIECE 핸들러의 분기 대기 패턴과 동일)
+        if (moveRes.awaitingBranch) {
+          game.awaitingBranchAt = pieceIdx;
+          game.awaitingBranchResult = useResult;
+          game.awaitingBranchType = 'center';
+          broadcastAll({
+            type: 'BRANCH_REQUEST',
+            pieceIndex: pieceIdx,
+            playerId: player.id,
+            branchType: 'center',
+          });
           broadcastState();
           break;
         }

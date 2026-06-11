@@ -53,21 +53,23 @@ test('YR-C7-005: cell 23 + 6 + top → GOAL (잔여 통과 완주) (§10-3 §11-
   expect(r.passedStart).toBe(true);
 });
 
-// ── §10-4 §13-2 centerExitB (bottom) 즉시 완주 ───────────────────
+// ── §10-4 §13-2 centerExitB (bottom) — 24/25 거쳐 완주 ───────────
 
-test('YR-C7-006: cell 23 + do(1) + bottom → GOAL (즉시 완주) (§10-4 §13-2)', () => {
+test('YR-C7-006: cell 23 + do(1) + bottom → cell 24 (centerExitB 중간 칸) (§10-4 §13-2)', () => {
+  // 갱신 사유: §13-2 해소 — 즉시 GOAL에서 23→24→25→GOAL 잔여 steps 소진으로 변경.
   // Given: 중앙 23
   // When: bottom + 도(1)
-  // Then: 남은 steps 무관 즉시 GOAL (정책 PASS: §13-2 단순화)
+  // Then: 칸 24 (날밭 첫 칸)
   const r = computeNextCell(23, 1, 'bottom');
-  expect(r.toCell).toBe(GOAL);
-  expect(r.passedStart).toBe(true);
+  expect(r.toCell).toBe(24);
+  expect(r.passedStart).toBe(false);
 });
 
-test('YR-C7-007: cell 23 + mo(5) + bottom → GOAL (steps 무관 즉시 완주) (§10-4 §13-2)', () => {
+test('YR-C7-007: cell 23 + mo(5) + bottom → GOAL (24→25→GOAL 잔여 소진) (§10-4 §13-2)', () => {
+  // 갱신 사유: §13-2 해소 — steps가 경로 길이(3)를 초과하면 잔여 소진 후 GOAL.
   // Given: 중앙 23
-  // When: bottom + 모(5) — steps=5여도
-  // Then: 즉시 GOAL (정책 PASS)
+  // When: bottom + 모(5) — 23→24→25→GOAL(잔여 흡수)
+  // Then: GOAL
   const r = computeNextCell(23, 5, 'bottom');
   expect(r.toCell).toBe(GOAL);
   expect(r.passedStart).toBe(true);
@@ -76,24 +78,26 @@ test('YR-C7-007: cell 23 + mo(5) + bottom → GOAL (steps 무관 즉시 완주) 
 // ── §10-5 §13-6 진입 경로 무관 양방향 자유 ───────────────────────
 
 test('YR-C7-008: 지름길B(10→) 진입 후에도 bottom 출구 선택 가능 (§10-5 §13-6)', () => {
-  // Given: cell 10 + geol(3) → 중앙 23 도달 (지름길B 경유)
+  // 갱신 사유: FIX-2 — 모서리는 분기 대기이므로 지름길 진입은 shortcut 명시.
+  //            §13-2 해소 — bottom 출구는 24 경유(즉시 GOAL → 24).
+  // Given: cell 10 + geol(3) + shortcut → 중앙 23 도달 (지름길B 경유)
   // When: 다음 턴 do(1) + bottom 선택
-  // Then: bottom centerExitB로 진행 가능 (양방향 자유 정책)
-  // 정책 확인: 첫 이동에서 23 도달 후 별도 호출로 bottom 사용 가능한지 검증
-  const arrived = computeNextCell(10, 3);
+  // Then: bottom centerExitB 첫 칸 24 (양방향 자유 정책 — 진입 경로 무관 bottom 가능)
+  const arrived = computeNextCell(10, 3, 'shortcut');
   expect(arrived.toCell).toBe(23);
   const next = computeNextCell(23, 1, 'bottom');
-  expect(next.toCell).toBe(GOAL);
+  expect(next.toCell).toBe(24);
 });
 
 test('YR-C7-009: 지름길A(5→) 진입 후에도 bottom 출구 선택 가능 (§10-5 §13-6)', () => {
-  // Given: cell 5 + geol(3) → 중앙 23 도달 (지름길A 경유)
+  // 갱신 사유: FIX-2 — 지름길 진입은 shortcut 명시. §13-2 해소 — bottom은 24 경유.
+  // Given: cell 5 + geol(3) + shortcut → 중앙 23 도달 (지름길A 경유)
   // When: 23 + bottom
-  // Then: 즉시 GOAL (top/bottom 자유 정책)
-  const arrived = computeNextCell(5, 3);
+  // Then: 칸 24 (top/bottom 자유 정책)
+  const arrived = computeNextCell(5, 3, 'shortcut');
   expect(arrived.toCell).toBe(23);
   const next = computeNextCell(23, 1, 'bottom');
-  expect(next.toCell).toBe(GOAL);
+  expect(next.toCell).toBe(24);
 });
 
 // ── §10-3 WS 통합: awaitingBranchAt STATE 반영 ───────────────────

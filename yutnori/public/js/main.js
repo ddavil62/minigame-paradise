@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resultText: document.getElementById('result-text'),
     countdownEl: document.getElementById('countdown'),
     branchModalEl: document.getElementById('branch-modal'),
+    branchTitleEl: document.querySelector('#branch-modal .branch-title'),
     branchTopBtn: document.getElementById('branch-top-btn'),
     branchBottomBtn: document.getElementById('branch-bottom-btn'),
     myPiecesEl: document.getElementById('my-pieces'),
@@ -52,6 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let net = null;
   let myId = null;
+  // FIX-2: 현재 열린 분기 모달의 유형. 'center'(중앙) | 'corner'(모서리).
+  // 분기 버튼 클릭 시 pathChoice를 결정하는 데 사용한다.
+  let currentBranchType = 'center';
 
   // ── 네트워크 핸들러 ──
   net = createNetwork({
@@ -88,9 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 결과 선택 시 안내 메시지
         ui.setStatus(`${YUT_NAMES_KO[pickedResult]} 결과 선택됨. 말을 클릭하여 이동하세요.`);
       });
-      // 분기 모달
+      // 분기 모달 (FIX-2: branchType 반영)
       if (state.awaitingBranchAt !== null && state.currentTurn === myId) {
-        ui.showBranchModal(true);
+        currentBranchType = state.awaitingBranchType || 'center';
+        ui.showBranchModal(true, currentBranchType);
       } else {
         ui.showBranchModal(false);
       }
@@ -106,10 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
         : (bonus ? ', 한번더!' : '');
       ui.setLastThrow(`${byLabel}: ${YUT_NAMES_KO[result]} (${stepText}${extraTag})`);
     },
-    onBranchRequest: ({ pieceIndex, playerId }) => {
+    onBranchRequest: ({ pieceIndex, playerId, branchType }) => {
       // STATE에서도 awaitingBranchAt를 통해 모달이 떠야 하지만 보조로 처리.
       if (playerId === myId) {
-        ui.showBranchModal(true);
+        currentBranchType = branchType || 'center'; // FIX-2
+        ui.showBranchModal(true, currentBranchType);
       }
     },
     onGameOver: ({ winner, reason }) => {
@@ -183,13 +189,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ── 분기 선택 버튼 ──
+  // ── 분기 선택 버튼 (FIX-2: branchType에 따라 pathChoice 결정) ──
+  // corner: top버튼='외곽 계속'→'outer', bottom버튼='지름길 진입'→'shortcut'.
+  // center: 기존 top/bottom 그대로.
   els.branchTopBtn.addEventListener('click', () => {
-    net.choosePath('top');
+    const pathChoice = currentBranchType === 'corner' ? 'outer' : 'top';
+    net.choosePath(pathChoice);
     ui.showBranchModal(false);
   });
   els.branchBottomBtn.addEventListener('click', () => {
-    net.choosePath('bottom');
+    const pathChoice = currentBranchType === 'corner' ? 'shortcut' : 'bottom';
+    net.choosePath(pathChoice);
     ui.showBranchModal(false);
   });
 

@@ -123,6 +123,31 @@ export const SHORTCUT_A = buildShortcutA();
 export const SHORTCUT_B = buildShortcutB();
 
 /**
+ * FIX-3: centerExitB 경로(중앙 → 좌하)의 중간 칸 24, 25.
+ * 24, 25는 중앙(23)과 좌하 출발점(0) 사이의 1/3, 2/3 지점.
+ * (server.js의 centerExitB 23→24→25→GOAL 동선과 인덱스 동기화)
+ *
+ * @returns {Array<{x:number, y:number, big:boolean}>}
+ */
+function buildCenterExitB() {
+  const start = CENTER_COORD;     // 중앙(23)
+  const end = OUTER_COORDS[0];    // 좌하 출발점(0)
+  const list = [];
+  for (let i = 1; i <= 2; i++) {
+    const t = i / 3;
+    list.push({
+      x: start.x + (end.x - start.x) * t,
+      y: start.y + (end.y - start.y) * t,
+      big: false,
+    });
+  }
+  return list;
+}
+
+/** centerExitB 중간 칸 좌표 (인덱스 24, 25). */
+export const CENTER_EXIT_B = buildCenterExitB();
+
+/**
  * 칸 인덱스 → 좌표 매핑 (대표 좌표).
  * 0~19: 외곽. 21,22: 지름길A. 26,27: 지름길B. 23: 중앙.
  *
@@ -136,6 +161,9 @@ export function cellToCoord(cell) {
   if (cell === 22) return SHORTCUT_A[1];
   if (cell === 26) return SHORTCUT_B[0];
   if (cell === 27) return SHORTCUT_B[1];
+  // FIX-3: centerExitB 중간 칸 24/25.
+  if (cell === 24) return CENTER_EXIT_B[0];
+  if (cell === 25) return CENTER_EXIT_B[1];
   return null;
 }
 
@@ -154,6 +182,9 @@ export function allCells() {
   list.push({ cell: 23, x: CENTER_COORD.x, y: CENTER_COORD.y, big: true });
   list.push({ cell: 26, x: SHORTCUT_B[0].x, y: SHORTCUT_B[0].y, big: false });
   list.push({ cell: 27, x: SHORTCUT_B[1].x, y: SHORTCUT_B[1].y, big: false });
+  // FIX-3: centerExitB 중간 칸 24/25 렌더링/hit-test 대상에 포함.
+  list.push({ cell: 24, x: CENTER_EXIT_B[0].x, y: CENTER_EXIT_B[0].y, big: false });
+  list.push({ cell: 25, x: CENTER_EXIT_B[1].x, y: CENTER_EXIT_B[1].y, big: false });
   return list;
 }
 

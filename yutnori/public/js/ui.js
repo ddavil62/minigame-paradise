@@ -109,9 +109,15 @@ export function createUI(els) {
     drawShortcutLine(ctx, [5, 21, 22, 23, 15]);
     ctx.stroke();
 
-    // 지름길B: 10 → 26 → 27 → 23 → 0
+    // 지름길B: 10 → 26 → 27 → 23 (중앙까지)
     ctx.beginPath();
-    drawShortcutLine(ctx, [10, 26, 27, 23, 0]);
+    drawShortcutLine(ctx, [10, 26, 27, 23]);
+    ctx.stroke();
+
+    // FIX-3: centerExitB 경로선 — 중앙(23) → 24 → 25 → 좌하(0).
+    // 지름길B 본선과 동일한 대각이지만 24/25 칸 노드를 명시적으로 경유한다.
+    ctx.beginPath();
+    drawShortcutLine(ctx, [23, 24, 25, 0]);
     ctx.stroke();
   }
 
@@ -341,11 +347,36 @@ export function createUI(els) {
     renderBoard();
   }
 
-  /** 분기 모달 표시/숨김. */
-  function showBranchModal(show) {
+  /**
+   * 분기 모달 표시/숨김.
+   * FIX-2: branchType에 따라 버튼/제목 텍스트를 전환한다.
+   *   - 'corner': 모서리(5/10) 분기 — "외곽 계속" / "지름길 진입".
+   *   - 'center'(기본): 중앙(23) 분기 — 기존 위/아래 출구 텍스트.
+   *
+   * @param {boolean} show
+   * @param {('center'|'corner')} [branchType='center']
+   */
+  function showBranchModal(show, branchType = 'center') {
     if (!els.branchModalEl) return;
-    if (show) els.branchModalEl.classList.remove('hidden');
-    else els.branchModalEl.classList.add('hidden');
+    if (show) {
+      if (branchType === 'corner') {
+        if (els.branchTitleEl) {
+          els.branchTitleEl.innerHTML = '모서리 도착!<br>외곽으로 계속할까요?';
+        }
+        if (els.branchTopBtn) els.branchTopBtn.textContent = '↩ 외곽 계속';
+        if (els.branchBottomBtn) els.branchBottomBtn.textContent = '↗ 지름길 진입';
+      } else {
+        // center (기존 텍스트 복원)
+        if (els.branchTitleEl) {
+          els.branchTitleEl.innerHTML = '중앙(방) 도착!<br>어느 출구로 갈까요?';
+        }
+        if (els.branchTopBtn) els.branchTopBtn.textContent = '↖ 위쪽 출구 (먼 길)';
+        if (els.branchBottomBtn) els.branchBottomBtn.textContent = '↙ 아래쪽 출구 (빠른 길)';
+      }
+      els.branchModalEl.classList.remove('hidden');
+    } else {
+      els.branchModalEl.classList.add('hidden');
+    }
   }
 
   /** 결과 오버레이. */

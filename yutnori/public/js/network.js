@@ -20,7 +20,7 @@
  * @param {(countdown: number) => void} handlers.onStart
  * @param {(state: object) => void} handlers.onState
  * @param {(payload: {by:string, sticks:number[], result:string, steps:number, bonus:boolean}) => void} handlers.onYutResult
- * @param {(payload: {pieceIndex:number, playerId:string}) => void} handlers.onBranchRequest
+ * @param {(payload: {pieceIndex:number, playerId:string, branchType:('center'|'corner')}) => void} handlers.onBranchRequest
  * @param {(payload: {winner:string, reason?:string}) => void} handlers.onGameOver
  * @param {(payload: {p1Ready:boolean, p2Ready:boolean}) => void} handlers.onRematchStatus
  * @param {(message:string) => void} handlers.onError
@@ -95,6 +95,7 @@ export function createNetwork(handlers) {
         handlers.onBranchRequest({
           pieceIndex: msg.pieceIndex,
           playerId: msg.playerId,
+          branchType: msg.branchType || 'center', // FIX-2: 분기 유형
         });
         break;
       case 'GAME_OVER':

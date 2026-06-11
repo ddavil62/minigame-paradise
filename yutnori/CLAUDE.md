@@ -1,6 +1,6 @@
 # Yutnori — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. Phase 1 완료, smoke 18/18 PASS. **Playwright 273/273 PASS** (유닛 65 + WS 20 + 룰북 168 + E2E 25). 룰북 §13 11/11 100% 커버 (2026-05-31).
+> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. **2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 QA PASS.** 회귀 게이트: 서버리스 289 + QA 엣지 26 = **315/315 PASS** + E2E 25 + smoke 40. 룰북 §13 12건(미해소 7 + 해소 5) — §13-1/§13-2 [HIGH] 2026-06-11 해소.
 
 ## 룰북 (필수 숙지)
 
@@ -8,7 +8,8 @@
 
 - QA는 룰북 시나리오 작성 시 §번호를 반드시 인용한다 (예: §5-2 칸 수 검증, §10-2 모서리 분기).
 - Coder가 게임 로직(`server.js`)을 수정하면 **§13 구현 노트의 영향 항목을 확인**하고 룰북에 영향이 있으면 Doc Writer가 §13을 갱신한다.
-- `§13 구현 노트`: 구현 vs 표준 차이 **11건** (미해소 HIGH 2 / MED 1 / LOW 5, 해소 HIGH 1 / MED 1 / LOW 1). 룰북 시나리오 회귀 게이트의 핵심.
+- `§13 구현 노트`: 구현 vs 표준 차이 **12건** (미해소 LOW 6 / MED 1, 해소 HIGH 3 / MED 1 / LOW 1). 룰북 시나리오 회귀 게이트의 핵심.
+- **2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 완료**: §13-1 모서리 외곽/지름길 선택 분기(FIX-2) / §13-2 centerExitB 24/25 경유 완주(FIX-3) / §13-11 FIX-4 capturedBonus 소진 조건 정밀화 / §13-12 [LOW 미해소] §6-1 중복 보너스 차단 신규 등록(별도 발주). FIX-1 재입장 ID 중복 데드락 수정. 상세는 룰북 §13.
 - **2026-05-31 정통 룰 정합 수정 3건 완료**: §13-9 HOME 시각 통일 / §13-10 HOME → 칸 N 정통 매핑 / §13-11 capturedBonus 리셋. 상세는 룰북 §13.
 - **2026-05-31 룰북 기반 168 시나리오 추가 + 잠재 결함 5건 수정**: §13-11 capturedBonus 라이프사이클을 정밀 검증 중 결정적 잠금 버그(잡기 후 보너스 THROW 잔류) 발견 및 해소. U-18~U-22 기댓값 정통 룰로 갱신, resetGame/softResetRoom 명시 초기화, YR-C5-008/C8-008 flaky 안정화. 회귀 게이트가 253/253 PASS로 확장.
 
@@ -32,10 +33,10 @@
 3. **포트 충돌 자동 폴백**
    - 3000~3010 자동 시도. `wss = new WebSocketServer({ server })`가 HTTP server를 공유하므로 EADDRINUSE 시 **양 채널에 error 핸들러 필수** (tetris-battle 함정 동일).
 4. **단순화 결정**
-   - 모서리(5, 10)에 정확히 멈추면 다음 이동 시 **자동으로** 지름길 진입. (정통 룰은 선택지지만 친구 게임은 빠르게) — 룰북 §13-1 미해소.
-   - 중앙(23)에서만 분기 모달로 출구 선택.
+   - 모서리(5, 10)에 정확히 멈추면 다음 이동 시 **외곽 계속 / 지름길 진입 선택 모달** 표시(정통 룰 적용, 2026-06-11 FIX-2). 이전 자동 지름길 진입 단순화는 해소 — 룰북 §13-1 해소.
+   - 중앙(23)·모서리(5/10) 모두 분기 모달로 경로 선택. 모서리 지름길 + 중앙 통과 시 corner→center 2단계 모달(중첩 분기).
    - 백도(빽도, X자 표식 가락) 변형 룰 미적용.
-   - 중앙→좌하 출구 합류는 직접 완주(GOAL)로 단순화 (정통 룰의 마지막 칸 1개 거치기 생략) — 룰북 §13-2 미해소.
+   - 중앙→좌하 출구는 **23→24→25→GOAL 잔여 steps 소진**(정통 룰 적용, 2026-06-11 FIX-3). 이전 즉시 완주 단순화는 해소 — 룰북 §13-2 해소.
    - HOME → 보드 진입은 **2026-05-31부로 정통 룰 매핑 적용** (HOME → 칸 N). 이전 단순화(HOME → 칸 N-1)는 해소. 룰북 §13-10 참조.
    - HOME 시각 위치는 **2026-05-31부로 양 팀 좌하 통일** (정통 룰). 이전 P2 우상 배치 단순화는 해소. 룰북 §13-9 참조.
 
@@ -64,17 +65,21 @@ yutnori/
 │       ├── piece.js          # 클릭 hit-test
 │       └── ui.js             # Canvas 보드/말 + DOM HUD
 └── tests/
-    ├── smoke.test.js                       # 레거시 smoke, 18 assert (node 직접 실행)
-    ├── yut.unit.spec.js                    # Playwright 단위 65개 — throwYutSticks/computeNextCell
-    ├── ws.scenarios.spec.js                # Playwright WS 20개 — 메시지 프로토콜/게임 흐름
+    ├── smoke.test.js                       # 레거시 smoke (node 직접 실행, 시나리오 1~8 + 모서리 분기/shortcut 보조 assert)
+    ├── yut.unit.spec.js                    # Playwright 단위 — throwYutSticks/computeNextCell (U-66~U-72 중첩 분기 포함)
+    ├── ws.scenarios.spec.js                # Playwright WS — 메시지 프로토콜/게임 흐름
     ├── e2e-scenarios.spec.js               # Playwright E2E 25개 — 브라우저 2페이지 실전 검증
+    ├── qa-defect2-captured-bonus-stuck.spec.js  # capturedBonus 잠금 회귀 가드 (QA-D2)
+    ├── qa-rulefix-edge.spec.js             # FIX-1~4 + 중첩 분기 QA 엣지 26개 (QA-RF1/2/3/4/X, 2026-06-11)
     ├── rulebook-helpers.js                 # 룰북 시나리오 공용 헬퍼 (WsClient/startServer/inject/withRandom)
-    └── rulebook-c1~c14-*.spec.js           # Playwright 룰북 168개 (YR-C1~C14, §1~§13+부록 정밀 커버)
+    └── rulebook-c1~c18-*.spec.js           # Playwright 룰북 (YR-C1~C18, §1~§13+부록 커버. c15 재입장 / c16 모서리 분기 / c17 centerExitB / c18 보너스 정밀화)
 ```
 
 ## 테스트 실행법
 
-### Playwright (주력 테스트 스위트, 273개)
+### Playwright (주력 테스트 스위트)
+
+> 2026-06-11 기준: 서버리스 회귀 289 + QA 엣지 26 = **315 PASS**, E2E 25(서버 필요). 신규 파일 `rulebook-c15~c18-*.spec.js`, `qa-rulefix-edge.spec.js`.
 
 ```powershell
 cd C:\LazySlimeStudio\minigames\yutnori
@@ -82,35 +87,36 @@ cd C:\LazySlimeStudio\minigames\yutnori
 # 터미널 1 (서버 — E2E 25개 전용. 유닛/WS/룰북은 서버 없이도 가능)
 node server.js --port 3088
 
-# 터미널 2 (전체 273개 실행)
+# 터미널 2 (전체 실행)
 npx playwright test --reporter=list
 
-# 서버 없이 가능한 부분만 (253개)
-npx playwright test tests/yut.unit.spec.js tests/ws.scenarios.spec.js tests/rulebook-c*.spec.js --reporter=list
+# 서버 없이 가능한 부분만 (315개: 회귀 289 + QA 엣지 26)
+npx playwright test tests/yut.unit.spec.js tests/ws.scenarios.spec.js tests/rulebook-c*.spec.js tests/qa-defect2-captured-bonus-stuck.spec.js tests/qa-rulefix-edge.spec.js --reporter=list
 
 # 개별 실행
-npx playwright test tests/yut.unit.spec.js          # 유닛 65개 (서버 불필요)
-npx playwright test tests/ws.scenarios.spec.js      # WS 20개 (서버 불필요 — createApp 직접 import)
-npx playwright test tests/rulebook-c*.spec.js       # 룰북 168개 (서버 불필요, §13 11/11 커버)
+npx playwright test tests/yut.unit.spec.js          # 유닛 (서버 불필요, U-66~U-72 중첩 분기 단위 포함)
+npx playwright test tests/ws.scenarios.spec.js      # WS (서버 불필요 — createApp 직접 import)
+npx playwright test tests/rulebook-c*.spec.js       # 룰북 (서버 불필요, YR-C1~C18, §13 커버. c16 모서리 분기 / c17 centerExitB / c18 보너스 정밀화)
+npx playwright test tests/qa-rulefix-edge.spec.js   # QA 엣지 26개 (FIX-1~4 + 중첩 분기, 서버 불필요)
 npx playwright test tests/e2e-scenarios.spec.js     # E2E 25개 (port 3088 서버 필요)
 ```
 
-기대: `273 passed` (E2E 포함) 또는 `253 passed` (서버 불필요 분량만)
+기대: 서버리스 `315 passed` (회귀 289 + QA 엣지 26), E2E 25는 서버 가동 시 별도
 
-### 레거시 smoke (18 assert)
+### 레거시 smoke (시나리오 1~8 + 모서리 분기 보조 assert)
 
 ```powershell
 node tests/smoke.test.js --port 3088
 ```
 
-기대: `PASS: 18, FAIL: 0`
+기대: 풀 실행 시 `PASS: 40, FAIL: 0` (시나리오 1~8 36 assert + 모서리 분기 대기/shortcut 진입 보조 assert). 시나리오 8b "참고용" WS 분포 샘플러는 다수 THROW 반복으로 환경 의존 장기 실행이라 기능 검증과 무관(장기 샘플).
 
 ### 회귀 게이트
 
-- 모든 변경은 **Playwright 273/273 PASS**를 유지해야 한다 (서버 없이 핵심 회귀 253/253).
-- smoke 18/18도 유지한다.
-- 룰북 168개(YR-C1~C14)는 §13 11건을 100% 커버. 새 게임 로직 변경 시 영향 받는 카테고리를 우선 회귀 실행한다.
-- 신규 시나리오는 추가하되 기존 시나리오는 수정/삭제하지 않는다.
+- 모든 변경은 **서버리스 회귀 289 + QA 엣지 26 = 315/315 PASS**를 유지해야 한다 (2026-06-11 기준). E2E 25는 서버 가동 시 별도 회귀.
+- smoke도 유지한다 (시나리오 1~8, 36 assert PASS. 8b "참고용" WS 샘플러는 환경 의존 장기 실행으로 기능 무관).
+- 룰북 시나리오(YR-C1~C18)는 §13 12건을 커버. 새 게임 로직 변경 시 영향 받는 카테고리를 우선 회귀 실행한다.
+- 신규 시나리오는 추가하되 기존 시나리오는 수정/삭제하지 않는다. **단, 정통 룰로 기댓값이 바뀐 경우 갱신 사유를 파일 주석에 명기하고 수정 허용**(2026-06-11 §13-1/§13-2 해소로 YR-C6/C7/C12, qa-defect2, smoke/unit 일부 갱신).
 
 ## WebSocket 메시지 프로토콜
 
@@ -120,12 +126,12 @@ node tests/smoke.test.js --port 3088
 | S→C | JOINED | `{ playerId, waiting, hostUrl }` | p1/p2 할당 |
 | C→S | READY | `{}` | 시작 준비 |
 | S→C | START | `{ countdown }` | 양쪽 READY 시 broadcast |
-| S→C | STATE | `{ started, currentTurn, pendingResults, awaitingBranchAt, winner, players }` | 매 액션 후 전체 상태 broadcast |
+| S→C | STATE | `{ started, currentTurn, pendingResults, awaitingBranchAt, awaitingBranchType, winner, players }` | 매 액션 후 전체 상태 broadcast. `awaitingBranchType: 'center'\|'corner'\|null` (FIX-2) |
 | C→S | THROW_YUT | `{}` | 권위: 서버가 결과 결정 |
 | S→C | YUT_RESULT | `{ by, sticks, result, steps, bonus }` | 양쪽 broadcast |
 | C→S | MOVE_PIECE | `{ pieceIndex, useResult }` | 사용 결과는 큐에서 차감 |
-| S→C | BRANCH_REQUEST | `{ pieceIndex, playerId }` | 중앙 분기 대기 |
-| C→S | CHOOSE_PATH | `{ pathChoice: 'top'|'bottom' }` | 분기 응답 |
+| S→C | BRANCH_REQUEST | `{ pieceIndex, playerId, branchType }` | 중앙/모서리 분기 대기. `branchType: 'center'\|'corner'` (FIX-2) |
+| C→S | CHOOSE_PATH | `{ pathChoice: 'top'\|'bottom'\|'outer'\|'shortcut' }` | center: top/bottom, corner: outer/shortcut. 내부 합성값 `'shortcut-top'\|'shortcut-bottom'`은 서버 전용(중첩 분기) |
 | S→C | GAME_OVER | `{ winner, reason? }` | 4말 완주 또는 disconnect |
 | C→S | REMATCH | `{}` | 재대결 요청 |
 | S→C | REMATCH_STATUS | `{ p1Ready, p2Ready }` | 양쪽 모두 시 START 재발송 |
@@ -143,33 +149,36 @@ node tests/smoke.test.js --port 3088
 | 항목 | 함정 |
 |---|---|
 | `wss = new WebSocketServer({ server })` | server와 wss 양쪽에 error 핸들러 필요. wss에만 또는 server에만 등록하면 EADDRINUSE 시 unhandled로 즉시 종료. |
-| `board.js` 칸 좌표 vs `server.js` 인덱스 | 칸 인덱스 매핑은 양쪽이 **반드시 일치**해야 함 (0~19 외곽, 21/22 지름길A, 26/27 지름길B, 23 중앙). 변경 시 양쪽 동시 갱신. |
+| `board.js` 칸 좌표 vs `server.js` 인덱스 | 칸 인덱스 매핑은 양쪽이 **반드시 일치**해야 함 (0~19 외곽, 21/22 지름길A, 26/27 지름길B, 23 중앙, **24/25 centerExitB** — 2026-06-11 FIX-3 신설, board.js `CENTER_EXIT_B`/`buildCenterExitB`). 변경 시 양쪽 동시 갱신. |
 | `MOVE_PIECE`의 `useResult` 검증 | 서버는 `pendingResults`에 해당 결과명이 있는지 indexOf로 검사. 큐에 없으면 ERROR. |
 | 보너스 턴 처리 | `lastResult === 'yut' || 'mo'`이면 큐가 비어도 다시 던질 수 있음. 잡기 보너스는 `game.capturedBonus` 플래그로 별도. 턴 종료 판단 시 `hasBonus` 체크 필수. |
-| `capturedBonus` 라이프사이클 | **3개 분기 모두에 명시 리셋 필요** (2026-05-31 §13-11 + 보강 해소): ① MOVE_PIECE/CHOOSE_PATH 핸들러의 `passTurn()` 직후 `game.capturedBonus = false`, ② THROW_YUT 핸들러에서 잡기 보너스 권리(=`capturedBonus===true`)로 진입한 던지기는 결과 큐 push 직후 `capturedBonus = false`로 1회 소진 처리, ③ `resetGame()` / `softResetRoom()` 명시 초기화. 누락하면 잡기 후 보너스 결과가 yut/mo가 아닐 경우 87.5% 확률로 결정적 턴 잠금이 발생한다 (QA-D2-001/002 회귀 가드 참조). 보너스 진입 검사식: `hasBonus = capturedBonus===true || lastResult==='yut' || lastResult==='mo'`. |
+| `capturedBonus` 라이프사이클 | **3개 분기 모두에 명시 리셋 필요** (2026-05-31 §13-11 + 보강 해소): ① MOVE_PIECE/CHOOSE_PATH 핸들러의 `passTurn()` 직후 `game.capturedBonus = false`, ② THROW_YUT 핸들러에서 잡기 보너스 권리로 진입한 던지기에서만 1회 소진 — **2026-06-11 FIX-4: 소진 조건을 `enteredViaCapturedBonus = pendingResults.length === 0 && capturedBonus === true`로 한정**(큐에 yut/mo 잔여 시 보존). 무조건 소진하면 윷·모 보너스 진입 던지기에서 잡기 보너스 권리를 부당하게 잃음. ③ `resetGame()` / `softResetRoom()` 명시 초기화. 누락하면 잡기 후 보너스 결과가 yut/mo가 아닐 경우 87.5% 확률로 결정적 턴 잠금 (QA-D2-001/002 회귀 가드). 보너스 진입 검사식: `hasBonus = capturedBonus===true || lastResult==='yut' || lastResult==='mo'`. |
+| 재입장 ID 배정 (FIX-1) | connection 핸들러는 `players.length` 기반이 아니라 **미사용 ID 탐색**(`usedIds = new Set(players.map(p=>p.id))` → `!usedIds.has('p1') ? 'p1' : 'p2'`)으로 배정해야 함. length 기반이면 p1 disconnect 후 재접속 시 p2 중복 배정으로 게임이 잠긴다. (2026-06-11 §13-1 무관, FIX-1) |
+| 중첩 분기 (shortcut-top/bottom 합성) | 모서리(5/10) 지름길 선택 후 잔여 steps가 중앙(23)을 통과하면 `computeNextCell`이 `awaitingBranch: true` 재반환 → **CHOOSE_PATH 핸들러가 큐 차감 없이 center 분기 재무장**(BRANCH_REQUEST center 재발송) 후 break. 2차 CHOOSE_PATH에서 piece.cell이 5/10이고 choice가 top/bottom이면 `shortcut-` 접두 합성(`shortcut-top`/`shortcut-bottom`, 서버 내부 전용). `isShortcutChoice`/`isBottomExit` 헬퍼로 판정. 누락하면 윷/모 결과가 증발하고 말이 제자리에 남는 HIGH 버그(2026-06-11 수정 사유). |
 | HOME → 보드 진입 칸 수 | `advanceOneCell()` cell === -1 분기는 **`return 1`** (정통 룰: HOME에서 도 = 칸 1). 추가로 `cell === 0`에서 `return 1` 안전망 필요. 이전 `return 0` 단순화는 정통과 1칸 차이를 유발했음. (2026-05-31 룰북 §13-10 해소 사유) |
 | 분기 대기 (`awaitingBranchAt`) | THROW/MOVE 모두 차단. 중앙 도달 시 piece는 **아직 이동시키지 않은 상태**로 두고 awaiting만 기록 → CHOOSE_PATH 시 movePiece 재호출. |
 | `start.bat` 인코딩 | ASCII-only로 유지. 한글 포함 시 cmd 949 코드페이지에서 깨짐. |
 | `stop.bat` 방식 | tetris-battle와 달리 윈도우 타이틀(`Yutnori Server`) 기준으로 종료 → 포트 3000~3010을 공유하는 다른 프로젝트(tetris-battle, matgo) 서버를 실수로 죽이지 않음. |
 | 윷가락 fronts↔result 매핑 | 정통 룰: 평평면 개수 = 칸 수 (도=1, 개=2, 걸=3, 윷=4). **모만 예외 (0개 → 5칸).** 백도는 fronts=1이고 그 평평면이 마크 가락일 때 발동. 거꾸로(fronts=0→윷, 4→모) 매핑하면 사용자 직관과 정반대로 동작하여 즉시 신고됨. Phase 2.1 핫픽스 사유. (룰북 §13-4) |
 
-### 룰북 §13 매핑 요약 — 구현 vs 표준 차이 (11건, 미해소 8 / 해소 3)
+### 룰북 §13 매핑 요약 — 구현 vs 표준 차이 (12건, 미해소 7 / 해소 5)
 
 코드 수정 시 영향 항목을 반드시 확인한다. 상세는 `docs/RULEBOOK.md` §13.
 
 | § | 항목 | 영향도 | 상태 | 한 줄 요약 |
 |---|---|---|---|---|
-| §13-1 | 모서리 강제 지름길 진입 | **HIGH** | 미해소 | 정통은 5/10에서 외곽/지름길 선택. 본 구현은 자동 지름길. **사용자 의심 1순위.** |
-| §13-2 | centerExitB 즉시 완주 | **HIGH** | 미해소 | 중앙→좌하 출구 시 남은 steps 무관 즉시 GOAL. **사용자 의심 2순위.** |
+| §13-1 | 모서리 분기 강제→선택 | **HIGH** | **2026-06-11 해소** | 외곽/지름길 선택 분기(FIX-2). `BRANCH_REQUEST corner` + `CHOOSE_PATH outer/shortcut` + 중첩 분기 2단계 모달. |
+| §13-2 | centerExitB 즉시 완주 | **HIGH** | **2026-06-11 해소** | `23→24→25→GOAL` 잔여 소진(FIX-3). 24/25 활성화, 잡기/업기/백도 동작, board.js `buildCenterExitB`. |
 | §13-3 | 윷가락 확률 균등 50% | LOW | 미해소 | 물리 가락은 60~65% 뒤집힘 편향. 디지털 단순화. |
 | §13-4 | 윷가락 매핑 회귀 위험 | MED | 미해소 | Phase 2→2.1 이력. 현재 정상. 회귀 테스트 필수. |
 | §13-5 | HOME 백도 자동 폐기 | LOW | 미해소 | 의도된 단순화. 토스트 안내 권장. |
 | §13-6 | 중앙 분기 양방향 자유 선택 | LOW | 미해소 | 정통은 진입 경로별 출구 고정. 본 구현은 자유. |
 | §13-7 | 선후공 결정 절차 생략 | LOW | 미해소 | 정통은 첫 던지기로 결정. 본 구현은 p1 고정. |
-| §13-8 | 외곽 인덱스 20/24/25/28 미사용 | LOW | 미해소 | 단순화. 코드 가독성 영향만. |
+| §13-8 | 외곽 인덱스 20/28 미사용 | LOW | 미해소 | 단순화. 24/25는 2026-06-11 centerExitB로 활성화(§13-2). |
 | §13-9 | HOME 시작 위치 좌우 분리 | LOW | **2026-05-31 해소** | 이전 P1 좌하/P2 우상 → 양 팀 좌하 통일 (`public/js/ui.js`). |
 | §13-10 | HOME → 칸 N-1 단순화 | MED | **2026-05-31 해소** | `advanceOneCell` `cell === -1` `return 0 → 1` + `cell === 0` 안전망. HOME → 칸 N 정통 매핑. |
-| §13-11 | capturedBonus 잔류 위험 | **HIGH** | **2026-05-31 해소(+보강)** | MOVE_PIECE/CHOOSE_PATH `passTurn()` 직후 명시 리셋 + 2026-05-31 보강: THROW_YUT 잡기 보너스 진입 시 결과 큐 push 직후 1회 소진 리셋 + `resetGame`/`softResetRoom` 명시 초기화. 보강 전에는 잡기 후 보너스 결과가 yut/mo 아닐 시 87.5% 확률 잠금. |
+| §13-11 | capturedBonus 잔류 위험 | **HIGH** | **2026-05-31 해소 + 2026-06-11 정밀화** | MOVE_PIECE/CHOOSE_PATH `passTurn()` 직후 명시 리셋 + THROW_YUT 1회 소진 + `resetGame`/`softResetRoom` 초기화. 2026-06-11 FIX-4: 소진 조건을 "큐 빈 capturedBonus 진입 THROW"로 한정(윷/모 진입 시 보존). |
+| §13-12 | §6-1 윷·모 잡기 중복 보너스 차단 | LOW | **미해소 (2026-06-11 신규)** | 윷·모로 잡으면 한 번만 다시 던져야 하나 두 보너스 모두 발생 가능. 별도 발주 예정. |
 
 ## 파이프라인 적용 규칙
 
@@ -181,8 +190,8 @@ node tests/smoke.test.js --port 3088
 
 | 우선순위 | 항목 | 비고 |
 |---|---|---|
+| 중간 | §13-12 윷·모 잡기 중복 보너스 차단 (§6-1) | MOVE_PIECE에서 useResult가 yut/mo + 잡기 시 capturedBonus 미부여. 별도 발주 예정 |
 | 중간 | 백도(빽도) 변형 룰 옵션 추가 | X자 표식 가락 1개 |
-| 중간 | 분기 진입 옵션 (모서리에서 외곽 계속 vs 지름길 선택) | 정통 룰 |
 | 낮음 | 던지기 애니메이션 (가락 회전) | 시각 폴리시 |
 | 낮음 | 사운드 (윷가락 소리, 잡기 효과음) | |
 | 낮음 | 채팅 또는 이모지 | 친구 대전 폴리시 |

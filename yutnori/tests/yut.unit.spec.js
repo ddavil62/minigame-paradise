@@ -280,19 +280,22 @@ test('U-32: cell 4 + gae(2) → cell 6 (4→5→6, 모서리 통과)', () => {
 
 // ── §5 computeNextCell — 지름길A (5→21→22→23) ────────────────────
 
-test('U-33: cell 5 + do(1) → cell 21 (지름길A 진입)', () => {
-  const r = computeNextCell(5, 1);
+test('U-33: cell 5 + do(1) + shortcut → cell 21 (지름길A 진입)', () => {
+  // 갱신 사유: FIX-2(§13-1 해소) — 모서리는 분기 대기. 지름길 진입은 shortcut 명시.
+  const r = computeNextCell(5, 1, 'shortcut');
   expect(r.toCell).toBe(21);
   expect(r.awaitingBranch).toBe(false);
 });
 
-test('U-34: cell 5 + gae(2) → cell 22', () => {
-  expect(computeNextCell(5, 2).toCell).toBe(22);
+test('U-34: cell 5 + gae(2) + shortcut → cell 22', () => {
+  // 갱신 사유: FIX-2(§13-1 해소) — 지름길 진입 shortcut 명시.
+  expect(computeNextCell(5, 2, 'shortcut').toCell).toBe(22);
 });
 
-test('U-35: cell 5 + geol(3) → cell 23 (중앙 정착, awaitingBranch=false)', () => {
+test('U-35: cell 5 + geol(3) + shortcut → cell 23 (중앙 정착, awaitingBranch=false)', () => {
+  // 갱신 사유: FIX-2(§13-1 해소) — 지름길 진입 shortcut 명시.
   // 마지막 스텝에서 23 도달 → 분기 결정은 다음 이동 시
-  const r = computeNextCell(5, 3);
+  const r = computeNextCell(5, 3, 'shortcut');
   expect(r.toCell).toBe(23);
   expect(r.awaitingBranch).toBe(false);
 });
@@ -323,16 +326,19 @@ test('U-39: cell 22 + gae(2) → awaitingBranch=true (중앙 통과 중 잔여 �
 
 // ── §6 computeNextCell — 지름길B (10→26→27→23) ───────────────────
 
-test('U-40: cell 10 + do(1) → cell 26 (지름길B 진입)', () => {
-  expect(computeNextCell(10, 1).toCell).toBe(26);
+test('U-40: cell 10 + do(1) + shortcut → cell 26 (지름길B 진입)', () => {
+  // 갱신 사유: FIX-2(§13-1 해소) — 모서리는 분기 대기. 지름길 진입 shortcut 명시.
+  expect(computeNextCell(10, 1, 'shortcut').toCell).toBe(26);
 });
 
-test('U-41: cell 10 + gae(2) → cell 27', () => {
-  expect(computeNextCell(10, 2).toCell).toBe(27);
+test('U-41: cell 10 + gae(2) + shortcut → cell 27', () => {
+  // 갱신 사유: FIX-2(§13-1 해소) — 지름길 진입 shortcut 명시.
+  expect(computeNextCell(10, 2, 'shortcut').toCell).toBe(27);
 });
 
-test('U-42: cell 10 + geol(3) → cell 23 (awaitingBranch=false)', () => {
-  const r = computeNextCell(10, 3);
+test('U-42: cell 10 + geol(3) + shortcut → cell 23 (awaitingBranch=false)', () => {
+  // 갱신 사유: FIX-2(§13-1 해소) — 지름길 진입 shortcut 명시.
+  const r = computeNextCell(10, 3, 'shortcut');
   expect(r.toCell).toBe(23);
   expect(r.awaitingBranch).toBe(false);
 });
@@ -391,11 +397,12 @@ test('U-51: cell 23 + 6, branchChoice=top → GOAL (23→15→16→17→18→19�
   expect(r.passedStart).toBe(true);
 });
 
-test('U-52: cell 23 + do(1), branchChoice=bottom → GOAL (centerExitB: 즉시 완주)', () => {
-  // centerExitB: 23→GOAL (단순화)
+test('U-52: cell 23 + do(1), branchChoice=bottom → cell 24 (centerExitB 중간 칸)', () => {
+  // 갱신 사유: FIX-3(§13-2 해소) — centerExitB가 즉시 GOAL에서 23→24→25→GOAL로 변경됨.
+  // 도(1)이면 첫 중간 칸 24에 정착.
   const r = computeNextCell(23, 1, 'bottom');
-  expect(r.toCell).toBe(GOAL);
-  expect(r.passedStart).toBe(true);
+  expect(r.toCell).toBe(24);
+  expect(r.passedStart).toBe(false);
 });
 
 test('U-53: cell 15 + do(1) → cell 16 (외곽 계속 진행)', () => {
@@ -461,4 +468,52 @@ test('U-65: 외곽 임의 칸에서 백도 — 이전 칸', () => {
   expect(computeNextCell(3, -1).toCell).toBe(2);
   expect(computeNextCell(10, -1).toCell).toBe(9);
   expect(computeNextCell(19, -1).toCell).toBe(18);
+});
+
+// ── §9 computeNextCell — 모서리 지름길 + 중앙 통과 복합 분기 (U-66~U-72) ──
+//
+// FIX-2 중첩 분기 결함 수정 (룰북 §10-2 모서리 외곽/지름길 선택, §10-3 중앙 출구 선택).
+// 모서리(5/10)에 멈춘 말이 윷/모로 지름길을 타고 중앙(23)을 잔여 steps 있이 통과하는 경우,
+// 1차 모서리 선택('shortcut')과 2차 중앙 선택('top'/'bottom')을 'shortcut-top'/'shortcut-bottom'
+// 복합값으로 합성하여 한 번에 계산한다.
+
+test('U-66: cell 5 + yut(4) + shortcut → 중앙 통과 잔여로 awaitingBranch=true (§10-2 §10-3)', () => {
+  // 5→21→22→23(i=2, steps-1=3, 2<3) → 잔여 steps 있이 중앙 도달 → 중앙 분기 재대기.
+  const r = computeNextCell(5, 4, 'shortcut');
+  expect(r.toCell).toBe(23);
+  expect(r.awaitingBranch).toBe(true);
+});
+
+test('U-67: cell 5 + yut(4) + shortcut-top → cell 15 (지름길A→centerExitA) (§10-2 §10-3)', () => {
+  // 5→21→22→23→15. 복합값이므로 중앙 재대기 없이 출구A로 진행.
+  const r = computeNextCell(5, 4, 'shortcut-top');
+  expect(r.toCell).toBe(15);
+  expect(r.awaitingBranch).toBe(false);
+});
+
+test('U-68: cell 5 + mo(5) + shortcut-top → cell 16 (5→21→22→23→15→16) (§10-3)', () => {
+  expect(computeNextCell(5, 5, 'shortcut-top').toCell).toBe(16);
+});
+
+test('U-69: cell 5 + yut(4) + shortcut-bottom → cell 24 (지름길A→centerExitB) (§10-3)', () => {
+  // 5→21→22→23→24. centerExitB 첫 중간 칸 24.
+  const r = computeNextCell(5, 4, 'shortcut-bottom');
+  expect(r.toCell).toBe(24);
+  expect(r.awaitingBranch).toBe(false);
+});
+
+test('U-70: cell 10 + yut(4) + shortcut-bottom → cell 24 (지름길B→centerExitB) (§10-3)', () => {
+  // 10→26→27→23→24.
+  expect(computeNextCell(10, 4, 'shortcut-bottom').toCell).toBe(24);
+});
+
+test('U-71: cell 10 + mo(5) + shortcut-bottom → cell 25 (10→26→27→23→24→25) (§10-3)', () => {
+  expect(computeNextCell(10, 5, 'shortcut-bottom').toCell).toBe(25);
+});
+
+test('U-72: cell 5 + geol(3) + shortcut → cell 23 정착 (잔여 없음, awaitingBranch=false) (§10-2)', () => {
+  // 5→21→22→23. 마지막 스텝에서 중앙 도달 → 잔여 없음 → 분기 재대기 없이 중앙 정착.
+  const r = computeNextCell(5, 3, 'shortcut');
+  expect(r.toCell).toBe(23);
+  expect(r.awaitingBranch).toBe(false);
 });

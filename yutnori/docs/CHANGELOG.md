@@ -1,5 +1,54 @@
 # Yutnori — 변경 이력
 
+## Rule Fixes — 룰 정합 수정 FIX-1~4 + 중첩 분기 수정 (2026-06-11)
+
+### 추가
+- **FIX-2 모서리(5/10) 외곽/지름길 선택 분기** (§13-1 [HIGH] 해소): 모서리에 정확히 멈춘 다음 이동 시 자동 지름길 진입을 폐기하고 외곽 계속/지름길 진입 선택 모달을 표시.
+  - `server.js`: `computeNextCell`이 `branchChoice=null`이면 `awaitingBranch=true` 반환(강제 지름길 제거), `'shortcut'`→지름길 / `'outer'`→외곽. `movePiece`가 모서리 출발 시도 awaitingBranch 반환. MOVE_PIECE 핸들러가 piece.cell 5/10 → `awaitingBranchType='corner'` 판별 후 `BRANCH_REQUEST { branchType }` broadcast.
+- **FIX-3 centerExitB 24/25 경유 완주** (§13-2 [HIGH] 해소): 중앙→좌하 출구를 즉시 GOAL에서 `23→24→25→GOAL` 잔여 steps 소진으로 변경.
+  - `server.js`: `advanceOneCell` centerExitB 잔여 소진, 백도 복귀 `25→24`/`24→23` 추가, `computeNextCell`이 cell 24/25 출발 시 centerExitB 컨텍스트 잔여 소진.
+  - `board.js`: `buildCenterExitB()`/`CENTER_EXIT_B` 좌표 신설, 24/25 칸 렌더링·hit-test·경로선 추가(이전 미사용 인덱스 활성화).
+- **중첩 분기 (shortcut-top/bottom 합성)**: 모서리 지름길 진입 이동이 중앙(23)을 잔여 steps 있이 통과할 때 윷/모 결과가 증발하고 말이 제자리에 남던 HIGH 버그 수정.
+  - `server.js`: `isShortcutChoice`/`isBottomExit` 헬퍼 신규. `computeNextCell`이 복합값 `shortcut-top`/`shortcut-bottom` 지원(모서리 지름길 판정 + 중앙 출구 결정, 복합값은 중앙 재대기 없이 출구까지 즉시 진행). CHOOSE_PATH 핸들러가 `moveRes.awaitingBranch===true` 시 큐 미차감 + `awaitingBranchType='center'` 재무장(BRANCH_REQUEST center 재발송) 후 break → 2차 CHOOSE_PATH에서 piece.cell이 5/10이고 choice가 top/bottom이면 `shortcut-` 접두 합성(서버 내부 전용). 신규 상태 필드 없이 cell 기반 판별.
+  - `main.js`: `onState`가 매 STATE의 `awaitingBranchType`로 `ui.showBranchModal(true, type)` 재호출 → corner→center 모달 연속 전환 자동 갱신(기존 코드, 수정 불필요 — 동작 확인만).
+  - 검증값: `(5,4,'shortcut')`→awaiting / `(5,4,'shortcut-top')`→15 / `(5,5,'shortcut-top')`→16 / `(5,4,'shortcut-bottom')`→24 / `(10,4,'shortcut-bottom')`→24 / `(10,5,'shortcut-bottom')`→25 / `(5,3,'shortcut')`→23 정착.
+- **§13-12 [LOW] 신규 등록 (미해소)**: §6-1 윷·모로 잡았을 때 잡기 보너스와 윷/모 보너스가 둘 다 발생 가능(정통은 한 번만). 의도적 미구현, 별도 발주 예정.
+- **신규 테스트 파일**:
+  - `tests/qa-rulefix-edge.spec.js`: FIX-1~4 + 중첩 분기 QA 엣지 26건(QA-RF1/2/3/4/X). 분기 대기 중 disconnect, 24/25 잡기/업기/완주, capturedBonus 보존/소진 경계, 중첩 분기 비정상 입력 방어 등 능동 도출.
+  - 룰북 신규 spec: `rulebook-c15` 재입장 / `c16` 모서리 분기(YR-C16-010/011 중첩 분기 2건 포함) / `c17` centerExitB / `c18` 보너스 정밀화.
+  - `tests/yut.unit.spec.js` §9 섹션 U-66~U-72 7건 추가(복합 분기 단위 검증).
+
+### 변경
+- **FIX-1 재입장 ID 중복 데드락 수정** (`server.js` connection 핸들러): ID 배정을 `players.length` 기반에서 미사용 ID 탐색(`usedIds = new Set(players.map(p=>p.id))` → `!usedIds.has('p1') ? 'p1' : 'p2'`)으로 변경. p1 disconnect 후 재접속 시 p2 중복 배정으로 게임이 잠기던 데드락 해소.
+- **FIX-4 capturedBonus 소진 조건 정밀화** (`server.js` THROW_YUT 핸들러): 잡기 보너스 권리를 무조건 소진하던 것을 **큐가 비어 capturedBonus로 진입한 던지기에서만 1회 소진**(`enteredViaCapturedBonus = pendingResults.length === 0 && capturedBonus === true`)으로 한정. 큐에 yut/mo 잔여 시 보존. 잡기 후 보너스 결과가 yut/mo가 아닐 때 윷·모 보너스 진입 던지기에서 잡기 보너스 권리를 부당하게 잃던 문제 방지.
+- **WS 프로토콜 확장**: `BRANCH_REQUEST`에 `branchType: 'center'|'corner'` 추가, `CHOOSE_PATH`의 `pathChoice` 값 확장(중앙 `top/bottom` + 모서리 `outer/shortcut`, 합성값 `shortcut-top/shortcut-bottom`은 서버 내부 전용), `STATE`에 `awaitingBranchType` 필드 추가(broadcast + inject).
+- **기존 테스트 기댓값 갱신** (정통 룰로 기댓값이 바뀐 경우만, 갱신 사유 파일 주석 명기):
+  - `rulebook-c12-unresolved.spec.js`: §13-1/§13-2를 RESOLVED로 갱신(YR-C12-001 분기 대기, YR-C12-002 24/25 경유, YR-C12-006 shortcut 명시 + bottom 첫 칸 24).
+  - `rulebook-c6-corner.spec.js`(YR-C6): 강제 지름길 기댓값 → 분기 대기/명시 shortcut.
+  - `rulebook-c7-center.spec.js`(YR-C7): centerExitB 즉시 GOAL → 24/25 경유.
+  - `rulebook-c2-movement.spec.js`: 모서리 통과/진입 동선.
+  - `yut.unit.spec.js`(U-33~U-52 등): shortcut 명시 + centerExitB 24 기댓값.
+  - `qa-defect2-captured-bonus-stuck.spec.js`: piece 배치 5→1 이동(모서리 분기로 흐름 변질 방지) + 기댓값 갱신(QA-D2-001 turn 보존 p1, QA-D2-002 큐 빈 진입 THROW 소진).
+  - `smoke.test.js`: 모서리 분기 대기 + shortcut 진입 보조 assert 추가(풀 실행 시 40 assert).
+
+### 회귀 결과
+- **서버리스 회귀 289 + QA 엣지 26 = 315/315 PASS** (0 FAIL). 기준 280 → 신규 9건(유닛 7 + WS 2) 추가로 289, QA 엣지 26 추가로 315.
+  - 내역: yut.unit 72 + ws.scenarios 20 + rulebook-c* 194 + qa-defect2 3 + qa-rulefix-edge 26.
+- E2E `e2e-scenarios.spec.js` 25/25는 서버(`node server.js --port 3088`) 가동 시 별도 회귀.
+- smoke: 시나리오 1~8 36 assert PASS(+모서리 분기 보조 assert, 풀 실행 40). 8b "참고용" WS 샘플러는 환경 의존 장기 실행으로 기능 무관.
+- QA 발견 결함 0건. LOW 등급 정책/방어 관찰 3건 비차단 기록.
+- AD 모드3 APPROVED (FAIL 0).
+
+### 알려진 이슈 (Out of Scope)
+- §13-12 [LOW] §6-1 윷·모 잡기 중복 보너스 차단 미구현 — 별도 발주 예정.
+- `ws.scenarios.spec.js` W-10(백도 폐기)는 백도가 나올 때까지 THROW 반복 구조라 환경 타이밍에 따라 드물게 flake. FIX-1~4와 무관, 재실행 시 안정 PASS.
+- smoke 8b "참고용" WS 분포 샘플러는 환경 의존 장기 실행/행. 의미 assert는 전부 시나리오 1~8에 있고 PASS.
+
+### 참고
+- 스펙: `.claude/specs/2026-06-11-yutnori-rule-fixes-spec.md`, `-scope.md`
+- 구현 리포트: `.claude/specs/2026-06-11-yutnori-rule-fixes-impl-report.md`
+- QA 리포트: `.claude/specs/2026-06-11-yutnori-rule-fixes-qa-report.md`
+
 ## Rulebook Tests — 룰북 기반 168 시나리오 + 결함 5건 수정 (2026-05-31)
 
 ### 추가

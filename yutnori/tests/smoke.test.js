@@ -458,17 +458,17 @@ async function main() {
     const rHome = computeNextCell(-1, -1);
     assert(rHome.toCell === -1, `백도 from HOME → HOME 유지 (실제: ${rHome.toCell})`);
 
-    // 지름길 진입 검증
-    // - 모서리 5에 멈춘 직후 다음 이동 (예: 도) → 지름길 진입 (21)
-    const sc5 = computeNextCell(5, 1);
-    assert(sc5.toCell === 21, `cell 5 + 1칸 → 21 (지름길A) (실제: ${sc5.toCell})`);
-    // - 모서리 10에 멈춘 직후 다음 이동 (도) → 지름길B 진입 (26)
-    const sc10 = computeNextCell(10, 1);
-    assert(sc10.toCell === 26, `cell 10 + 1칸 → 26 (지름길B) (실제: ${sc10.toCell})`);
-    // - 5에서 3칸 → 21→22→23(중앙) 도달 시 분기 대기
-    const sc5branch = computeNextCell(5, 3);
-    assert(sc5branch.awaitingBranch === true || sc5branch.toCell === 23,
-      `cell 5 + 3칸 → 중앙 도달 + 분기 대기 (실제: toCell=${sc5branch.toCell}, awaiting=${sc5branch.awaitingBranch})`);
+    // 지름길 진입 검증 (FIX-2 §13-1 해소: 모서리는 외곽/지름길 분기 대기. 지름길 진입은 shortcut 명시)
+    // - 모서리 5에 멈춘 직후 다음 이동 (예: 도) + 지름길 선택 → 지름길 진입 (21)
+    const sc5 = computeNextCell(5, 1, 'shortcut');
+    assert(sc5.toCell === 21, `cell 5 + 1칸 + shortcut → 21 (지름길A) (실제: ${sc5.toCell})`);
+    // - 모서리 10에 멈춘 직후 다음 이동 (도) + 지름길 선택 → 지름길B 진입 (26)
+    const sc10 = computeNextCell(10, 1, 'shortcut');
+    assert(sc10.toCell === 26, `cell 10 + 1칸 + shortcut → 26 (지름길B) (실제: ${sc10.toCell})`);
+    // - 5에서 분기 미선택 → 외곽/지름길 분기 대기
+    const sc5branch = computeNextCell(5, 1);
+    assert(sc5branch.awaitingBranch === true,
+      `cell 5 + 분기 미선택 → 분기 대기 (실제: toCell=${sc5branch.toCell}, awaiting=${sc5branch.awaitingBranch})`);
   }
 
   // ──

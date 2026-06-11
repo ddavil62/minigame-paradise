@@ -32,20 +32,29 @@ const HOME = -1;
  * 대신 inject로 pendingResults에 'do' (yut/mo 아닌 결과)를 직접 주입한 뒤 MOVE_PIECE만으로도 동일 코드 경로를 타게 한다.
  */
 
-test('QA-D2-001: capturedBonus=true + pendingResults=["do"] + MOVE → passTurn 호출 안 됨 (잔류 확인)', async () => {
+test('QA-D2-001: capturedBonus=true(미소진) + pendingResults=["do"] + MOVE → 턴 보존(p1) + 데드락 없음', async () => {
+  // ── 배치 이동 + 기댓값 갱신 사유 (FIX-2 §13-1, FIX-4 §6) ──────────────────────
+  // (1) FIX-2(§13-1) 모서리 분기 도입으로 칸 5 출발 이동은 awaitingBranch(corner) 대기가 되어
+  //     본 시나리오(capturedBonus 라이프사이클)와 무관한 분기 흐름으로 변질된다.
+  //     → 검증 의도(capturedBonus 잔류/데드락)는 불변, piece를 모서리가 아닌 칸 1로 이동 배치.
+  // (2) FIX-4(§6) + 메인 오케스트레이터 판정(쟁점 1): inject로 capturedBonus=true를 직접 주입하고
+  //     THROW를 거치지 않은 채 MOVE하면, capturedBonus는 소진되지 않으므로 hasBonus=true →
+  //     passTurn하지 않는 것이 정답이다(턴 보존 p1 + 추가 던지기 1회 권리 보유).
+  //     이전 기댓값 p2는 "THROW로 진입하며 capturedBonus를 소진한 뒤"의 흐름(QA-D2-002)과 혼동한 것.
+  //     본 케이스에서 "데드락 없음"은 보유한 추가 던지기 권리가 정상 행사 가능함으로 검증한다.
+  // ──────────────────────────────────────────────────────────────────────────────
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
   try {
-    // Given: 잡기 직후 상태 시뮬레이션 — capturedBonus=true, 큐에는 보너스 THROW로 얻은 'do', P1 말 1개 칸 5.
-    // (보너스 THROW 결과 'do'를 직접 inject. 실제 코드 흐름과 동일한 진입점)
+    // Given: capturedBonus=true(미소진), 큐=['do'], P1 말 1개 칸 1(모서리 아님).
     await inject(port, {
       currentTurn: 'p1',
       pendingResults: ['do'],
       capturedBonus: true,
       pieces: {
         p1: [
-          { cell: 5, stack: 1, done: false },
+          { cell: 1, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
@@ -61,104 +70,86 @@ test('QA-D2-001: capturedBonus=true + pendingResults=["do"] + MOVE → passTurn 
     await p1.next('STATE');
     await p2.next('STATE');
 
-    // When: P1이 'do' 사용하여 piece 0 이동 (5 → 지름길A 진입 후 shortcutA cell 21로 진행)
+    // When: P1이 'do' 사용하여 piece 0 이동 (1 → 2, 분기 없음).
     p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'do' });
     const stateAfter = await p1.next('STATE');
     p2.drain('STATE');
 
-    // Then: 큐가 비고 결과는 yut/mo가 아니므로 정상이라면 passTurn 발생해야 함.
-    // 잠재 결함: capturedBonus=true 잔류로 hasBonus=true → passTurn 안 됨 → currentTurn 여전히 p1.
+    // Then: 큐는 비지만 capturedBonus(미소진)로 hasBonus=true → 턴 보존(p1).
     console.log(`[QA-D2-001] currentTurn after MOVE: ${stateAfter.currentTurn}, pendingResults: ${JSON.stringify(stateAfter.pendingResults)}`);
-    // 기대: currentTurn === 'p2' (정상 패스턴).
-    // 실측: 결함이 확정되면 currentTurn === 'p1' 잔류.
-    expect(stateAfter.currentTurn).toBe('p2');
+    expect(stateAfter.pendingResults).toEqual([]);
+    expect(stateAfter.currentTurn).toBe('p1');
+
+    // 데드락 없음 검증: 보유한 추가 던지기 권리가 정상 행사 가능(THROW 수락 → 큐에 결과 누적).
+    p1.send({ type: 'THROW_YUT' });
+    await p1.next('YUT_RESULT');
+    const stateThrow = await p1.next('STATE');
+    p2.drain('YUT_RESULT'); p2.drain('STATE');
+    expect(stateThrow.pendingResults.length).toBeGreaterThanOrEqual(1);
   } finally {
     p1.close(); p2.close();
     await stopServer(server);
   }
 });
 
-test('QA-D2-002: 잡기 시퀀스 전체 WS 사이클 — 잡기 → 보너스 THROW(do/gae/geol 강제) → MOVE 후 턴 전환 검증', async () => {
-  // 실제 WS 사이클로 잡기 → 보너스 THROW → MOVE 흐름.
-  // Math.random 제어는 어렵지만, inject로 직접 capturedBonus 세팅하고 추가 THROW를 통해 검증.
+test('QA-D2-002: 잡기 후 보너스 THROW(큐 빈 진입 → 소진) → non-bonus MOVE 후 턴 전환(p2) — 데드락 가드', async () => {
+  // ── 배치 이동 사유 (FIX-2 §13-1) + 핵심 데드락 흐름 (FIX-4 §6) ────────────────
+  // FIX-2(§13-1): 칸 5 출발은 corner 분기가 되어 흐름이 변질되므로 piece를 칸 1로 이동 배치
+  //   (검증 의도 = capturedBonus 데드락 가드, 불변).
+  // 본 테스트가 검증하는 "진짜 데드락 흐름"(메인 오케스트레이터 판정 쟁점 2):
+  //   잡기 → 큐 빈 상태 → THROW(큐 빈 진입이므로 FIX-4가 capturedBonus 소진) → non-bonus(do/gae/geol)
+  //   → MOVE → 큐 빔 + capturedBonus=false → passTurn(p2).
+  // 보강 전(§13-11 미해소) 코드는 이 지점에서 capturedBonus 잔류로 p1 잠금이 발생했다.
+  // 주의: THROW가 capturedBonus를 소진하므로, 이후 큐 정리 inject에서 capturedBonus를 다시 true로
+  //       강제하면 안 된다(데드락 흐름이 무효화됨).
+  // ──────────────────────────────────────────────────────────────────────────────
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
   try {
-    // Given: P1이 잡기로 capturedBonus=true 획득한 직후 상태 (큐는 비어 있음).
-    await inject(port, {
-      currentTurn: 'p1',
-      pendingResults: [],
-      capturedBonus: true,
-      pieces: {
-        p1: [
-          { cell: 5, stack: 1, done: false },
-          { cell: HOME, stack: 1, done: false },
-          { cell: HOME, stack: 1, done: false },
-          { cell: HOME, stack: 1, done: false },
-        ],
-        p2: [
-          { cell: HOME, stack: 1, done: false },
-          { cell: HOME, stack: 1, done: false },
-          { cell: HOME, stack: 1, done: false },
-          { cell: HOME, stack: 1, done: false },
-        ],
-      },
-    });
-    await p1.next('STATE');
-    await p2.next('STATE');
-
-    // When: P1이 보너스 던지기 시도 (큐 비어있지만 capturedBonus=true이므로 허용됨)
     let bonusResult = null;
-    let attempts = 0;
-    // 보너스 결과가 yut/mo면 큐에 yut/mo가 쌓여 hasBonus=true (정상), 그래서 우리는 do/gae/geol/backdo를 원함.
-    // 최대 30회 던지기로 non-bonus 결과 확보.
-    while (attempts < 30) {
+    // 큐 빈 + capturedBonus=true에서 THROW → non-bonus 확보. 매 시도마다 상태를 재주입해
+    // "큐 빈 진입" 조건을 보장한다(THROW가 capturedBonus를 소진하므로 매번 재무장).
+    for (let attempt = 0; attempt < 40 && !bonusResult; attempt++) {
+      await inject(port, {
+        currentTurn: 'p1',
+        pendingResults: [],
+        capturedBonus: true,
+        pieces: {
+          p1: [
+            { cell: 1, stack: 1, done: false },
+            { cell: HOME, stack: 1, done: false },
+            { cell: HOME, stack: 1, done: false },
+            { cell: HOME, stack: 1, done: false },
+          ],
+          p2: [
+            { cell: HOME, stack: 1, done: false },
+            { cell: HOME, stack: 1, done: false },
+            { cell: HOME, stack: 1, done: false },
+            { cell: HOME, stack: 1, done: false },
+          ],
+        },
+      });
+      await p1.next('STATE');
+      await p2.next('STATE');
+
+      // 큐 빈 + capturedBonus=true로 진입한 THROW → FIX-4가 capturedBonus를 소진한다.
       p1.send({ type: 'THROW_YUT' });
       const yr = await p1.next('YUT_RESULT');
       await p1.next('STATE');
       p2.drain('YUT_RESULT'); p2.drain('STATE');
       if (yr.result === 'do' || yr.result === 'gae' || yr.result === 'geol') {
-        bonusResult = yr.result;
-        break;
+        bonusResult = yr.result; // 큐=[bonusResult], capturedBonus는 소진된 상태
       }
-      // yut/mo가 나오면 큐에 쌓이고 추가 던지기 가능 → 계속 시도
-      // backdo는 자동 폐기될 수 있어 큐 비어있을 수 있음 → 다음 던지기 가능
-      attempts++;
-      if (yr.result === 'backdo' && yr.discarded) {
-        // 큐가 비고 capturedBonus가 살아있으면 계속 시도 가능
-        // 그런데 inject로 다시 큐 비우는 게 더 명확
-        await inject(port, { pendingResults: [], capturedBonus: true });
-        await p1.next('STATE');
-        await p2.next('STATE');
-        continue;
-      }
-      if (yr.result === 'yut' || yr.result === 'mo') {
-        // 큐에 yut/mo가 있으니 추가 던지기로 일반 결과 노림
-        continue;
-      }
-      // 정상 결과 도달
-      bonusResult = yr.result;
-      break;
     }
+    expect(bonusResult).toBeTruthy();
 
-    console.log(`[QA-D2-002] 보너스 결과 확보: ${bonusResult}, attempts=${attempts}`);
-    if (!bonusResult) {
-      // 시도 한도 초과 — 테스트 자체 한계
-      console.log('[QA-D2-002] 30회 안에 do/gae/geol 확보 실패');
-      return;
-    }
-
-    // 큐 정리: 잔여 yut/mo 결과는 제거하고 bonusResult만 남기기 위해 inject
-    await inject(port, { pendingResults: [bonusResult], capturedBonus: true });
-    await p1.next('STATE');
-    await p2.next('STATE');
-
-    // When: 보너스 결과로 MOVE
+    // When: non-bonus 결과로 MOVE (capturedBonus는 이미 소진됨 — 재무장 금지).
     p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: bonusResult });
     const stateAfter = await p1.next('STATE');
     p2.drain('STATE');
 
+    // Then: 큐 빔 + capturedBonus 소진 → hasBonus=false → passTurn(p2). 데드락 없음.
     console.log(`[QA-D2-002] MOVE 후 currentTurn: ${stateAfter.currentTurn}, queue: ${JSON.stringify(stateAfter.pendingResults)}`);
     expect(stateAfter.currentTurn).toBe('p2');
   } finally {
@@ -168,9 +159,14 @@ test('QA-D2-002: 잡기 시퀀스 전체 WS 사이클 — 잡기 → 보너스 T
 });
 
 test('QA-D2-003: THROW_YUT 핸들러가 capturedBonus를 리셋하는지 확인 (Defect #2 핵심 경로)', async () => {
+  // ── 배치 이동 사유 (FIX-2 §13-1) ────────────────────────────────────────────
+  // FIX-2(§13-1) 모서리 분기 도입으로 칸 5 출발 MOVE는 corner 분기가 되므로 piece를 칸 1로 이동 배치.
+  //   검증 의도(THROW 후 capturedBonus 소진 → non-bonus MOVE 시 passTurn) 불변.
+  //   본 흐름은 "큐 빈 진입 THROW → FIX-4 소진"이므로 MOVE 후 정상 passTurn(p2).
+  // ──────────────────────────────────────────────────────────────────────────────
   // inject로 직접 시뮬레이션:
   //   capturedBonus=true + 큐 빈 상태에서 THROW_YUT → 보너스 인정 (큐 비어도)
-  //   THROW 후 capturedBonus가 false로 리셋되는가? (코드상 안 됨 — 결함 확정)
+  //   THROW 후 capturedBonus가 false로 소진되는가? (FIX-4: 큐 빈 진입 THROW에서 1회 소진)
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
@@ -181,7 +177,7 @@ test('QA-D2-003: THROW_YUT 핸들러가 capturedBonus를 리셋하는지 확인 
       capturedBonus: true,
       pieces: {
         p1: [
-          { cell: 5, stack: 1, done: false },
+          { cell: 1, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
