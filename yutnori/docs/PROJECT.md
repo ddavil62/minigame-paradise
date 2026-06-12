@@ -2,9 +2,17 @@
 
 > 한국 전통 윷놀이 LAN 1:1 대전. 사용자가 친구와 즉시 플레이용으로 발주된 신규 프로젝트.
 
-## 현재 상태 (2026-06-11)
+## 현재 상태 (2026-06-12)
 
-**룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 완료** — QA PASS(결함 0), AD3 APPROVED. 서버리스 회귀 289 + QA 엣지 26 = **315/315 PASS** + E2E 25 + smoke 40.
+**AI 봇 추가 완료** — `mode=ai` 진입 시 봇 자동 spawn, 대기 화면 "🤖 AI랑 시작" 진입점. QA PASS(결함 0), AD3 APPROVED. 봇 smoke 7/7×4 + 서버리스 회귀 315 + E2E 25 + smoke 40 PASS.
+
+### 2026-06-12 주요 변경 (AI 봇)
+- **`bot.js` 신규** — STATE 기반 상태 머신 봇(분기 응답 → 그리디 말 이동 → 던지기). matgo/janggi/yahtzee/rummikub와 동일한 `getBotUrl` + `child_process.spawn` 패턴. 강한 AI가 아니라 게임 전 흐름을 데드락 없이 완주하는 테스트용 봇.
+- **`server.js`**: `getBotUrl` 옵션 + `spawnBotChild`/`killBotChild` + connection 핸들러 `mode=ai/bot/human` 파싱 + **STATE에 `capturedBonus` 필드 추가(후방 호환)**.
+- **클라**: 대기 화면 `#ai-panel`("🤖 AI랑 시작") 버튼(p1+혼자 대기+mode≠ai일 때 노출), `?mode=ai` 재진입, `network.js` mode 쿼리 + sessionStorage 백업.
+- **런처**: yutnori `getBotUrl` 주입, `games.json` `botAvailable: false → true`(런처 1/2 AI 모드 활성).
+- **신규 `tests/bot-smoke.test.js`** (YBOT-001~005, 포트 3104).
+- **간헐 데드락(HIGH) 수정**: 봇 중복 행동 방지 키에 `awaitingBranchType` 추가. 중첩 분기(corner shortcut→center 재무장) 시 키가 동일해져 봇이 2차 분기를 무시하던 영구 턴 잠금 해소.
 
 ### 2026-06-11 주요 변경
 - **FIX-1** 재입장 ID 중복 데드락 수정(미사용 ID 탐색 배정).
@@ -34,6 +42,7 @@
 - ✅ 말 4×2색 렌더링 + 업힘 카운트 표시
 - ✅ 결과 큐 → 클릭으로 사용할 결과 선택 → 말 클릭 이동
 - ✅ 중앙 분기 모달
+- ✅ AI 봇 (`bot.js`, 2026-06-12) — `mode=ai` 자동 spawn, 대기 화면 "🤖 AI랑 시작" 진입점, 런처 1/2 AI 모드
 - ✅ 재대결 흐름
 - ✅ tetris-battle 패턴: ANSI 콘솔 박스, LAN IP 자동 감지, 포트 3000~3010 폴백
 - ✅ 친구 초대 패널 + 주소 복사 버튼 + 토스트
@@ -66,9 +75,10 @@
 | 낮음 | 던지기 애니메이션 (가락 회전 → 결과 노출) |
 | 낮음 | 사운드 효과 |
 
-## 테스트 현황 (2026-06-11)
+## 테스트 현황 (2026-06-12)
 
-- **서버리스 회귀 289 + QA 엣지 26 = 315/315 PASS**: 유닛 72 + WS 20 + 룰북 194 + qa-defect2 3 + qa-rulefix-edge 26.
+- **봇 smoke (YBOT-001~005, 포트 3104): 7/7 PASS (4회 연속, 데드락 0)**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`.
+- **서버리스 회귀 289 + QA 엣지 26 = 315/315 PASS**: 유닛 72 + WS 20 + 룰북 194 + qa-defect2 3 + qa-rulefix-edge 26. (server.js `capturedBonus` 필드 추가 + connection `(ws, req)` 변경 후에도 회귀 유지)
   - 룰북 (YR-C1~C18): 룰북 §1~§13 + 부록 커버, §13 12건 커버. c15 재입장 / c16 모서리 분기(중첩 포함) / c17 centerExitB / c18 보너스 정밀화.
   - 신규 파일: `qa-rulefix-edge.spec.js`(QA 엣지 26), `rulebook-c15~c18-*.spec.js`. 유닛 U-66~U-72 중첩 분기 7건 추가.
 - **E2E 25/25 PASS**: `e2e-scenarios.spec.js` (서버 가동 시 별도 회귀).

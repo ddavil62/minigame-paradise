@@ -74,7 +74,11 @@ const GAME_APPS = {
     // mode=ai 사용자 진입 시 matgo 서버가 자체적으로 봇을 spawn할 URL.
     getBotUrl: () => `ws://localhost:${PORT}/matgo/ws?mode=bot`,
   }),
-  'yutnori':        createYutnoriApp(),
+  // 윷놀이 — 봇 지원 (2026-06-12 추가).
+  'yutnori':        createYutnoriApp({
+    // mode=ai 사용자 진입 시 yutnori 서버가 자체적으로 봇을 spawn할 URL.
+    getBotUrl: () => `ws://localhost:${PORT}/yutnori/ws?mode=bot`,
+  }),
   'tetris-battle':  createTetrisApp(),
   'janggi':         createJanggiApp({
     // mode=ai 사용자 진입 시 janggi 서버가 자체적으로 봇을 spawn할 URL.

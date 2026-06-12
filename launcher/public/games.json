@@ -41,7 +41,7 @@
     "wsPath": "/yutnori/ws",
     "color": "#D4A017",
     "emoji": "🎲",
-    "botAvailable": false
+    "botAvailable": true
   },
   {
     "id": "tetris-battle",

@@ -1,5 +1,48 @@
 # Yutnori — 변경 이력
 
+## AI Bot — AI 봇 추가 (2026-06-12)
+
+### 추가
+- **`bot.js` 신규** — STATE 기반 상태 머신 봇. matgo/janggi/yahtzee/rummikub와 동일한 `getBotUrl` + `child_process.spawn` 패턴. 강한 AI가 아니라 던지기 → 말 이동 → 분기 선택 → 잡기 보너스 → 완주 → 재대결 전 흐름을 데드락 없이 완주하는 테스트용 봇.
+  - **STATE만 입력으로 받는 순수 상태 머신** (YUT_RESULT/BRANCH_REQUEST는 정보성으로 무시, 결정은 STATE 기반).
+  - `__isMain` 가드(테스트 import 시 WS 연결 생략) + `choosePiece` 테스트 export + `actionEpoch` 액션 체인 취소(rummikub 패턴).
+  - 행동 지연 환경변수 `YUTNORI_BOT_DELAY_MIN/RAND`(기본 300~800ms, 테스트는 단축).
+  - `actTurn` 상태 머신(우선순위 순): ① `awaitingBranchAt!==null` → CHOOSE_PATH **최우선**(턴 잠금 방지, corner=30% shortcut/70% outer, center=50:50 top/bottom) ② `pendingResults.length>0` → `choosePiece` 그리디 말 선택 후 MOVE_PIECE ③ 큐 빈 상태 → THROW_YUT(첫 던지기 또는 capturedBonus 진입).
+  - `choosePiece` 그리디: `done` 제외 + 백도는 HOME(-1) 말 제외, cell 내림차순(GOAL=99 최근접 우선, HOME=-1은 -2 취급), 동률이면 인덱스 오름차순.
+  - 에러 처리: ERROR(방 가득) → `ws.close()`, 그 외 ERROR → `lastActedFor=null` + `actionEpoch+=1` + 타이머 클리어 후 다음 STATE 재시도. GAME_OVER → 500ms 후 REMATCH 자동 송신. 서버 로직(`computeNextCell` 등) 재구현 안 함(스펙 Out of Scope).
+- **`tests/bot-smoke.test.js` 신규** (ad-hoc 노드 러너, 포트 3104) — YBOT-001(봇 vs 봇 1판 완주) / YBOT-002(3판 연속 REMATCH 완주, 잠금 0) / YBOT-003(corner 분기 응답) / YBOT-004(center 분기 응답) / YBOT-005(capturedBonus THROW). **인라인 봇(테스트가 직접 운전 + 분기/보너스 카운트 집계) vs 서버 spawn한 실제 `bot.js` 자식 프로세스** 혼합 방식으로 `mode=ai → spawnBotChild → mode=bot` 실제 spawn 경로까지 검증. YBOT-003/004/005는 3판 누적(YBOT-002) 동안의 자연 발생 카운트(≥1)로 판정.
+- **클라 진입점**: `public/index.html` `#ai-panel`(`또는` 구분선 + `#btn-start-ai` "🤖 AI랑 시작" + ai-hint, ready-btn 아래) / `public/css/style.css` `.ai-panel` 절대 배치(`top: calc(50% + 44px)`) + `.ai-divider`/`.btn-start-ai`/`.ai-hint`(CSS 변수 `--accent`/`--text`/`--panel-border`) / `public/js/main.js` `aiPanelEl`·`btnStartAiEl` 등록 + onJoined 노출 조건(p1+waiting+mode≠ai) + onStart/onRematchStatus 숨김 + btnStartAi 클릭 시 `?mode=ai` 재진입.
+
+### 변경
+- **`server.js`** — `createApp` opts에 `getBotUrl` 옵션 추가 + `spawnBotChild`/`killBotChild` 봇 자식 프로세스 관리. `wss.on('connection', (ws, req))`에서 URL 쿼리 `mode` 파싱(ai/bot/human): `mode=ai`로 혼자 입장 시 `spawnBotChild`(URL `?mode=bot`), 사람(`mode=ai`) close 시 `killBotChild`. standalone 진입점 `listeningPort` 연동(`getBotUrl: () => ws://localhost:${listeningPort}/ws?mode=bot`). `child_process`/`fs` import 추가.
+- **`server.js` STATE에 `capturedBonus` 필드 추가 (후방 호환)** — 봇이 자체 추적 없이 던지기 가능 여부를 STATE에서 직접 판단하도록 broadcast 페이로드에 노출. 기존 클라이언트는 무시하므로 후방 호환.
+- **`public/js/network.js`** — WS URL에 `?mode=` 쿼리 부착 + 새로고침 유실 대비 `sessionStorage('yutnori:mode')` 백업(matgo/rummikub 동일 패턴).
+- **`launcher/server.js`** — `createYutnoriApp({ getBotUrl: () => ws://localhost:${PORT}/yutnori/ws?mode=bot })` 주입.
+- **`launcher/public/games.json`** — yutnori `botAvailable: false → true`(런처 1/2 AI 모드에서 윷놀이 카드 활성).
+
+### 수정 (Bugfix)
+- **간헐 데드락 (HIGH)** — 구현 직후 bot-smoke가 간헐적으로 `gameOvers=0`(전 항목 데드락)으로 실패. 원인: 봇 중복 행동 방지 키가 `${currentTurn}|${pendingResults}|${awaitingBranchAt}|${capturedBonus}` 형태였는데, **중첩 분기**(모서리 5/10에서 shortcut 선택 후 잔여 steps가 중앙 23을 통과)가 발생하면 서버가 1차 CHOOSE_PATH를 큐 차감 없이 처리하고 `awaitingBranchAt`(pieceIndex)·큐·`capturedBonus`를 전부 그대로 둔 채 `awaitingBranchType`만 `corner→center`로 바꿔 STATE를 재발송(center 재무장). 키 구성 요소가 전부 동일해 키가 변하지 않으니 봇이 2차 center 분기를 "이미 처리한 상태"로 무시 → **영구 턴 잠금**. 봇이 corner에서 shortcut을 고르고 잔여 steps가 정확히 중앙을 통과할 때만 발생하는 확률적·간헐적 재현.
+  - 수정: 중복 방지 키에 `awaitingBranchType` 추가. `bot.js`(:169)와 `bot-smoke.test.js` 인라인 봇(:120) 양쪽에 동일 적용, 두 곳 모두 주석으로 원인 명기. 키 추가 전 간헐 실패 → 추가 후 4회 연속 7/7 PASS로 재현 불가 확인.
+
+### 회귀 결과
+- **bot-smoke (YBOT-001~005, 포트 3104): 키 수정 후 4회 연속 7/7 PASS** (3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기, 데드락 0).
+- **서버리스 회귀 289 + QA 엣지 26 = 315/315 PASS** 유지 — server.js `capturedBonus` 필드 추가(후방 호환) + connection 핸들러 `(ws, req)` 변경 후에도 회귀 유지.
+- **E2E 25/25 PASS** 유지(포트 3088).
+- legacy smoke 기능 구간 36 assert PASS(0 FAIL).
+- AD 모드3 APPROVED (`2026-06-12-yutnori-bot-ad3-review.md`). QA PASS(결함 0).
+
+### 스펙 대비 차이 (합당한 사유)
+- bot-smoke 구현 방식: 스펙 의사코드는 두 인라인 봇 또는 bot.js spawn 중 택일을 제시했으나, **인라인 봇(테스트 운전, 분기/보너스 카운트 집계) vs 서버 spawn한 실제 bot.js 자식 프로세스** 혼합 방식으로 구현 — `mode=ai → spawnBotChild → mode=bot` 실제 spawn 경로를 함께 검증하기 위함.
+- YBOT-003/004/005는 별도 `/test/inject` 강제 주입 대신 3판 누적(YBOT-002) 동안의 자연 발생 카운트(≥1)로 판정 — 스펙에 명시된 허용 방식.
+
+### 알려진 이슈 (Out of Scope)
+- 고급 전략 AI / 난이도 선택 / 관전 모드 / §13-12 윷·모 잡기 중복 보너스 차단(별도 발주) — 본 작업 범위 아님.
+
+### 참고
+- 스펙: `.claude/specs/2026-06-12-yutnori-bot-spec.md`
+- 구현 리포트: `.claude/specs/2026-06-12-yutnori-bot-impl-report.md`
+- AD3 검수: `.claude/specs/2026-06-12-yutnori-bot-ad3-review.md` (APPROVED)
+
 ## Rule Fixes — 룰 정합 수정 FIX-1~4 + 중첩 분기 수정 (2026-06-11)
 
 ### 추가

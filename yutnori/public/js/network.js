@@ -38,7 +38,17 @@ export function createNetwork(handlers) {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const seg = location.pathname.split('/').filter(Boolean)[0] || '';
     const wsPath = seg ? `/${seg}/ws` : '/ws';
-    const url = `${proto}://${location.host}${wsPath}`;
+    // mode 쿼리 부착 — '?mode=ai' 진입 시 서버가 봇을 자동 spawn한다.
+    // 새로고침으로 쿼리가 유실되는 경우를 대비해 sessionStorage에 백업한다(matgo/rummikub 동일 패턴).
+    const urlParams = new URLSearchParams(location.search);
+    let mode = urlParams.get('mode');
+    if (mode) {
+      sessionStorage.setItem('yutnori:mode', mode);
+    } else {
+      mode = sessionStorage.getItem('yutnori:mode') || 'human';
+    }
+    const wsQuery = `?mode=${encodeURIComponent(mode)}`;
+    const url = `${proto}://${location.host}${wsPath}${wsQuery}`;
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
 

@@ -20,6 +20,8 @@ import { WebSocketServer } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import { spawn } from 'child_process';
+import fs from 'fs';
 
 // ── 경로 ──────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -349,13 +351,17 @@ function advanceOneCell(cell, pathContext) {
 // ──────────────────────────────────────────────────────────────
 /**
  * 윷놀이 게임 앱 인스턴스를 생성한다.
- * @param {{ hostUrl?: string }} [opts]
+ * @param {{ hostUrl?: string, getBotUrl?: () => (string|null) }} [opts]
+ *   - getBotUrl(): mode=ai 사용자 진입 시 봇이 접속할 WS URL을 반환한다.
+ *     null 반환 시 봇 spawn을 스킵한다. 미지정 시 항상 null(봇 비활성).
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  *   - setHostUrl(url): 부트스트랩 이후 LAN URL이 결정되면 갱신.
  */
 export function createApp(opts = {}) {
   // closure 변수: standalone listen 이후 setHostUrl로 갱신 가능.
   let HOST_URL = typeof opts.hostUrl === 'string' ? opts.hostUrl : '';
+  // mode=ai 사용자가 들어왔을 때 봇이 접속할 WS URL 공급 함수.
+  const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
 
   // ── express 앱 (정적 서빙) ────────────────────────────────────
   const expressApp = express();
@@ -404,6 +410,52 @@ export function createApp(opts = {}) {
 
   // ── WSS (noServer 모드) ───────────────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
+
+  // ── 봇 자식 프로세스 관리 (mode=ai 사용자가 들어왔을 때 자동 spawn) ───
+  /** @type {import('child_process').ChildProcess|null} */
+  let botChild = null;
+
+  /**
+   * 봇 자식 프로세스를 spawn한다. 이미 실행 중이면 무시.
+   * bot.js가 없거나 getBotUrl이 null을 반환하면 경고 출력 후 스킵.
+   */
+  function spawnBotChild() {
+    const botPath = path.join(__dirname, 'bot.js');
+    if (!fs.existsSync(botPath)) {
+      console.warn('[yutnori] bot.js 없음 — 봇 spawn 스킵');
+      return;
+    }
+    if (botChild && botChild.exitCode === null) {
+      console.log('[yutnori] 봇 이미 실행 중');
+      return;
+    }
+    const url = getBotUrl();
+    if (!url) {
+      console.warn('[yutnori] getBotUrl이 null 반환 — 봇 spawn 스킵');
+      return;
+    }
+    console.log(`[yutnori] 봇 spawn: ${url}`);
+    botChild = spawn(process.execPath, [botPath, '--url', url], {
+      detached: false,
+      stdio: 'ignore',
+      env: process.env, // YUTNORI_BOT_DELAY_* 등 환경변수 전파 (테스트 속도 조정용)
+    });
+    botChild.on('exit', (code) => {
+      console.log(`[yutnori] 봇 종료 (code=${code})`);
+      botChild = null;
+    });
+  }
+
+  /**
+   * 봇 자식 프로세스를 종료한다. mode=ai 사용자가 끊어졌을 때 호출.
+   */
+  function killBotChild() {
+    if (botChild && botChild.exitCode === null) {
+      console.log('[yutnori] 봇 종료 요청');
+      botChild.kill();
+      botChild = null;
+    }
+  }
 
 // ── 게임 상태 ────────────────────────────────────────────────────
 /**
@@ -510,6 +562,9 @@ function broadcastState() {
     awaitingBranchAt: game.awaitingBranchAt,
     awaitingBranchResult: game.awaitingBranchResult,
     awaitingBranchType: game.awaitingBranchType, // FIX-2: 분기 유형 전달
+    // 잡기 보너스 권리. true면 큐가 비어도 추가 THROW_YUT가 가능하다.
+    // 봇이 자체 추적 없이 STATE에서만 읽어 던지기 가능 여부를 판단하도록 노출(후방 호환 필드 추가).
+    capturedBonus: game.capturedBonus === true,
     winner: game.winner,
     players: players.map((p) => ({
       id: p.id,
@@ -706,7 +761,15 @@ function movePiece(mover, pieceIdx, resultName, branchChoice = null) {
 }
 
 // ── WebSocket 핸들러 ─────────────────────────────────────────────
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  // URL 쿼리에서 mode 파싱 (launcher가 mode=ai|bot|human 전달).
+  //   - 'ai'  : 사람 사용자가 AI 대전을 원함 → 서버가 봇 자식 프로세스 spawn.
+  //   - 'bot' : spawn된 봇 본인 접속.
+  //   - 그 외 : 일반 사람 대전.
+  const reqUrlObj = new URL(req.url || '/', 'http://localhost');
+  const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
+  const isBot = wsMode === 'bot';
+
   if (players.length >= 2) {
     ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
     ws.close();
@@ -730,7 +793,14 @@ wss.on('connection', (ws) => {
     ws,
   };
   players.push(player);
-  console.log(`[server] ${playerId} 연결됨 (현재 인원: ${players.length}/2)`);
+  console.log(`[server] ${playerId} 연결됨 (현재 인원: ${players.length}/2, mode=${wsMode})`);
+
+  // mode=ai 사용자가 혼자 들어왔다 → 봇 자동 spawn (자기 자식 프로세스).
+  // 봇이 connect하면 두 번째 슬롯을 차지하고 JOIN/READY로 게임을 시작한다.
+  // 약간의 지연: 사용자 클라이언트가 JOIN/READY를 먼저 보낼 여유 확보.
+  if (wsMode === 'ai' && !isBot && players.length === 1) {
+    setTimeout(() => spawnBotChild(), 200);
+  }
 
   ws.on('message', (data) => {
     let msg;
@@ -1027,7 +1097,12 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    console.log(`[server] ${player.id} 연결 해제`);
+    console.log(`[server] ${player.id} 연결 해제 (mode=${wsMode})`);
+    // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
+    // 새 사용자가 다시 들어오면 새 봇이 spawn된다.
+    if (wsMode === 'ai' && !isBot) {
+      killBotChild();
+    }
     players = players.filter((p) => p.id !== player.id);
     if (players.length > 0) {
       const remainingId = players[0].id;
@@ -1205,7 +1280,15 @@ if (isDirectExecution() && !process.env.YUTNORI_NO_LISTEN) {
   const MAX_PORT_FALLBACK = 10;
 
   // standalone에서 사용할 createApp 인스턴스를 단일 생성하고, 포트 폴백 시 새 server만 갈아끼운다.
-  const app = createApp({ hostUrl: '' });
+  // closure 변수 listeningPort를 getBotUrl이 참조한다 (포트 폴백 대응).
+  let listeningPort = 0;
+  const app = createApp({
+    hostUrl: '',
+    // mode=ai 사용자 진입 시 봇이 접속할 WS URL. 포트가 확정되기 전(0)이면 null 반환.
+    getBotUrl: () => (listeningPort > 0
+      ? `ws://localhost:${listeningPort}/ws?mode=bot`
+      : null),
+  });
 
   function startListening(port, attemptsLeft) {
     const server = http.createServer(app.handleHttp);
@@ -1228,6 +1311,7 @@ if (isDirectExecution() && !process.env.YUTNORI_NO_LISTEN) {
     server.listen(port, () => {
       server.removeListener('error', onError);
       ACTUAL_PORT = port;
+      listeningPort = port; // getBotUrl이 참조할 확정 포트.
       const lanIps = getLanAddresses();
       if (lanIps.length > 0) {
         HOST_URL = `http://${lanIps[0].ip}:${port}`;

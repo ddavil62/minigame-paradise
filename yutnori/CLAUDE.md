@@ -1,6 +1,6 @@
 # Yutnori — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. **2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 QA PASS.** 회귀 게이트: 서버리스 289 + QA 엣지 26 = **315/315 PASS** + E2E 25 + smoke 40. 룰북 §13 12건(미해소 7 + 해소 5) — §13-1/§13-2 [HIGH] 2026-06-11 해소.
+> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. **2026-06-12 AI 봇 추가 (bot-smoke 7/7×4 PASS).** 2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 QA PASS. 회귀 게이트: 서버리스 315 + E2E 25 + smoke 40 + bot-smoke 7. 룰북 §13 12건(미해소 7 + 해소 5) — §13-1/§13-2 [HIGH] 2026-06-11 해소.
 
 ## 룰북 (필수 숙지)
 
@@ -44,7 +44,8 @@
 
 ```
 yutnori/
-├── server.js                 # 백엔드 + 게임 로직 (서버 권위)
+├── server.js                 # 백엔드 + 게임 로직 (서버 권위, getBotUrl + spawn/killBotChild + mode 파싱)
+├── bot.js                    # AI 봇 (STATE 기반 상태 머신, mode=ai 진입 시 server.js가 spawn)
 ├── start.bat / stop.bat      # Windows 더블클릭 런처
 ├── package.json
 ├── playwright.config.js      # Playwright 공통 설정 (port 3088)
@@ -66,6 +67,7 @@ yutnori/
 │       └── ui.js             # Canvas 보드/말 + DOM HUD
 └── tests/
     ├── smoke.test.js                       # 레거시 smoke (node 직접 실행, 시나리오 1~8 + 모서리 분기/shortcut 보조 assert)
+    ├── bot-smoke.test.js                   # 봇 smoke (node 직접 실행, YBOT-001~005, 포트 3104. 인라인 봇 vs 서버 spawn bot.js)
     ├── yut.unit.spec.js                    # Playwright 단위 — throwYutSticks/computeNextCell (U-66~U-72 중첩 분기 포함)
     ├── ws.scenarios.spec.js                # Playwright WS — 메시지 프로토콜/게임 흐름
     ├── e2e-scenarios.spec.js               # Playwright E2E 25개 — 브라우저 2페이지 실전 검증
@@ -111,6 +113,14 @@ node tests/smoke.test.js --port 3088
 
 기대: 풀 실행 시 `PASS: 40, FAIL: 0` (시나리오 1~8 36 assert + 모서리 분기 대기/shortcut 진입 보조 assert). 시나리오 8b "참고용" WS 분포 샘플러는 다수 THROW 반복으로 환경 의존 장기 실행이라 기능 검증과 무관(장기 샘플).
 
+### 봇 smoke (YBOT-001~005, 포트 3104)
+
+```powershell
+node tests/bot-smoke.test.js
+```
+
+기대: `7/7 PASS` (봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기, 데드락 0). 인라인 봇(테스트 운전) vs 서버 spawn한 실제 `bot.js` 자식 프로세스 대전으로 `mode=ai → spawnBotChild → mode=bot` 경로까지 검증. 포트 3104는 bot-smoke 전용으로 사용자 launcher(3000)와 무영향. 환경변수 `YUTNORI_BOT_DELAY_MIN/RAND`로 봇 속도 조정(테스트는 짧게 단축, 기본 300~800ms).
+
 ### 회귀 게이트
 
 - 모든 변경은 **서버리스 회귀 289 + QA 엣지 26 = 315/315 PASS**를 유지해야 한다 (2026-06-11 기준). E2E 25는 서버 가동 시 별도 회귀.
@@ -126,7 +136,7 @@ node tests/smoke.test.js --port 3088
 | S→C | JOINED | `{ playerId, waiting, hostUrl }` | p1/p2 할당 |
 | C→S | READY | `{}` | 시작 준비 |
 | S→C | START | `{ countdown }` | 양쪽 READY 시 broadcast |
-| S→C | STATE | `{ started, currentTurn, pendingResults, awaitingBranchAt, awaitingBranchType, winner, players }` | 매 액션 후 전체 상태 broadcast. `awaitingBranchType: 'center'\|'corner'\|null` (FIX-2) |
+| S→C | STATE | `{ started, currentTurn, pendingResults, awaitingBranchAt, awaitingBranchType, capturedBonus, winner, players }` | 매 액션 후 전체 상태 broadcast. `awaitingBranchType: 'center'\|'corner'\|null` (FIX-2). `capturedBonus: boolean` — true면 큐 비어도 THROW 가능(잡기 보너스). 봇이 자체 추적 없이 던지기 가능 여부 판단(2026-06-12 후방 호환 추가) |
 | C→S | THROW_YUT | `{}` | 권위: 서버가 결과 결정 |
 | S→C | YUT_RESULT | `{ by, sticks, result, steps, bonus }` | 양쪽 broadcast |
 | C→S | MOVE_PIECE | `{ pieceIndex, useResult }` | 사용 결과는 큐에서 차감 |
@@ -136,6 +146,16 @@ node tests/smoke.test.js --port 3088
 | C→S | REMATCH | `{}` | 재대결 요청 |
 | S→C | REMATCH_STATUS | `{ p1Ready, p2Ready }` | 양쪽 모두 시 START 재발송 |
 | S→C | ERROR | `{ message }` | 잘못된 요청 |
+
+### 접속 쿼리 `?mode=` (2026-06-12 AI 봇)
+
+WS 연결 URL(`/ws?mode=...`)에 모드 쿼리를 부착한다. `network.js`가 부착 + 새로고침 유실 대비 `sessionStorage('yutnori:mode')` 백업.
+
+| `mode` 값 | 의미 |
+|---|---|
+| `human` (기본) | 일반 사람 대전 |
+| `ai` | 사람(p1)이 AI 대전을 요청. 혼자 입장 시 server.js가 `spawnBotChild`로 `bot.js`를 자식 프로세스 spawn(URL은 `?mode=bot`). 사람이 끊기면 `killBotChild`로 봇 정리 |
+| `bot` | spawn된 봇 자신의 접속. 자동 spawn 경로 전용(클라이언트가 직접 쓰지 않음) |
 
 ## 코드 컨벤션
 
@@ -155,6 +175,7 @@ node tests/smoke.test.js --port 3088
 | `capturedBonus` 라이프사이클 | **3개 분기 모두에 명시 리셋 필요** (2026-05-31 §13-11 + 보강 해소): ① MOVE_PIECE/CHOOSE_PATH 핸들러의 `passTurn()` 직후 `game.capturedBonus = false`, ② THROW_YUT 핸들러에서 잡기 보너스 권리로 진입한 던지기에서만 1회 소진 — **2026-06-11 FIX-4: 소진 조건을 `enteredViaCapturedBonus = pendingResults.length === 0 && capturedBonus === true`로 한정**(큐에 yut/mo 잔여 시 보존). 무조건 소진하면 윷·모 보너스 진입 던지기에서 잡기 보너스 권리를 부당하게 잃음. ③ `resetGame()` / `softResetRoom()` 명시 초기화. 누락하면 잡기 후 보너스 결과가 yut/mo가 아닐 경우 87.5% 확률로 결정적 턴 잠금 (QA-D2-001/002 회귀 가드). 보너스 진입 검사식: `hasBonus = capturedBonus===true || lastResult==='yut' || lastResult==='mo'`. |
 | 재입장 ID 배정 (FIX-1) | connection 핸들러는 `players.length` 기반이 아니라 **미사용 ID 탐색**(`usedIds = new Set(players.map(p=>p.id))` → `!usedIds.has('p1') ? 'p1' : 'p2'`)으로 배정해야 함. length 기반이면 p1 disconnect 후 재접속 시 p2 중복 배정으로 게임이 잠긴다. (2026-06-11 §13-1 무관, FIX-1) |
 | 중첩 분기 (shortcut-top/bottom 합성) | 모서리(5/10) 지름길 선택 후 잔여 steps가 중앙(23)을 통과하면 `computeNextCell`이 `awaitingBranch: true` 재반환 → **CHOOSE_PATH 핸들러가 큐 차감 없이 center 분기 재무장**(BRANCH_REQUEST center 재발송) 후 break. 2차 CHOOSE_PATH에서 piece.cell이 5/10이고 choice가 top/bottom이면 `shortcut-` 접두 합성(`shortcut-top`/`shortcut-bottom`, 서버 내부 전용). `isShortcutChoice`/`isBottomExit` 헬퍼로 판정. 누락하면 윷/모 결과가 증발하고 말이 제자리에 남는 HIGH 버그(2026-06-11 수정 사유). |
+| 봇 dedup 키에 `awaitingBranchType` 필수 (2026-06-12) | `bot.js`/`bot-smoke.test.js` 인라인 봇의 중복 행동 방지 키(`${currentTurn}\|${pendingResults}\|${awaitingBranchAt}\|${awaitingBranchType}\|${capturedBonus}`)에서 **`awaitingBranchType`을 빼면 안 됨**. 중첩 분기(corner shortcut→center 재무장) 시 서버가 `pieceIndex`(awaitingBranchAt)·큐·capturedBonus를 그대로 둔 채 `awaitingBranchType`만 `corner→center`로 바꿔 STATE를 재발송하므로, 이 필드가 키에 없으면 키가 동일해져 봇이 2차 center 분기를 "이미 처리한 상태"로 무시 → **영구 턴 잠금**. 봇이 corner에서 shortcut을 고르고 잔여 steps가 정확히 중앙을 통과할 때만 발생하는 간헐(확률적) 데드락이라 재현이 까다로움. (bot.js:169, bot-smoke.test.js:120, HIGH 수정 사유) |
 | HOME → 보드 진입 칸 수 | `advanceOneCell()` cell === -1 분기는 **`return 1`** (정통 룰: HOME에서 도 = 칸 1). 추가로 `cell === 0`에서 `return 1` 안전망 필요. 이전 `return 0` 단순화는 정통과 1칸 차이를 유발했음. (2026-05-31 룰북 §13-10 해소 사유) |
 | 분기 대기 (`awaitingBranchAt`) | THROW/MOVE 모두 차단. 중앙 도달 시 piece는 **아직 이동시키지 않은 상태**로 두고 awaiting만 기록 → CHOOSE_PATH 시 movePiece 재호출. |
 | `start.bat` 인코딩 | ASCII-only로 유지. 한글 포함 시 cmd 949 코드페이지에서 깨짐. |

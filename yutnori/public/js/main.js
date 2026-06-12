@@ -45,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
     inviteUrlEl: document.getElementById('invite-url'),
     copyUrlBtnEl: document.getElementById('copy-url-btn'),
     toastEl: document.getElementById('toast'),
+    aiPanelEl: document.getElementById('ai-panel'),
+    btnStartAiEl: document.getElementById('btn-start-ai'),
   };
 
   const ui = createUI(els);
@@ -69,11 +71,20 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.setStatus('상대 입장. 준비 버튼을 눌러주세요.');
       }
       ui.showInvitePanel(hostUrl || '');
+      // AI 버튼 노출: p1이고 혼자 대기 중이고 이미 ai 모드가 아닐 때만.
+      // (이미 mode=ai면 곧 봇이 들어오므로 중복 버튼을 숨긴다.)
+      const currentMode = new URLSearchParams(location.search).get('mode') || 'human';
+      if (playerId === 'p1' && waiting && currentMode !== 'ai') {
+        els.aiPanelEl.classList.remove('hidden');
+      } else {
+        els.aiPanelEl.classList.add('hidden');
+      }
     },
     onStart: (countdown) => {
       ui.hideResult();
       els.readyBtnEl.classList.add('hidden');
       els.rematchBtnEl.classList.add('hidden');
+      els.aiPanelEl.classList.add('hidden'); // 게임 시작 시 AI 버튼 숨김
       ui.hideInvitePanel();
       ui.setStatus('');
       runCountdown(countdown, () => {
@@ -140,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const myReady = (myId === 'p1' && p1Ready) || (myId === 'p2' && p2Ready);
       const oppReady = (myId === 'p1' && p2Ready) || (myId === 'p2' && p1Ready);
       ui.setStatus(`재대결 대기: 나 ${myReady ? '완료' : '대기'} / 상대 ${oppReady ? '완료' : '대기'}`);
+      // 재대결 진행 중에는 AI 버튼을 숨긴다 (새 매칭 진입과 구분, rummikub 동일 패턴).
+      els.aiPanelEl.classList.add('hidden');
     },
     onError: (message) => {
       ui.showToast(message, 'error');
@@ -161,6 +174,17 @@ document.addEventListener('DOMContentLoaded', () => {
     net.ready();
     els.readyBtnEl.disabled = true;
     els.readyBtnEl.textContent = '준비 완료 (상대 대기)';
+  });
+
+  // ── AI랑 시작 버튼 ──
+  // 클릭 시 ?mode=ai로 새로고침 → network.js가 WS URL에 mode=ai를 부착 →
+  // 서버가 봇 자식 프로세스를 자동 spawn한다.
+  els.btnStartAiEl.addEventListener('click', () => {
+    els.btnStartAiEl.disabled = true;
+    els.btnStartAiEl.textContent = '🤖 AI 호출 중...';
+    const url = new URL(location.href);
+    url.searchParams.set('mode', 'ai');
+    location.href = url.toString();
   });
 
   // ── 재대결 버튼 ──
