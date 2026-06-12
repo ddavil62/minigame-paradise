@@ -55,6 +55,10 @@ export function createNetwork(handlers) {
     ws.addEventListener('open', () => {
       console.log('[net] 연결됨');
       reconnectAttempted = false;
+      // 연결 확립 시점을 상위(main.js)에 알린다 — JOIN은 반드시 open 이후에 보내야 한다.
+      // (고정 타이머로 JOIN을 보내면 연결이 늦게 열릴 때 JOIN이 유실되어
+      //  myId=null 소프트락("상대 턴" 오표시)이 발생한다. 재연결 시 재JOIN도 이 경로로 처리.)
+      if (typeof handlers.onOpen === 'function') handlers.onOpen();
     });
     ws.addEventListener('message', (event) => {
       let msg;

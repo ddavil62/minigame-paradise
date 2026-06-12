@@ -61,6 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 네트워크 핸들러 ──
   net = createNetwork({
+    // 연결(또는 재연결) 확립 직후 JOIN 송신 — open 이전 송신은 network.js가 드롭하므로
+    // 반드시 이 콜백에서 보낸다. 재연결 시에도 재JOIN되어 myId가 항상 갱신된다.
+    onOpen: () => {
+      const playerName = `Player-${Math.floor(Math.random() * 1000)}`;
+      net.join(playerName);
+    },
     onJoined: ({ playerId, waiting, hostUrl }) => {
       myId = playerId;
       ui.setMyId(playerId);
@@ -320,11 +326,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── 시작 ──
+  // JOIN은 onOpen 콜백에서 송신한다 (고정 300ms 타이머는 연결 지연 시 JOIN 유실
+  // → myId=null 소프트락을 유발해 폐기. 2026-06-12 fix).
   net.connect();
-  setTimeout(() => {
-    const playerName = `Player-${Math.floor(Math.random() * 1000)}`;
-    net.join(playerName);
-  }, 300);
 
   // 초기 보드 그리기 (빈 보드)
   ui.renderBoard(null);
