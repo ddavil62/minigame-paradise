@@ -425,24 +425,27 @@ section('#6 같은 세트 왼쪽/오른쪽 이동 + 경계값 to.index');
     g.hands.p2 = [];
     return g;
   }
-  // 오른쪽 이동: a(0) → index 2. 기대 [b,a,c,d].
+  // [정규화 추가(2026-06-12)] set_m=[a,b,c,d]는 valid 런(red 1-2-3-4)이므로
+  //   moveTile mutation(off-by-one 보정/끝 슬롯 클램프) 직후 normalizeSetTiles가
+  //   슬롯 오름차순으로 재정렬한다. 따라서 어떤 슬롯으로 이동해도 최종 결과는 항상
+  //   [a,b,c,d]가 된다. (이동 전 좌표/클램프 로직 자체는 mutation 단계에서 여전히
+  //   동작하며, 그 결과의 직접 관찰은 invalid 세트로 정규화를 회피하는 smoke RUMMI-036이 담당.)
+  // 오른쪽 이동: a(0) → index 2 → 이동 직후 [b,a,c,d] → 정규화 → [a,b,c,d].
   let g = mk();
   moveTile(g, 'p1', { kind: 'set', setId: 'set_m', tileId: 'a' }, { kind: 'set', setId: 'set_m', index: 2 });
-  eq(g.board[0].tiles, ['b', 'a', 'c', 'd'], '오른쪽 이동 a→idx2 = [b,a,c,d]');
-  // 왼쪽 이동: d(3) → index 1. fromIdx=3, insertIdx=1, 1>3 거짓 → 보정 없음. [a,b,c] splice(1,0,d)=[a,d,b,c].
+  eq(g.board[0].tiles, ['a', 'b', 'c', 'd'], '오른쪽 이동 후 정규화 = [a,b,c,d]');
+  // 왼쪽 이동: d(3) → index 1 → 이동 직후 [a,d,b,c] → 정규화 → [a,b,c,d].
   g = mk();
   moveTile(g, 'p1', { kind: 'set', setId: 'set_m', tileId: 'd' }, { kind: 'set', setId: 'set_m', index: 1 });
-  eq(g.board[0].tiles, ['a', 'd', 'b', 'c'], '왼쪽 이동 d→idx1 = [a,d,b,c]');
-  // to.index = 0 경계: c(2) → 0. fromIdx=2, insertIdx=0, 0>2 거짓. [a,b,d] splice(0,0,c)=[c,a,b,d].
+  eq(g.board[0].tiles, ['a', 'b', 'c', 'd'], '왼쪽 이동 후 정규화 = [a,b,c,d]');
+  // to.index = 0 경계: c(2) → 0 → 이동 직후 [c,a,b,d] → 정규화 → [a,b,c,d].
   g = mk();
   moveTile(g, 'p1', { kind: 'set', setId: 'set_m', tileId: 'c' }, { kind: 'set', setId: 'set_m', index: 0 });
-  eq(g.board[0].tiles, ['c', 'a', 'b', 'd'], 'to.index=0 c→맨앞 = [c,a,b,d]');
-  // QA-ISSUE-1 (수정 완료): to.index = length(4) 경계 — 이동 전 좌표(preLen) 기준
-  // bounds-check로 고쳐 이중 차감 해소. 우측 끝 슬롯 이동이 정확히 끝에 꽂힌다.
-  // (수정 전엔 줄어든 길이로 클램프 + #6 보정이 겹쳐 [b,c,a,d]가 나왔음. 회귀: RUMMI-032)
+  eq(g.board[0].tiles, ['a', 'b', 'c', 'd'], 'to.index=0 이동 후 정규화 = [a,b,c,d]');
+  // QA-ISSUE-1 회귀: to.index = length(4) 경계 끝 슬롯 → 이동 직후 [b,c,d,a] → 정규화 → [a,b,c,d].
   g = mk();
   moveTile(g, 'p1', { kind: 'set', setId: 'set_m', tileId: 'a' }, { kind: 'set', setId: 'set_m', index: 4 });
-  eq(g.board[0].tiles, ['b', 'c', 'd', 'a'], 'QA-ISSUE-1 fix: to.index=length 같은세트 우측끝 이동 = [b,c,d,a]');
+  eq(g.board[0].tiles, ['a', 'b', 'c', 'd'], 'QA-ISSUE-1 fix: 우측끝 이동 후 정규화 = [a,b,c,d]');
 }
 
 // ════════════════════════════════════════════════════════════════════

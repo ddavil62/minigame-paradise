@@ -204,6 +204,23 @@ body.theme-rummikub {
 .zone-hand .zone-title { border-bottom-color:var(--paper-line); }
 .zone-hand .zone-title span:first-child { color:var(--ink); }
 .zone-hand .selection-info { color:var(--tomato-2); }
+
+/* ── 손패 정렬 버튼 ── */
+.sort-btns {
+  display:inline-flex; gap:4px; align-items:center;
+}
+.sort-btn {
+  font-family:'Jua',sans-serif; font-size:12px;
+  color:var(--ink-dim); background:var(--paper-2);
+  border:1.5px solid var(--paper-line); border-radius:8px;
+  padding:4px 10px; cursor:pointer; white-space:nowrap;
+  transition:background .1s, color .1s, border-color .1s;
+}
+.sort-btn:hover { background:var(--paper); color:var(--ink); }
+.sort-btn.active {
+  background:var(--felt-1); color:#fff;
+  border-color:var(--felt-edge);
+}
 .hand-area {
   display:flex; flex-wrap:wrap; gap:5px; padding:6px 0; overflow-x:auto; min-height:80px;
   align-items:center;

@@ -1,6 +1,6 @@
 # Rummikub — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 루미큐브. Node.js + 바닐라 JS. **1차 코어 완료 + 한계 3건 해결 + 봇 강화 2건 (2026-06-10) + 룰 정합 수정 10건 (2026-06-11)**. 미니게임 천국 9번째 종목.
+> LAN 1:1 루미큐브. Node.js + 바닐라 JS. **1차 코어 완료 + 한계 3건 해결 + 봇 강화 2건 (2026-06-10) + 룰 정합 수정 10건 (2026-06-11) + 손패 정렬 UX 2종 + 보드 세트 자동 정규화 (2026-06-12)**. 미니게임 천국 9번째 종목.
 
 ## 정체성
 
@@ -43,7 +43,9 @@ rummikub/
 │       ├── ui.js            # HUD + 결과 + 토스트
 │       └── sounds.js        # 효과음 (Web Audio)
 └── tests/
-    └── smoke.test.js        # RUMMI-001~032
+    ├── smoke.test.js          # RUMMI-001~037
+    ├── qa-pass4-sort.test.js  # 보드 정규화 능동 공격 (2026-06-12)
+    └── sort-buttons-qa.spec.js # 정렬 버튼 Playwright 시각 검증
 ```
 
 ## WebSocket 프로토콜
@@ -89,10 +91,11 @@ rummikub/
 
 ```powershell
 cd C:\LazySlimeStudio\minigames\rummikub
-node tests/smoke.test.js  # RUMMI-001~032
+node tests/smoke.test.js         # RUMMI-001~037
+node tests/qa-pass4-sort.test.js # 보드 정규화 능동 공격 34건
 ```
 
-기대: `총 138건, PASS=138, FAIL=0` (2026-06-11 룰 정합 수정 10건 + 회귀 RUMMI-023~032 추가 후 기준).
+기대: smoke `총 150건, PASS=150, FAIL=0` (2026-06-12 정렬 RUMMI-033~037 추가 후 기준), qa-pass4-sort `34/34`.
 
 작업 포트: 봇 시나리오는 3096 사용 (사용자 launcher 3000과 다른 게임 무영향).
 
@@ -123,6 +126,7 @@ node tests/smoke.test.js  # RUMMI-001~032
 | **moveTile 트랜잭션 일관성** | from을 splice로 제거하기 **전에** to 라우팅(잘못된 kind / 없는 setId)을 먼저 dry-run으로 검증해야 한다. 안 그러면 to가 거부될 때 from 타일이 영구 유실됨. 새 라우팅 분기 추가 시 1·2단계(검증) → 3단계(mutation) 순서를 절대 깨지 말 것. (2026-06-10 HIGH-1 fix) |
 | **endTurn boardChanged 판정** | 빈 NEW_SET 추가/제거만으로 boardChanged=true 판정하면 commit 분기로 빠져 `consecutivePassesAfterDeckEmpty`가 무한 리셋된다. `boardsEqualIgnoringEmpty`로 빈 세트 무시 후 비교해야 함. 새 보드 변경 케이스 추가 시 빈 세트가 실질 변화로 잘못 카운트되지 않도록 확인. (2026-06-10 MED-1 fix) |
 | **first-meld 후 보드→손 가드** | `wasInMyHand` 가드는 `!state.played[by]`일 때만 적용한다. 첫 등판 후엔 룰상 보드 자유 재구성이 가능하므로 가드 해제. 단 END_TURN 시 invalid 보드는 자동 롤백되므로 안전망 유지. 새 회수 분기 추가 시 동일 패턴 따를 것. (2026-06-10 MED-2 fix) |
+| **보드 세트 자동 정규화** | `normalizeSetTiles(state, set)`(비공개 헬퍼, **export 금지**)는 `moveTile`/`swapJoker` mutation **직후에만** 호출되며, 영향 세트(`fromSet`/`toSet`, swapJoker는 `set`)가 `validateSet().valid`일 때**만** tiles 배열을 정렬한다. **invalid(배치 중 2장 미만/비연속/색 섞임) 세트는 절대 건드리지 않음** — 자유 배치 방해 금지. 런: `findRunStart` 슬롯 순(숫자 타일은 자기 슬롯, 조커는 빠진 슬롯에 오름차순 배정 — 조커 ID 원래 배열 순서 무관). 그룹: COLOR_ORDER(red→blue→black→orange) + 조커 마지막. **SWAP_JOKER는 jokerIndex 처리가 끝난 후 정규화**하므로, 정규화로 조커 슬롯 위치가 바뀌면 다음 회수 jokerIndex는 정규화된 배열 기준이어야 한다(qa-pass4 B 케이스). `endTurn` 내부에서는 호출 금지(스냅샷 타이밍 충돌). `snapshotForRollback`은 정규화된 tiles를 저장하므로 롤백 시 정규화 이전으로 되돌아가지 않음. `findRunStart`가 `validateSet`의 best start와 일치해야 정규화가 점수 로직과 어긋나지 않음. **테스트에서 mutation 단계의 off-by-one/클램프 자체를 관찰하려면 invalid 세트로 정규화를 회피**해야 한다(RUMMI-036이 담당). (2026-06-12) |
 
 ## 파이프라인 적용 규칙
 

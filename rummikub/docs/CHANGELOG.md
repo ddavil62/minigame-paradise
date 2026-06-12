@@ -1,5 +1,38 @@
 # Rummikub — 변경 이력
 
+## 2026-06-12 — 손패 정렬 버튼 2종 + 보드 세트 자동 정규화 (smoke 150/150, QA PASS 이슈 0)
+
+손패 영역에 정렬 모드 토글 버튼을 추가하고, 서버가 보드 세트를 valid일 때 오름차순으로 자동 정규화하도록 구현했다. WS 프로토콜은 무변경이며, 정규화는 순수 표시 목적으로 점수/롤백/스냅샷 게임 로직에 영향을 주지 않는다. visual_change: ui, AD3 APPROVED.
+
+### 추가
+- **손패 정렬 버튼 2종** — `public/index.html` 손 zone-title에 `.sort-btns` + "색상순"/"숫자순" 버튼 2개. `public/css/style.css`에 `.sort-btns`/`.sort-btn`/`.sort-btn:hover`/`.sort-btn.active`(펠트 그린 active 강조, 기존 아이보리 테마 일관) 스타일 추가.
+  - **색상순**(기본): COLOR_ORDER(red→blue→black→orange) → number 오름차순 → 조커 마지막. 기존 동작.
+  - **숫자순**: number 오름차순 → 동수 시 COLOR_ORDER → 조커 마지막.
+  - 정렬 모드는 `main.js` `sortMode` 로컬 상태 + localStorage `rummikub.sortMode`(`'color'`/`'number'`, 기본 `'color'`)로 영속. `syncSortButtons()`로 active 강조 동기화. 버튼 클릭은 **본인 턴 여부와 무관**하게 즉시 재렌더(STATE 수신 불필요). STATE 수신 시에도 모드 유지(서버 메시지 무관).
+  - `hand.js::renderHand`에 `ctx.sortMode` 파라미터 추가, 정렬 비교 함수를 `'color'`/`'number'` 분기로 변경(조커는 두 모드 공통 마지막).
+- **`normalizeSetTiles(state, set)` (비공개 헬퍼, export 안 함)** — `game.js`. `moveTile`/`swapJoker` mutation **직후**, 영향 세트가 `validateSet().valid`일 때**만** tiles 배열을 정렬. invalid 세트는 불변.
+  - 런: `findRunStart`로 시작 슬롯 결정 → start~end 순으로 숫자 타일 배치, 빠진 슬롯에 조커 오름차순 배정(조커 ID 원래 배열 순서 무관).
+  - 그룹: COLOR_ORDER 순 + 조커 마지막.
+  - `moveTile`: `fromSet`/`toSet` 정규화(동일 세트면 1회). `swapJoker`: jokerIndex 처리 완료 후 `set` 정규화.
+  - 함수 선언 호이스팅으로 `swapJoker` 앞(헬퍼 직후)에 배치. `endTurn` 내부 미호출(스냅샷 타이밍 충돌 회피). `snapshotForRollback`은 정규화된 tiles를 저장(롤백 일관성).
+- 신규 smoke RUMMI-033~037(런/조커 런/그룹/invalid 스킵/SWAP_JOKER 후 정규화) — `moveTile`/`swapJoker` 공개 API 경유 검증. smoke 138 → **150/150**.
+- 신규 능동 공격 스위트 `tests/qa-pass4-sort.test.js`(**34/34 PASS**) — 조커 2장 런 멱등(A), 정규화로 바뀐 JK 인덱스로 SWAP_JOKER(B), invalid 보존(C), 뒤섞인 런 first-meld 30점(D), set→set 양쪽 정규화(E), self-move no_change 우회 방지(F1)/롤백 복원(F2)/no_tile_played 가드(F3), 그룹 COLOR_ORDER(G).
+- 신규 Playwright 시각 검증 `tests/sort-buttons-qa.spec.js`(1 passed, 포트 3097) — 버튼 렌더·active 토글·localStorage 저장/reload 복원·pageerror 0.
+
+### 변경
+- 정규화 반영으로 기존 테스트 9건 단정 갱신(모두 valid 세트를 moveTile로 재배치하던 케이스 — 이제 오름차순으로 수렴, 사유 주석 코드에 명기):
+  - smoke RUMMI-029 — red 1-2-3-4 run, `[b,a,c,d]` → `[a,b,c,d]`.
+  - smoke RUMMI-032(×3) — 동일 valid run, 끝 슬롯/클램프 이동 후 모두 `[a,b,c,d]`.
+  - qa-pass3-attack `#6`(×4) — 동일 valid run, 좌/우/끝 이동 후 모두 `[a,b,c,d]`.
+  - qa-pass2-edge GAME-005-2 — `[red5,blue5,black5]` valid group, `[b,a,c]` → `[a,b,c]`(COLOR_ORDER red→blue→black).
+- mutation 단계의 off-by-one/클램프 직접 관찰은 invalid 세트로 정규화를 회피하는 smoke RUMMI-036이 담당하도록 보존.
+
+### 참고
+- 스펙: `.claude/specs/2026-06-12-rummikub-sort-spec.md`
+- 리포트: `.claude/specs/2026-06-12-rummikub-sort-impl-report.md`
+- QA: `.claude/specs/2026-06-12-rummikub-sort-qa-report.md` (PASS, 잔존 이슈 0)
+- 테스트: smoke 150/150 + qa-pass4-sort 34/34 + qa-pass3-attack 48/48 + qa-pass2-edge 46/46 + qa-pass3-parity 12/12 + qa-pass2-fuzz 14/14 + Playwright sort-buttons 1/1. AD3 APPROVED.
+
 ## 2026-06-11 — 룰 정합 수정 10건 (코드 리뷰 9건 + QA 후속 1건, smoke 138/138)
 
 코드 리뷰에서 발견된 룰 버그 4건·UI 동작 불일치 3건·견고성 결함 2건을 전수 수정하고, QA 능동 공격에서 추가로 발견된 LOW 결함 1건(QA-ISSUE-1)을 즉시 보정했다.

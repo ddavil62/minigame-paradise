@@ -21,6 +21,7 @@ LAN 1:1 루미큐브. 미니게임 천국 9번째 종목.
 - 손 타일을 1장도 내지 않은 턴(순수 재배치)은 commit 불가 → 롤백 + 더미 1장 (`no_tile_played`)
 - 조커 회수(`SWAP_JOKER`)는 첫 등판 후 + 정확한 대체 타일에서만 허용
 - 손 0장 즉시 승리
+- 보드 세트는 `moveTile`/`swapJoker` 후 valid일 때만 자동 오름차순 정규화(런: 슬롯 순, 그룹: 색 순). invalid(배치 중) 세트는 놓은 순서 보존
 
 ## 디렉토리
 
@@ -33,7 +34,7 @@ rummikub/
 ├── CLAUDE.md / README.md
 ├── docs/{PROJECT.md, CHANGELOG.md}
 ├── public/{index.html, css/style.css, js/*}
-└── tests/smoke.test.js
+└── tests/{smoke.test.js, qa-pass4-sort.test.js, sort-buttons-qa.spec.js, ...}
 ```
 
 ## 진행 상태
@@ -43,13 +44,14 @@ rummikub/
 - ✅ AI 봇 (`bot.js`)
 - ✅ 클라이언트 UI (보드/손/HUD/효과음)
 - ✅ launcher 통합 (GAME_APPS 등록 + games.json 카드)
-- ✅ smoke 테스트 (RUMMI-001~032, 138/138 PASS)
+- ✅ smoke 테스트 (RUMMI-001~037, 150/150 PASS)
 - ✅ 조커 회수 표준 룰 (`SWAP_JOKER` 액션 + `jokerReturnedThisTurn` 추적, 등판 후 + 정확 타일 검증)
 - ✅ 봇 보드 단순 확장 (런 양 끝/그룹 4번째 색 자동 MOVE_TILE)
 - ✅ 더미 빈 후 무한 루프 방지 + 손 적은 자 승리 (`consecutivePassesAfterDeckEmpty`)
 - ✅ **봇 조커 활용** (그룹 빈 색 + 런 빈 자리 모든 패턴, 2026-06-10)
 - ✅ **봇 보드 재구성** (보드 세트 분해 + 새 세트 재조립, 500ms 시간 제한, 2026-06-10)
 - ✅ **룰 정합 수정 10건** (2026-06-11) — 재배치만 commit 차단(`no_tile_played`), 첫 등판 전 보드 격리, 런 점수 순서 독립, 조커 회수 정확 검증, 빈 세트 4개 상한, 봇 actionEpoch 체인 취소 등. 상세는 CHANGELOG 참조.
+- ✅ **손패 정렬 버튼 2종 + 보드 세트 자동 정규화** (2026-06-12) — 손패 "색상순"(기본)/"숫자순" 토글 버튼(localStorage `rummikub.sortMode` 영속, 본인 턴 무관 즉시 재렌더). 서버 `moveTile`/`swapJoker` 후 valid 세트만 오름차순 정규화(WS 프로토콜 무변경). smoke 150/150 + qa-pass4-sort 34/34.
 
 ## 알려진 한계
 

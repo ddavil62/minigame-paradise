@@ -232,10 +232,13 @@ section('GAME-005: moveTile 같은 세트 내 인덱스 이동');
                      { kind: 'set', setId: 'set_1', index: 2 });
   console.log(`  GAME-005: set_1.tiles=${JSON.stringify(g.board[0].tiles)}`);
   assertTrue(r.ok, 'GAME-005-1: 같은 세트 내 이동 ok');
-  // [룰픽스 #6] 같은 세트 내 오른쪽 이동 off-by-one 보정:
-  //   from splice 후 인덱스가 1 당겨지므로 insertIdx = 2-1 = 1 → [b, a, c].
-  //   (옛 동작은 [b, c, a]였으나 의도한 목표 위치보다 +1 어긋난 버그였음.)
-  assertEq(g.board[0].tiles, ['b', 'a', 'c'], 'GAME-005-2: off-by-one 보정 [b,a,c]');
+  // [룰픽스 #6] 같은 세트 내 오른쪽 이동 off-by-one 보정: 이동 직후엔 [b, a, c].
+  // [정규화 추가(2026-06-12)] set_1=[red5, blue5, black5]는 valid 그룹이므로 mutation 직후
+  //   normalizeSetTiles가 COLOR_ORDER(red→blue→black) 순으로 재정렬한다.
+  //   a=red5, b=blue5, c=black5 → 정규화 결과 [a, b, c].
+  //   (off-by-one 보정 자체는 mutation 단계에서 여전히 적용되며, 그 결과의 직접 관찰은
+  //    invalid 세트로 정규화를 회피하는 smoke RUMMI-036이 담당한다.)
+  assertEq(g.board[0].tiles, ['a', 'b', 'c'], 'GAME-005-2: valid 그룹 이동 후 정규화 COLOR_ORDER [a,b,c]');
 }
 
 // ═══════════════════════════════════════════════════════════════════

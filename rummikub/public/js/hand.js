@@ -1,7 +1,9 @@
 /**
  * @fileoverview 손 타일 영역 렌더링 — 가로 정렬 + 클릭 선택.
  *
- * 정렬: 색별로 → 숫자 오름차순 → 마지막에 조커.
+ * 정렬 모드 2종(조커는 두 모드 모두 항상 마지막):
+ *  - 'color'(기본): 색별(COLOR_ORDER) → 숫자 오름차순.
+ *  - 'number': 숫자 오름차순 → 동수면 색별(COLOR_ORDER).
  */
 
 import { buildTileEl } from './tiles.js';
@@ -17,6 +19,7 @@ const COLOR_ORDER = ['red', 'blue', 'black', 'orange'];
  *   state, myTurn, selectedSrc,
  *   jokerSwapMode?: { candidateTileIds: string[] },  // 회수 모드 후보 강조용
  *   mustUseTileIds?: Set<string>,                     // 이번 턴 회수된 조커 ID — "필수" 배지
+ *   sortMode?: 'color' | 'number',                    // 손패 정렬 모드(기본 'color')
  *   onTileClick(tileId, el),
  * }
  */
@@ -33,11 +36,19 @@ export function renderHand(container, ctx) {
     .map((id) => lookupTile(state, id))
     .filter(Boolean);
 
-  // 정렬: 조커 마지막, 일반은 (color order index, number).
+  // 정렬: 조커는 항상 마지막. 일반 타일은 sortMode에 따라 분기.
+  const sortMode = ctx.sortMode || 'color';
   tiles.sort((a, b) => {
     if (a.kind === 'joker' && b.kind === 'joker') return 0;
     if (a.kind === 'joker') return 1;
     if (b.kind === 'joker') return -1;
+
+    if (sortMode === 'number') {
+      // 숫자 오름차순, 동수면 COLOR_ORDER 순.
+      if (a.number !== b.number) return a.number - b.number;
+      return COLOR_ORDER.indexOf(a.color) - COLOR_ORDER.indexOf(b.color);
+    }
+    // 색상순(기본): COLOR_ORDER → number 오름차순.
     const ca = COLOR_ORDER.indexOf(a.color);
     const cb = COLOR_ORDER.indexOf(b.color);
     if (ca !== cb) return ca - cb;

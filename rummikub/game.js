@@ -510,7 +510,84 @@ export function moveTile(state, by, from, to) {
     toSet.tiles.splice(insertIdx, 0, tileId);
   }
 
+  // ── 정규화: 영향받은 세트가 valid이면 tiles 배열을 오름차순 재정렬(표시 목적) ──
+  // invalid(배치 중) 세트는 normalizeSetTiles 내부에서 자동 스킵된다.
+  // 동일 세트(toSet === fromSet) 내 이동이면 한 번만 호출.
+  if (fromSet) normalizeSetTiles(state, fromSet);
+  if (toSet && toSet !== fromSet) normalizeSetTiles(state, toSet);
+
   return { ok: true };
+}
+
+/**
+ * valid 세트의 tiles 배열을 오름차순으로 정규화한다(in-place, 표시 목적).
+ *
+ * - 런: `findRunStart`로 시작 슬롯 결정 후 start~end 슬롯 순서로 재배열.
+ *       숫자 타일은 자기 슬롯에, 빠진 슬롯에는 조커를 오름차순으로 배정한다.
+ * - 그룹: COLOR_ORDER(red, blue, black, orange) 순 + 조커 마지막.
+ *
+ * invalid 세트(배치 중 / 부분 구성)는 절대 건드리지 않는다.
+ * 정규화는 순수 표시 목적이며 endTurn/rollback/점수 계산 로직과 무관하다.
+ * (export하지 않음 — moveTile / swapJoker 내부에서만 호출)
+ *
+ * @param {object} state
+ * @param {{ id: string, type: string, tiles: Array<string> }} set 정규화 대상 세트(in-place 수정)
+ */
+function normalizeSetTiles(state, set) {
+  if (!set || !set.tiles || set.tiles.length === 0) return;
+  const resolved = resolveSet(state, set.tiles);
+  if (!resolved) return;
+  const v = validateSet(resolved);
+  if (!v.valid) return; // invalid 세트(배치 중)는 정규화 안 함.
+
+  if (v.type === 'run') {
+    // ── 런 정규화 ──
+    // 1) findRunStart로 시작 슬롯 결정(validateSet의 best start와 일치).
+    // 2) start~end 슬롯 순으로 tiles 재배열.
+    // 3) 숫자 타일은 자기 슬롯, 빠진 슬롯에는 조커를 오름차순으로 배정.
+    const start = findRunStart(resolved);
+    if (start < 0) return;
+    const end = start + set.tiles.length - 1;
+
+    // 숫자 number → tileId 매핑 + 조커 ID 수집.
+    const numByValue = new Map(); // number → tileId
+    const jokerIds = [];
+    for (let i = 0; i < set.tiles.length; i++) {
+      const t = resolved[i];
+      if (t.kind === 'num') numByValue.set(t.number, set.tiles[i]);
+      else jokerIds.push(set.tiles[i]);
+    }
+
+    // 슬롯 순서대로 tiles 재배열(빠진 슬롯은 조커로 메움).
+    const ordered = [];
+    let jokerIdx = 0;
+    for (let v2 = start; v2 <= end; v2++) {
+      if (numByValue.has(v2)) {
+        ordered.push(numByValue.get(v2));
+      } else {
+        // 빠진 슬롯 → 조커(원래 배열 순서와 무관, 슬롯 오름차순 배정).
+        ordered.push(jokerIds[jokerIdx++]);
+      }
+    }
+    set.tiles = ordered;
+  } else if (v.type === 'group') {
+    // ── 그룹 정규화 ──
+    // COLOR_ORDER 순 정렬 + 조커는 항상 마지막.
+    const COLOR_ORDER = ['red', 'blue', 'black', 'orange'];
+    const numTileIds = [];
+    const jokerIds = [];
+    for (let i = 0; i < set.tiles.length; i++) {
+      const t = resolved[i];
+      if (t.kind === 'num') numTileIds.push(set.tiles[i]);
+      else jokerIds.push(set.tiles[i]);
+    }
+    numTileIds.sort((aId, bId) => {
+      const ta = state.tiles[aId];
+      const tb = state.tiles[bId];
+      return COLOR_ORDER.indexOf(ta.color) - COLOR_ORDER.indexOf(tb.color);
+    });
+    set.tiles = [...numTileIds, ...jokerIds];
+  }
 }
 
 // ── 조커 회수(SWAP_JOKER) ────────────────────────────────────────
@@ -620,6 +697,10 @@ export function swapJoker(state, by, params) {
 
   // 회수된 조커 추적(이번 턴에 손에 있으면 안 됨 — END_TURN 검증).
   state.jokerReturnedThisTurn[jokerTileId] = true;
+
+  // ── 정규화: 교환 완료 후 세트가 valid이면 tiles 배열 재정렬(표시 목적) ──
+  // jokerIndex 기반 검증/교환은 위에서 이미 완료됐으므로 정규화는 그 이후에 수행한다.
+  normalizeSetTiles(state, set);
 
   return { ok: true, jokerId: jokerTileId };
 }

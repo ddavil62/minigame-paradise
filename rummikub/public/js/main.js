@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btnNewSet: document.getElementById('btn-new-set'),
     btnEndTurn: document.getElementById('btn-end-turn'),
     actionHint: document.getElementById('action-hint'),
+    btnSortColor: document.getElementById('btn-sort-color'),
+    btnSortNumber: document.getElementById('btn-sort-number'),
 
     resultOutcome: document.getElementById('result-outcome'),
     resultP1Name: document.getElementById('result-p1-name'),
@@ -104,6 +106,16 @@ document.addEventListener('DOMContentLoaded', () => {
    * { setId, jokerIndex, jokerTileId, candidateTileIds: string[] }
    */
   let jokerSwapMode = null;
+  /** 손패 정렬 모드 — 'color'(기본) | 'number'. localStorage로 영속(sounds.js mute 패턴). */
+  let sortMode = localStorage.getItem('rummikub.sortMode') || 'color';
+
+  // ── 손패 정렬 모드 동기화 ───────────────────────────────────
+  /** 현재 활성 정렬 모드 버튼에 .active 적용. */
+  function syncSortButtons() {
+    els.btnSortColor.classList.toggle('active', sortMode === 'color');
+    els.btnSortNumber.classList.toggle('active', sortMode === 'number');
+  }
+  syncSortButtons();
 
   // ── 화면 전환 ────────────────────────────────────────────────
   function showScreen(name) {
@@ -301,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 손 영역 — 본인 턴일 때만 selectable.
     els.handCount.textContent = state.myHand ? state.myHand.length : '0';
     renderHand(els.handArea, {
-      state, myTurn, selectedSrc, jokerSwapMode, mustUseTileIds,
+      state, myTurn, selectedSrc, jokerSwapMode, mustUseTileIds, sortMode,
       onTileClick: (tileId) => handleHandTileClick(tileId),
     });
 
@@ -599,6 +611,20 @@ document.addEventListener('DOMContentLoaded', () => {
   els.btnEndTurn.addEventListener('click', () => {
     selectedSrc = null;
     net.endTurn();
+  });
+
+  // 손패 정렬 모드 버튼 — 클릭 시 localStorage 영속 + 즉시 재렌더(본인 턴 무관).
+  els.btnSortColor.addEventListener('click', () => {
+    sortMode = 'color';
+    localStorage.setItem('rummikub.sortMode', sortMode);
+    syncSortButtons();
+    renderAll();
+  });
+  els.btnSortNumber.addEventListener('click', () => {
+    sortMode = 'number';
+    localStorage.setItem('rummikub.sortMode', sortMode);
+    syncSortButtons();
+    renderAll();
   });
 
   els.copyUrlBtn.addEventListener('click', async () => {

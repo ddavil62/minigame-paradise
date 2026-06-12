@@ -954,18 +954,28 @@ section('RUMMI-029: #6 같은 세트 내 오른쪽 이동 off-by-one 보정');
     nextSetSeq: g.nextSetSeq,
     jokerReturnedThisTurn: {},
   };
-  // 'a'(인덱스 0)를 인덱스 2 위치로 이동. 기대 결과: [b, a, c, d].
+  // 'a'(인덱스 0)를 인덱스 2 위치로 이동.
+  // [정규화 추가(2026-06-12)] set_m=[a,b,c,d]는 valid 런(red 1-2-3-4)이므로
+  //   moveTile mutation 직후 normalizeSetTiles가 슬롯 오름차순으로 재정렬한다.
+  //   따라서 off-by-one 보정(이동 직후 [b,a,c,d])을 거쳐 최종 [a,b,c,d]가 된다.
+  //   (off-by-one 보정 자체는 moveTile mutation 단계에서 여전히 적용되며, RUMMI-036
+  //    invalid 세트 비정규화 케이스가 보정 결과를 직접 검증한다.)
   moveTile(g, 'p1',
     { kind: 'set', setId: 'set_m', tileId: 'a' },
     { kind: 'set', setId: 'set_m', index: 2 },
   );
-  assertEq(g.board[0].tiles, ['b', 'a', 'c', 'd'], '오른쪽 이동 off-by-one 보정 [b,a,c,d]');
+  assertEq(g.board[0].tiles, ['a', 'b', 'c', 'd'], 'valid 런 이동 후 정규화 오름차순 [a,b,c,d]');
 }
 
 // ── RUMMI-032: #6 같은 세트 내 "끝 슬롯" 이동 (QA-ISSUE-1 회귀) ──
 // to.index가 이동 전 배열 길이(=마지막 슬롯)일 때 제거 후 길이로 클램프되어
 // 오른쪽 이동 보정과 이중 차감되던 결함의 회귀 테스트.
-section('RUMMI-032: #6 같은 세트 내 끝 슬롯 이동 (경계값)');
+// [정규화 추가(2026-06-12)] set_m=[a,b,c,d]는 valid 런(red 1-2-3-4)이므로 mutation 직후
+//   normalizeSetTiles가 슬롯 오름차순 [a,b,c,d]로 재정렬한다. 따라서 어떤 슬롯으로
+//   이동해도 결과는 항상 [a,b,c,d]가 된다. 이동 전 좌표/클램프 로직 자체의 회귀
+//   검증(보정 결과를 직접 관찰)은 invalid 세트로 정규화를 피하는 RUMMI-036과,
+//   qa-pass3-attack의 #6 섹션(2026-06-12 갱신)이 담당한다.
+section('RUMMI-032: #6 같은 세트 내 끝 슬롯 이동 (경계값, 정규화 후)');
 {
   const g = createGame();
   const tiles = {
@@ -984,24 +994,156 @@ section('RUMMI-032: #6 같은 세트 내 끝 슬롯 이동 (경계값)');
     nextSetSeq: g.nextSetSeq,
     jokerReturnedThisTurn: {},
   };
-  // 'a'(인덱스 0)를 끝 슬롯(이동 전 좌표 4)으로 이동. 기대: [b, c, d, a].
+  // 'a'(인덱스 0)를 끝 슬롯으로 이동 → 이동 직후 [b,c,d,a] → 정규화 → [a,b,c,d].
   moveTile(g, 'p1',
     { kind: 'set', setId: 'set_m', tileId: 'a' },
     { kind: 'set', setId: 'set_m', index: 4 },
   );
-  assertEq(g.board[0].tiles, ['b', 'c', 'd', 'a'], '끝 슬롯 이동 [b,c,d,a]');
-  // 왼쪽 끝(슬롯 0)으로 되돌리기: 'a'(인덱스 3) → index 0. 기대: [a, b, c, d].
+  assertEq(g.board[0].tiles, ['a', 'b', 'c', 'd'], '끝 슬롯 이동 후 정규화 [a,b,c,d]');
+  // 왼쪽 끝(슬롯 0)으로 이동 → 정규화 → [a,b,c,d].
   moveTile(g, 'p1',
     { kind: 'set', setId: 'set_m', tileId: 'a' },
     { kind: 'set', setId: 'set_m', index: 0 },
   );
-  assertEq(g.board[0].tiles, ['a', 'b', 'c', 'd'], '왼쪽 끝 슬롯 이동 [a,b,c,d]');
-  // 범위 밖 인덱스(이동 전 길이 초과)는 끝으로 클램프: 'a'(인덱스 0) → index 99. 기대: [b, c, d, a].
+  assertEq(g.board[0].tiles, ['a', 'b', 'c', 'd'], '왼쪽 끝 슬롯 이동 후 정규화 [a,b,c,d]');
+  // 범위 밖 인덱스 → 끝 클램프 → 정규화 → [a,b,c,d].
   moveTile(g, 'p1',
     { kind: 'set', setId: 'set_m', tileId: 'a' },
     { kind: 'set', setId: 'set_m', index: 99 },
   );
-  assertEq(g.board[0].tiles, ['b', 'c', 'd', 'a'], '범위 밖 인덱스 끝 클램프 [b,c,d,a]');
+  assertEq(g.board[0].tiles, ['a', 'b', 'c', 'd'], '범위 밖 인덱스 끝 클램프 후 정규화 [a,b,c,d]');
+}
+
+// ── RUMMI-033: normalizeSetTiles — 런 정규화 (moveTile 경유) ────
+section('RUMMI-033: normalizeSetTiles — 런 정규화 (오름차순)');
+{
+  const g = createGame();
+  Object.assign(g.tiles, {
+    r3: { id: 'r3', kind: 'num', color: 'red', number: 3 },
+    r4: { id: 'r4', kind: 'num', color: 'red', number: 4 },
+    r5: { id: 'r5', kind: 'num', color: 'red', number: 5 },
+  });
+  // 보드에 역순 2장 런(invalid) [r5, r4], 손에 r3.
+  g.board = [{ id: 'set_run', type: 'run', tiles: ['r5', 'r4'] }];
+  g.hands.p1 = ['r3'];
+  g.hands.p2 = [];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: [{ id: 'set_run', type: 'run', tiles: ['r5', 'r4'] }],
+    hands: { p1: ['r3'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 손 r3 → set_run 끝에 삽입 → [r5, r4, r3] → valid 런(3~5) → 정규화 [r3, r4, r5].
+  const mv = moveTile(g, 'p1', { kind: 'hand', tileId: 'r3' }, { kind: 'set', setId: 'set_run' });
+  assertTrue(mv.ok, 'moveTile ok');
+  assertEq(g.board[0].tiles, ['r3', 'r4', 'r5'], '런 정규화: 슬롯 오름차순 [r3,r4,r5]');
+}
+
+// ── RUMMI-034: normalizeSetTiles — 조커 포함 런 정규화 ──────────
+section('RUMMI-034: normalizeSetTiles — 조커 런 정규화 (빠진 슬롯 위치)');
+{
+  const g = createGame();
+  Object.assign(g.tiles, {
+    r3: { id: 'r3', kind: 'num', color: 'red', number: 3 },
+    r5: { id: 'r5', kind: 'num', color: 'red', number: 5 },
+    JK: { id: 'JK', kind: 'joker', color: null, number: null },
+  });
+  // 보드에 [r3, r5](invalid 2장), 손에 조커 JK.
+  g.board = [{ id: 'set_run', type: 'run', tiles: ['r3', 'r5'] }];
+  g.hands.p1 = ['JK'];
+  g.hands.p2 = [];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: [{ id: 'set_run', type: 'run', tiles: ['r3', 'r5'] }],
+    hands: { p1: ['JK'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 손 JK → set_run 끝 → [r3, r5, JK] → valid 런(3-4-5, JK=4) → 정규화 [r3, JK, r5] (슬롯 3-4-5).
+  const mv = moveTile(g, 'p1', { kind: 'hand', tileId: 'JK' }, { kind: 'set', setId: 'set_run' });
+  assertTrue(mv.ok, 'moveTile ok');
+  assertEq(g.board[0].tiles, ['r3', 'JK', 'r5'], '조커 런 정규화: 빠진 슬롯 4에 조커 [r3,JK,r5]');
+}
+
+// ── RUMMI-035: normalizeSetTiles — 그룹 정규화 (COLOR_ORDER) ────
+section('RUMMI-035: normalizeSetTiles — 그룹 정규화 (COLOR_ORDER)');
+{
+  const g = createGame();
+  Object.assign(g.tiles, {
+    k7: { id: 'k7', kind: 'num', color: 'black', number: 7 },
+    rr7: { id: 'rr7', kind: 'num', color: 'red', number: 7 },
+    o7: { id: 'o7', kind: 'num', color: 'orange', number: 7 },
+  });
+  // 보드에 [black7, orange7](valid 그룹 미달이지만 2장 invalid), 손에 red7.
+  g.board = [{ id: 'set_grp', type: 'group', tiles: ['k7', 'o7'] }];
+  g.hands.p1 = ['rr7'];
+  g.hands.p2 = [];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: [{ id: 'set_grp', type: 'group', tiles: ['k7', 'o7'] }],
+    hands: { p1: ['rr7'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // red7 추가 → [k7, o7, rr7] → valid 그룹 → 정규화 COLOR_ORDER(red→black→orange) → [rr7, k7, o7].
+  const mv = moveTile(g, 'p1', { kind: 'hand', tileId: 'rr7' }, { kind: 'set', setId: 'set_grp' });
+  assertTrue(mv.ok, 'moveTile ok');
+  assertEq(g.board[0].tiles, ['rr7', 'k7', 'o7'], '그룹 정규화: COLOR_ORDER [red,black,orange]');
+}
+
+// ── RUMMI-036: normalizeSetTiles — invalid 세트는 정규화 안 함 ──
+section('RUMMI-036: normalizeSetTiles — invalid 세트 비정규화');
+{
+  const g = createGame();
+  Object.assign(g.tiles, {
+    r5: { id: 'r5', kind: 'num', color: 'red', number: 5 },
+    r9: { id: 'r9', kind: 'num', color: 'red', number: 9 },
+  });
+  // 보드에 [r9](1장), 손에 r5. r5 추가 → [r9, r5] = 2장 미완성(invalid) → 정규화 안 함.
+  g.board = [{ id: 'set_inv', type: 'run', tiles: ['r9'] }];
+  g.hands.p1 = ['r5'];
+  g.hands.p2 = [];
+  g.played.p1 = true;
+  g.turnSnapshot = {
+    board: [{ id: 'set_inv', type: 'run', tiles: ['r9'] }],
+    hands: { p1: ['r5'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // r5 → set_inv 끝 → [r9, r5] (2장 = invalid) → 정규화 안 함 → 놓은 순서 [r9, r5] 유지.
+  const mv = moveTile(g, 'p1', { kind: 'hand', tileId: 'r5' }, { kind: 'set', setId: 'set_inv' });
+  assertTrue(mv.ok, 'moveTile ok');
+  assertEq(g.board[0].tiles, ['r9', 'r5'], 'invalid(2장) 세트는 정규화 안 됨 (순서 보존)');
+}
+
+// ── RUMMI-037: normalizeSetTiles — SWAP_JOKER 후 정규화 ────────
+section('RUMMI-037: normalizeSetTiles — SWAP_JOKER 후 정규화');
+{
+  const g = createGame();
+  Object.assign(g.tiles, {
+    r4: { id: 'r4', kind: 'num', color: 'red', number: 4 },
+    r6: { id: 'r6', kind: 'num', color: 'red', number: 6 },
+    JK: { id: 'JK', kind: 'joker', color: null, number: null },
+    r5: { id: 'r5', kind: 'num', color: 'red', number: 5 },
+  });
+  // 보드 런 [r4, JK, r6] (JK=5, valid 4-5-6), 손에 대체 타일 red5.
+  g.board = [{ id: 'set_sw', type: 'run', tiles: ['r4', 'JK', 'r6'] }];
+  g.hands.p1 = ['r5'];
+  g.hands.p2 = [];
+  g.played.p1 = true; // [#4] 등판 후에만 조커 회수 가능.
+  g.turnSnapshot = {
+    board: [{ id: 'set_sw', type: 'run', tiles: ['r4', 'JK', 'r6'] }],
+    hands: { p1: ['r5'], p2: [] },
+    nextSetSeq: g.nextSetSeq,
+    jokerReturnedThisTurn: {},
+  };
+  // 조커(index 1) ↔ 손 red5 교환 → 세트 [r4, r5, r6] valid → 정규화(이미 오름차순) 유지.
+  const r = swapJoker(g, 'p1', { setId: 'set_sw', jokerIndex: 1, handTileId: 'r5' });
+  assertTrue(r.ok, 'swapJoker 성공');
+  assertEq(r.jokerId, 'JK', '회수된 조커 ID = JK');
+  assertEq(g.board[0].tiles, ['r4', 'r5', 'r6'], 'SWAP_JOKER 후 정규화 [r4,r5,r6]');
+  assertTrue(g.hands.p1.includes('JK'), '조커 손으로 회수됨');
 }
 
 // ── RUMMI-031: #8 빈 세트 상한 (4개 초과 거부) ─────────────────
