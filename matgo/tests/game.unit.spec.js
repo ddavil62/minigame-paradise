@@ -71,6 +71,8 @@ function makeGame({ p1Hand = [], p2Hand = [], floor = [], deck = [], turn = 'p1'
     pendingSangtong: null,
     shakeAsked: { p1: false, p2: false },
     bombExtraDraw: false,
+    // 프로덕션 createGame과 스키마 정합 — 폭탄 권리 누적용 (bombSteps가 g.bombDeckCredit[playerId]를 직접 참조)
+    bombDeckCredit: { p1: 0, p2: 0 },
     firstPpeokBy: null,
   };
 }
@@ -709,7 +711,8 @@ test('G-35: 폭탄 후 bombExtraDraw=false (덱 2장 모두 정상 뒤집힘 시
   expect(['awaiting_play', 'round_end', 'awaiting_go_stop'].includes(g.phase)).toBe(true);
 });
 
-test('G-36: 폭탄 후 첫 번째 뒤집기에서 awaiting_floor_choice → bombExtraDraw=true', () => {
+test('G-36: 폭탄 후 첫 번째 뒤집기에서 같은 월 2장 → awaiting_floor_choice (폭탄 권리 +2 유지)', () => {
+  // 2026-06-02 룰 정정: bombExtraDraw(드로우 2회 연속) 모델은 bombDeckCredit("기회 보존의 법칙")로 대체됨.
   // 첫 번째 뒤집기로 같은 월 2장이 있는 케이스를 만들어 awaiting_floor_choice 진입.
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
@@ -719,13 +722,15 @@ test('G-36: 폭탄 후 첫 번째 뒤집기에서 awaiting_floor_choice → bomb
   });
   const r = bomb(g, 'p1', 1);
   expect(r.ok).toBe(true);
-  // 첫 번째 뒤집기에서 멈춤 → bombExtraDraw 플래그가 살아 있어야 한다.
+  // 첫 번째 뒤집기에서 멈춤(바닥 선택 대기).
   expect(g.phase).toBe('awaiting_floor_choice');
-  expect(g.bombExtraDraw).toBe(true);
+  // 폭탄 발동으로 누적된 보너스 뒤집기 권리 +2가 살아 있어야 한다.
+  expect(g.bombDeckCredit.p1).toBe(2);
 });
 
-test('G-37: chooseFloorSteps가 bombExtraDraw=true를 이어받아 두 번째 뒤집기 실행', () => {
-  // G-36과 동일 셋업 + 덱에 두 번째 뒤집기용 카드 추가
+test('G-37: bomb→awaiting_floor_choice에서 chooseFloor로 해소 → 턴 정상 마무리 (폭탄 권리 보존)', () => {
+  // 2026-06-02 룰 정정: 두 번째 강제 뒤집기 대신 bombDeckCredit(+2)이 이후 턴에 bonusFlipSteps로 소비된다.
+  // G-36과 동일 셋업 + 덱에 추가 카드.
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
@@ -735,14 +740,14 @@ test('G-37: chooseFloorSteps가 bombExtraDraw=true를 이어받아 두 번째 �
   });
   bomb(g, 'p1', 1);
   expect(g.phase).toBe('awaiting_floor_choice');
-  expect(g.bombExtraDraw).toBe(true);
+  expect(g.bombDeckCredit.p1).toBe(2);
 
   // 바닥에서 m07_pi_a 선택
   const r = chooseFloor(g, 'p1', 'm07_pi_a');
   expect(r.ok).toBe(true);
-  // chooseFloorSteps가 두 번째 뒤집기까지 실행 → bombExtraDraw 복원
-  expect(g.bombExtraDraw).toBe(false);
-  // 두 번째 뒤집기 후 정상적으로 턴 교대 또는 round_end
+  // 폭탄 권리(+2)는 소진되지 않고 보존되어 이후 p1 차례에 bonusFlipSteps로 사용된다.
+  expect(g.bombDeckCredit.p1).toBe(2);
+  // 바닥 선택 해소 후 정상적으로 턴 교대 또는 round_end
   expect(['awaiting_play', 'round_end', 'awaiting_go_stop'].includes(g.phase)).toBe(true);
 });
 
