@@ -1,5 +1,41 @@
 # Changelog
 
+## [2026-06-13] — fly-출처 정합 2건 (강탈 피 / 흔들기 낸 카드)
+
+사용자 실플레이 피드백 2건. 게임 로직(점수·룰)은 무변경, 클라이언트 fly 애니메이션 출발 지점만 교정.
+
+### 수정
+
+#### 버그4 — 강탈 피 fly 출처 (`public/client.js`)
+- 증상: 조커/쪽/뻑풀이/따닥/쓸/폭탄 등 상대 피를 빼앗는 연출에서, 빼앗은 피가 상대 획득 영역이 아니라 **더미(덱)에서 날아옴**.
+- 수정: `la.stoleFromOpp > 0`일 때 `stolenPiIds = prevCapIds[opp] ∩ newCapIds[me]`로 빼앗긴 피 카드 ID를 식별 → 신규 `startFlyFromOppCaptured`로 **상대 획득 영역(oppCapturedZone)에서 출발**. `drewIds`(이번 턴 더미에서 뽑은 카드)는 제외해 자연 덱 fly와 분리. `resolvePendingFlies`의 handLike 분기에 `origin: 'opp-captured'`를 포함해 보류 fly 해소 시에도 출발점 유지.
+
+#### 버그5 — 흔들기 낸 카드 fly 출처 (`public/client.js`)
+- 증상: 같은 월 3장 흔들기 모달을 경유해 카드를 낼 때, 낸 카드가 내 손이 아니라 **더미에서 날아옴**.
+- 원인: SHAKE STATE 도착이 `renderMyHand`(`innerHTML = ''`)로 fly clone의 원본 DOM을 무효화 → 출발점 좌표가 손 카드 위치를 못 잡음.
+- 수정(옵션 A): `renderMyHand` 말미에 `pendingFlies` 보유 카드의 재생성된 DOM에 `visibility:hidden`을 재적용 → 클론 원본이 손 위치에 보존되어 **내 손(myCards)에서 출발**.
+
+### 추가 (`tests/e2e-scenarios.spec.js`)
+- **E-28**: 버그4 — 강탈 피 fly가 `opp-captured-zone`에서 출발하고 `startFlyFromDeck`이 호출되지 않음을 검증.
+- **E-29**: 버그5 — 흔들기로 낸 카드 fly가 `myCards` 카드 위치에서 출발하고 `startFlyFromDeck`이 호출되지 않음을 검증.
+
+### 검증
+- 신규 E2E **E-28 / E-29 둘 다 PASS** + 회귀 게이트 **E-26 / E-27 PASS**.
+- `game.unit` + `score.unit` **100 passed / 0 failed**.
+- QA 판정: **PASS** (신규 결정적 회귀 0건, baseline 대조 입증).
+
+### 선재/flaky 실패 (이번 변경과 무관)
+> ⚠️ 아래는 본 변경의 회귀가 아님 — baseline(git stash) 대조로 확인.
+- **선재 실패**: E-03(덱수 20 stale 단언), E-15·E-16(제거된 `shake_decision` inject 의존). baseline 동일 실패.
+- **전체 스위트 flakiness**: E-07·E-23 — 공유 룸 + workers:1 순차 실행 순서 의존으로 fail↔pass 스왑. 단독·baseline 모두 PASS.
+
+### 비고
+- `game.js` / `score.js` / `cards.js` / `server.js` 무변경. 룰·점수·프로토콜 영향 없음. 클라이언트 fly 출발점만 교정.
+
+### 참고
+- 스펙: `.claude/specs/2026-06-13-matgo-fly-origin-steal-shake-spec.md`
+- QA: `.claude/specs/2026-06-13-matgo-fly-origin-steal-shake-qa.md`
+
 ## [2026-06-13] - 연출-STATE 순서 정합 수정 2건 (chooseFloor 획득 순간이동 / 뻑 토스트 선행)
 
 사용자 실플레이 피드백 2건. 게임 로직(점수·룰)은 무변경, 서버 broadcast 타이밍과 클라이언트 토스트 타이밍만 교정.

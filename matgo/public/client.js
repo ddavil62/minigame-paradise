@@ -473,6 +473,10 @@
     newFloorIds = setDiff(curFloorIds, prevFloorIds);
     newCapIds.p1 = setDiff(curCapIds.p1, prevCapIds.p1);
     newCapIds.p2 = setDiff(curCapIds.p2, prevCapIds.p2);
+    // 강탈 피 식별용 — prevCapIds를 curCapIds로 덮어쓰기 전에 직전 captured 스냅샷 보존.
+    // (아래 stolenPiIds 분기는 "직전 상대 captured에 있었고 이번 내 captured에 새로 등장"을
+    //  판정하므로, 덮어쓴 뒤의 prevCapIds로는 교집합이 항상 false가 된다.)
+    const prevCapSnapshot = { p1: prevCapIds.p1, p2: prevCapIds.p2 };
     prevFloorIds = curFloorIds;
     prevCapIds = curCapIds;
 
@@ -593,6 +597,20 @@
     // 덱 fly를 발동하면 "더미에서 나오는" 인상이 되어 어색하다 (사용자 보고).
     // lastAction.kind === 'round_start'이면 fly 보류.
     const isRoundStart = la && la.kind === 'round_start';
+
+    // 강탈 피 식별 — stoleFromOpp > 0인 STATE에서 상대 captured→내 captured로 이동한 카드.
+    // stealPi(game.js)가 victim.captured의 실제 피 카드를 taker.captured로 splice/push하므로
+    // prevCapIds[opp]에 있었고 newCapIds[me]에 새로 등장한 카드만 강탈 피다.
+    // 이 카드들은 oppCapturedZoneEl에서 fly 출발해야 하므로 drewIds(덱 출발)에서 제외한다.
+    // (게이트 없이 교집합만으로도 견고하나, 스펙 지정대로 la.stoleFromOpp > 0 게이트를 둔다.)
+    const stolenPiIds = new Set();
+    if (la && la.stoleFromOpp > 0) {
+      for (const id of newCapIds[me]) {
+        if (prevCapSnapshot[oppId].has(id)) stolenPiIds.add(id);
+      }
+      for (const id of stolenPiIds) newCardIds.delete(id);
+    }
+
     const drewIds = new Set();
     if (!isRoundStart) {
       // 덱 fly 대상 = 새 카드 중 상대 손 origin이 아닌 것
@@ -617,6 +635,8 @@
     for (const id of drewIds) flyTargetIds.add(id);
     // 상대 손에서 나온 카드도 fly 대상
     for (const id of oppHandOriginIds) flyTargetIds.add(id);
+    // 강탈 피도 fly 대상 — 도착지(내 captured) appear 애니메이션 끄고 상대 captured에서 출발
+    for (const id of stolenPiIds) flyTargetIds.add(id);
 
     // 손패 / 바닥 / 점수판 렌더
     renderOppHand(s);
@@ -640,6 +660,14 @@
       const oppHandRect = oppCardsEl.getBoundingClientRect();
       for (const id of oppHandOriginIds) {
         startFlyFromOppHand(id, oppHandRect);
+      }
+    }
+
+    // 강탈 피 fly 시작 — oppCapturedZoneEl에서 내 captured로 날아옴
+    if (stolenPiIds.size > 0 && oppCapturedZoneEl) {
+      const oppCapRect = oppCapturedZoneEl.getBoundingClientRect();
+      for (const id of stolenPiIds) {
+        startFlyFromOppCaptured(id, oppCapRect);
       }
     }
 
@@ -872,6 +900,18 @@
       }
       myCardsEl.appendChild(el);
     });
+
+    // pendingFlies에 등록된 손 카드는 DOM 재생성 후에도 visibility:hidden 유지.
+    // 버그5: 흔들기/그냥내기 모달 경유 시 SHAKE STATE(shaking[me]=true)가 도착하면
+    // renderMyHand가 myCardsEl.innerHTML=''로 원본 DOM을 파괴한다. fly clone은 살아 있으나
+    // 새로 그려진 원본 카드가 보이면 "손에 카드가 그대로 있는데 더미서 또 날아오는" 인상이 된다.
+    // 새 DOM에 다시 가림 처리해 fly clone이 도착할 때까지 원본을 숨긴다.
+    if (pendingFlies.length > 0) {
+      for (const fly of pendingFlies) {
+        const newSrc = myCardsEl.querySelector(`[data-card-id="${fly.cardId}"]`);
+        if (newSrc) newSrc.style.visibility = 'hidden';
+      }
+    }
   }
 
   /**
@@ -1147,7 +1187,22 @@
     flyOverlay.appendChild(clone);
     void clone.offsetHeight;
     src.style.visibility = 'hidden';
+    recordFlyOrigin(cardId, 'hand', rect.left, rect.top);
     pendingFlies.push({ cardId, clone, startedAt: Date.now() });
+  }
+
+  /**
+   * 테스트 계측용 fly 출처 기록기. 각 fly 등록 시점에 cardId/origin/시작 좌표를
+   * window.__matgoFlies에 누적한다. (production 무해 — 배열 미초기화 시 no-op)
+   * E2E에서 fly clone 시작 좌표가 손/덱/상대 captured 중 어디인지 검증하는 데 쓴다.
+   * @param {string} cardId
+   * @param {string} origin
+   * @param {number} startLeft
+   * @param {number} startTop
+   */
+  function recordFlyOrigin(cardId, origin, startLeft, startTop) {
+    if (typeof window === 'undefined' || !window.__matgoFlies) return;
+    window.__matgoFlies.push({ cardId, origin, startLeft, startTop, t: Date.now() });
   }
 
   /**
@@ -1182,7 +1237,43 @@
     flyOverlay.appendChild(clone);
     void clone.offsetHeight;
     target.style.visibility = 'hidden';
+    recordFlyOrigin(cardId, 'opp-hand', startLeft, startTop);
     pendingFlies.push({ cardId, clone, startedAt: Date.now(), origin: 'opp-hand' });
+  }
+
+  /**
+   * 상대 먹은 패 영역에서 강탈된 피 카드의 fly 클론 생성.
+   * 시작 좌표를 상대 captured zone 중앙으로 설정 — stoleFromOpp > 0 케이스 전용.
+   * @param {string} cardId
+   * @param {DOMRect} oppCapRect 상대 captured zone DOM의 viewport 좌표
+   */
+  function startFlyFromOppCaptured(cardId, oppCapRect) {
+    const target =
+      myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      floorCardsEl.querySelector(`[data-card-id="${cardId}"]`);
+    if (!target) return;
+    const targetRect = target.getBoundingClientRect();
+    const w = targetRect.width || 60;
+    const h = targetRect.height || 85;
+    const startLeft = oppCapRect.left + (oppCapRect.width / 2) - (w / 2);
+    const startTop  = oppCapRect.top  + (oppCapRect.height / 2) - (h / 2);
+    const clone = target.cloneNode(true);
+    clone.classList.add('flying-card');
+    clone.classList.remove('clickable');
+    clone.style.position = 'fixed';
+    clone.style.margin = '0';
+    clone.style.transition = 'none';
+    clone.style.left   = `${startLeft}px`;
+    clone.style.top    = `${startTop}px`;
+    clone.style.width  = `${w}px`;
+    clone.style.height = `${h}px`;
+    clone.style.visibility = 'visible';
+    clone.style.zIndex = '10';
+    flyOverlay.appendChild(clone);
+    void clone.offsetHeight;
+    target.style.visibility = 'hidden';
+    recordFlyOrigin(cardId, 'opp-captured', startLeft, startTop);
+    pendingFlies.push({ cardId, clone, startedAt: Date.now(), origin: 'opp-captured' });
   }
 
   /**
@@ -1215,6 +1306,7 @@
     flyOverlay.appendChild(clone);
     void clone.offsetHeight;
     target.style.visibility = 'hidden';
+    recordFlyOrigin(cardId, 'deck', deckRect.left, deckRect.top);
     pendingFlies.push({ cardId, clone, startedAt: Date.now(), origin: 'deck' });
   }
 
@@ -1382,7 +1474,7 @@
     };
     const hasCapMove = entries.some((e) => e.isCap);
     const deckEntries = entries.filter((e) => e.origin === 'deck');
-    const handLikeEntries = entries.filter((e) => e.origin === 'hand' || e.origin === 'opp-hand');
+    const handLikeEntries = entries.filter((e) => e.origin === 'hand' || e.origin === 'opp-hand' || e.origin === 'opp-captured');
     const pairOnlyEntries = entries.filter((e) => e.origin === 'pair');
 
     function flyTo(clone, rect, durMs) {

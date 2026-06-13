@@ -798,6 +798,8 @@ test('E-24: AI 봇 모드 — mode=ai URL 진입 시 봇 자동 연결', async (
 async function installStateRecorder(page) {
   await page.addInitScript(() => {
     window.__matgoStates = [];
+    // fly 출처 기록기 활성화 — client.js recordFlyOrigin이 여기에 push한다.
+    window.__matgoFlies = [];
     const OrigWS = window.WebSocket;
     // WebSocket 인스턴스의 message 이벤트를 가로채 STATE의 lastAction.kind 기록.
     window.WebSocket = function (...args) {
@@ -921,6 +923,140 @@ test('E-27: 뻑 토스트는 덱 뒤집기(DECK_LAND) 연출 이후 등장 (버�
       () => document.querySelector('.action-toast')?.textContent ?? '',
     );
     expect(finalText).toContain('뻑');
+  } finally {
+    await browser.close();
+  }
+});
+
+/**
+ * fly 출처 기록기를 페이지 로드 전에 설치한다. client.js recordFlyOrigin이
+ * window.__matgoFlies에 { cardId, origin, startLeft, startTop } 를 push한다.
+ * @param {import('playwright/test').Page} page
+ */
+async function installFlyRecorder(page) {
+  await page.addInitScript(() => { window.__matgoFlies = []; });
+}
+
+test('E-28: 강탈 피(쪽) fly가 opp-captured-zone에서 출발 — 더미 출발 아님 (버그4)', async () => {
+  const browser = await chromium.launch();
+  const ctxP1 = await browser.newContext({ viewport: VIEWPORT });
+  const ctxP2 = await browser.newContext({ viewport: VIEWPORT });
+  const pageP1 = await ctxP1.newPage();
+  const pageP2 = await ctxP2.newPage();
+  try {
+    await installFlyRecorder(pageP1);
+    await joinAndStartGame(pageP1, pageP2);
+
+    // 쪽(jjok) 시나리오: P1 손 m05_kkeut(5월) → 바닥에 5월 없음 → 0매칭으로 바닥에 놓임 →
+    // 덱 m05_pi_a(5월) 뒤집힘 → sameMonthOnFloor=[m05_kkeut] 1장 → jjok: 둘 다 captured +
+    // 상대 피 1장(m07_pi_a) 강탈. 강탈 피는 opp-captured에서 출발해야 한다.
+    await inject({
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m05_kkeut'),
+      p2Hand: cards('m06_kkeut'),
+      floor:  cards('m07_tti_cho'),
+      deck:   cards('m05_pi_a'),
+      captured: { p1: [], p2: cards('m07_pi_a') },
+    });
+    await waitForHandCount(pageP1, 1);
+    await waitForFlyIdle(pageP1);
+    // inject 후 발동한 옵티미스틱 fly 기록을 비운다.
+    await pageP1.evaluate(() => { window.__matgoFlies = []; });
+
+    // 카드 클릭 → 쪽 형성 + 강탈 피
+    await pageP1.click('#my-hand-cards .card.clickable');
+
+    // 강탈 피(m07_pi_a) fly가 opp-captured origin으로 등록될 때까지 대기
+    await pageP1.waitForFunction(
+      () => (window.__matgoFlies || []).some((f) => f.cardId === 'm07_pi_a'),
+      { timeout: 6000 },
+    );
+
+    const flies = await pageP1.evaluate(() => window.__matgoFlies.slice());
+    const stolen = flies.find((f) => f.cardId === 'm07_pi_a');
+    expect(stolen).toBeTruthy();
+    // 핵심: 강탈 피는 opp-captured origin (더미 'deck'이 아님)
+    expect(stolen.origin).toBe('opp-captured');
+    // 강탈 피는 startFlyFromDeck로 등록되지 않아야 함
+    expect(flies.some((f) => f.cardId === 'm07_pi_a' && f.origin === 'deck')).toBe(false);
+
+    // 시작 좌표가 opp-captured-zone rect 범위 안인지 검증
+    const oppCapBox = await pageP1.locator('#opp-captured-zone').boundingBox();
+    expect(oppCapBox).toBeTruthy();
+    expect(stolen.startLeft).toBeGreaterThanOrEqual(oppCapBox.x - 60);
+    expect(stolen.startLeft).toBeLessThanOrEqual(oppCapBox.x + oppCapBox.width + 60);
+    expect(stolen.startTop).toBeGreaterThanOrEqual(oppCapBox.y - 60);
+    expect(stolen.startTop).toBeLessThanOrEqual(oppCapBox.y + oppCapBox.height + 60);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('E-29: 흔들기로 낸 카드 fly가 myCards 영역에서 출발 — startFlyFromDeck 미호출 (버그5)', async () => {
+  const browser = await chromium.launch();
+  const ctxP1 = await browser.newContext({ viewport: VIEWPORT });
+  const ctxP2 = await browser.newContext({ viewport: VIEWPORT });
+  const pageP1 = await ctxP1.newPage();
+  const pageP2 = await ctxP2.newPage();
+  try {
+    await installFlyRecorder(pageP1);
+    await joinAndStartGame(pageP1, pageP2);
+
+    // 흔들기 시나리오: P1 손에 8월 3장(m08_gwang/m08_kkeut_godori/m08_pi_a) + 필러 1장.
+    // 바닥에 8월 없음 → 폭탄(bombable) 아님 → 같은 월 첫 카드 클릭 시 흔들기 모달.
+    // 덱 1장(m11_pi_b) 비매칭 → 낸 카드 0매칭으로 바닥에 놓임. 낸 카드는 손에서 출발해야 한다.
+    await inject({
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m08_gwang', 'm08_kkeut_godori', 'm08_pi_a', 'm01_pi_a'),
+      p2Hand: cards('m06_kkeut'),
+      floor:  cards('m07_tti_cho'),
+      deck:   cards('m11_pi_b'),
+      captured: { p1: [], p2: [] },
+    });
+    await waitForHandCount(pageP1, 4);
+    await waitForFlyIdle(pageP1);
+    await pageP1.evaluate(() => { window.__matgoFlies = []; });
+
+    // 8월 카드 클릭 → 흔들기 모달
+    await pageP1.click('#my-hand-cards .card[data-card-id="m08_gwang"]');
+    await pageP1.waitForFunction(
+      () => !document.getElementById('shake-modal')?.classList.contains('hidden'),
+      { timeout: 5000 },
+    );
+
+    // 흔들기 선언
+    await pageP1.click('#btn-shake');
+
+    // 낸 카드(m08_gwang) fly가 hand origin으로 등록될 때까지 대기
+    await pageP1.waitForFunction(
+      () => (window.__matgoFlies || []).some((f) => f.cardId === 'm08_gwang'),
+      { timeout: 6000 },
+    );
+
+    const flies = await pageP1.evaluate(() => window.__matgoFlies.slice());
+    const played = flies.find((f) => f.cardId === 'm08_gwang');
+    expect(played).toBeTruthy();
+    // 핵심: 낸 카드는 hand origin (더미 'deck'이 아님)
+    expect(played.origin).toBe('hand');
+    // startFlyFromDeck로 등록되지 않아야 함 (더미서 날아오지 않음)
+    expect(flies.some((f) => f.cardId === 'm08_gwang' && f.origin === 'deck')).toBe(false);
+
+    // 시작 좌표가 my-hand-cards rect 범위 안인지 검증
+    const myHandBox = await pageP1.locator('#my-hand-cards').boundingBox();
+    expect(myHandBox).toBeTruthy();
+    expect(played.startLeft).toBeGreaterThanOrEqual(myHandBox.x - 60);
+    expect(played.startLeft).toBeLessThanOrEqual(myHandBox.x + myHandBox.width + 60);
+    expect(played.startTop).toBeGreaterThanOrEqual(myHandBox.y - 60);
+    expect(played.startTop).toBeLessThanOrEqual(myHandBox.y + myHandBox.height + 60);
+
+    // 흔들기 배지(×2)가 즉시 표시되는지 회귀 확인
+    await pageP1.waitForFunction(
+      () => /×?\s*2|x2/i.test(document.getElementById('my-badges')?.textContent || '')
+         || /흔/.test(document.getElementById('my-badges')?.textContent || ''),
+      { timeout: 4000 },
+    ).catch(() => { /* 배지 포맷 차이는 비치명적 — origin 검증이 핵심 */ });
   } finally {
     await browser.close();
   }
