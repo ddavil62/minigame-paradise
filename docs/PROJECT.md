@@ -1,6 +1,7 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-06-13 — 맞고 E-15/E-16 흔들기 E2E 현행 모달 흐름 재작성(skip 해제) (inject 1월 손 3장+바닥 0장 → 카드 클릭 → shake-modal 표시(E-15) / btn-shake 클릭 → shaking.p1 반영(E-16). 3회 연속 30 passed / 0 skipped / 0 failed, 28 passed/2 skipped → 30 passed/0 skipped)
+> 최종 업데이트: 2026-06-13 — 맞고 레거시 shake_decision/pendingShake 데드코드 정리 (죽은 `shake_decision` 분기 + `pendingShake` 필드 제거, 동작 무변경 프로덕션 no-op. 레거시 테스트 G-22/G-23 제거로 game.unit 42, 단위 98 passed / adhoc 42 / e2e 30 passed. 커밋 513a603)
+> 이전 갱신: 2026-06-13 — 맞고 E-15/E-16 흔들기 E2E 현행 모달 흐름 재작성(skip 해제) (inject 1월 손 3장+바닥 0장 → 카드 클릭 → shake-modal 표시(E-15) / btn-shake 클릭 → shaking.p1 반영(E-16). 3회 연속 30 passed / 0 skipped / 0 failed, 28 passed/2 skipped → 30 passed/0 skipped)
 > 이전 갱신: 2026-06-13 — 맞고 e2e 스위트 flakiness 안정화 (공유 룸 teardown 레이스 → `POST /test/reset` + beforeEach/afterEach, 오프닝 fly+무가드 click 레이스 → waitForFlyIdle + pickSafePlayCard 헬퍼)
 > 이전 갱신: 2026-06-13 — 맞고 폭탄 손 3장 fly 출처 수정 (버그6: 폭탄 발동 시 손 3장이 myCards에서 출발, E-30 PASS)
 > 이전 갱신: 2026-06-13 — 맞고 fly-출처 정합 수정 2건 (강탈 피는 oppCapturedZone 출발 / 흔들기 낸 카드는 myCards 출발)

@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-06-13] — 레거시 shake_decision/pendingShake 데드코드 정리
+
+2026-05-31 흔들기 모달 이전 이후로 남아 있던 레거시 잔재(죽은 `shake_decision` 분기 + `pendingShake` 필드)를 제거. **동작 변화 없음(프로덕션 no-op)** — 제거 대상은 모두 도달 불가 분기/미사용 필드였다. 커밋 `513a603`.
+
+### 변경
+- **`game.js`**: `shakeDecision` 내 죽은 `shake_decision` 분기 제거 + `pendingShake` 필드 전체 제거(`@property` 주석 / `createGame` / `startRound` / `snapshotForPlayer`).
+- **`server.js`**: `inject`의 `pendingShake` 대입 제거(`shake_decision` 제거 설명 주석은 유지).
+- **`smoke-test.js`**: `shake_decision` 조건 제거.
+- **adhoc (bombdup / joker / sseul)**: `makeGame` 헬퍼의 `pendingShake` 제거.
+
+### 수정 (테스트)
+- **`game.unit.spec.js`**: 죽은 분기 검증용 레거시 테스트 **G-22 / G-23 제거** + G-02 단언을 `awaiting_play` 단일화 + `makeGame`의 `pendingShake` 제거. game.unit **42개**(직전 44에서 -2). 현행 흔들기 동작은 **G-38**이 커버.
+
+### 유지
+- `shakeDecision` 함수(현행 SHAKE 핸들러), `client.js`의 `pendingShakeCardId`(로컬 변수) — 현행 코드라 보존.
+
+### 검증
+- grep live(소스) `shake_decision`/`pendingShake` **0건**.
+- 단위 game.unit(42) + score.unit(56) = **98 passed**.
+- adhoc **42/42** PASS.
+- e2e **30 passed / 0 skipped / 0 failed** (E-15 / E-16 PASS).
+
+---
+
 ## [2026-06-13] — E-15/E-16 흔들기 E2E 현행 모달 흐름 재작성(skip 해제)
 
 직전 flakiness 안정화 때 `test.skip` 처리했던 E-15·E-16을 현행 흔들기 모달 흐름 기준으로 재작성해 복원. 게임 로직·서버 무변경, e2e 테스트 코드만 수정.

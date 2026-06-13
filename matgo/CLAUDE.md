@@ -59,7 +59,7 @@ matgo/
     └── screenshots/         — E2E 스크린샷 출력
 ```
 
-> 단위 game.unit + score.unit 합계 100/100 PASS (2026-06-13 기준).
+> 단위 game.unit(42) + score.unit(56) 합계 98/98 PASS (2026-06-13 기준 — 레거시 G-22/G-23 제거 반영).
 
 ## 서버 실행 (테스트용)
 
@@ -87,7 +87,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js --reporter=
 node server.js --port 3013 &
 npx playwright test tests/e2e-scenarios.spec.js --reporter=list
 
-# 전체 실행 (단위 + E2E, 총 104개)
+# 전체 실행 (단위 98 + E2E 30 = 총 128개)
 npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-scenarios.spec.js --reporter=list
 ```
 
@@ -95,7 +95,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 
 | 파일 | 테스트 수 | 상태 | 서버 필요 |
 |------|----------|------|----------|
-| `score.unit.spec.js` + `game.unit.spec.js` | 합계 100개 | ✅ 100/100 PASS | ❌ |
+| `score.unit.spec.js` (56) + `game.unit.spec.js` (42) | 합계 98개 | ✅ 98/98 PASS | ❌ |
 | `e2e-scenarios.spec.js` | E-30까지 30개 | ✅ 30 PASS / 0 skip / 0 fail (3회 연속 결정성) | ✅ (3013) |
 
 > **2026-06-13 flakiness 안정화**: 공유 룸 teardown 레이스(→ `POST /test/reset` + `beforeEach`/`afterEach`)와 랜덤 분배 바닥 조커 오프닝 fly 레이스(→ `waitForFlyIdle` + `pickSafePlayCard` 헬퍼)를 해소해 전체 e2e가 결정적이 됨.
@@ -137,7 +137,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 
 ## 변경 시 자주 깨지는 함정
 
-1. **`shake_decision` phase는 더 이상 존재하지 않는다.** (2026-05-31 제거) 흔들기는 클라이언트 모달로만 처리. 서버 phase·메시지에서 참조하지 말 것. e2e `E-15/E-16`은 한때 이 제거된 phase의 inject에 의존해 `test.skip`이었으나, **현행 모달 흐름으로 재작성됨**(2026-06-13): inject(1월 손 3장 + 바닥 1월 0장) → 카드 클릭 → `shake-modal` 표시 → `#btn-shake` 클릭 → `shaking.p1` 반영. **`shake_decision` phase 참조 금지는 그대로 유지**(재작성 테스트도 phase 미참조).
+1. **`shake_decision` phase는 더 이상 존재하지 않는다.** (2026-05-31 제거) 흔들기는 클라이언트 모달로만 처리. 서버 phase·메시지에서 참조하지 말 것. e2e `E-15/E-16`은 한때 이 제거된 phase의 inject에 의존해 `test.skip`이었으나, **현행 모달 흐름으로 재작성됨**(2026-06-13): inject(1월 손 3장 + 바닥 1월 0장) → 카드 클릭 → `shake-modal` 표시 → `#btn-shake` 클릭 → `shaking.p1` 반영. **`shake_decision` phase 참조 금지는 그대로 유지**(재작성 테스트도 phase 미참조). 레거시 잔재(`game.js`의 죽은 `shake_decision` 분기·`pendingShake` 필드, 단위 테스트 G-22/G-23)는 2026-06-13 데드코드로 제거됨(동작 무변경, 현행 흔들기는 G-38이 커버).
 2. **사통 phase `awaiting_sangtong`은 `isPauseForUserInput()`이 true를 반환해야 한다.** (`server.js`) 누락 시 사통 모달 표시 중에도 서버가 봇 턴을 진행해 상태 깨짐.
 3. **첫뻑 보너스(`firstPpeokBonus`)는 base 가산 7점이지 multiplier가 아니다.** `applyFinalMultipliers`에서 base에 +7 후 박/고 multiplier가 곱해진다. 순서 바뀌면 점수 폭주.
 4. **폭탄 후 `g.bombExtraDraw` 플래그는 두 번째 `drawAndResolve` 직후 반드시 false로 리셋.** 미리셋 시 `chooseFloorSteps`에서 무한 3회차 진입 가능.
