@@ -93,6 +93,10 @@ export function createApp(opts = {}) {
    * 같은 이유로 choice_made(2매칭 후 사용자가 1장 선택)도 다음 단계에서 뻑이 형성될
    * 수 있으므로 보류.
    *
+   * 'choice_made' 보류 — chooseFloorSteps 단계 1(바닥 선택 후 srcCard+chosen captured 이동)
+   * 직후 브로드캐스트하면 클라가 srcCard를 fly 없이 즉시 captured에서 발견하여 순간이동
+   * 현상이 발생한다. 단계 2(덱 뒤집기) 결과까지 포함한 통합 STATE 1회 송신으로 해결.
+   *
    * @param {object} g 게임 상태
    * @returns {boolean}
    */
@@ -108,7 +112,10 @@ export function createApp(opts = {}) {
     // 'pair_from_hand' 보류 — 단계 1(손→captured)과 단계 2(덱 뒤집기)가 통합 STATE로
     // 송신되어 뻑(ppeok) 형성 시 client가 captured 도착 fly 후 floor 되돌리기 fly를
     // 발동하는 어색한 흐름을 방지. client는 통합 STATE 1회에 단계 분리 fly로 시각화.
-    return k === 'pair_from_hand' || k === 'kkeut_choice';
+    // 'choice_made' 추가 — chooseFloorSteps 단계 1(srcCard+chosen captured 이동)을
+    // 단계 2(덱 뒤집기)까지 보류해 통합 STATE로 송신. 미보류 시 srcCard가 fly 없이
+    // 즉시 captured에 등장하는 순간이동 버그 발생.
+    return k === 'pair_from_hand' || k === 'kkeut_choice' || k === 'choice_made';
   }
 
   /**

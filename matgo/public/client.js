@@ -133,6 +133,8 @@
   let newCapIds    = { p1: new Set(), p2: new Set() };
   /** lastAction 동일성 체크용 키 */
   let prevActionKey = '';
+  /** ppeok 토스트 지연 보관. 덱 뒤집기 fly의 DECK_LAND 전환 이후 flush. */
+  let pendingPpeokToast = null;
   /** 액션 토스트 DOM (지연 생성, 한 개만 유지) */
   let actionToastEl = null;
   /** 진행 중인 fly 애니메이션 */
@@ -334,6 +336,8 @@
         floorSlotMap.clear();
         shakeAskedThisRound = false;
         bombCheckSkipOnce = false;
+        // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
+        pendingPpeokToast = null;
         break;
       case 'ROUND_START':
         hideRoundModal();
@@ -341,6 +345,8 @@
         floorSlotMap.clear();
         shakeAskedThisRound = false;
         bombCheckSkipOnce = false;
+        // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
+        pendingPpeokToast = null;
         break;
       case 'STATE':
         lastState = msg;
@@ -471,9 +477,15 @@
     prevCapIds = curCapIds;
 
     // 액션 토스트 (특수 룰 발생 시 화면 중앙에 한 번 띄움)
+    // ppeok 종류는 덱 뒤집기 연출이 완료된 후 표시 — DECK_LAND 전환에서 flush.
     const actionKey = s.lastAction ? JSON.stringify(s.lastAction) : '';
     if (actionKey && actionKey !== prevActionKey) {
-      maybeShowActionToast(s.lastAction);
+      if (s.lastAction && s.lastAction.kind === 'ppeok') {
+        // 뻑: 덱 fly DECK_LAND 이후 표시. resolvePendingFlies가 flush 책임.
+        pendingPpeokToast = s.lastAction;
+      } else {
+        maybeShowActionToast(s.lastAction);
+      }
       prevActionKey = actionKey;
     }
 
@@ -1461,6 +1473,11 @@
             const pairs = pairsByMonth.get(month) || [];
             for (const pe of pairs) flashMeet(pe.clone);
           }
+          // 뻑 토스트 지연 flush — 덱이 바닥에 쌓인 직후 표시.
+          if (pendingPpeokToast) {
+            maybeShowActionToast(pendingPpeokToast);
+            pendingPpeokToast = null;
+          }
           stateTimer = setTimeout(
             () => transition(hasCapMove ? 'RESOLVE' : 'CLEANUP'),
             T.DECK_LAND,
@@ -1478,6 +1495,12 @@
           for (const e of entries) {
             if (e.finalEl) e.finalEl.style.visibility = '';
             e.clone.remove();
+          }
+          // 안전망: DECK_LAND를 거치지 못한 채 CLEANUP에 진입한 경우(덱 empty 등)
+          // pendingPpeokToast가 남아 있으면 여기서 flush.
+          if (pendingPpeokToast) {
+            maybeShowActionToast(pendingPpeokToast);
+            pendingPpeokToast = null;
           }
           pendingFlies = [];
           isAnimating = false;

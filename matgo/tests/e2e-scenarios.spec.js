@@ -127,6 +127,22 @@ async function waitForHandCount(page, expectedCount, timeout = 4000) {
   );
 }
 
+/**
+ * fly 애니메이션이 완전히 끝나(클론 0개) 클릭 입력이 받아들여질 상태까지 대기한다.
+ *
+ * inject로 손패/바닥을 통째로 교체하면 client가 STATE diff를 카드 이동으로 해석해
+ * 옵티미스틱 fly(HAND_THROW→…→CLEANUP)를 한 차례 발동한다. 이때 isAnimating=true라
+ * sendPlay()가 조용히 무시되므로(중복 입력 가드), fly clone(#fly-overlay 자식)이
+ * 모두 제거된 뒤에 카드를 클릭해야 PLAY_CARD가 실제로 송신된다.
+ * @param {import('playwright/test').Page} page
+ */
+async function waitForFlyIdle(page, timeout = 4000) {
+  await page.waitForFunction(
+    () => (document.getElementById('fly-overlay')?.childElementCount ?? 0) === 0,
+    { timeout },
+  );
+}
+
 // ── 테스트 타임아웃 ────────────────────────────────────────────────────
 test.setTimeout(60000);
 
@@ -764,6 +780,147 @@ test('E-24: AI 봇 모드 — mode=ai URL 진입 시 봇 자동 연결', async (
     const s = await readState(page);
     expect(s.yourHandLen).toBe(10);
     expect(s.oppHandLen).toBe(10);
+  } finally {
+    await browser.close();
+  }
+});
+
+// ============================================================
+// §6 연출-STATE 순서 정합성 (2026-06-13 버그 수정 검증)
+// ============================================================
+
+/**
+ * 페이지 로드 전에 WebSocket.prototype.send 직전 단계의 수신 메시지를 가로채는
+ * init script를 설치한다. window.__matgoStates 배열에 STATE의 lastAction.kind를
+ * 시간순으로 누적한다. (page.evaluate로 검사)
+ * @param {import('playwright/test').Page} page
+ */
+async function installStateRecorder(page) {
+  await page.addInitScript(() => {
+    window.__matgoStates = [];
+    const OrigWS = window.WebSocket;
+    // WebSocket 인스턴스의 message 이벤트를 가로채 STATE의 lastAction.kind 기록.
+    window.WebSocket = function (...args) {
+      const sock = new OrigWS(...args);
+      sock.addEventListener('message', (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg && msg.type === 'STATE') {
+            // STATE 메시지는 lastAction을 최상위에 둔다(snapshotForPlayer) → msg.lastAction.kind.
+            window.__matgoStates.push(msg.lastAction ? msg.lastAction.kind : null);
+          }
+        } catch { /* 무시 */ }
+      });
+      return sock;
+    };
+    window.WebSocket.prototype = OrigWS.prototype;
+    Object.assign(window.WebSocket, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 });
+  });
+}
+
+test('E-26: chooseFloor 시 choice_made는 defer되어 단일 통합 STATE만 송신 (버그1)', async () => {
+  const browser = await chromium.launch();
+  const ctxP1 = await browser.newContext({ viewport: VIEWPORT });
+  const ctxP2 = await browser.newContext({ viewport: VIEWPORT });
+  const pageP1 = await ctxP1.newPage();
+  const pageP2 = await ctxP2.newPage();
+  try {
+    // STATE 레코더를 P1 페이지 로드 전에 설치
+    await installStateRecorder(pageP1);
+    await joinAndStartGame(pageP1, pageP2);
+
+    // awaiting_play 주입: P1 손에 m03_pi_a, 바닥에 같은 월(3월) 2장 → 카드 클릭 시
+    // 2매칭 → awaiting_floor_choice. 덱에는 비매칭 카드 1장(m07_pi_a)을 둬 단계2 진행.
+    await inject({
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m03_pi_a'),
+      p2Hand: cards('m06_kkeut'),
+      floor:  cards('m03_pi_b', 'm03_tti_hong'),
+      deck:   cards('m07_pi_a'),
+    });
+    await waitForHandCount(pageP1, 1);
+    // inject STATE diff로 발동한 옵티미스틱 fly가 끝나야 클릭(sendPlay)이 받아들여진다.
+    await waitForFlyIdle(pageP1);
+
+    // 레코더 초기화 (inject의 test_inject STATE 제외)
+    await pageP1.evaluate(() => { window.__matgoStates = []; });
+
+    // 손패 카드 클릭 → 같은 월 2장 → 바닥 선택 모달
+    await pageP1.click('#my-hand-cards .card.clickable');
+    await pageP1.waitForFunction(
+      () => !document.getElementById('floor-choice-modal')?.classList.contains('hidden'),
+      { timeout: 5000 },
+    );
+
+    // 후보 중 첫 카드 선택 → CHOOSE_FLOOR 송신
+    await pageP1.click('#floor-choice-cards .card');
+
+    // 단계2(deck_flipped/turn_finished)까지 진행되어 통합 STATE가 도착할 때까지 대기.
+    // defer가 정상 동작하면 choice_made 단독 STATE는 절대 도착하지 않아야 한다.
+    await pageP1.waitForFunction(
+      () => window.__matgoStates.some(
+        (k) => k && k !== 'choice_made' && k !== 'choice_pending' && k !== 'test_inject',
+      ),
+      { timeout: 6000 },
+    );
+    await pageP1.waitForTimeout(500); // 잔여 STATE 수신 여유
+
+    const kinds = await pageP1.evaluate(() => window.__matgoStates.slice());
+    // 핵심 검증: choice_made 단독 STATE가 클라이언트에 도달하지 않아야 함 (서버 defer).
+    expect(kinds).not.toContain('choice_made');
+    // 통합 STATE에는 단계2의 결과(턴 종료 등)가 담겨야 함 → 비-pending STATE 1개 이상.
+    expect(kinds.filter((k) => k && k !== 'choice_pending').length).toBeGreaterThan(0);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('E-27: 뻑 토스트는 덱 뒤집기(DECK_LAND) 연출 이후 등장 (버그2)', async () => {
+  const { browser, pageP1, pageP2 } = await setupTwoPlayers();
+  try {
+    await joinAndStartGame(pageP1, pageP2);
+
+    // 뻑 시나리오: P1 손 m12_pi_ssangpi → 바닥 m12_tti_bi와 1매칭(pair_from_hand) →
+    // 덱 첫 장 m12_kkeut(같은 12월)이 뒤집혀 뻑 형성. deck.pop()이 마지막 원소를
+    // 뽑으므로 덱 배열의 마지막에 m12_kkeut을 둔다.
+    await inject({
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m12_pi_ssangpi'),
+      p2Hand: cards('m06_kkeut'),
+      floor:  cards('m12_tti_bi'),
+      deck:   cards('m12_kkeut'),
+    });
+    await waitForHandCount(pageP1, 1);
+    // inject STATE diff로 발동한 옵티미스틱 fly가 끝나야 클릭(sendPlay)이 받아들여진다.
+    await waitForFlyIdle(pageP1);
+
+    // 카드 클릭 → 뻑 형성 흐름 시작
+    await pageP1.click('#my-hand-cards .card.clickable');
+
+    // 네거티브 검증: 카드 낸 직후 300ms 시점에는 뻑 토스트가 아직 없어야 한다.
+    // (덱 뒤집기 DECK_FLIP+DECK_THROW+DECK_LAND = 680ms 이후에 등장해야 함)
+    await pageP1.waitForTimeout(300);
+    const earlyToast = await pageP1.evaluate(() => {
+      const el = document.querySelector('.action-toast');
+      const visible = !!(el && el.classList.contains('show'));
+      return { visible, text: el ? el.textContent : null };
+    });
+    expect(earlyToast.visible && /뻑/.test(earlyToast.text || '')).toBe(false);
+
+    // DECK_LAND 이후에는 "N월 뻑!" 토스트가 등장해야 한다.
+    await pageP1.waitForFunction(
+      () => {
+        const el = document.querySelector('.action-toast');
+        return !!(el && el.classList.contains('show') && /뻑/.test(el.textContent || ''));
+      },
+      { timeout: 3000 },
+    );
+    const finalText = await pageP1.evaluate(
+      () => document.querySelector('.action-toast')?.textContent ?? '',
+    );
+    expect(finalText).toContain('뻑');
   } finally {
     await browser.close();
   }

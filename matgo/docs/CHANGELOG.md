@@ -1,5 +1,46 @@
 # Changelog
 
+## [2026-06-13] - 연출-STATE 순서 정합 수정 2건 (chooseFloor 획득 순간이동 / 뻑 토스트 선행)
+
+사용자 실플레이 피드백 2건. 게임 로직(점수·룰)은 무변경, 서버 broadcast 타이밍과 클라이언트 토스트 타이밍만 교정.
+
+### 수정
+
+#### 버그1 — chooseFloor 획득 카드 순간이동 (`server.js`)
+- 증상: `awaiting_floor_choice`에서 1장 선택 시, 낸 카드(srcCard)와 선택한 바닥 카드가 fly 연출 없이 순간이동.
+- 원인: `shouldDeferBroadcast`의 보류 키 목록에서 `k === 'choice_made'`가 **누락된 드리프트**. JSDoc에는 choice_made 보류 의도가 이미 적혀 있었으나 실제 return 조건에서 빠져 있어, `chooseFloorSteps` 단계1(srcCard + chosen captured 이동) 직후 즉시 broadcast → 클라가 단계1 STATE와 단계2(덱 뒤집기) STATE를 따로 받아 fly가 깨짐.
+- 수정: `shouldDeferBroadcast`에 `k === 'choice_made'` 보류 추가. 단계1을 단계2(덱 뒤집기)까지 보류해 **통합 STATE 1회만 송신** → 클라가 fly 연출을 온전히 수행.
+
+#### 버그2 — "뻑!" 토스트 선행 (`public/client.js`)
+- 증상: 뻑 발생 시 "뻑!" 토스트가 카드를 내자마자(덱이 바닥에 쌓이기 전에) 떠서 연출 순서가 어긋남.
+- 수정: ppeok 종류 lastAction의 토스트를 즉시 표시하지 않고 `pendingPpeokToast`로 보관 → 덱 뒤집기 fly의 **DECK_LAND 전환 시점에 flush**(덱이 바닥에 쌓인 뒤 표시). 안전망으로 CLEANUP 시 flush, 라운드 시작(`NEW_ROUND`/`ROUND_START`) 시 폐기.
+- ppeok 외 토스트는 기존 타이밍 그대로 유지.
+
+### 추가 (`tests/e2e-scenarios.spec.js`)
+- **E-26**: 버그1 — chooseFloor 선택 시 단계1+단계2 통합 STATE 1회 송신 검증 (획득 카드 순간이동 방지).
+- **E-27**: 버그2 — "뻑!" 토스트가 카드 낸 직후가 아니라 덱 바닥 안착(DECK_LAND) 이후 표시되는 타이밍 검증.
+
+### 검증
+- 신규 E2E **E-26 / E-27 둘 다 PASS**.
+- `score.unit` **52 PASS**, `game.unit` **96 PASS**.
+- QA 판정: **PASS**.
+
+### 선재 실패 (이번 변경과 무관 — 기존 이슈, 별도 추적)
+> ⚠️ 아래 8건은 본 작업 이전부터 존재하던 baseline 실패로, 이번 연출-STATE 순서 수정의 회귀가 아님을 baseline 대조로 확인함.
+- 폭탄 유닛 4건: **G-24 / G-35 / G-36 / G-37** — `g.bombDeckCredit` undefined 참조.
+- E2E 4건: **E-03 / E-15 / E-16 / E-23**.
+
+### 비고
+- 버그1은 신규 동작 추가가 아니라 JSDoc 의도와 실제 코드의 드리프트를 메우는 수정 — choice_made는 원래 보류 대상으로 설계되어 있었음.
+- `game.js` / `score.js` / `cards.js` 무변경. 룰·점수 로직 영향 없음.
+
+### 참고
+- 목적 정의서: `.claude/specs/2026-06-13-matgo-anim-state-order-scope.md`
+- 스펙: `.claude/specs/2026-06-13-matgo-anim-state-order-spec.md`
+- QA: `.claude/specs/2026-06-13-matgo-anim-state-order-qa.md`
+
+---
+
 ## [2026-06-08] - 조커 라운드 종료 불가 수정 — 손+credit 비대칭 시 한쪽 종료 + 잔여 자동 정산
 
 사용자 신고: 본인 시작 손에 조커 1장 + 게임 중 더미 뒤집기로 조커 1장 더 받음(케이스 B). 막판에 본인 손 3장 / 상대 손 0장 상태로 **라운드 종료가 트리거되지 않아 게임 진행 불가**(상대가 카드 낼 수 없어 멈춤).

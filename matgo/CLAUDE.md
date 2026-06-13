@@ -102,6 +102,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 | §3 inject 모달 | E-12~E-18 | go-stop, shake, floor-choice, kkeut 모달 주입 테스트 |
 | §4 박 시나리오 | E-19~E-22 | 피박·멍박·광박·고박 round-modal 텍스트 검증 |
 | §5 안정성 | E-23~E-25 | 콘솔 에러, AI봇 연결, 레이아웃 스크린샷 |
+| §6 연출-STATE 순서 | E-26~E-27 | (2026-06-13) E-26: chooseFloor 통합 STATE 1회 송신(획득 순간이동 방지) / E-27: 뻑 토스트 DECK_LAND 이후 표시 타이밍 |
 
 #### 알려진 주의사항
 
@@ -136,3 +137,5 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 10. **조커는 폭탄 대상이 아니다.** 폭탄 매치 카운트(`handMonthCount[m] === 3 && floorMonthCount[m] === 1`)에서 m='0' 제외. 또한 4장 도달 자체가 불가능(조커 2장뿐) — 이중 안전망.
 11. **`createGame()`/`startRound()` 후 `floor.length`는 더 이상 항상 8이 아니다** (2026-06-03 룰 정정). 바닥에 조커가 떨어졌으면 `applyFloorJokerToFirst`가 선공자 `captured`로 옮겨 floor가 6~8 가변, captured 총합 = `8 - floor.length`. 새 테스트는 `total === 50` 일관성 기준으로 검증할 것. `deck.length === 22`는 불변(분배 후 잔여).
 12. **라운드 종료 조건은 양쪽 모두 0이 아니어도 트리거된다** (2026-06-08 조커 라운드 종료 불가 수정). `finishTurn`은 "한쪽의 `손+credit=0`이고 상대의 `credit=0`"이면 자동 종료한다. 조커 케이스 B로 한쪽 손이 +1 누적되어도 영구히 막히지 않도록 보장. 종료 직전 `flushHandsToCaptured(g)`가 양쪽 잔여 손을 각자 captured로 이동(조커는 `type='joker'` 그대로 → `score.js`가 피 +2 자동 처리, 일반 카드는 type별 분류). **양쪽 모두 0+0+0+0 케이스에서도 동일하게 endRoundDraw 호출되어 기존 동작 회귀 보장** (JOKER-017). 폭탄 권리(credit > 0) 우선이므로 한쪽 손+credit=0이어도 상대 credit > 0이면 종료 X. `score.js` 무수정.
+13. **chooseFloor 단계 broadcast는 choice_made까지 보류한다** (2026-06-13 연출-STATE 순서 수정). `server.js` `shouldDeferBroadcast`는 `k === 'choice_made'`를 **반드시 보류 대상에 포함**해야 한다. `chooseFloorSteps` 단계1(srcCard + chosen captured 이동) STATE를 단계2(덱 뒤집기)까지 묶어 **통합 STATE 1회만 송신**해야 클라가 fly 연출을 온전히 수행한다. 단계1을 즉시 broadcast하면 낸 카드가 fly 없이 순간이동한다. (과거 JSDoc엔 의도가 적혀 있었으나 return 조건에서 누락된 드리프트였음.) 회귀 게이트: e2e **E-26**.
+14. **ppeok(뻑) 토스트는 즉시 띄우지 않고 DECK_LAND까지 보류한다** (2026-06-13 연출-STATE 순서 수정). `client.js`는 ppeok 종류 lastAction의 토스트를 `pendingPpeokToast`로 보관 → 덱 뒤집기 fly의 **DECK_LAND 전환 시점에 flush**(덱이 바닥에 쌓인 뒤 표시). 안전망으로 CLEANUP 시 flush, 라운드 시작(`NEW_ROUND`/`ROUND_START`) 시 폐기한다. ppeok 외 토스트는 기존 타이밍 유지. 즉시 표시로 되돌리면 "뻑!"이 카드 내자마자 떠서 연출 순서가 어긋난다. 회귀 게이트: e2e **E-27**.
