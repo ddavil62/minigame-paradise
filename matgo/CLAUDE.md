@@ -52,12 +52,14 @@ matgo/
 │   ├── client.js   — 클라이언트 로직 (WebSocket + 렌더링)
 │   └── style.css
 └── tests/
-    ├── score.unit.spec.js   — score.js 단위 테스트 (52개, 서버 불필요)
-    ├── game.unit.spec.js    — game.js 단위 테스트 (27개, 서버 불필요)
-    ├── e2e-scenarios.spec.js — 브라우저 E2E 시나리오 (25개, 서버 필요)
+    ├── score.unit.spec.js   — score.js 단위 테스트 (서버 불필요)
+    ├── game.unit.spec.js    — game.js 단위 테스트 (서버 불필요)
+    ├── e2e-scenarios.spec.js — 브라우저 E2E 시나리오 (E-30까지 30개, 서버 필요)
     ├── v8-qa.spec.js        — 구버전 QA 테스트 (레거시)
     └── screenshots/         — E2E 스크린샷 출력
 ```
+
+> 단위 game.unit + score.unit 합계 100/100 PASS (2026-06-13 기준).
 
 ## 서버 실행 (테스트용)
 
@@ -67,6 +69,11 @@ node matgo/server.js --port 3013
 
 # playwright.config.js baseURL: http://localhost:3013
 ```
+
+### 테스트 전용 엔드포인트
+
+- `POST /test/inject` — 모달/상태 강제 주입 (Playwright E2E용).
+- `POST /test/reset` — 공유 룸 강제 초기화 (테스트 격리용). e2e `beforeEach`에서 호출해 직전 테스트의 룸 잔여 상태로 인한 레이스를 차단한다. **프로덕션 무영향(테스트 엔드포인트)**.
 
 ## 테스트 실행
 
@@ -84,14 +91,14 @@ npx playwright test tests/e2e-scenarios.spec.js --reporter=list
 npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-scenarios.spec.js --reporter=list
 ```
 
-### 테스트 현황 (2026-05-30 기준)
+### 테스트 현황 (2026-06-13 기준)
 
 | 파일 | 테스트 수 | 상태 | 서버 필요 |
 |------|----------|------|----------|
-| `score.unit.spec.js` | 52개 | ✅ 전부 PASS | ❌ |
-| `game.unit.spec.js` | 27개 | ✅ 전부 PASS | ❌ |
-| `e2e-scenarios.spec.js` | 25개 | ✅ 전부 PASS | ✅ (3013) |
-| **합계** | **104개** | **✅ 전부 PASS** | |
+| `score.unit.spec.js` + `game.unit.spec.js` | 합계 100개 | ✅ 100/100 PASS | ❌ |
+| `e2e-scenarios.spec.js` | E-30까지 30개 | ✅ 28 PASS / 2 skip(E-15·E-16) / 0 fail (3회 연속 결정성) | ✅ (3013) |
+
+> **2026-06-13 flakiness 안정화**: 공유 룸 teardown 레이스(→ `POST /test/reset` + `beforeEach`/`afterEach`)와 랜덤 분배 바닥 조커 오프닝 fly 레이스(→ `waitForFlyIdle` + `pickSafePlayCard` 헬퍼)를 해소해 전체 e2e가 3회 연속 28 passed / 2 skipped / 0 failed로 완전 결정적이 됨. E-15·E-16은 제거된 `shake_decision` phase에 의존하므로 `test.skip` 처리(현행 흔들기 모달 E2E 재작성은 별도 발주).
 
 #### E2E 시나리오 요약 (e2e-scenarios.spec.js)
 
@@ -104,6 +111,9 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 | §5 안정성 | E-23~E-25 | 콘솔 에러, AI봇 연결, 레이아웃 스크린샷 |
 | §6 연출-STATE 순서 | E-26~E-27 | (2026-06-13) E-26: chooseFloor 통합 STATE 1회 송신(획득 순간이동 방지) / E-27: 뻑 토스트 DECK_LAND 이후 표시 타이밍 |
 | §7 fly-출처 정합 | E-28~E-30 | (2026-06-13) E-28: 강탈 피 fly가 oppCapturedZone에서 출발(더미 아님, startFlyFromDeck 미호출) / E-29: 흔들기로 낸 카드 fly가 myCards에서 출발(startFlyFromDeck 미호출) / E-30: 폭탄 손 3장 fly가 myCards에서 출발(startFlyFromDeck 미호출) |
+
+> **E-15·E-16은 `test.skip`** — 제거된 `shake_decision` phase의 `/test/inject` 케이스에 의존. 현행 흔들기 모달 기준 E2E 재작성은 별도 발주.
+> **stale 단언 정정**: E-03(덱 20→22), E-04(바닥 8→6~8 범위).
 
 #### 알려진 주의사항
 
@@ -126,7 +136,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 
 ## 변경 시 자주 깨지는 함정
 
-1. **`shake_decision` phase는 더 이상 존재하지 않는다.** (2026-05-31 제거) 흔들기는 클라이언트 모달로만 처리. 서버 phase·메시지에서 참조하지 말 것. 기존 e2e `E-13/E-15/E-16` inject 시나리오가 의존했으므로 후속 정리 필요.
+1. **`shake_decision` phase는 더 이상 존재하지 않는다.** (2026-05-31 제거) 흔들기는 클라이언트 모달로만 처리. 서버 phase·메시지에서 참조하지 말 것. 기존 e2e `E-15/E-16`이 이 제거된 phase의 inject에 의존하므로 **`test.skip` 처리됨**(2026-06-13). 현행 흔들기 모달 기준 E2E 재작성은 별도 발주.
 2. **사통 phase `awaiting_sangtong`은 `isPauseForUserInput()`이 true를 반환해야 한다.** (`server.js`) 누락 시 사통 모달 표시 중에도 서버가 봇 턴을 진행해 상태 깨짐.
 3. **첫뻑 보너스(`firstPpeokBonus`)는 base 가산 7점이지 multiplier가 아니다.** `applyFinalMultipliers`에서 base에 +7 후 박/고 multiplier가 곱해진다. 순서 바뀌면 점수 폭주.
 4. **폭탄 후 `g.bombExtraDraw` 플래그는 두 번째 `drawAndResolve` 직후 반드시 false로 리셋.** 미리셋 시 `chooseFloorSteps`에서 무한 3회차 진입 가능.
@@ -143,3 +153,4 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 15. **강탈 피 fly는 oppCapturedZone에서 출발한다** (2026-06-13 fly-출처 정합 수정). `client.js`는 `la.stoleFromOpp > 0`일 때 `stolenPiIds = prevCapIds[opp] ∩ newCapIds[me]`로 빼앗긴 피 카드 ID를 식별 → 신규 `startFlyFromOppCaptured`로 **상대 획득 영역에서 출발**시킨다. 이때 `drewIds`(이번 턴 더미에서 뽑은 카드)는 **반드시 제외**(자연 덱 fly와 분리)하고, `resolvePendingFlies`의 handLike 분기에 `origin: 'opp-captured'`를 포함해야 보류 해소 시에도 출발점이 유지된다. 누락 시 빼앗은 피가 더미에서 날아온다. 회귀 게이트: e2e **E-28**.
 16. **흔들기/모달 경유로 낸 카드는 renderMyHand가 DOM 재생성 시 pendingFlies 카드에 visibility:hidden을 재적용해야 한다** (2026-06-13 fly-출처 정합 수정). SHAKE STATE 도착이 `renderMyHand`(`innerHTML = ''`)로 fly clone의 원본 DOM을 무효화하므로, `renderMyHand` 말미에 `pendingFlies` 보유 카드의 재생성 DOM에 `visibility:hidden`을 다시 걸어 클론 원본을 손 위치에 보존해야 **내 손(myCards)에서 출발**한다(옵션 A). 누락 시 낸 카드가 더미에서 날아온다. 회귀 게이트: e2e **E-29**.
 17. **폭탄 발동 시 `btnBombConfirm`/`btnBomb`에서 손 3장에 `startFlyFromHand`를 직접 등록해야 한다** (2026-06-13 fly-출처 수정). 폭탄으로 가져가는 같은 월 손 3장의 fly 출발점을, `sendBomb` 호출 직전에 `btnBombConfirm`(~1765) + `btnBomb` 폴백(~1790)에서 명시 등록한다. 내 폭탄 경로(`la.player === me`)는 상대 폭탄용 `oppHandOrigin` 분기(`la.player === oppId`)에 잡히지 않아 누락된다 → 누락 시 손 3장이 더미에서 날아온다. 회귀 게이트: e2e **E-30**.
+18. **e2e 테스트는 격리가 필수다** (2026-06-13 flakiness 안정화). 전체 스위트는 단일 공유 룸 + `workers:1` 순차 실행이라 직전 테스트의 룸 잔여 상태가 다음 테스트로 새는 teardown 레이스가 있었다. (1) `beforeEach`에서 **`POST /test/reset`을 반드시 호출**(룸 강제 초기화)하고 `afterEach`에도 안전망으로 호출한다. (2) `joinAndStartGame` 헬퍼 말미에서 **`waitForFlyIdle`로 오프닝 fly를 대기**한다 — 랜덤 분배로 바닥 조커가 깔리면 오프닝에 fly 연출이 발생하는데 이를 기다리지 않고 카드를 클릭하면 fly race로 flaky해진다. (3) 카드 클릭은 무가드 `click` 대신 **`pickSafePlayCard` 헬퍼**를 쓴다(조커/흔들기·폭탄 트리거/바닥 선택 분기를 회피해 결정성 확보). 미준수 시 공유룸 레이스 또는 오프닝 fly race로 flaky해진다.

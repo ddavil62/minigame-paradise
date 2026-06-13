@@ -1,5 +1,36 @@
 # Changelog
 
+## [2026-06-13] — e2e 스위트 flakiness 안정화
+
+e2e-scenarios 스위트의 비결정적 fail↔pass 스왑(flakiness)을 근본 원인 2계층으로 분리해 해소. 게임 로직(룰·점수)은 무변경, 테스트 인프라(서버 테스트 엔드포인트 + e2e 헬퍼/단언)만 수정.
+
+### 근본원인 및 수정
+
+#### 계층1 — 공유 룸 teardown 레이스 (`server.js` + `tests/e2e-scenarios.spec.js`)
+- 원인: 전체 스위트가 단일 공유 룸 + `workers:1` 순차 실행이라, 직전 테스트의 룸 잔여 상태가 다음 테스트로 새어 실행 순서에 따라 결과가 바뀜.
+- 수정: `server.js`에 **`POST /test/reset`** 신설(룸 강제 초기화, 테스트 격리 전용·프로덕션 무영향). e2e에 **`beforeEach`(reset)** + **`afterEach`(reset 안전망)** 추가.
+
+#### 계층2 — 오프닝 fly + 무가드 click 레이스 (`tests/e2e-scenarios.spec.js`)
+- 원인: 랜덤 분배로 바닥에 조커가 깔리면 오프닝에 fly 연출(`floor_joker_to_first`)이 발생하는데, 이를 기다리지 않고 카드를 클릭하면 fly race 발생. 또한 무가드 `click`이 조커/흔들기·폭탄/바닥선택 분기에 걸려 비결정적.
+- 수정: **`waitForFlyIdle`** 헬퍼 신설 + `joinAndStartGame` 말미에서 호출(오프닝 fly 대기). 카드 클릭은 **`pickSafePlayCard`** 헬퍼로 교체(조커/흔들기·폭탄/바닥선택 분기 회피).
+
+### 변경 (stale 단언 정정)
+- **E-03**: 덱 카운트 단언 20 → **22** (조커 2장 포함 50장 덱 기준).
+- **E-04**: 바닥 카운트 단언 8 → **6~8 범위** (바닥 조커 선공 자동 획득으로 floor 가변).
+
+### 변경 (skip 처리)
+- **E-15 / E-16**: 제거된 `shake_decision` phase의 `/test/inject`에 의존 → **`test.skip`** 처리. 현행 흔들기 모달 기준 E2E 재작성은 별도 발주.
+
+### 검증
+- 전체 e2e-scenarios **3회 연속 28 passed / 2 skipped(E-15·E-16) / 0 failed** — 완전 결정성 확인.
+- `game.unit` + `score.unit` **100/100 PASS**.
+- 회귀 게이트 **E-26~E-30 PASS**.
+
+### 비고
+- `game.js` / `score.js` / `cards.js` 무변경. `server.js`는 `POST /test/reset` 테스트 엔드포인트만 추가(프로덕션 경로 무영향).
+
+---
+
 ## [2026-06-13] — 폭탄 손 3장 fly 출처 수정 (버그6)
 
 사용자 실플레이 피드백. 게임 로직(점수·룰)은 무변경, 클라이언트 fly 애니메이션 출발 지점만 교정.

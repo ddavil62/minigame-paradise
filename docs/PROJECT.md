@@ -1,6 +1,7 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-06-13 — 맞고 폭탄 손 3장 fly 출처 수정 (버그6: 폭탄 발동 시 손 3장이 myCards에서 출발, E-30 PASS)
+> 최종 업데이트: 2026-06-13 — 맞고 e2e 스위트 flakiness 안정화 (공유 룸 teardown 레이스 → `POST /test/reset` + beforeEach/afterEach, 오프닝 fly+무가드 click 레이스 → waitForFlyIdle + pickSafePlayCard 헬퍼. 3회 연속 28 passed / 2 skipped(E-15·E-16) / 0 failed, unit 100/100)
+> 이전 갱신: 2026-06-13 — 맞고 폭탄 손 3장 fly 출처 수정 (버그6: 폭탄 발동 시 손 3장이 myCards에서 출발, E-30 PASS)
 > 이전 갱신: 2026-06-13 — 맞고 fly-출처 정합 수정 2건 (강탈 피는 oppCapturedZone 출발 / 흔들기 낸 카드는 myCards 출발)
 > 이전 갱신: 2026-06-13 — 맞고 연출-STATE 순서 정합 수정 2건 (chooseFloor 획득 순간이동 / 뻑 토스트 선행)
 > 이전 갱신: 2026-05-31

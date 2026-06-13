@@ -574,6 +574,33 @@ export function createApp(opts = {}) {
       return;
     }
 
+    // ── 테스트 전용 엔드포인트: POST /test/reset ──────────────────────────────
+    // 룸 상태를 강제 초기화한다 (테스트 전용, beforeEach에서 호출).
+    // browser.close() 후 ws close 이벤트가 비동기로 처리되는 레이스를 제거하기 위해
+    // game/players를 먼저 비운 뒤 활성 ws를 강제 close한다.
+    // 프로덕션 요청에는 절대 도달하지 않는 경로 (LAN 전용 게임이므로 보안 위험 없음).
+    if (req.method === 'POST' && reqPath === '/test/reset') {
+      // 1단계: close 이벤트 재진입 방지 — game/players를 선제 초기화한다.
+      //   close 핸들러는 players = players.filter(...) / game = null 을 수행하므로
+      //   먼저 비워두면 이벤트가 발화해도 filter 대상이 없어 noop이 된다.
+      game = null;
+      const snapshot = players.slice(); // 강제 종료할 ws 목록 확보
+      players = [];                     // 선제 초기화 (close 이벤트 재진입 시 splice 대상 없음)
+
+      // 2단계: 스냅샷의 ws를 강제 close. 이미 닫혔으면(readyState >= CLOSING) skip.
+      for (const p of snapshot) {
+        try {
+          if (p.ws.readyState < 2) { // CONNECTING(0) or OPEN(1)
+            p.ws.close();
+          }
+        } catch (e) { /* 이미 닫힌 ws — 무시 */ }
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, reset: snapshot.length }));
+      return;
+    }
+
     const urlPath = (reqPath === '/' || reqPath === '') ? '/index.html' : reqPath;
     const safePath = path.normalize(urlPath).replace(/^([\\/])+/, '');
     const fullPath = path.join(PUBLIC_DIR, safePath);

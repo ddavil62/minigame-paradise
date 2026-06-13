@@ -59,6 +59,13 @@ async function joinAndStartGame(pageP1, pageP2) {
     () => document.querySelectorAll('#opp-hand-cards .card.back').length === 10,
     { timeout: 8000 },
   );
+  // 오프닝 floor-joker fly 레이스 방어:
+  //   랜덤 분배로 바닥에 조커가 깔리면 applyFloorJokerToFirst가 "선공 바닥 조커 N장 획득!"
+  //   오프닝 fly를 한 차례 발동한다(fly 진행 중 client isAnimating=true → sendPlay 무시).
+  //   이때 테스트가 곧바로 카드를 클릭하면 PLAY_CARD가 조용히 삼켜져 턴 전환이 타임아웃된다.
+  //   조커가 안 깔린 분배에선 #fly-overlay가 비어 즉시 통과(noop)하므로 무해하다.
+  await waitForFlyIdle(pageP1);
+  await waitForFlyIdle(pageP2);
 }
 
 /** DOM 기반 게임 상태를 추출한다. */
@@ -143,8 +150,86 @@ async function waitForFlyIdle(page, timeout = 4000) {
   );
 }
 
+/**
+ * 단순 1장 내기 테스트(E-07/E-08/E-23)에서 모달 없이 결정적으로 PLAY_CARD가
+ * 송신되는 손패 카드를 고른다.
+ *
+ * 근본원인: client.js sendPlay는 "그 월 손패 3장"이면 흔들기 모달(`shake-modal`)을,
+ * "폭탄 가능 월(손 3장 + 바닥 1장)"이면 폭탄 모달(`bomb-confirm-modal`)을 띄우고
+ * PLAY_CARD를 보내지 않는다. 폭탄 조건은 흔들기 조건(같은 월 3장)의 부분집합이므로,
+ * **손패에서 그 월이 3장 미만(≤2)인 clickable 카드**를 고르면 두 모달 모두 자연 회피된다.
+ * 랜덤 분배로 첫 clickable 카드가 3장-월에 걸려 모달이 떠 손패 감소가 안 일어나던
+ * E-07/E-08/E-23 flakiness를 결정적으로 제거한다.
+ *
+ * 카드 ID는 `m{NN}_...` 패턴으로 월(月)을 담고 있다. 피해야 할 분기는 3가지:
+ *  1) 조커(m00, month 0): 모달은 없지만 "케이스 A"로 손에서 1장 나가며 더미 1장 보충 →
+ *     손패 길이가 그대로(10) 유지 → "손패 9장 감소"(E-07) 단언 파탄.
+ *  2) 같은 월 손패 3장: 흔들기 모달(`shake-modal`) 또는 폭탄 모달(`bomb-confirm-modal`)
+ *     이 떠 PLAY_CARD 미송신 → 손패 미감소·턴 미전환.
+ *  3) 그 월 바닥 카드 2장 이상: 매칭 후보가 둘이라 `awaiting_floor_choice`(바닥 선택)에
+ *     걸려 **턴이 상대로 넘어가지 않음**(E-08 "P2 턴으로 전환" 단언 파탄). E-08이 가장 취약.
+ *
+ * 위 3조건을 모두 피하는 일반 화투 카드(month 1~12, 손 ≤2장, 바닥 ≤1장)를 우선 반환한다.
+ * 그런 카드가 없으면 손 조건만이라도 만족하는 카드, 최후엔 첫 clickable로 폴백.
+ * @param {import('playwright/test').Page} page
+ * @returns {Promise<string|null>} 모달/바닥선택 없이 손패 순감소+턴전환되는 카드 ID
+ */
+async function pickSafePlayCard(page) {
+  return page.evaluate(() => {
+    const cards = Array.from(document.querySelectorAll('#my-hand-cards .card.clickable'));
+    if (cards.length === 0) return null;
+    const monthOf = (id) => {
+      const m = /^m(\d{2})_/.exec(id || '');
+      return m ? parseInt(m[1], 10) : null;
+    };
+    // 손패 전체 월별 카운트 — 흔들기/폭탄 조건은 손 3장 기준.
+    const handCounts = {};
+    for (const el of document.querySelectorAll('#my-hand-cards .card')) {
+      const mo = monthOf(el.dataset.cardId);
+      if (mo != null) handCounts[mo] = (handCounts[mo] || 0) + 1;
+    }
+    // 바닥 월별 카운트 — 2장 이상이면 바닥 선택(awaiting_floor_choice) 발동.
+    const floorCounts = {};
+    for (const el of document.querySelectorAll('#floor-cards > .card')) {
+      const mo = monthOf(el.dataset.cardId);
+      if (mo != null) floorCounts[mo] = (floorCounts[mo] || 0) + 1;
+    }
+    const isHandOk  = (mo) => mo >= 1 && (handCounts[mo] || 0) < 3;       // 조커 제외 + 흔들기/폭탄 회피
+    const isFloorOk = (mo) => (floorCounts[mo] || 0) < 2;                  // 바닥 선택 회피
+    // 1순위: 손·바닥 조건 모두 만족 (턴 전환까지 보장).
+    let pick = cards.find((el) => { const mo = monthOf(el.dataset.cardId); return isHandOk(mo) && isFloorOk(mo); });
+    // 2순위: 최소한 손 조건(모달 회피)만이라도 만족.
+    if (!pick) pick = cards.find((el) => isHandOk(monthOf(el.dataset.cardId)));
+    return (pick || cards[0]).dataset.cardId;
+  });
+}
+
 // ── 테스트 타임아웃 ────────────────────────────────────────────────────
 test.setTimeout(60000);
+
+// ── 룸 격리: 각 test 전후 서버 상태 초기화 ─────────────────────────────────
+const RESET_URL = `${BASE_URL}/test/reset`;
+
+/**
+ * 각 test 시작 전 서버 룸 상태를 초기화한다.
+ * 단일 전역 players/game을 공유하므로, 이전 test의 browser.close() 후
+ * ws close 이벤트가 비동기로 처리되는 레이스를 reset으로 제거한다.
+ */
+test.beforeEach(async () => {
+  await fetch(RESET_URL, { method: 'POST' });
+  // reset 응답은 players=[]/game=null 선제 할당 + ws.close() 호출까지만 동기 보장.
+  // ws close 이벤트(잔존 연결 정리)는 Node.js 이벤트 루프 다음 tick 이후 발화하므로
+  // 짧은 대기로 흡수한다.
+  await new Promise((r) => setTimeout(r, 150));
+});
+
+/**
+ * 각 test 종료 후 안전망 reset. finally의 browser.close() 이후 잔존 ws 제거.
+ * 서버가 다운된 극단적 케이스는 무시한다.
+ */
+test.afterEach(async () => {
+  await fetch(RESET_URL, { method: 'POST' }).catch(() => {/* 서버 다운 시 무시 */});
+});
 
 // ============================================================
 // §1 기본 연결 / 입장
@@ -189,7 +274,8 @@ test('E-03: 게임 시작 시 초기 덱 수 = 20', async () => {
   try {
     await joinAndStartGame(pageP1, pageP2);
     const s = await readState(pageP1);
-    expect(s.deckCount).toBe(20);
+    // 조커 2장 도입(2026-06-03): 덱 50장, 손패 10+10=20, 바닥 8 → 분배 후 잔여 22.
+    expect(s.deckCount).toBe(22);
   } finally {
     await browser.close();
   }
@@ -200,7 +286,10 @@ test('E-04: 게임 시작 시 바닥 8장', async () => {
   try {
     await joinAndStartGame(pageP1, pageP2);
     const s = await readState(pageP1);
-    expect(s.floorIds.length).toBe(8);
+    // 조커 바닥 자동획득(applyFloorJokerToFirst)으로 바닥 조커 N장은 선공자 captured로 이동.
+    // 조커 0장이면 8, 1장이면 7, 2장이면 6 → 6~8 가변.
+    expect(s.floorIds.length).toBeGreaterThanOrEqual(6);
+    expect(s.floorIds.length).toBeLessThanOrEqual(8);
   } finally {
     await browser.close();
   }
@@ -256,10 +345,14 @@ test('E-07: P1 카드 클릭 → 손패 9장으로 감소', async () => {
     const s1 = await readState(pageP1);
     const activePage = s1.firstClickableId ? pageP1 : pageP2;
     const activeState = s1.firstClickableId ? s1 : await readState(pageP2);
-    const cardId = activeState.firstClickableId;
-    if (!cardId) { console.log('E-07: shake_decision phase — skip'); return; }
+    // 흔들기/폭탄 모달을 띄우지 않는 안전 카드 선택(같은 월 3장 카드 회피).
+    // 첫 clickable 카드가 3장-월에 걸리면 모달이 떠 손패 감소가 안 일어나 timeout 되던
+    // flakiness 제거. 안전 카드가 없으면 첫 clickable로 폴백.
+    const cardId = await pickSafePlayCard(activePage);
+    if (!cardId) { console.log('E-07: 사통 등 비-플레이 phase — skip'); return; }
 
     const prevLen = activeState.yourHandLen;
+    await waitForFlyIdle(activePage); // 클릭 직전 오프닝 fly 잔류 방어(noop이면 즉시 통과)
     await activePage.click(`[data-card-id="${cardId}"]`);
     // 손패 감소 대기
     await activePage.waitForFunction(
@@ -283,11 +376,12 @@ test('E-08: P1 카드 낸 후 → P2 턴으로 전환', async () => {
     await joinAndStartGame(pageP1, pageP2);
     const s1 = await readState(pageP1);
     const activePage = s1.firstClickableId ? pageP1 : pageP2;
-    const activeState = s1.firstClickableId ? s1 : await readState(pageP2);
     const otherPage = activePage === pageP1 ? pageP2 : pageP1;
-    const cardId = activeState.firstClickableId;
+    // 흔들기/폭탄 모달을 회피하는 안전 카드 — 모달이 뜨면 PLAY_CARD 미송신으로 턴 전환 안 됨.
+    const cardId = await pickSafePlayCard(activePage);
     if (!cardId) { return; }
 
+    await waitForFlyIdle(activePage); // 클릭 직전 오프닝 fly 잔류 방어
     await activePage.click(`[data-card-id="${cardId}"]`);
 
     // 상대방에게 클릭 가능 카드가 생겨야 한다 (턴 교대)
@@ -344,8 +438,11 @@ test('E-10: 빠른 연속 클릭 방어 — 손패가 2장 이상 줄지 않음'
     const s1 = await readState(pageP1);
     const activePage = s1.firstClickableId ? pageP1 : pageP2;
     const activeState = s1.firstClickableId ? s1 : await readState(pageP2);
-    const cardId = activeState.firstClickableId;
+    // 안전 카드 선택 — 바닥선택/흔들기/폭탄 분기를 피해 단일 턴 전환만 일어나게 해
+    // "빠른 연속 클릭 가드"만을 결정적으로 검증한다(랜덤 분배·오프닝 fly 의존 제거).
+    const cardId = await pickSafePlayCard(activePage);
     if (!cardId) { return; }
+    await waitForFlyIdle(activePage); // 클릭 직전 오프닝 fly 잔류 방어(noop이면 즉시 통과)
 
     // 같은 카드를 빠르게 3회 클릭
     for (let i = 0; i < 3; i++) {
@@ -497,7 +594,11 @@ test('E-14: round-modal에 최종 점수 + 배수 표시', async () => {
   }
 });
 
-test('E-15: inject shake_decision → P1에 흔들기 모달 표시', async () => {
+// shake_decision phase는 2026-05-31에 제거됨. 현행 흔들기는 awaiting_play에서
+// 카드 클릭 시 클라이언트 모달(shake-modal)로 처리한다. 이 테스트가 inject하는
+// shake_decision phase는 서버에 존재하지 않아 모달이 뜨지 않음 → 항상 FAIL.
+// 현행 모달 기반 흔들기 시나리오로의 재작성은 별도 발주. (본문은 참조용 보존)
+test.skip('E-15: inject shake_decision → P1에 흔들기 모달 표시', async () => {
   const { browser, pageP1, pageP2 } = await setupTwoPlayers();
   try {
     await joinAndStartGame(pageP1, pageP2);
@@ -524,7 +625,9 @@ test('E-15: inject shake_decision → P1에 흔들기 모달 표시', async () =
   }
 });
 
-test('E-16: 흔들기 선언 버튼 클릭 → 모달 닫힘, 게임 계속', async () => {
+// E-15와 동일 사유: shake_decision phase 제거(2026-05-31)로 inject 전제가 무효.
+// 현행 모달 기반 흔들기 시나리오로의 재작성은 별도 발주. (본문은 참조용 보존)
+test.skip('E-16: 흔들기 선언 버튼 클릭 → 모달 닫힘, 게임 계속', async () => {
   const { browser, pageP1, pageP2 } = await setupTwoPlayers();
   try {
     await joinAndStartGame(pageP1, pageP2);
@@ -729,12 +832,16 @@ test('E-23: 콘솔 에러 없음 — 게임 입장 + 1카드 플레이', async (
     let activePage = null;
     let cardId = null;
     if (s1.firstClickableId) {
-      activePage = pageP1; cardId = s1.firstClickableId;
+      activePage = pageP1;
     } else if (s2.firstClickableId) {
-      activePage = pageP2; cardId = s2.firstClickableId;
+      activePage = pageP2;
     }
+    // 흔들기/폭탄 모달을 회피하는 안전 카드 선택(같은 월 3장 회피) — 모달이 떠 손패가
+    // 안 줄고 대기조건(hasModal에 bomb-confirm 미포함)도 못 맞춰 timeout 되던 flakiness 제거.
+    if (activePage) cardId = await pickSafePlayCard(activePage);
 
     if (activePage && cardId) {
+      await waitForFlyIdle(activePage); // 클릭 직전 오프닝 fly 잔류 방어
       await activePage.click(`[data-card-id="${cardId}"]`);
       // 손패 감소 or 모달 표시 대기 (최대 4초)
       await activePage.waitForFunction(
