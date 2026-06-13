@@ -59,7 +59,6 @@ import { calculateScore, applyFinalMultipliers } from './score.js';
  * @property {'p1'|'p2'|null} roundWinner
  * @property {'p1'|'p2'|null} stoppedBy
  * @property {object|null} lastAction
- * @property {object|null} pendingShake                 - 흔들기 선언 대기 (자동 감지)
  * @property {object|null} roundResult                  - 라운드 결과 (UI 모달용)
  */
 
@@ -96,7 +95,6 @@ export function createGame(firstTurn = 'p1', opts = {}) {
     roundWinner: null,
     stoppedBy: null,
     lastAction: null,
-    pendingShake: null,
     roundResult: null,
     // 게임 종료(잔고 음수 도달) 상태. NEW_ROUND가 거부되고 NEW_GAME만 허용된다.
     gameOver: false,
@@ -154,7 +152,6 @@ export function startRound(game, firstTurn) {
   // ── 5건 룰 보강 (2026-05-31): 라운드 단위 상태 초기화 ──
   // 흔들기는 라운드 시작 일괄 검사가 아니라 클라이언트 모달에서 카드 클릭 시점에 결정한다.
   // shakeAsked로 라운드 당 흔들기 모달 1회 표시 제한.
-  game.pendingShake = null;
   game.shakeAsked = { p1: false, p2: false };
   // 폭탄 보너스 뒤집기 권리. 폭탄 1회당 +2 누적, 자기 차례에 손 0이면 1씩 차감하며 자동 뒤집기.
   // "기회 보존의 법칙": 손 + bombDeckCredit 합이 매 턴 -1로 진행 (양쪽 동기).
@@ -1006,12 +1003,6 @@ export function shakeDecision(g, playerId, decision, month) {
   // 라운드 당 1회 제한
   g.shakeAsked = g.shakeAsked || { p1: false, p2: false };
   g.shakeAsked[playerId] = true;
-  g.pendingShake = null;
-  // 레거시 호환: shake_decision phase를 사용하는 inject 테스트나 옛 흐름에서
-  // 호출된 경우 phase를 awaiting_play로 복원해 카드 플레이를 이어갈 수 있게 한다.
-  if (g.phase === 'shake_decision') {
-    g.phase = 'awaiting_play';
-  }
   return { ok: true };
 }
 
@@ -1182,8 +1173,6 @@ export function snapshotForPlayer(g, playerId) {
   const opp = playerId === 'p1' ? 'p2' : 'p1';
   const myBreakdown = calculateScore(g.captured[playerId], { kkeutAsSsangpi: g.kkeutAsSsangpi?.[playerId] });
   const oppBreakdown = calculateScore(g.captured[opp],     { kkeutAsSsangpi: g.kkeutAsSsangpi?.[opp] });
-  // 흔들기 결정이 자기 차례인 경우만 pendingShake 노출
-  const myShake = g.pendingShake && g.pendingShake.player === playerId ? g.pendingShake : null;
   // 바닥 선택이 내 차례인 경우만 pendingFloorChoice 노출
   const myChoice = g.pendingFloorChoice && g.pendingFloorChoice.player === playerId ? g.pendingFloorChoice : null;
   // 폭탄 가능 월 자동 감지 — 표준 규칙: 손 3장 + 바닥 1장
@@ -1221,7 +1210,6 @@ export function snapshotForPlayer(g, playerId) {
     turn: g.turn,
     phase: g.phase,
     pendingChoice: myChoice ? { month: myChoice.month, candidates: myChoice.candidates } : null,
-    pendingShake: myShake ? { month: myShake.month } : null,
     pendingSangtong: mySangtong ? { player: mySangtong.player, month: mySangtong.month } : null,
     bombableMonths,
     firstPpeokBy: g.firstPpeokBy || null,

@@ -556,7 +556,6 @@ export function createApp(opts = {}) {
           // 항상 초기화 — 이전 대기 상태 잔류 방지
           game.ppeokFlags         = cfg.ppeokFlags || {};
           game.pendingFloorChoice = null;
-          game.pendingShake       = cfg.pendingShake || null;
           game.pendingKkeutChoice = cfg.pendingKkeutChoice || null;
           game.lastAction         = { kind: 'test_inject' };
           broadcastState();

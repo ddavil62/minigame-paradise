@@ -53,7 +53,6 @@ function makeGame({ p1Hand = [], p2Hand = [], floor = [], deck = [], turn = 'p1'
     roundWinner: null,
     stoppedBy: null,
     lastAction: null,
-    pendingShake: null,
     roundResult: null,
     lastGoScore: { p1: null, p2: null },
     kkeutAsSsangpi:   { p1: false, p2: false },

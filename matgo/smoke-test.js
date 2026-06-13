@@ -20,7 +20,7 @@ function makeClient(label) {
       const total = msg.yourHand.length + msg.oppHandCount + msg.floor.length + msg.deckCount
                   + (msg.captured.p1?.length || 0) + (msg.captured.p2?.length || 0);
       console.log(`[${label}] 카드 총합: ${total}/50`);
-      if (label === 'A' && msg.phase === 'awaiting_play' || msg.phase === 'shake_decision') {
+      if (label === 'A' && msg.phase === 'awaiting_play') {
         setTimeout(() => ws.close(), 500);
       }
     } else if (msg.type === 'JOINED') {

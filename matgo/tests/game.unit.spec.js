@@ -61,7 +61,6 @@ function makeGame({ p1Hand = [], p2Hand = [], floor = [], deck = [], turn = 'p1'
     roundWinner: null,
     stoppedBy: null,
     lastAction: null,
-    pendingShake: null,
     roundResult: null,
     lastGoScore: { p1: null, p2: null },
     kkeutAsSsangpi:   { p1: false, p2: false },
@@ -104,8 +103,8 @@ test('G-01: createGame — 손패 10+10, 바닥 ≤ 8 (조커 자동 획득), �
 
 test('G-02: createGame — 초기 phase와 잔고', () => {
   const g = createGame();
-  // shake_decision 또는 awaiting_play 중 하나여야 한다
-  expect(['awaiting_play', 'shake_decision']).toContain(g.phase);
+  // createGame 직후 phase는 awaiting_play여야 한다
+  expect(g.phase).toBe('awaiting_play');
   expect(g.money.p1).toBe(10000);
   expect(g.money.p2).toBe(10000);
   expect(g.goCount.p1).toBe(0);
@@ -429,43 +428,6 @@ test('G-21: 9월 술잔 kkeut 선택 → kkeutAsSsangpi=false, 끗으로 카운�
 
   expect(g.kkeutAsSsangpi.p1).toBe(false);
   expect(g.kkeutChoiceMade.p1).toBe(true);
-  expect(g.phase).toBe('awaiting_play');
-});
-
-// ============================================================
-// §6 흔들기
-// ============================================================
-
-test('G-22: 흔들기 선언 → shaking=true, phase=awaiting_play', () => {
-  const g = makeGame({
-    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
-    p2Hand: ['m06_kkeut'],
-    floor:  [],
-    deck:   [],
-  });
-  // checkShakeOpportunity는 private이므로 직접 상태 세팅
-  g.pendingShake = { player: 'p1', month: 1 };
-  g.phase = 'shake_decision';
-
-  const result = shakeDecision(g, 'p1', 'shake');
-  expect(result.ok).toBe(true);
-  expect(g.shaking.p1).toBe(true);
-  expect(g.phase).toBe('awaiting_play');
-  expect(g.pendingShake).toBeNull();
-});
-
-test('G-23: 흔들기 거절 → shaking=false 유지', () => {
-  const g = makeGame({
-    p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
-    p2Hand: ['m06_kkeut'],
-    floor:  [],
-    deck:   [],
-  });
-  g.pendingShake = { player: 'p1', month: 1 };
-  g.phase = 'shake_decision';
-
-  shakeDecision(g, 'p1', 'normal');
-  expect(g.shaking.p1).toBe(false);
   expect(g.phase).toBe('awaiting_play');
 });
 
