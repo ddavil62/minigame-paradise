@@ -594,30 +594,53 @@ test('E-14: round-modal에 최종 점수 + 배수 표시', async () => {
   }
 });
 
-// shake_decision phase는 2026-05-31에 제거됨. 현행 흔들기는 awaiting_play에서
-// 카드 클릭 시 클라이언트 모달(shake-modal)로 처리한다. 이 테스트가 inject하는
-// shake_decision phase는 서버에 존재하지 않아 모달이 뜨지 않음 → 항상 FAIL.
-// 현행 모달 기반 흔들기 시나리오로의 재작성은 별도 발주. (본문은 참조용 보존)
-test.skip('E-15: inject shake_decision → P1에 흔들기 모달 표시', async () => {
+// ── 현행 흔들기 모달 흐름 (2026-06-13 재작성) ────────────────────────────
+// 2026-05-31에 서버 `shake_decision` phase + `pendingShake` inject 의존이 제거됐다.
+// 현행 흔들기는 `awaiting_play`에서 같은 월 3장을 보유한 채 그 월 카드를 처음 클릭하면
+// 클라이언트가 `#shake-modal`(흔들기 선언/그냥 내기)을 띄우는 방식이다(client.js sendPlay).
+//   - 흔들기 모달 조건: `!shakeAskedThisRound && !shaking[me]` + 손패 같은 월 3장 + !bombable.
+//   - bombable(폭탄)은 손 3장 + 바닥 1장인 월이므로, 흔들기만 띄우려면 그 월 바닥 0장 유지.
+//   - shakeAskedThisRound는 GAME_START/ROUND_START 수신 시에만 리셋되고 inject는 그 이벤트를
+//     보내지 않으므로, joinAndStartGame 직후 첫 inject에서는 false 유지 → 첫 클릭에 모달 정상 표시.
+//
+// inject 상태(E-15/E-16 공통):
+//   p1Hand = 1월 3장(m01_gwang/m01_tti_hong/m01_pi_a) + 5월 필러 1장(m05_kkeut),
+//   floor  = 1월 0장(m05_tti_cho/m06_tti_cheong) → 폭탄(손3+바닥1) 회피,
+//   deck   = 비매칭 카드들. inject 후 waitForFlyIdle로 옵티미스틱 fly 잔류를 대기해야
+//   sendPlay(클릭)가 받아들여진다.
+
+test('E-15: awaiting_play 같은 월 3장 카드 클릭 → P1에 흔들기 모달 표시', async () => {
   const { browser, pageP1, pageP2 } = await setupTwoPlayers();
   try {
     await joinAndStartGame(pageP1, pageP2);
     await inject({
-      turn:         'p1',
-      phase:        'shake_decision',
-      pendingShake: { player: 'p1', month: 1 },
-      p1Hand:  cards('m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'),
-      p2Hand:  cards('m06_kkeut'),
-      floor:   [],
-      deck:    [],
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'),
+      p2Hand: cards('m06_kkeut', 'm07_kkeut'),
+      floor:  cards('m05_tti_cho', 'm06_tti_cheong'),  // 1월 바닥 0장 → 폭탄 회피
+      deck:   cards('m09_kkeut', 'm10_kkeut', 'm11_gwang', 'm12_gwang'),
     });
+    await waitForHandCount(pageP1, 4);
+    // inject STATE diff로 발동한 옵티미스틱 fly가 끝나야 클릭(sendPlay)이 받아들여진다.
+    await waitForFlyIdle(pageP1);
+    await waitForFlyIdle(pageP2);
+
+    // 1월 카드 클릭 → 같은 월 3장 + 바닥 0장 → 흔들기 모달
+    await pageP1.click('#my-hand-cards .card[data-card-id="m01_gwang"]');
     await pageP1.waitForFunction(
       () => !document.getElementById('shake-modal')?.classList.contains('hidden'),
       { timeout: 5000 },
     );
+
     const s1 = await readState(pageP1);
     expect(s1.shakePanelVisible).toBe(true);
-    // P2에는 보이지 않음
+    // 모달 안내 월 텍스트 검증
+    const monthText = await pageP1.evaluate(
+      () => document.getElementById('shake-month-text')?.textContent?.trim() ?? '',
+    );
+    expect(monthText).toContain('1월');
+    // P2에는 보이지 않아야 한다 (모달은 클라이언트 로컬 UI)
     const s2 = await readState(pageP2);
     expect(s2.shakePanelVisible).toBe(false);
   } finally {
@@ -625,35 +648,51 @@ test.skip('E-15: inject shake_decision → P1에 흔들기 모달 표시', async
   }
 });
 
-// E-15와 동일 사유: shake_decision phase 제거(2026-05-31)로 inject 전제가 무효.
-// 현행 모달 기반 흔들기 시나리오로의 재작성은 별도 발주. (본문은 참조용 보존)
-test.skip('E-16: 흔들기 선언 버튼 클릭 → 모달 닫힘, 게임 계속', async () => {
+test('E-16: 흔들기 선언 버튼 클릭 → 모달 닫힘, 흔들기 반영 + 게임 계속', async () => {
   const { browser, pageP1, pageP2 } = await setupTwoPlayers();
   try {
     await joinAndStartGame(pageP1, pageP2);
     await inject({
-      turn:         'p1',
-      phase:        'shake_decision',
-      pendingShake: { player: 'p1', month: 1 },
-      p1Hand:  cards('m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'),
-      p2Hand:  cards('m06_kkeut'),
-      floor:   [],
-      deck:    [],
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'),
+      p2Hand: cards('m06_kkeut', 'm07_kkeut'),
+      floor:  cards('m05_tti_cho', 'm06_tti_cheong'),  // 1월 바닥 0장 → 폭탄 회피
+      deck:   cards('m09_kkeut', 'm10_kkeut', 'm11_gwang', 'm12_gwang'),
     });
+    await waitForHandCount(pageP1, 4);
+    await waitForFlyIdle(pageP1);
+    await waitForFlyIdle(pageP2);
+
+    // 1월 카드 클릭 → 흔들기 모달 표시
+    await pageP1.click('#my-hand-cards .card[data-card-id="m01_gwang"]');
     await pageP1.waitForFunction(
       () => !document.getElementById('shake-modal')?.classList.contains('hidden'),
       { timeout: 5000 },
     );
-    // 흔들기 선언 버튼 클릭
+
+    // 흔들기 선언 버튼 클릭 → 모달 닫힘 + SHAKE/PLAY_CARD 송신
     await pageP1.click('#btn-shake');
-    // 모달 닫힘 대기
     await pageP1.waitForFunction(
       () => document.getElementById('shake-modal')?.classList.contains('hidden'),
       { timeout: 5000 },
     );
+
+    // 흔들기 반영: 프로필 배지('흔들기 ×2') 또는 banner-multiplier('×2')에 흔들기 표식이
+    // 떠야 한다(SHAKE STATE의 shaking.p1=true 반영). 폴링으로 견고하게 대기.
+    await pageP1.waitForFunction(
+      () => {
+        const badges = document.getElementById('my-badges')?.textContent || '';
+        const multi  = document.getElementById('banner-multiplier')?.textContent || '';
+        return /흔들기/.test(badges) || /×?\s*2|x2/i.test(multi) || /×?\s*2|x2/i.test(badges);
+      },
+      { timeout: 6000 },
+    );
+
     const s = await readState(pageP1);
+    // 모달은 닫혀 있어야 한다
     expect(s.shakePanelVisible).toBe(false);
-    // phase = awaiting_play로 복귀
+    // 게임은 계속 진행 — 배너 상태에 턴 텍스트가 존재해야 한다.
     expect(s.bannerStatus).toMatch(/내 턴|상대 턴/);
   } finally {
     await browser.close();

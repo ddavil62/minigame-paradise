@@ -96,9 +96,10 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 | 파일 | 테스트 수 | 상태 | 서버 필요 |
 |------|----------|------|----------|
 | `score.unit.spec.js` + `game.unit.spec.js` | 합계 100개 | ✅ 100/100 PASS | ❌ |
-| `e2e-scenarios.spec.js` | E-30까지 30개 | ✅ 28 PASS / 2 skip(E-15·E-16) / 0 fail (3회 연속 결정성) | ✅ (3013) |
+| `e2e-scenarios.spec.js` | E-30까지 30개 | ✅ 30 PASS / 0 skip / 0 fail (3회 연속 결정성) | ✅ (3013) |
 
-> **2026-06-13 flakiness 안정화**: 공유 룸 teardown 레이스(→ `POST /test/reset` + `beforeEach`/`afterEach`)와 랜덤 분배 바닥 조커 오프닝 fly 레이스(→ `waitForFlyIdle` + `pickSafePlayCard` 헬퍼)를 해소해 전체 e2e가 3회 연속 28 passed / 2 skipped / 0 failed로 완전 결정적이 됨. E-15·E-16은 제거된 `shake_decision` phase에 의존하므로 `test.skip` 처리(현행 흔들기 모달 E2E 재작성은 별도 발주).
+> **2026-06-13 flakiness 안정화**: 공유 룸 teardown 레이스(→ `POST /test/reset` + `beforeEach`/`afterEach`)와 랜덤 분배 바닥 조커 오프닝 fly 레이스(→ `waitForFlyIdle` + `pickSafePlayCard` 헬퍼)를 해소해 전체 e2e가 결정적이 됨.
+> **2026-06-13 E-15·E-16 복원**: 위 안정화 때 `test.skip` 처리했던 E-15·E-16을 현행 흔들기 모달 흐름으로 재작성해 복원. `/test/inject`로 P1 손에 1월 3장(+5월1)·바닥 1월 0장(폭탄 회피) 주입 → `waitForFlyIdle` → 1월 카드 클릭 → `#shake-modal` 표시(E-15) / `#btn-shake` 클릭 → 모달 닫힘 + `shaking.p1` 반영(배지 '흔들기 ×2')(E-16). 제거된 `shake_decision` phase 의존을 제거함. 결과: 전체 e2e가 **3회 연속 30 passed / 0 skipped / 0 failed**(28 passed/2 skipped → 30 passed/0 skipped).
 
 #### E2E 시나리오 요약 (e2e-scenarios.spec.js)
 
@@ -112,7 +113,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 | §6 연출-STATE 순서 | E-26~E-27 | (2026-06-13) E-26: chooseFloor 통합 STATE 1회 송신(획득 순간이동 방지) / E-27: 뻑 토스트 DECK_LAND 이후 표시 타이밍 |
 | §7 fly-출처 정합 | E-28~E-30 | (2026-06-13) E-28: 강탈 피 fly가 oppCapturedZone에서 출발(더미 아님, startFlyFromDeck 미호출) / E-29: 흔들기로 낸 카드 fly가 myCards에서 출발(startFlyFromDeck 미호출) / E-30: 폭탄 손 3장 fly가 myCards에서 출발(startFlyFromDeck 미호출) |
 
-> **E-15·E-16은 `test.skip`** — 제거된 `shake_decision` phase의 `/test/inject` 케이스에 의존. 현행 흔들기 모달 기준 E2E 재작성은 별도 발주.
+> **E-15·E-16 복원됨 (2026-06-13)** — 현행 흔들기 모달 흐름으로 재작성. E-15: inject(1월 손 3장+바닥 0장) → 카드 클릭 → `#shake-modal` 표시 검증. E-16: `#btn-shake` 클릭 → 모달 닫힘 + `shaking.p1` 반영(배지 '흔들기 ×2'). 제거된 `shake_decision` phase 의존 없음. 30 passed / 0 skipped.
 > **stale 단언 정정**: E-03(덱 20→22), E-04(바닥 8→6~8 범위).
 
 #### 알려진 주의사항
@@ -136,7 +137,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 
 ## 변경 시 자주 깨지는 함정
 
-1. **`shake_decision` phase는 더 이상 존재하지 않는다.** (2026-05-31 제거) 흔들기는 클라이언트 모달로만 처리. 서버 phase·메시지에서 참조하지 말 것. 기존 e2e `E-15/E-16`이 이 제거된 phase의 inject에 의존하므로 **`test.skip` 처리됨**(2026-06-13). 현행 흔들기 모달 기준 E2E 재작성은 별도 발주.
+1. **`shake_decision` phase는 더 이상 존재하지 않는다.** (2026-05-31 제거) 흔들기는 클라이언트 모달로만 처리. 서버 phase·메시지에서 참조하지 말 것. e2e `E-15/E-16`은 한때 이 제거된 phase의 inject에 의존해 `test.skip`이었으나, **현행 모달 흐름으로 재작성됨**(2026-06-13): inject(1월 손 3장 + 바닥 1월 0장) → 카드 클릭 → `shake-modal` 표시 → `#btn-shake` 클릭 → `shaking.p1` 반영. **`shake_decision` phase 참조 금지는 그대로 유지**(재작성 테스트도 phase 미참조).
 2. **사통 phase `awaiting_sangtong`은 `isPauseForUserInput()`이 true를 반환해야 한다.** (`server.js`) 누락 시 사통 모달 표시 중에도 서버가 봇 턴을 진행해 상태 깨짐.
 3. **첫뻑 보너스(`firstPpeokBonus`)는 base 가산 7점이지 multiplier가 아니다.** `applyFinalMultipliers`에서 base에 +7 후 박/고 multiplier가 곱해진다. 순서 바뀌면 점수 폭주.
 4. **폭탄 후 `g.bombExtraDraw` 플래그는 두 번째 `drawAndResolve` 직후 반드시 false로 리셋.** 미리셋 시 `chooseFloorSteps`에서 무한 3회차 진입 가능.

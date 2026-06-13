@@ -1,5 +1,26 @@
 # Changelog
 
+## [2026-06-13] — E-15/E-16 흔들기 E2E 현행 모달 흐름 재작성(skip 해제)
+
+직전 flakiness 안정화 때 `test.skip` 처리했던 E-15·E-16을 현행 흔들기 모달 흐름 기준으로 재작성해 복원. 게임 로직·서버 무변경, e2e 테스트 코드만 수정.
+
+### 변경 (`tests/e2e-scenarios.spec.js`)
+- **E-15 / E-16**: 제거된 `shake_decision` phase 의존을 걷어내고 현행 흐름으로 재작성.
+  - `/test/inject`로 P1 손에 **1월 3장(+5월 1장)**, 바닥 **1월 0장**(폭탄 회피) 주입.
+  - `waitForFlyIdle` 대기 → **1월 카드 클릭**.
+  - **E-15**: `#shake-modal` 표시 검증.
+  - **E-16**: `#btn-shake` 클릭 → 모달 닫힘 + `shaking.p1` 반영(배지 '흔들기 ×2') 검증.
+- `test.skip` 해제. `shake_decision` phase 미참조(참조 금지 유지).
+
+### 검증
+- 전체 e2e-scenarios **3회 연속 30 passed / 0 skipped / 0 failed** (이전 28 passed / 2 skipped → 30 passed / 0 skipped).
+- 회귀 게이트 **E-03 / E-04 / E-26~E-30 PASS**.
+
+### 비고
+- `game.js` / `score.js` / `cards.js` / `server.js` 무변경. e2e 테스트 코드만 수정.
+
+---
+
 ## [2026-06-13] — e2e 스위트 flakiness 안정화
 
 e2e-scenarios 스위트의 비결정적 fail↔pass 스왑(flakiness)을 근본 원인 2계층으로 분리해 해소. 게임 로직(룰·점수)은 무변경, 테스트 인프라(서버 테스트 엔드포인트 + e2e 헬퍼/단언)만 수정.
