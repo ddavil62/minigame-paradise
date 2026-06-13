@@ -1761,7 +1761,14 @@
       const cardId = pendingBombFallbackCardId;
       pendingBombFallbackCardId = null;
       const card = cardId ? (lastState?.yourHand || []).find((c) => c.id === cardId) : null;
-      if (card) sendBomb(card.month);
+      if (card) {
+        // 폭탄 손 3장도 손에서 출발 — startFlyFromHand 등록.
+        // (미등록 시 BOMB STATE에서 손 3장이 newCardIds→drewIds로 분류되어
+        //  startFlyFromDeck로 더미에서 날아오는 버그가 발생한다.)
+        const bombCards = (lastState?.yourHand || []).filter((c) => c.month === card.month);
+        for (const bc of bombCards) startFlyFromHand(bc.id);
+        sendBomb(card.month);
+      }
     });
   }
   if (btnBombCancel) {
@@ -1780,6 +1787,9 @@
   btnBomb.addEventListener('click', () => {
     if (!lastState || !lastState.bombableMonths || lastState.bombableMonths.length === 0) return;
     const month = lastState.bombableMonths[0]; // 첫 번째 자동 선택
+    // 폭탄 손 3장도 손에서 출발 — startFlyFromHand 등록 (btnBombConfirm과 동일).
+    const bombCards = (lastState.yourHand || []).filter((c) => c.month === month);
+    for (const bc of bombCards) startFlyFromHand(bc.id);
     sendBomb(month);
   });
   // ── 사통 모달 핸들러 (2026-05-31) ──

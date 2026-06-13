@@ -103,7 +103,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 | §4 박 시나리오 | E-19~E-22 | 피박·멍박·광박·고박 round-modal 텍스트 검증 |
 | §5 안정성 | E-23~E-25 | 콘솔 에러, AI봇 연결, 레이아웃 스크린샷 |
 | §6 연출-STATE 순서 | E-26~E-27 | (2026-06-13) E-26: chooseFloor 통합 STATE 1회 송신(획득 순간이동 방지) / E-27: 뻑 토스트 DECK_LAND 이후 표시 타이밍 |
-| §7 fly-출처 정합 | E-28~E-29 | (2026-06-13) E-28: 강탈 피 fly가 oppCapturedZone에서 출발(더미 아님, startFlyFromDeck 미호출) / E-29: 흔들기로 낸 카드 fly가 myCards에서 출발(startFlyFromDeck 미호출) |
+| §7 fly-출처 정합 | E-28~E-30 | (2026-06-13) E-28: 강탈 피 fly가 oppCapturedZone에서 출발(더미 아님, startFlyFromDeck 미호출) / E-29: 흔들기로 낸 카드 fly가 myCards에서 출발(startFlyFromDeck 미호출) / E-30: 폭탄 손 3장 fly가 myCards에서 출발(startFlyFromDeck 미호출) |
 
 #### 알려진 주의사항
 
@@ -142,3 +142,4 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 14. **ppeok(뻑) 토스트는 즉시 띄우지 않고 DECK_LAND까지 보류한다** (2026-06-13 연출-STATE 순서 수정). `client.js`는 ppeok 종류 lastAction의 토스트를 `pendingPpeokToast`로 보관 → 덱 뒤집기 fly의 **DECK_LAND 전환 시점에 flush**(덱이 바닥에 쌓인 뒤 표시). 안전망으로 CLEANUP 시 flush, 라운드 시작(`NEW_ROUND`/`ROUND_START`) 시 폐기한다. ppeok 외 토스트는 기존 타이밍 유지. 즉시 표시로 되돌리면 "뻑!"이 카드 내자마자 떠서 연출 순서가 어긋난다. 회귀 게이트: e2e **E-27**.
 15. **강탈 피 fly는 oppCapturedZone에서 출발한다** (2026-06-13 fly-출처 정합 수정). `client.js`는 `la.stoleFromOpp > 0`일 때 `stolenPiIds = prevCapIds[opp] ∩ newCapIds[me]`로 빼앗긴 피 카드 ID를 식별 → 신규 `startFlyFromOppCaptured`로 **상대 획득 영역에서 출발**시킨다. 이때 `drewIds`(이번 턴 더미에서 뽑은 카드)는 **반드시 제외**(자연 덱 fly와 분리)하고, `resolvePendingFlies`의 handLike 분기에 `origin: 'opp-captured'`를 포함해야 보류 해소 시에도 출발점이 유지된다. 누락 시 빼앗은 피가 더미에서 날아온다. 회귀 게이트: e2e **E-28**.
 16. **흔들기/모달 경유로 낸 카드는 renderMyHand가 DOM 재생성 시 pendingFlies 카드에 visibility:hidden을 재적용해야 한다** (2026-06-13 fly-출처 정합 수정). SHAKE STATE 도착이 `renderMyHand`(`innerHTML = ''`)로 fly clone의 원본 DOM을 무효화하므로, `renderMyHand` 말미에 `pendingFlies` 보유 카드의 재생성 DOM에 `visibility:hidden`을 다시 걸어 클론 원본을 손 위치에 보존해야 **내 손(myCards)에서 출발**한다(옵션 A). 누락 시 낸 카드가 더미에서 날아온다. 회귀 게이트: e2e **E-29**.
+17. **폭탄 발동 시 `btnBombConfirm`/`btnBomb`에서 손 3장에 `startFlyFromHand`를 직접 등록해야 한다** (2026-06-13 fly-출처 수정). 폭탄으로 가져가는 같은 월 손 3장의 fly 출발점을, `sendBomb` 호출 직전에 `btnBombConfirm`(~1765) + `btnBomb` 폴백(~1790)에서 명시 등록한다. 내 폭탄 경로(`la.player === me`)는 상대 폭탄용 `oppHandOrigin` 분기(`la.player === oppId`)에 잡히지 않아 누락된다 → 누락 시 손 3장이 더미에서 날아온다. 회귀 게이트: e2e **E-30**.

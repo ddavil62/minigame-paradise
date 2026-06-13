@@ -1062,6 +1062,77 @@ test('E-29: 흔들기로 낸 카드 fly가 myCards 영역에서 출발 — start
   }
 });
 
+test('E-30: 폭탄 손 3장 fly가 myCards에서 출발 — startFlyFromDeck 미호출 (버그6)', async () => {
+  const browser = await chromium.launch();
+  const ctxP1 = await browser.newContext({ viewport: VIEWPORT });
+  const ctxP2 = await browser.newContext({ viewport: VIEWPORT });
+  const pageP1 = await ctxP1.newPage();
+  const pageP2 = await ctxP2.newPage();
+  try {
+    await installFlyRecorder(pageP1);
+    await joinAndStartGame(pageP1, pageP2);
+
+    // 폭탄 시나리오: P1 손에 9월 3장(m09_kkeut/m09_pi_a/m09_pi_b) + 필러 1장.
+    // 바닥에 9월 1장(m09_tti_cheong) → 폭탄 조건(손 3 + 바닥 1) 충족 → bombableMonths=[9].
+    // 9월 카드 클릭 → bomb-confirm-modal → btnBombConfirm → 손 3장 + 바닥 1장 captured.
+    // 핵심: 손 3장은 myCards에서 출발해야 한다(더미 'deck' 아님).
+    const BOMB_HAND = ['m09_kkeut', 'm09_pi_a', 'm09_pi_b'];
+    await inject({
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m09_kkeut', 'm09_pi_a', 'm09_pi_b', 'm01_pi_a'),
+      p2Hand: cards('m06_kkeut'),
+      floor:  cards('m09_tti_cheong', 'm07_tti_cho'),
+      deck:   cards('m11_pi_b'),
+      captured: { p1: [], p2: [] },
+    });
+    await waitForHandCount(pageP1, 4);
+    await waitForFlyIdle(pageP1);
+    // inject 후 발동한 옵티미스틱 fly 기록을 비운다.
+    await pageP1.evaluate(() => { window.__matgoFlies = []; });
+
+    // 9월 카드 클릭 → 폭탄 확인 모달
+    await pageP1.click('#my-hand-cards .card[data-card-id="m09_kkeut"]');
+    await pageP1.waitForFunction(
+      () => !document.getElementById('bomb-confirm-modal')?.classList.contains('hidden'),
+      { timeout: 5000 },
+    );
+
+    // 폭탄 확정
+    await pageP1.click('#btn-bomb-confirm');
+
+    // 손 3장 모두 hand origin으로 등록될 때까지 대기
+    await pageP1.waitForFunction(
+      (ids) => ids.every((id) => (window.__matgoFlies || []).some((f) => f.cardId === id)),
+      BOMB_HAND,
+      { timeout: 6000 },
+    );
+
+    const flies = await pageP1.evaluate(() => window.__matgoFlies.slice());
+    const myHandBox = await pageP1.locator('#my-hand-cards').boundingBox();
+    expect(myHandBox).toBeTruthy();
+
+    for (const id of BOMB_HAND) {
+      const fly = flies.find((f) => f.cardId === id);
+      expect(fly, `${id} fly 미등록`).toBeTruthy();
+      // 핵심: 손 3장은 hand origin (더미 'deck'이 아님)
+      expect(fly.origin, `${id} origin`).toBe('hand');
+      // startFlyFromDeck로 등록되지 않아야 함 (더미서 날아오지 않음)
+      expect(
+        flies.some((f) => f.cardId === id && f.origin === 'deck'),
+        `${id} deck origin 발견`,
+      ).toBe(false);
+      // 시작 좌표가 my-hand-cards rect 범위 안인지 검증
+      expect(fly.startLeft).toBeGreaterThanOrEqual(myHandBox.x - 60);
+      expect(fly.startLeft).toBeLessThanOrEqual(myHandBox.x + myHandBox.width + 60);
+      expect(fly.startTop).toBeGreaterThanOrEqual(myHandBox.y - 60);
+      expect(fly.startTop).toBeLessThanOrEqual(myHandBox.y + myHandBox.height + 60);
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
 test('E-25: 스크린샷 시각 검증 — 레이아웃 오류 없음', async () => {
   const { browser, pageP1, pageP2 } = await setupTwoPlayers();
   try {

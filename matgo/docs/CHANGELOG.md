@@ -1,5 +1,30 @@
 # Changelog
 
+## [2026-06-13] — 폭탄 손 3장 fly 출처 수정 (버그6)
+
+사용자 실플레이 피드백. 게임 로직(점수·룰)은 무변경, 클라이언트 fly 애니메이션 출발 지점만 교정.
+
+### 수정
+
+#### 버그6 — 폭탄 손 3장 fly 출처 (`public/client.js`)
+- 증상: 폭탄 발동 시 가져가는 손 3장이 내 손(myCards)이 아니라 **더미(덱)에서 날아옴**.
+- 원인: 내 폭탄 경로(`la.player === me`)가 상대 폭탄용 `oppHandOrigin` 분기(`la.player === oppId`)에 잡히지 않아 손 3장 fly 출발점 등록이 누락됨.
+- 수정: `btnBombConfirm`(~1765) + `btnBomb` 폴백(~1790)에서 `sendBomb` 호출 직전에 해당 월 손 3장에 `startFlyFromHand`를 호출 → **내 손(myCards)에서 출발**.
+
+### 추가 (`tests/e2e-scenarios.spec.js`)
+- **E-30**: 버그6 — 폭탄 손 3장 fly가 `myCards`에서 출발하고 `startFlyFromDeck`이 호출되지 않음을 검증.
+
+### 검증
+- 신규 E2E **E-30 PASS** + 회귀 게이트 **E-26~E-29 PASS** (E-26~E-30 5/5).
+- `game.unit` + `score.unit` **100 passed / 0 failed**.
+
+### 선재/flaky 실패 (이번 변경과 무관)
+> ⚠️ 아래는 본 변경의 회귀가 아님 — baseline 동일.
+- E-03/E-04/E-07/E-08/E-15/E-16/E-23 잔여 실패는 기존 stale/flaky로 baseline 동일. 폭탄 핸들러와 코드 경로 무관.
+
+### 비고
+- `game.js` / `score.js` / `cards.js` / `server.js` 무변경. 룰·점수·프로토콜 영향 없음. 클라이언트 fly 출발점만 교정.
+
 ## [2026-06-13] — fly-출처 정합 2건 (강탈 피 / 흔들기 낸 카드)
 
 사용자 실플레이 피드백 2건. 게임 로직(점수·룰)은 무변경, 클라이언트 fly 애니메이션 출발 지점만 교정.
