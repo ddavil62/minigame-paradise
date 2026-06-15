@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오목 - LAN 1:1</title>
+  <!-- 우드 테마 폰트 (Jua: 헤드라인, Gowun Dodum: 본문) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="theme-wood">
+  <header class="game-header">
+    <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+    <h1>⚫ 오목</h1>
+    <div class="status-bar">
+      <span id="player-label">접속 중...</span>
+      <span class="status-divider">·</span>
+      <span id="status-msg">서버 연결 중</span>
+      <span class="status-divider">·</span>
+      <span id="turn-indicator">-</span>
+      <span class="status-divider">·</span>
+      <span id="move-count">착수 0수</span>
+    </div>
+  </header>
+
+  <!-- 대기 화면 -->
+  <section id="screen-waiting" class="screen screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">⚫⚪</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+
+      <div id="invite-panel" class="invite-panel hidden">
+        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
+        <div class="invite-url-row">
+          <code id="invite-url" class="invite-url">http://...</code>
+          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
+        </div>
+        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      </div>
+
+      <!-- AI 진입 -->
+      <div id="ai-panel" class="ai-panel hidden">
+        <div class="ai-divider"><span>또는</span></div>
+        <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
+        <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+      </div>
+
+      <!-- 룰 요약 -->
+      <div class="rules-summary">
+        <h3>오목 규칙 요약</h3>
+        <ul>
+          <li><strong>19×19 바둑판</strong>에 흑(선공)·백이 번갈아 교차점에 착수.</li>
+          <li>가로·세로·대각선으로 <strong>같은 색 5개 이상 연속</strong>이면 즉시 승리.</li>
+          <li><strong>장목(6목 이상)</strong>도 승리로 인정됩니다.</li>
+          <li><strong>쌍삼(33)·사사(44) 금수</strong> — 한 착수로 열린3 두 개 또는 4목 두 개가 동시 생성되면 해당 착수를 거부합니다. 패배가 아닙니다.</li>
+          <li>이미 돌이 놓인 자리에는 둘 수 없습니다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 게임 화면 -->
+  <main id="screen-game" class="screen screen-game hidden">
+    <div class="board-wrap">
+      <canvas id="board-canvas" class="board-canvas" width="728" height="728"></canvas>
+    </div>
+    <div class="action-row">
+      <button id="btn-resign" class="btn-resign" type="button">기권</button>
+    </div>
+  </main>
+
+  <!-- 게임 종료 오버레이 -->
+  <div id="screen-game-over" class="result-overlay hidden">
+    <div class="result-card">
+      <div id="result-outcome" class="result-outcome">결과</div>
+      <div id="result-detail" class="result-detail"></div>
+      <div class="result-actions">
+        <button id="rematch-btn" class="primary-btn rematch-btn" type="button">한 판 더</button>
+        <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
+      </div>
+      <div class="result-hint">한 판 더를 누르면 상대도 동의 시 바로 새 판이 시작됩니다.</div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

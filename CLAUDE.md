@@ -1,6 +1,6 @@
 # 미니게임 천국 (minigame-paradise)
 
-LAN 1:1 미니게임 9종 통합 패키지. 단일 포트(3000) 통합 라우터 구조. (하나비는 2인 협력 게임)
+LAN 1:1 미니게임 10종 통합 패키지. 단일 포트(3000) 통합 라우터 구조. (하나비는 2인 협력 게임)
 
 ## 게임 목록
 
@@ -15,6 +15,7 @@ LAN 1:1 미니게임 9종 통합 패키지. 단일 포트(3000) 통합 라우터
 | `/hanabi/` | 하나비 (협력 불꽃 카드게임) | `hanabi/server.js` | X |
 | `/yahtzee/` | 요트 다이스 (Yahtzee, 1:1 점수표) | `yahtzee/server.js` | O |
 | `/rummikub/` | 루미큐브 (타일 그룹/런 세트 만들기) | `rummikub/server.js` | O |
+| `/omok/` | 오목 (표준 19×19, 쌍삼·사사 금수) | `omok/server.js` | O |
 
 AI 봇 지원 게임은 1/2 AI 모드 진입 시 server.js가 `bot.js`를 child_process로 자동 spawn한다 (`getBotUrl` 옵션 패턴).
 
@@ -39,10 +40,11 @@ node matgo/server.js --port 3013
 - **요트 다이스 (yahtzee)**: LAN 1:1 턴 교대 5다이스 점수표 게임 (2026-06-08 신규). 서버 권위 — 다이스 랜덤·점수 계산·턴 전환 모두 `game.js` 순수 함수. 표준 Yahtzee 13 카테고리 + 상단 보너스(63점 → +35) + 야츠 보너스(첫 야츠 50점 후 +100점 누적). smoke 테스트 `tests/smoke.test.js`(ad-hoc 노드 러너, 10건 YACHT-001~010, 131/131 PASS). **AI 봇 지원** (2026-06-08 추가): `bot.js` 휴리스틱 — 최빈/스트레이트/큰값 keep + 카테고리 우선순위(Yahtzee→Straight→FullHouse→Quad→Triple→상단→Chance→손해 최소 0점). 봇 시나리오 `tests/bot-smoke.test.js`(25/25 PASS, YACHT-BOT-001~005, 포트 3099). 외부 에셋 0(다이스는 Canvas 2D pip 패턴). **2026-06-09 효과음 9종**(Web Audio API 코드 합성, 외부 MP3 0건, 헤더 🔊/🔇 토글, localStorage `yahtzee.muted` 영속). **2026-06-09 실시간 keep 동기화 + 카테고리 강조**: 신규 `TOGGLE_KEEP { index, value }` 메시지(서버 `game.js::toggleKeep` 가드 — phase/턴/rollCount≥1/0≤index<5, 실패는 조용히 무시) → 상대 턴에서 본인 keep 다이스가 `.die.kept.opponent` + 라벨 "상대 KEEP"으로 즉시 동기화. CATEGORY_SCORED 시 `data-pid`+`data-category` 셀에 `@keyframes scored-flash`(1.4s, scale 1→1.55→1.3→1 + tomato 글로우) 적용. 신규 회귀 YACHT-LIVE-001(toggleKeep 단위 가드)/002(WS 양쪽 STATE.keep 일치)/003·004(opponent KEEP 라벨). 합계 **222/222 PASS** (smoke 155 + dice-render 42 + bot-smoke 25).
 - **코드네임 듀엣 (codenames-duet)**: 2026-06-09 **복기 모드 추가** — 게임 종료(`GAME_END`) 시 서버가 `review = { words, keyCardP1, keyCardP2, revealed, greenFound, tokensLeft }`를 함께 브로드캐스트. 결과 모달의 "🔍 복기 보기" 버튼 → 모달 닫고 보드 25칸이 **양쪽 시점 키 카드 전체 공개**(좌상단=내 시점, 우하단=상대 시점 점). 상단 `#review-banner` (sticky)에 결과 요약 + 새 게임/다른 종목/결과 다시 보기 버튼. 복기 중 카드 클릭·단서 입력 비활성. **자동 새 게임 트리거 없음** (사용자가 명시적으로 `NEW_GAME` 보낼 때만 시작). 회귀: `tests/review-smoke.mjs`(27/27 PASS, REVIEW-000~004) + `tests/review-visual.mjs`(11/11 PASS, Playwright). 작업 포트 3098(launcher 3000과 격리). **AI 봇 미지원.**
 - **하나비 (hanabi)**: 룰북 `hanabi/docs/RULEBOOK.md` (Antoine Bauza 표준 Hanabi + 본 구현 비교, §1~§13, 2026-06-01) + 룰북 기반 Playwright 시나리오 61개(`tests/rulebook-c1~c11-*.spec.js`, HR-C1~C11) 완비 (2026-06-01). 2인 완전 협력 카드게임 — 서버 권위 + **손패 가림**(`snapshotForPlayer`가 본인 손패 color/number null 마스킹)이 정체성. §13 구현 vs 표준 차이 **8건 전부 confirmed**. 회귀 게이트: 손패 누설(HR-C6-001/HR-C7-001), §13-7 오프바이원(HR-C7-003/004, 2026-06-01 giveClue checkGameEnd 누락 HIGH 버그 수정). 테스트: 유닛 31 + WS 7 + QA엣지 8 + E2E 6 + 가이드 슬라이더 9. **대기 화면 룰 가이드 슬라이더**(인포그래픽 7장 `public/assets/guide/`, 버튼·키보드·스와이프, HR-C11, 2026-06-01 추가 — game.js/WS 무변경). E2E(C8~C11)는 `node server.js --port 3095` 사전 구동 필요. **AI 봇 미지원.**
+- **오목 (omok)**: 표준 19×19 오목 (2026-06-15 신규, 10번째 종목). 룰: **쌍삼(33)·사사(44) 금수**(흑·백 양쪽 동일, 착수 거부), 5목 이상 연속(가로/세로/대각 4방향) 승리, **장목(6목 이상)도 승리**(반칙 아님), 선공=흑(p1). 서버 권위 — 착수 검증·4방향 `checkWin`(5목 이상·장목 포함)·금수·`checkDraw`(361칸) 모두 `game.js` 순수 함수. **AI 봇 지원**(`bot.js` 휴리스틱 1수 평가 — 빈 교차점 361칸 전수 평가, 공격 1.0 + 수비 0.9 가중치, CHAIN_WEIGHT 테이블, 첫 수 천원, `getBotUrl`+`child_process.spawn` 패턴 + 대기 화면 "🤖 AI랑 시작"). 외부 이미지 에셋 0 — Canvas(728px, 19×19 격자·나뭇결·화점 9곳·좌표 라벨 A~T/1~19) + CSS 우드 테마. 단독 실행 포트 3012(충돌 시 +1 폴백). **2026-06-15 쌍삼·사사 금수 + 세션 유지 리매치 추가**: (1) 금수 — 한 착수로 열린3(`_XXX_`) 2개+ 또는 4목(len===4) 2개+ 동시 생성 시 **착수 거부**(board/moveCount 원복·ERROR 토스트·게임 계속), `game.js`에 `isOpenThree`/`isFour`/`checkDoubleThree`/`checkDoubleFour` 추가, `placeStone` 순서 = 기존검증→가상착수→`checkWin`(승리 우선)→`checkDoubleThree`→`checkDoubleFour`(거부 원복)→`checkDraw`→턴교대. **5목+ 완성 수는 33/44 동시여도 승리**(checkWin 선행), 장목은 여전히 승리. (2) 리매치 — `location.reload()` 제거, WS 연결 유지한 채 양쪽 "한 판 더" 동의 시 재시작. 신규 메시지 `REMATCH`(C→S)/`REMATCH_WAITING{ready}`/`REMATCH_START{nextBlack}`(S→C). 선공: 패자=다음 흑, 기권자=흑, 무승부=색 교체(p1/p2 id 불변·color만 재배정 + `createGame()` 재생성, `server.js` `swapColorsForRematch`/`rematchPending`/`lastGameResult`). 봇은 GAME_OVER/REMATCH_WAITING 시 자동 REMATCH(0.5s, 타임아웃 보호 10s), `REMATCH_START`에서 myColor 재설정, 종료 안 함. 수정: `game.js`/`server.js`/`bot.js`/`public/js/{main,network}.js`/`public/index.html`/`public/css/style.css`. 테스트: smoke 106(OMOK-001~012, 포트 3105) + bot-smoke 14(OMOK-BOT-001~004, 포트 3106) + QA엣지 35(`qa-edge` +QA-R1~R6) + QA draw/bot 9 + QA 금수공격 28(`qa-renju-attack` — 닫힌3 비금수/장목 승리/5목+33 승리/경계 래핑/흑백 양쪽) + QA 리매치공격 14(`qa-rematch-attack` — 색 swap/WAITING/START/원복) + E2E 3 + 모바일 1(격리 포트 3077) = **210건 전부 PASS**(기존 117 회귀 포함, 장목 승리·대각/세로 승리·draw 금수 오탐 0건). QA PASS(결함 0), AD3 APPROVED.
 
 ## 런처 로비
 
-단일 화면에서 게임 카드 7개를 즉시 표시하고, 호스트가 카드를 클릭하여 게임을 선택한다. 스타트 버튼이나 별도의 종목 선택 단계는 없다.
+단일 화면에서 게임 카드 10개를 즉시 표시하고, 호스트가 카드를 클릭하여 게임을 선택한다. 스타트 버튼이나 별도의 종목 선택 단계는 없다.
 
 - 1/2: 호스트가 카드 클릭 시 AI 모드로 게임 시작 (봇 미지원 게임은 비활성)
 - 2/2: 호스트가 카드 클릭 시 인간 대전으로 양쪽 동시 이동

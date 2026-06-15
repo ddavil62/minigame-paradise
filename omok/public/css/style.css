@@ -1,0 +1,319 @@
+/**
+ * @fileoverview 오목 게임 스타일 — 우드 테마.
+ *
+ * 외부 이미지 에셋 0. 바둑판·돌은 Canvas로 그리고, 그 외 UI는 CSS로 합성한다.
+ * 색상 변수는 :root에 모아 두고, 대기/게임/종료 화면을 각각 스타일링한다.
+ */
+
+/* ── 색상 변수 ─────────────────────────────────────────────── */
+:root {
+  --wood-light: #D4A55A;
+  --wood-dark: #8B5E1A;
+  --accent: #C8102E;        /* 빨간 강조 (내 턴 표시, 마지막 착수 점) */
+  --accent-ai: #2E8B57;     /* AI 시작 버튼 (녹색) */
+  --bg: #F5E9D0;            /* 배경 (크림색) */
+  --text: #2C1A0E;          /* 텍스트 (진한 갈색) */
+  --card-bg: #FFF9EE;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Gowun Dodum', sans-serif;
+  min-height: 100vh;
+}
+
+.hidden { display: none !important; }
+
+/* ── 헤더 ──────────────────────────────────────────────────── */
+.game-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--wood-light), var(--wood-dark));
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  flex-wrap: wrap;
+}
+
+.game-header h1 {
+  font-family: 'Jua', sans-serif;
+  font-size: 1.4rem;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.btn-back-to-lobby {
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 0.9rem;
+}
+.btn-back-to-lobby:hover { background: rgba(0, 0, 0, 0.35); }
+
+.status-bar {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #fff;
+  flex-wrap: wrap;
+}
+.status-divider { opacity: 0.6; }
+
+#turn-indicator.my-turn {
+  color: #FFE08A;
+  font-weight: bold;
+  text-shadow: 0 0 6px rgba(255, 224, 138, 0.8);
+}
+
+/* ── 화면 공통 ─────────────────────────────────────────────── */
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 12px;
+}
+
+/* ── 대기 화면 ─────────────────────────────────────────────── */
+.waiting-card {
+  background: var(--card-bg);
+  border: 2px solid var(--wood-dark);
+  border-radius: 14px;
+  padding: 28px 24px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.waiting-logo {
+  font-size: 2.6rem;
+  margin-bottom: 8px;
+  letter-spacing: 4px;
+}
+
+.waiting-title {
+  font-family: 'Jua', sans-serif;
+  font-size: 1.3rem;
+  margin-bottom: 18px;
+  color: var(--wood-dark);
+}
+
+.invite-panel {
+  background: #fff;
+  border: 1px dashed var(--wood-dark);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.invite-label { font-size: 0.85rem; margin-bottom: 8px; color: var(--wood-dark); }
+.invite-url-row { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.invite-url {
+  background: #F3E6CC;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+.copy-btn {
+  background: var(--wood-dark);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: 'Gowun Dodum', sans-serif;
+}
+.copy-btn:hover { filter: brightness(1.1); }
+.invite-hint { font-size: 0.78rem; color: #8a6a3a; margin-top: 8px; }
+
+/* AI 진입 */
+.ai-panel { margin: 18px 0; }
+.ai-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #a08050;
+  font-size: 0.85rem;
+  margin: 12px 0;
+}
+.ai-divider::before, .ai-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #d8c19a;
+}
+.ai-divider span { padding: 0 12px; }
+
+.btn-start-ai {
+  background: var(--accent-ai);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 1.05rem;
+  font-family: 'Jua', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #1d6b40;
+}
+.btn-start-ai:hover { filter: brightness(1.08); }
+.btn-start-ai:disabled { opacity: 0.6; cursor: default; }
+.ai-hint { font-size: 0.8rem; color: #7a5a30; margin-top: 8px; }
+
+/* 룰 요약 */
+.rules-summary {
+  text-align: left;
+  margin-top: 18px;
+  border-top: 1px solid #e0cda6;
+  padding-top: 14px;
+}
+.rules-summary h3 {
+  font-family: 'Jua', sans-serif;
+  font-size: 1rem;
+  margin: 0 0 8px;
+  color: var(--wood-dark);
+}
+.rules-summary ul { margin: 0; padding-left: 18px; font-size: 0.88rem; line-height: 1.6; }
+
+/* ── 게임 화면 ─────────────────────────────────────────────── */
+.board-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.board-canvas {
+  /* Canvas 내부는 728px 고정. 모바일 대응을 위해 CSS로 축소만 허용. */
+  width: 728px;
+  max-width: 90vmin;
+  max-height: 90vmin;
+  height: auto;
+  border: 3px solid var(--wood-dark);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  touch-action: manipulation;
+}
+
+.action-row {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-resign {
+  background: #fff;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 11px 22px;
+  font-size: 0.95rem;
+  font-family: 'Gowun Dodum', sans-serif;
+  cursor: pointer;
+}
+.btn-resign:hover { background: var(--accent); color: #fff; }
+.btn-resign:disabled { opacity: 0.4; cursor: default; }
+
+/* ── 종료 오버레이 ─────────────────────────────────────────── */
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+.result-card {
+  background: var(--card-bg);
+  border: 3px solid var(--wood-dark);
+  border-radius: 16px;
+  padding: 32px 28px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+.result-outcome {
+  font-family: 'Jua', sans-serif;
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: var(--wood-dark);
+}
+.result-outcome.win { color: var(--accent-ai); }
+.result-outcome.lose { color: var(--accent); }
+.result-detail { font-size: 1rem; margin-bottom: 22px; color: #5a4326; }
+.result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+.primary-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 1rem;
+  font-family: 'Jua', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #8e0a20;
+}
+.primary-btn:hover { filter: brightness(1.08); }
+.primary-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* 상대가 먼저 "한 판 더"를 눌렀을 때 동의를 유도하는 강조(맥동 애니메이션). */
+.rematch-btn.rematch-requested {
+  animation: rematch-pulse 1s ease-in-out infinite;
+  box-shadow: 0 3px 0 #8e0a20, 0 0 0 0 rgba(200, 16, 45, 0.6);
+}
+@keyframes rematch-pulse {
+  0%   { box-shadow: 0 3px 0 #8e0a20, 0 0 0 0 rgba(200, 16, 45, 0.55); }
+  70%  { box-shadow: 0 3px 0 #8e0a20, 0 0 0 12px rgba(200, 16, 45, 0); }
+  100% { box-shadow: 0 3px 0 #8e0a20, 0 0 0 0 rgba(200, 16, 45, 0); }
+}
+
+.return-lobby-btn {
+  background: #fff;
+  color: var(--wood-dark);
+  border: 2px solid var(--wood-dark);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  font-family: 'Gowun Dodum', sans-serif;
+  cursor: pointer;
+}
+.return-lobby-btn:hover { background: var(--wood-light); color: #fff; }
+.result-hint { font-size: 0.8rem; color: #8a6a3a; margin-top: 14px; }
+
+/* ── 토스트 ────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(44, 26, 14, 0.95);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 60;
+  max-width: 80vw;
+  text-align: center;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.error { background: rgba(200, 16, 46, 0.95); }

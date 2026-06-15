@@ -97,5 +97,16 @@
     "color": "#3FA7D6",
     "emoji": "🀄",
     "botAvailable": true
+  },
+  {
+    "id": "omok",
+    "name": "오목",
+    "description": "19×19 바둑판에 5목을 먼저 완성하라! 1:1 오목 대전 (금수 없음)",
+    "port": 3012,
+    "httpPath": "/omok/",
+    "wsPath": "/omok/ws",
+    "color": "#6B4226",
+    "emoji": "⚫",
+    "botAvailable": true
   }
 ]
