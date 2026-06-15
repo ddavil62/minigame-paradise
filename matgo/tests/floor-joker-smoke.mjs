@@ -66,6 +66,8 @@ async function runOnce(attempt) {
   const issues = [];
   if (total !== 50) issues.push(`total=${total} (≠50)`);
   if (floorHasJoker) issues.push('floor에 조커 잔존');
+  // 리필 후 floor는 항상 8 (조커 제거 + deck 보충 — 2026-06-15 룰)
+  if (floor !== 8) issues.push(`floor=${floor} (≠8, 리필 미작동)`);
   if (capP2 > 0) issues.push(`p2 captured ${capP2}장 (선공 p1이어야 함)`);
   if (capP1 > 0 && !s1.captured.p1.every((c) => c.type === 'joker')) issues.push('p1 captured에 조커 외 카드');
 

@@ -189,16 +189,44 @@ export function startRound(game, firstTurn) {
 export function applyFloorJokerToFirst(game, firstTurn) {
   const floorJokers = game.floor.filter((c) => c.type === 'joker');
   if (floorJokers.length === 0) return 0;
+
+  // 바닥에서 조커 제거 → 선공자 captured로 이동
   game.floor = game.floor.filter((c) => c.type !== 'joker');
   for (const j of floorJokers) game.captured[firstTurn].push(j);
+  let totalMoved = floorJokers.length;
+
+  // ── 바닥 리필 (2026-06-15 룰 추가) ──
+  // 조커 N장을 제거한 만큼 deck에서 보충 → floor 원래 길이(8) 복원.
+  // 보충 카드가 조커이면 선공자 captured로 이동 + 재보충(비조커가 floor에 안착할 때까지).
+  // 조커는 덱 전체에서 2장뿐이라 최대 2회 연쇄 — 무한루프 불가.
+  // deck 소진 방어: deck이 비면 더 못 보충하므로 루프 종료(floor가 8 미만일 수 있음).
+  let needed = floorJokers.length;
+  while (needed > 0 && game.deck.length > 0) {
+    // drawAndResolve와 동일하게 deck.pop() 방향으로 꺼낸다(분배 방향 일관성).
+    const drawn = game.deck.pop();
+    if (drawn.type === 'joker') {
+      // 리필 카드가 조커 → 선공자 captured + 한 장 더 보충(needed 줄지 않음)
+      game.captured[firstTurn].push(drawn);
+      totalMoved++;
+    } else {
+      game.floor.push(drawn);
+      needed--;
+    }
+  }
+  // 불변식: floor.length === 8 (deck 소진 시 그보다 작을 수 있으나 실제 게임에서 deck≥22로 충분)
+  //         카드 총합 = hand.p1 + hand.p2 + floor + deck + captured.p1 + captured.p2 === 50 유지
+  //         (이동/보충은 위치만 바꿔 총합 불변)
+
   // lastAction 덮어씌움 — round_start 자리에 표시. 사통 검사로 phase가 바뀌어도 lastAction은 유지.
   game.lastAction = {
     kind: 'floor_joker_to_first',
     player: firstTurn,
-    count: floorJokers.length,
-    jokers: floorJokers,
+    // count는 선공자가 가져간 조커 총수(최초 floor 조커 + 연쇄 조커 합산)
+    // — 클라이언트 토스트 "선공 바닥 조커 N장 획득!" 기준
+    count: totalMoved,
+    jokers: game.captured[firstTurn].filter((c) => c.type === 'joker'),
   };
-  return floorJokers.length;
+  return totalMoved;
 }
 
 /**

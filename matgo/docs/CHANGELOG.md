@@ -1,5 +1,40 @@
 # Changelog
 
+## [2026-06-15] — 선공 바닥 조커 연출 수정 + 바닥 리필 룰
+
+선공 바닥 조커 처리의 연출 버그(사안 A)를 수정하고, 조커 제거 후 바닥을 항상 8장으로 채우는 리필 룰(사안 B)을 신설. `score.js` 무수정.
+
+### 수정 (사안 A — 연출)
+
+#### 선공 바닥 조커 fly 출처 (`public/client.js`)
+- 증상: 선공 바닥 조커가 더미에서 captured로 fly되며 손패 근처로 보이던 연출 버그(라운드 오프닝인데 일반 획득처럼 날아옴).
+- 수정: `client.js:599` `isRoundStart` 판정 조건에 `floor_joker_to_first`를 추가 → 조커·리필 카드 모두 **fly 없이 appear**(round_start 오프닝과 동일 처리).
+
+### 변경 (사안 B — 바닥 리필 룰)
+
+#### `applyFloorJokerToFirst` (`game.js`)
+- 바닥 조커 N장을 선공자(`firstTurn`) `captured`로 이동한 뒤, `deck.pop()`(drawAndResolve와 동일 방향)으로 한 장씩 꺼내 floor에 push해 **floor 길이를 8로 리필**한다 (이전: floor가 6~8로 줄어듦).
+- **연쇄 정책**: 리필 카드가 또 조커면 그것도 선공자 captured로 이동 + 재보충(비조커가 안착할 때까지). 조커 2장뿐이라 **최대 2회** — 무한루프 불가.
+- **deck 소진 방어**: `deck.length > 0` 가드로 deck이 비면 루프 종료(작은 픽스처에서 floor < 8 허용).
+- `lastAction.count`/반환값은 선공자가 가져간 조커 **총수(연쇄 포함)**로 일관. 토스트 "선공 바닥 조커 N장 획득!".
+- 불변식: `floor.length === 8`(deck 충분 시), `deck.length === 22 - N`(보충 횟수 N, 최대 2), 카드 총합 50 불변. **`deck.length === 22`는 더 이상 불변이 아니며 `22 - N` 가변**(직전 22 고정 → 가변).
+
+### 추가/변경 (테스트)
+- **joker-adhoc**: JOKER-010~013 갱신(리필 반영) + 신규 **JOKER-018~021**(리필/연쇄/deck 소진 방어). joker-adhoc **23/0**.
+- **floor-joker-smoke**: `floor === 8` 단언으로 갱신. smoke **5/5**(floor 8 / total 50).
+- **e2e**: **E-03**(`deck 20~22` = `22 - N`) / **E-04**(`floor === 8` 고정) / **E-08**(`/test/inject` 상태 고정으로 결정화 → flaky 해소).
+- **단위**: G-01 등 갱신, game.unit + score.unit **98/0**.
+
+### 검증
+- joker-adhoc **23/0**, 단위 **98/0**, floor-joker-smoke **5/5**(floor 8 / total 50), e2e **3회 연속 30/0/0**.
+- 불변식 확인: `floor === 8`, `deck === 22 - N`, 카드 총합 50.
+
+### 비고
+- `score.js` 무수정(조커 피 +2 계산 그대로).
+- 함정 11(`matgo/CLAUDE.md`) 현행화: floor는 리필로 항상 8, deck는 `22 - N` 가변, 불변식은 카드 총합 50.
+
+---
+
 ## [2026-06-13] — 레거시 shake_decision/pendingShake 데드코드 정리
 
 2026-05-31 흔들기 모달 이전 이후로 남아 있던 레거시 잔재(죽은 `shake_decision` 분기 + `pendingShake` 필드)를 제거. **동작 변화 없음(프로덕션 no-op)** — 제거 대상은 모두 도달 불가 분기/미사용 필드였다. 커밋 `513a603`.
@@ -61,7 +96,7 @@ e2e-scenarios 스위트의 비결정적 fail↔pass 스왑(flakiness)을 근본 
 
 ### 변경 (stale 단언 정정)
 - **E-03**: 덱 카운트 단언 20 → **22** (조커 2장 포함 50장 덱 기준).
-- **E-04**: 바닥 카운트 단언 8 → **6~8 범위** (바닥 조커 선공 자동 획득으로 floor 가변).
+- **E-04**: 바닥 카운트 단언 8 → **6~8 범위** (바닥 조커 선공 자동 획득으로 floor 가변). *(2026-06-15 바닥 리필 룰로 `floor === 8` 고정으로 재정정됨 — 아래 2026-06-15 섹션 참조.)*
 
 ### 변경 (skip 처리)
 - **E-15 / E-16**: 제거된 `shake_decision` phase의 `/test/inject`에 의존 → **`test.skip`** 처리. 현행 흔들기 모달 기준 E2E 재작성은 별도 발주.

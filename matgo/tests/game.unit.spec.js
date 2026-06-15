@@ -80,21 +80,20 @@ function makeGame({ p1Hand = [], p2Hand = [], floor = [], deck = [], turn = 'p1'
 // §1 기본 초기화
 // ============================================================
 
-test('G-01: createGame — 손패 10+10, 바닥 ≤ 8 (조커 자동 획득), 덱 22 (2026-06-03 룰 정정)', () => {
+test('G-01: createGame — 손패 10+10, 바닥 항상 8 (조커 자동 획득 + 리필), 덱 22-N (2026-06-15 리필 룰)', () => {
   const g = createGame();
   expect(g.hands.p1.length).toBe(10);
   expect(g.hands.p2.length).toBe(10);
-  // 2026-06-03 룰 정정: 분배 시 바닥(8장 슬롯)에 조커 N장이 있으면 선공자(기본 p1) captured로 자동 이동.
-  // 따라서 floor = 8 - N (N=0~2), captured 총합 = N. 카드 총합 50장 일관성.
-  expect(g.floor.length).toBeGreaterThanOrEqual(6);
-  expect(g.floor.length).toBeLessThanOrEqual(8);
-  // 50 - 10 - 10 - 8 = 22 (화투 48 + 조커 2). 덱은 분배 후 잔여 — 불변.
-  expect(g.deck.length).toBe(22);
+  // 2026-06-15 바닥 리필 룰: 바닥 조커 N장을 선공자 captured로 옮긴 뒤 deck에서 N장 보충 → floor 항상 8.
+  // 연쇄 조커 포함 N = captured 조커 수. deck = 22 - N (보충 횟수만큼 감소, N=0~2).
+  expect(g.floor.length).toBe(8);
   const capturedTotal = g.captured.p1.length + g.captured.p2.length;
-  expect(capturedTotal).toBe(8 - g.floor.length);
+  // 덱은 분배 후 22장에서 리필 N장만큼 감소.
+  expect(g.deck.length).toBe(22 - capturedTotal);
   const total = g.hands.p1.length + g.hands.p2.length + g.floor.length + g.deck.length + capturedTotal;
   expect(total).toBe(50);
-  // 이동한 카드는 무조건 조커 + 선공자(p1)에게만
+  // 이동한 카드는 무조건 조커 + 선공자(p1)에게만, floor에 조커 잔존 없음
+  expect(g.floor.some((c) => c.type === 'joker')).toBe(false);
   if (capturedTotal > 0) {
     expect(g.captured.p2.length).toBe(0);
     expect(g.captured.p1.every((c) => c.type === 'joker')).toBe(true);

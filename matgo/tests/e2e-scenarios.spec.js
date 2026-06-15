@@ -269,13 +269,18 @@ test('E-02: 두 플레이어 입장 → 게임 시작, 손패 10+10', async () =
   }
 });
 
-test('E-03: 게임 시작 시 초기 덱 수 = 20', async () => {
+test('E-03: 게임 시작 시 초기 덱 수 = 22 - 리필N', async () => {
   const { browser, pageP1, pageP2 } = await setupTwoPlayers();
   try {
     await joinAndStartGame(pageP1, pageP2);
     const s = await readState(pageP1);
     // 조커 2장 도입(2026-06-03): 덱 50장, 손패 10+10=20, 바닥 8 → 분배 후 잔여 22.
-    expect(s.deckCount).toBe(22);
+    // 2026-06-15 바닥 리필 룰: 바닥 조커 N장은 선공자 captured로 이동 후 deck에서 N장 보충 →
+    //   floor는 항상 8로 복원되고 deck은 22-N (N=리필 횟수, 0~2). 따라서 deck은 더 이상 항상 22가 아님.
+    //   (조커 captured는 visual 그룹(광/끗/띠/피) 외라 DOM에 .card로 안 나타나므로 deck 범위로 검증.)
+    expect(s.deckCount).toBeGreaterThanOrEqual(20); // N≤2
+    expect(s.deckCount).toBeLessThanOrEqual(22);
+    expect(s.floorIds.length).toBe(8); // 리필로 항상 8
   } finally {
     await browser.close();
   }
@@ -286,10 +291,8 @@ test('E-04: 게임 시작 시 바닥 8장', async () => {
   try {
     await joinAndStartGame(pageP1, pageP2);
     const s = await readState(pageP1);
-    // 조커 바닥 자동획득(applyFloorJokerToFirst)으로 바닥 조커 N장은 선공자 captured로 이동.
-    // 조커 0장이면 8, 1장이면 7, 2장이면 6 → 6~8 가변.
-    expect(s.floorIds.length).toBeGreaterThanOrEqual(6);
-    expect(s.floorIds.length).toBeLessThanOrEqual(8);
+    // 바닥 리필 룰(2026-06-15): 조커 N장 제거 후 deck에서 N장 보충 → floor 항상 8.
+    expect(s.floorIds.length).toBe(8);
   } finally {
     await browser.close();
   }
@@ -374,29 +377,34 @@ test('E-08: P1 카드 낸 후 → P2 턴으로 전환', async () => {
   const { browser, pageP1, pageP2 } = await setupTwoPlayers();
   try {
     await joinAndStartGame(pageP1, pageP2);
-    const s1 = await readState(pageP1);
-    const activePage = s1.firstClickableId ? pageP1 : pageP2;
-    const otherPage = activePage === pageP1 ? pageP2 : pageP1;
-    // 흔들기/폭탄 모달을 회피하는 안전 카드 — 모달이 뜨면 PLAY_CARD 미송신으로 턴 전환 안 됨.
-    const cardId = await pickSafePlayCard(activePage);
-    if (!cardId) { return; }
+    // 결정적 상태 주입: P1이 바닥에 매칭 없는 카드를 내고, 이어지는 덱 뒤집기도 매칭이
+    // 없어 바닥 선택/뻑/끗 분기 없이 깔끔하게 P2로 턴이 넘어가는 시나리오.
+    // (랜덤 분배 + pickSafePlayCard로는 덱 뒤집기發 awaiting_floor_choice가 드물게 발생해
+    //  턴 미전환으로 flaky했다 — inject로 결정화.)
+    await inject({
+      turn: 'p1',
+      phase: 'awaiting_play',
+      p1Hand: cards('m05_pi_a', 'm09_pi_a', 'm10_pi_a'), // 5/9/10월 (바닥과 무매칭)
+      p2Hand: cards('m06_kkeut', 'm07_kkeut'),
+      floor:  cards('m01_pi_a', 'm02_pi_a', 'm03_pi_a'), // 1/2/3월 — 5월 매칭 없음
+      deck:   cards('m11_gwang', 'm12_gwang', 'm08_pi_a'), // pop=m08_pi_a(8월) → 바닥 무매칭 → 놓기
+      captured: { p1: [], p2: [] },
+    });
+    await waitForHandCount(pageP1, 3);
+    await waitForFlyIdle(pageP1);
+    await waitForFlyIdle(pageP2);
 
-    await waitForFlyIdle(activePage); // 클릭 직전 오프닝 fly 잔류 방어
-    await activePage.click(`[data-card-id="${cardId}"]`);
+    // P1이 5월 피를 냄 → 바닥(1/2/3월) 무매칭 → 놓기. 이어 덱 뒤집기 m08(8월) 무매칭 → 놓기.
+    // → 턴 종료 → P2 턴.
+    await pageP1.click('[data-card-id="m05_pi_a"]');
 
-    // 상대방에게 클릭 가능 카드가 생겨야 한다 (턴 교대)
-    await otherPage.waitForFunction(
-      () => {
-        const phase = document.getElementById('banner-status')?.textContent;
-        return phase?.includes('내 턴') || phase?.includes('고/스톱') || phase?.includes('바닥 선택')
-            || phase?.includes('흔들기') || phase?.includes('9월 술잔');
-      },
+    // P2로 턴 전환 — P2 배너가 '내 턴'이 되어야 한다.
+    await pageP2.waitForFunction(
+      () => (document.getElementById('banner-status')?.textContent || '').includes('내 턴'),
       { timeout: 12000 },
     );
-    const sOther = await readState(otherPage);
-    expect(
-      sOther.firstClickableId !== null || sOther.goStopVisible || sOther.shakePanelVisible,
-    ).toBe(true);
+    const sOther = await readState(pageP2);
+    expect(sOther.firstClickableId !== null).toBe(true);
   } finally {
     await browser.close();
   }

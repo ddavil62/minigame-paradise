@@ -354,17 +354,18 @@ it('JOKER-011: 바닥 조커 1장 → 선공(p1) captured 1장 추가, 손/더�
   // p1 captured에 조커 1장
   eq(g.captured.p1.length, 1, 'p1 captured 1장');
   truthy(g.captured.p1.some((c) => c.id === 'm00_joker_a'), 'joker_a captured.p1');
-  // floor에서 조커 제거 (나머지 2장 유지)
-  eq(g.floor.length, 2, '바닥 2장');
+  // floor에서 조커 제거 후 리필 1장 → 3장 (2026-06-15 리필 룰)
+  eq(g.floor.length, 3, '바닥 3장 (조커 제거 + 리필 1장)');
   not(g.floor.some((c) => c.type === 'joker'), '바닥 조커 제거됨');
   truthy(g.floor.some((c) => c.id === 'm02_kkeut_godori'), '바닥 m02 유지');
   truthy(g.floor.some((c) => c.id === 'm03_pi_a'), '바닥 m03 유지');
+  truthy(g.floor.some((c) => c.id === 'm07_kkeut'), '리필 카드 m07 floor에 추가');
   // p2 영향 없음 — 추가 보너스 없음 (피 뺏기 X)
   eq(g.captured.p2.length, 0, 'p2 captured 영향 없음');
-  // 손/덱 영향 없음
+  // 손 영향 없음
   eq(g.hands.p1.length, 2, 'p1 손 그대로');
   eq(g.hands.p2.length, 1, 'p2 손 그대로');
-  eq(g.deck.length, 1, '더미 그대로 (뒤집기 X)');
+  eq(g.deck.length, 0, '더미 1장 → 리필로 소비');
   // 턴 영향 없음 — p1 여전히 선공
   eq(g.turn, 'p1', '턴 그대로 p1');
   // lastAction 갱신
@@ -379,7 +380,8 @@ it('JOKER-012: 바닥 조커 2장 → 선공 captured 2장, score 계산 시 piC
     p1Hand:  ['m01_gwang'],
     p2Hand:  ['m06_kkeut'],
     floor:   ['m00_joker_a', 'm00_joker_b', 'm02_kkeut_godori'],
-    deck:    ['m07_kkeut'],
+    // 조커 2장 제거 후 2장 리필 필요 → deck 2장 (2026-06-15 리필 룰)
+    deck:    ['m07_kkeut', 'm08_kkeut_godori'],
     turn:    'p2', // 선공 p2 케이스
   });
 
@@ -389,8 +391,9 @@ it('JOKER-012: 바닥 조커 2장 → 선공 captured 2장, score 계산 시 piC
   eq(g.captured.p2.length, 2, 'p2 captured 2장');
   truthy(g.captured.p2.some((c) => c.id === 'm00_joker_a'), 'joker_a captured.p2');
   truthy(g.captured.p2.some((c) => c.id === 'm00_joker_b'), 'joker_b captured.p2');
-  // floor 조커 모두 제거 (1장 남음)
-  eq(g.floor.length, 1, '바닥 1장');
+  // floor 조커 2장 제거 + 리필 2장 → 3장 (기존 비조커 1장 + 리필 2장)
+  eq(g.floor.length, 3, '바닥 3장 (조커 2장 제거 + 리필 2장)');
+  eq(g.deck.length, 0, '더미 2장 → 리필로 소비');
   not(g.floor.some((c) => c.type === 'joker'), '바닥 조커 제거됨');
   // p1 영향 없음
   eq(g.captured.p1.length, 0, 'p1 captured 영향 없음');
@@ -425,8 +428,11 @@ it('JOKER-013: 자동 획득은 보너스 없음 — 더미 뒤집기/턴 변경
   // 상대 피 뺏기 발생 안 함
   eq(g.captured.p2.length, p2PiBefore, '상대 피 그대로');
   truthy(g.captured.p2.every((c) => c.type === 'pi'), 'p2 피 카드 그대로');
-  // 더미 뒤집기 발생 안 함
-  eq(g.deck.length, deckBefore, '더미 그대로 (뒤집기 X)');
+  // 더미 뒤집기(턴 진행) 발생 안 함 — 단, 리필로 deck 2장 소비 (2026-06-15 리필 룰)
+  eq(g.deck.length, 0, '더미 2장 → 리필로 소비');
+  // floor 조커 2장 제거(초기 0) + 리필 2장 → 2장
+  eq(g.floor.length, 2, '바닥 2장 (조커 제거 + 리필 2장)');
+  void deckBefore;
   // 턴 변경 없음
   eq(g.turn, turnBefore, '턴 그대로');
   // goCount/shaking 등 다른 상태 영향 없음
@@ -595,6 +601,109 @@ it('REG-DIST: 화투 48종 그대로 + 조커 2장만 추가', () => {
   for (const j of jokers) eq(j.month, 0, `${j.id} month=0`);
 });
 
+// ── 비조커 ID 풀 (리필 픽스처용) — 48장 순환 사용 ────────────
+// applyFloorJokerToFirst 직접 호출 단위 테스트는 startRound를 거치지 않으므로
+// 임의 비조커 카드로 zone을 채운다. 길이 기반 단언이라 ID 중복(동일 객체 참조) 허용.
+const NONJOKER_POOL = ALL.filter((c) => c.type !== 'joker').map((c) => c.id);
+/** n개의 비조커 ID를 풀에서 순환 추출 (offset부터). */
+function fillNonJoker(n, offset = 0) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(NONJOKER_POOL[(offset + i) % NONJOKER_POOL.length]);
+  return out;
+}
+/** game 6개 zone 카드 총합 (총합 50 불변식 검증용). */
+function totalCards(g) {
+  return g.hands.p1.length + g.hands.p2.length + g.floor.length
+       + g.deck.length + g.captured.p1.length + g.captured.p2.length;
+}
+
+// ── JOKER-018: 바닥 조커 1장 → 리필 1장 → floor=8, deck=21 (2026-06-15) ──
+it('JOKER-018: 바닥 조커 1장 → deck에서 1장 보충 → floor=8, deck=21, total=50', () => {
+  const g = makeGame({
+    p1Hand: fillNonJoker(10, 0),
+    p2Hand: fillNonJoker(10, 10),
+    floor:  ['m00_joker_a', ...fillNonJoker(7, 20)], // 조커1 + 비조커7 = 8
+    deck:   fillNonJoker(22, 27),                    // 분배 후 잔여 22장
+    turn:   'p1',
+  });
+  const totalBefore = totalCards(g); // 50
+  const moved = applyFloorJokerToFirst(g, 'p1');
+  eq(moved, 1, '이동 1장');
+  eq(g.floor.length, 8, 'floor 복원 8');
+  eq(g.deck.length, 21, 'deck 22→21 (1장 리필 소비)');
+  eq(g.captured.p1.length, 1, 'p1 captured 1장(조커)');
+  truthy(g.captured.p1.every((c) => c.type === 'joker'), 'captured 조커만');
+  not(g.floor.some((c) => c.type === 'joker'), 'floor 조커 없음');
+  eq(g.lastAction.count, 1, 'lastAction.count=1');
+  eq(totalCards(g), 50, '카드 총합 50 불변');
+  eq(totalCards(g), totalBefore, '이동/보충은 위치만 — 총합 불변');
+});
+
+// ── JOKER-019: 바닥 조커 2장 → 리필 2장 → floor=8, deck=20 (2026-06-15) ──
+it('JOKER-019: 바닥 조커 2장 → deck에서 2장 보충 → floor=8, deck=20, total=50', () => {
+  const g = makeGame({
+    p1Hand: fillNonJoker(10, 0),
+    p2Hand: fillNonJoker(10, 10),
+    floor:  ['m00_joker_a', 'm00_joker_b', ...fillNonJoker(6, 20)], // 조커2 + 비조커6 = 8
+    deck:   fillNonJoker(22, 26),                                   // 분배 후 잔여 22장
+    turn:   'p1',
+  });
+  const moved = applyFloorJokerToFirst(g, 'p1');
+  eq(moved, 2, '이동 2장');
+  eq(g.floor.length, 8, 'floor 복원 8');
+  eq(g.deck.length, 20, 'deck 22→20 (2장 리필 소비)');
+  eq(g.captured.p1.length, 2, 'p1 captured 2장(조커)');
+  truthy(g.captured.p1.every((c) => c.type === 'joker'), 'captured 조커만');
+  not(g.floor.some((c) => c.type === 'joker'), 'floor 조커 없음');
+  eq(g.lastAction.count, 2, 'lastAction.count=2');
+  eq(totalCards(g), 50, '카드 총합 50 불변');
+});
+
+// ── JOKER-020: 연쇄 조커 — 첫 리필 카드가 조커 → captured + 재보충 (2026-06-15) ──
+it('JOKER-020: 연쇄 조커 — 리필 카드가 조커면 captured 이동 + 재보충, floor 복원', () => {
+  // deck.pop()으로 가장 먼저 나오는 자리(배열 끝)에 joker_b 배치 → 연쇄 유발.
+  const g = makeGame({
+    p1Hand: fillNonJoker(10, 0),
+    p2Hand: fillNonJoker(10, 10),
+    floor:  ['m00_joker_a', ...fillNonJoker(7, 20)],          // 조커1 + 비조커7 = 8
+    // deck 22장: [비조커21 ... joker_b] — pop()이 joker_b를 먼저 꺼내 연쇄, 이후 비조커로 floor 채움
+    deck:   [...fillNonJoker(21, 27), 'm00_joker_b'],
+    turn:   'p1',
+  });
+  const moved = applyFloorJokerToFirst(g, 'p1');
+  // floor 조커 1장 + 연쇄 조커 1장 = 총 2장 이동
+  eq(moved, 2, '연쇄 포함 이동 2장');
+  eq(g.lastAction.count, 2, 'lastAction.count=2 (연쇄 포함)');
+  eq(g.captured.p1.length, 2, 'captured에 joker_a + joker_b 모두');
+  truthy(g.captured.p1.some((c) => c.id === 'm00_joker_a'), 'joker_a captured');
+  truthy(g.captured.p1.some((c) => c.id === 'm00_joker_b'), 'joker_b captured(연쇄)');
+  eq(g.floor.length, 8, 'floor 복원 8(비조커로 채움)');
+  not(g.floor.some((c) => c.type === 'joker'), 'floor 조커 없음');
+  // deck: 22장 시작 → joker_b 1장(연쇄) + 비조커 1장(floor 채움) = 2장 소비 → 20
+  eq(g.deck.length, 20, 'deck 22→20 (연쇄 조커 + 비조커 1장)');
+  eq(totalCards(g), 50, '카드 총합 50 불변(연쇄 포함)');
+});
+
+// ── JOKER-021: deck 소진 방어 — deck 부족 시 floor가 8 미만이어도 멈춤 (2026-06-15) ──
+it('JOKER-021: deck 소진 방어 — deck 1장뿐이면 1장만 리필, floor<8 허용, 무한루프 없음', () => {
+  // 작은 픽스처: deck 소진 가드 검증 목적. 총합은 이 픽스처 자체 기준으로 불변(위치만 이동).
+  const g = makeGame({
+    p1Hand: fillNonJoker(10, 0),
+    p2Hand: fillNonJoker(10, 10),
+    floor:  ['m00_joker_a', 'm00_joker_b', ...fillNonJoker(6, 20)], // 조커2 + 비조커6 = 8
+    deck:   fillNonJoker(1, 26),                                    // 1장뿐 — 2장 제거했지만 1장만 보충 가능
+    turn:   'p1',
+  });
+  const totalBefore = totalCards(g); // 8 + 1 + 20 = 29
+  const moved = applyFloorJokerToFirst(g, 'p1');
+  eq(moved, 2, '조커 2장 이동');
+  eq(g.deck.length, 0, 'deck 소진(가드로 루프 종료)');
+  eq(g.floor.length, 7, 'floor 7 (조커 2장 제거 + 리필 1장만 가능)');
+  eq(g.captured.p1.length, 2, 'captured 조커 2장');
+  eq(g.lastAction.count, 2, 'lastAction.count=2');
+  eq(totalCards(g), totalBefore, '총합 불변 (위치만 이동 — deck 소진해도 카드 보존)');
+});
+
 // ── 회귀: 조커가 폭탄/사통 대상에서 제외 ──────────────────
 it('REG-BOMB-SANGTONG: 조커는 폭탄/사통 트리거 안 됨', () => {
   // bombableMonths 검사 — month=0이라도 floor에 1장 + 손에 3장이 가능할 일 거의 없지만
@@ -607,7 +716,7 @@ it('REG-BOMB-SANGTONG: 조커는 폭탄/사통 트리거 안 됨', () => {
 
 // ── 결과 출력 ─────────────────────────────────────────────────
 console.log('');
-console.log(`조커 룰 ad-hoc 단위 검증 (${passed + failed}건, JOKER-001~017 + REG-DIST + REG-BOMB-SANGTONG)`);
+console.log(`조커 룰 ad-hoc 단위 검증 (${passed + failed}건, JOKER-001~021 + REG-DIST + REG-BOMB-SANGTONG)`);
 console.log('─'.repeat(60));
 for (const r of results) console.log(r);
 console.log('─'.repeat(60));

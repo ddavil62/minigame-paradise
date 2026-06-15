@@ -596,7 +596,9 @@
     // 라운드/게임 시작 STATE — 손 8장 분배 + floor 8장 초기 등장. 이 카드들에 대해
     // 덱 fly를 발동하면 "더미에서 나오는" 인상이 되어 어색하다 (사용자 보고).
     // lastAction.kind === 'round_start'이면 fly 보류.
-    const isRoundStart = la && la.kind === 'round_start';
+    // 바닥 조커 자동획득(floor_joker_to_first) STATE도 라운드 시작이므로 더미 fly 억제
+    // (조커는 captured로, 리필 카드는 floor에 fly 없이 appear — round_start 오프닝과 동일).
+    const isRoundStart = la && (la.kind === 'round_start' || la.kind === 'floor_joker_to_first');
 
     // 강탈 피 식별 — stoleFromOpp > 0인 STATE에서 상대 captured→내 captured로 이동한 카드.
     // stealPi(game.js)가 victim.captured의 실제 피 카드를 taker.captured로 splice/push하므로
