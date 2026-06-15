@@ -962,7 +962,11 @@ wss.on('connection', (ws, req) => {
         // 결과 큐에서 차감
         game.pendingResults.splice(queueIdx, 1);
 
-        if (moveRes.captured) {
+        // §6-1 / §13-12: 윷·모로 잡으면 잡기 보너스와 윷/모 자체 보너스(추가 던지기)는
+        // 중복되지 않는다 (한 행위 최대 1회). 윷/모를 던진 것 자체가 이미 추가 던지기 권리를
+        // 부여하므로, 그 윷/모로 잡아도 capturedBonus를 부여하지 않는다(중복 차단).
+        // 도/개/걸로 잡기는 자체 보너스가 없으므로 capturedBonus를 +1 유지한다.
+        if (moveRes.captured && useResult !== 'yut' && useResult !== 'mo') {
           // 잡기 보너스: 던질 권한 1회 부여 → pendingResults에 별도 표식 없이, 큐가 비어도
           // 추가 THROW 허용. 단순화를 위해 pendingResults가 비어 있을 때 currentPlayer가
           // 동일 + 마지막 결과 없음이면 보너스로 던질 수 있게 한다.
@@ -1055,7 +1059,12 @@ wss.on('connection', (ws, req) => {
         const queueIdx = game.pendingResults.indexOf(useResult);
         if (queueIdx >= 0) game.pendingResults.splice(queueIdx, 1);
 
-        if (moveRes.captured) game.capturedBonus = true;
+        // §6-1 / §13-12: 윷·모로 잡으면 잡기 보너스와 윷/모 자체 보너스는 중복 불가.
+        // useResult는 분기 대기 시점에 game.awaitingBranchResult로 확정된 값(L1011).
+        // 윷/모로 잡아도 capturedBonus 미부여(중복 차단), 도/개/걸로 잡기는 +1 유지.
+        if (moveRes.captured && useResult !== 'yut' && useResult !== 'mo') {
+          game.capturedBonus = true;
+        }
 
         if (moveRes.finished) {
           game.winner = player.id;

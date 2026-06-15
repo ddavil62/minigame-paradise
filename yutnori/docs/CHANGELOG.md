@@ -1,5 +1,37 @@
 # Yutnori — 변경 이력
 
+## [2026-06-15] — §13-12 윷·모 잡기 중복 보너스 차단
+
+### 변경
+- **`server.js` MOVE_PIECE(~972)·CHOOSE_PATH(~1066) capturedBonus 부여 가드 추가** (§13-12 [LOW] 해소): 잡기 보너스를 부여하기 직전 사용 결과(`useResult`)가 윷/모이면 `game.capturedBonus = true`를 건너뛴다. 가드식 `if (moveRes.captured && useResult !== 'yut' && useResult !== 'mo')`.
+  - **MOVE_PIECE**: `useResult`는 큐 검증값(`msg.useResult` → `pendingResults.indexOf`로 존재 검증, L923/929-933).
+  - **CHOOSE_PATH**: `useResult = game.awaitingBranchResult` (분기 대기 진입 시 MOVE_PIECE에서 세팅, L1011).
+  - 윷·모로 잡아도 잡기 보너스 미부여(윷/모 자체 보너스와 중복 차단, 한 행위 최대 1회). **도/개/걸 잡기는 capturedBonus +1 유지**.
+  - 한국어 주석(§6-1/§13-12) 추가. §13-11(FIX-4) THROW_YUT 소진 로직(`enteredViaCapturedBonus`)은 미수정 — 무충돌 확인.
+- **권위 근거**: Gemini Deep Research 권위 룰 가이드(`docs/2026-06-15-yutnori-rule-research.md` E3 항목) + 한국어 위키. 윷·모 자체 보너스와 잡기 보너스는 한 번만 발생하는 것이 정통.
+
+### 추가
+- **`tests/rulebook-c19-capture-bonus-no-stack.spec.js` 신규** (YR-C19-001~006, 6건): (a) 윷 잡기 시 capturedBonus 미부여 (b) 모 잡기 시 미부여 (c) 도/개/걸 잡기 시 부여 유지 (d) 결과 사용 순서 무관성. corner 미경유 직선 잡기로 가드 자체를 격리 검증.
+- **연구 보고서 보존**: `docs/2026-06-15-yutnori-rule-research.md` — Gemini Deep Research 권위 룰 가이드. 향후 룰 정합 판단의 표준 기준으로 보존.
+
+### 수정 (테스트 기댓값 갱신)
+- **`tests/rulebook-c8-bonus.spec.js` YR-C8-009**: 기존에는 구버그(윷/모 잡기 시 중복 보너스 발생)를 단언하고 있었다 → 해소 룰(중복 차단)에 맞춰 기댓값 갱신. 변경 사유 파일 주석 명기. (신규 케이스 아님 — 기존 케이스의 기댓값 정정)
+
+### 회귀 결과
+- **서버리스 회귀 321/321 PASS** (이전 315 + 신규 YR-C19 6건. YR-C8-009는 갱신이므로 순증가 6). 최초 실행 시 YR-C8-009 1건이 구버그 기댓값으로 FAIL → 해소 룰로 갱신 후 321/321.
+- **신규 YR-C19 단독 6/6 PASS** (2.2s).
+- **봇 스모크 7/7 PASS** (포트 3104). YBOT-005에서 capturedBonus=true STATE는 do/gae/geol 잡기로 정상 부여 — 가드 영향 없음 확인.
+- §13-11 회귀(YR-C18-001~004 FIX-4 + qa-defect2 QA-D2 데드락 가드) 전부 PASS 유지 → capturedBonus 라이프사이클 정합 확인.
+- 레거시 smoke(시나리오 1~8): capturedBonus 스태킹 미검증 스코프 + 8b WS 분포 샘플러 환경 의존 장기 실행으로 요약 라인 미회수(핵심 게이트가 capture/bonus/turn-pass를 전수 커버).
+
+### 룰북 §13 카운트
+- 구현 vs 표준 차이 12건: 미해소 6 + 해소 6 (§13-1/§13-2/§13-9/§13-10/§13-11/§13-12 해소). 직전 해소 5 → 6.
+
+### 참고
+- 목적 정의서: `.claude/specs/2026-06-15-yutnori-bonus-stack-fix-scope.md`
+- 구현 리포트: `.claude/specs/2026-06-15-yutnori-bonus-stack-fix-report.md`
+- 연구 보고서: `docs/2026-06-15-yutnori-rule-research.md`
+
 ## AI Bot — AI 봇 추가 (2026-06-12)
 
 ### 추가

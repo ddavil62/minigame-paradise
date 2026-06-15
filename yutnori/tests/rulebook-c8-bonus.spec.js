@@ -205,16 +205,25 @@ test('YR-C8-008: 백도는 보너스 없음 (§6-2 §9-2)', async () => {
   }
 });
 
-test('YR-C8-009: 윷으로 잡은 경우 중복 보너스 (yut 큐 잔여 + capturedBonus) — §13-2 미해소 정책 PASS (§6-4)', async () => {
+test('YR-C8-009: 윷으로 잡은 경우 중복 보너스 차단 — §13-12 해소 (2026-06-15) (§6-1 §6-4)', async () => {
+  // ── 기댓값 변경 사유 (§13-12 해소, 2026-06-15) ───────────────────────────────
+  // 이 케이스는 이전에 "윷으로 잡은 경우 중복 보너스 — 미해소 정책 PASS"로, 윷으로 잡으면
+  // capturedBonus=true가 부여되어 추가 던지기가 1회 더(윷 보너스 + 잡기 보너스 = 2회) 가능했다.
+  // 권위 룰(§6-1, 한국어 위키): 윷/모 자체 보너스와 잡기 보너스는 중복 불가(한 행위 최대 1회).
+  // server.js MOVE_PIECE/CHOOSE_PATH에 useResult가 yut/mo면 capturedBonus 미부여 가드를 추가하여
+  // §13-12를 해소했다. 따라서 윷으로 잡아도 잡기 보너스는 생기지 않으며, 윷 던지기 자체로 얻는
+  // 추가 던지기 권리만 유효하다(이 케이스는 inject로 큐에 yut만 주입 — 던지기 권리 흐름이 없는 상태이므로
+  // 큐 소진 후 capturedBonus=false → passTurn).
+  // ──────────────────────────────────────────────────────────────────────────
   // Given: 큐=['yut'], P1 piece 0=cell 2, P2 piece 0=cell 6 (4칸 이동시 잡힘)
   // When: P1 yut(4) 사용 → cell 6 도착, 잡기
-  // Then: 큐 비지만 capturedBonus=true → THROW_YUT 허용 (중복 보너스 정책 PASS)
+  // Then: capturedBonus 미부여(false) → 큐 비고 보너스 없음 → passTurn → currentTurn=p2.
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
   try {
     await inject(port, {
-      started: true, currentTurn: 'p1', pendingResults: ['yut'],
+      started: true, currentTurn: 'p1', pendingResults: ['yut'], capturedBonus: false,
       pieces: {
         p1: [{ cell: 2, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
         p2: [{ cell: 6, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
@@ -224,12 +233,12 @@ test('YR-C8-009: 윷으로 잡은 경우 중복 보너스 (yut 큐 잔여 + capt
     await p2.next('STATE');
 
     p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'yut' });
-    await p1.next('STATE');
-
-    // capturedBonus=true → 큐 비어도 THROW 가능
-    p1.send({ type: 'THROW_YUT' });
-    const yr = await p1.next('YUT_RESULT');
-    expect(yr.by).toBe('p1');
+    const state = await p1.next('STATE');
+    const p2Pieces = state.players.find((p) => p.id === 'p2').pieces;
+    expect(p2Pieces[0].cell).toBe(HOME); // 잡기 발생 확인
+    // §13-12 해소: 윷으로 잡아도 잡기 보너스 미부여 → 중복 차단.
+    expect(state.capturedBonus).toBe(false);
+    expect(state.currentTurn).toBe('p2');
   } finally {
     p1.close(); p2.close();
     await stopServer(server);

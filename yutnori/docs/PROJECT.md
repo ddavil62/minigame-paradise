@@ -2,9 +2,18 @@
 
 > 한국 전통 윷놀이 LAN 1:1 대전. 사용자가 친구와 즉시 플레이용으로 발주된 신규 프로젝트.
 
-## 현재 상태 (2026-06-12)
+## 현재 상태 (2026-06-15)
 
-**AI 봇 추가 완료** — `mode=ai` 진입 시 봇 자동 spawn, 대기 화면 "🤖 AI랑 시작" 진입점. QA PASS(결함 0), AD3 APPROVED. 봇 smoke 7/7×4 + 서버리스 회귀 315 + E2E 25 + smoke 40 PASS.
+**§13-12 윷·모 잡기 중복 보너스 차단 해소** — `server.js` MOVE_PIECE/CHOOSE_PATH capturedBonus 부여에 `useResult !== 'yut' && useResult !== 'mo'` 가드 추가. 윷·모로 잡아도 잡기 보너스 미부여(중복 차단), 도/개/걸 잡기는 +1 유지. 신규 회귀 YR-C19 6건 + 기존 YR-C8-009 기댓값 갱신. 권위 근거: 딥리서치 룰 가이드(`docs/2026-06-15-yutnori-rule-research.md`). 회귀 게이트 **서버리스 321 + 봇 smoke 7/7 PASS**.
+
+### 2026-06-15 주요 변경 (§13-12 해소)
+- **`server.js`**: MOVE_PIECE(~972)·CHOOSE_PATH(~1066) capturedBonus 부여 가드(`useResult !== 'yut' && useResult !== 'mo'`). 윷·모 자체 보너스와 잡기 보너스 중복 차단(한 행위 최대 1회), 도/개/걸 잡기는 +1 유지.
+- **신규 `tests/rulebook-c19-capture-bonus-no-stack.spec.js`** (YR-C19-001~006). 기존 YR-C8-009는 구버그(중복 보너스) 단언 → 해소 룰로 기댓값 갱신.
+- **연구 보고서 보존**: `docs/2026-06-15-yutnori-rule-research.md` (딥리서치 권위 룰 가이드, 향후 표준 기준).
+- 회귀: 서버리스 295 + QA 엣지 26 = **321/321 PASS**(이전 315 + YR-C19 6), 봇 smoke 7/7 PASS, E2E 25 유지.
+- 룰북 §13: 구현 vs 표준 차이 12건 → 미해소 6 + 해소 6 (§13-12 해소 추가).
+
+### 2026-06-12 주요 변경 (AI 봇)
 
 ### 2026-06-12 주요 변경 (AI 봇)
 - **`bot.js` 신규** — STATE 기반 상태 머신 봇(분기 응답 → 그리디 말 이동 → 던지기). matgo/janggi/yahtzee/rummikub와 동일한 `getBotUrl` + `child_process.spawn` 패턴. 강한 AI가 아니라 게임 전 흐름을 데드락 없이 완주하는 테스트용 봇.
@@ -19,9 +28,9 @@
 - **FIX-2** 모서리(5/10) 외곽/지름길 선택 분기(§13-1 [HIGH] 해소). `BRANCH_REQUEST corner` + `CHOOSE_PATH outer/shortcut`. 모서리 지름길 + 중앙 통과 시 corner→center 2단계 중첩 분기 모달.
 - **FIX-3** centerExitB `23→24→25→GOAL` 잔여 소진(§13-2 [HIGH] 해소). 신규 칸 24/25 활성화(`board.js buildCenterExitB`).
 - **FIX-4** capturedBonus 소진 조건 정밀화(큐 빈 capturedBonus 진입 THROW에서만 소진, 윷/모 진입 시 보존).
-- **§13-12** [LOW] §6-1 윷·모 잡기 중복 보너스 차단 신규 등록(미구현, 별도 발주).
+- **§13-12** [LOW] §6-1 윷·모 잡기 중복 보너스 차단 신규 등록(2026-06-15 해소).
 - **중첩 분기 결함 수정**: 모서리 지름길 진입이 중앙 통과 시 윷/모 결과 증발 HIGH 버그 → `computeNextCell` 복합 branchChoice(`shortcut-top/bottom`) + CHOOSE_PATH center 재무장.
-- **룰북 §13**: 구현 vs 표준 차이 **12건** (미해소 7 + 해소 5). §13-1/§13-2 [HIGH] 본 작업 해소.
+- **룰북 §13**: 구현 vs 표준 차이 **12건** (미해소 6 + 해소 6). §13-1/§13-2 [HIGH] 본 작업 해소, §13-12 [LOW]는 2026-06-15 해소.
 
 **Phase 2 완료** — 백도(빽도) 추가 + 룰 매핑 정정. smoke 40/40 PASS.
 
@@ -59,7 +68,7 @@
 ### 알려진 제한
 
 - 같은 칸의 자기 말 묶음을 "업힘 1묶음"으로 시각화하지만, **이동 시에는** 같은 cell에 있는 자기 piece 인덱스 전부를 group으로 함께 이동시킴 (의도된 단순화)
-- §13-12 [LOW]: §6-1 윷·모로 잡으면 잡기 보너스 + 윷/모 보너스 둘 다 발생(정통은 한 번만). 미구현, 별도 발주 예정
+- ~~§13-12 [LOW]: §6-1 윷·모로 잡으면 잡기 보너스 + 윷/모 보너스 둘 다 발생~~ → **2026-06-15 해소** (MOVE_PIECE/CHOOSE_PATH 가드로 윷·모 잡기 보너스 미부여, 도/개/걸은 +1 유지)
 - HOME 영역 클릭은 좌하/우상 코너 박스 + 빈 영역 폴백으로 처리. 더 명시적인 HOME 클릭 UI는 향후 폴리시.
 
 ## 디렉토리
@@ -70,17 +79,16 @@
 
 | 우선순위 | 항목 |
 |---|---|
-| 중간 | §13-12 윷·모 잡기 중복 보너스 차단 (§6-1) — 별도 발주 예정 |
 | 중간 | 백도 변형 룰 옵션 |
 | 낮음 | 던지기 애니메이션 (가락 회전 → 결과 노출) |
 | 낮음 | 사운드 효과 |
 
-## 테스트 현황 (2026-06-12)
+## 테스트 현황 (2026-06-15)
 
-- **봇 smoke (YBOT-001~005, 포트 3104): 7/7 PASS (4회 연속, 데드락 0)**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`.
-- **서버리스 회귀 289 + QA 엣지 26 = 315/315 PASS**: 유닛 72 + WS 20 + 룰북 194 + qa-defect2 3 + qa-rulefix-edge 26. (server.js `capturedBonus` 필드 추가 + connection `(ws, req)` 변경 후에도 회귀 유지)
-  - 룰북 (YR-C1~C18): 룰북 §1~§13 + 부록 커버, §13 12건 커버. c15 재입장 / c16 모서리 분기(중첩 포함) / c17 centerExitB / c18 보너스 정밀화.
-  - 신규 파일: `qa-rulefix-edge.spec.js`(QA 엣지 26), `rulebook-c15~c18-*.spec.js`. 유닛 U-66~U-72 중첩 분기 7건 추가.
+- **봇 smoke (YBOT-001~005, 포트 3104): 7/7 PASS**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`. §13-12 가드 후에도 YBOT-005 capturedBonus(do/gae/geol 잡기) 정상 관측.
+- **서버리스 회귀 295 + QA 엣지 26 = 321/321 PASS**: 이전 315 + 신규 YR-C19 6건(§13-12 윷·모 잡기 중복 차단). YR-C8-009는 해소 룰로 기댓값 갱신(순증가 6).
+  - 룰북 (YR-C1~C19): 룰북 §1~§13 + 부록 커버, §13 12건 커버. c15 재입장 / c16 모서리 분기(중첩 포함) / c17 centerExitB / c18 보너스 정밀화 / c19 §13-12 윷·모 잡기 중복 차단.
+  - 신규 파일: `rulebook-c19-capture-bonus-no-stack.spec.js`(YR-C19 6). 기존 `qa-rulefix-edge.spec.js`(QA 엣지 26), `rulebook-c15~c18-*.spec.js`.
 - **E2E 25/25 PASS**: `e2e-scenarios.spec.js` (서버 가동 시 별도 회귀).
 - `tests/smoke.test.js`: 시나리오 1~8 36 assert + 모서리 분기 보조 assert, 풀 실행 **40 PASS** (레거시 유지). 8b "참고용" WS 샘플러는 환경 의존 장기 실행으로 기능 무관.
 
