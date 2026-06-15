@@ -422,11 +422,20 @@ test('U-55: cell 23 + steps=3, branchChoice=top → cell 17', () => {
 
 // ── §8 computeNextCell — 백도(-1) ────────────────────────────────
 
-test('U-56: cell 1, steps=-1 → cell 0', () => {
+test('U-56: cell 1, steps=-1 → cell 19 (첫칸 빽도 워프, §13-5 해소)', () => {
+  // 갱신 사유: §13-5 해소(2026-06-15) — 첫칸(cell 1) 빽도 워프 규칙 적용.
+  //   이전 기댓값 toCell=0(단순 후퇴) → 변경 후 toCell=19(외곽 마지막 칸 워프, done=false).
   const r = computeNextCell(1, -1);
-  expect(r.toCell).toBe(0);
+  expect(r.toCell).toBe(19);
   expect(r.awaitingBranch).toBe(false);
   expect(r.passedStart).toBe(false);
+});
+
+test('U-56b: cell 19, steps=-1 → cell 1 (워프 복귀 대칭, §13-5 해소)', () => {
+  // §13-5 대칭: 첫칸 워프(1→19)의 역방향. 이전 단순 후퇴(19→18)를 대체.
+  const r = computeNextCell(19, -1);
+  expect(r.toCell).toBe(1);
+  expect(r.awaitingBranch).toBe(false);
 });
 
 test('U-57: cell 5, steps=-1 → cell 4 (외곽 1칸 뒤)', () => {
@@ -463,11 +472,13 @@ test('U-64: cell 23, steps=-1 → cell 22 (중앙 백도)', () => {
   expect(computeNextCell(23, -1).toCell).toBe(22);
 });
 
-test('U-65: 외곽 임의 칸에서 백도 — 이전 칸', () => {
-  // 3→2, 10→9, 19→18
+test('U-65: 외곽 임의 칸에서 백도 — 이전 칸 (cell 19는 워프 복귀)', () => {
+  // 갱신 사유: §13-5 해소(2026-06-15) — cell 19 빽도가 워프 복귀(→1)로 변경.
+  //   이전 19→18(단순 후퇴) → 변경 후 19→1(첫칸 워프 복귀). 3/10은 범용 후퇴 무영향.
+  // 3→2, 10→9, 19→1(워프)
   expect(computeNextCell(3, -1).toCell).toBe(2);
   expect(computeNextCell(10, -1).toCell).toBe(9);
-  expect(computeNextCell(19, -1).toCell).toBe(18);
+  expect(computeNextCell(19, -1).toCell).toBe(1);
 });
 
 // ── §9 computeNextCell — 모서리 지름길 + 중앙 통과 복합 분기 (U-66~U-72) ──

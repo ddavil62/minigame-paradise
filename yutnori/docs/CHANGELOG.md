@@ -1,5 +1,35 @@
 # Yutnori — 변경 이력
 
+## [2026-06-15] — §13-6 지름길B 중앙 자동 라우팅 + §13-5 첫칸 빽도 워프
+
+### 변경
+- **§13-6 해소 — 지름길B 경유 중앙 정착 시 자동 centerExitB(bottom)**: 지름길B(우상 10→26→27→23) 경유로 중앙(23)에 정확히 정착한 말은 다음 이동 시 `BRANCH_REQUEST` 없이 자동으로 좌하 출구(centerExitB, bottom)로 라우팅한다.
+  - `server.js computeNextCell` 반환에 `finalPath` 필드 추가, `movePiece`가 이를 `piece.lastPath`에 저장(서버 내부 필드).
+  - MOVE_PIECE 자동 조건: **`piece.cell === 23 && piece.lastPath === 'shortcutB'`**. 이 조건에서만 자동 bottom 발동.
+  - 지름길A 경유 중앙 정착은 기존 자유 선택(`BRANCH_REQUEST center` + `CHOOSE_PATH top/bottom`) 유지.
+  - 중첩 분기(cell 5/10에서 shortcut 후 중앙 통과)는 `awaitingBranch=true`로 center 재무장 경로로 빠지며 piece.cell이 5/10이라 자동 조건과 겹치지 않음(YR-C16 무영향).
+  - **STATE 스키마 무변경**: `piece.lastPath`는 broadcastState 직렬화 목록에 추가하지 않음 → 클라이언트/봇 무영향.
+- **§13-5 해소 — 첫칸 빽도 워프**: `computeNextCell` `steps === -1` 분기에서 cell 1 → 외곽 마지막 칸 cell 19(참먹이) 워프, cell 19 → cell 1 복귀. `toCell=19`는 GOAL이 아니므로 `done=false` 유지.
+  - cell 1↔19 특례를 외곽 범용 후퇴(`fromCell-1`) **앞에** 배치하고, 범용 범위를 `1~19`에서 `2~18`로 좁혀 언더플로우/오후퇴 방지.
+  - HOME 말 빽도 자동 폐기·cell 0 빽도→0 정책은 기존 유지.
+
+### 추가 (테스트)
+- **신규 케이스**: 지름길B 경유 중앙 자동 bottom / 지름길A 경유 선택 유지 / cell 1↔19 양방향 워프 / 워프 후 완주 흐름. `rulebook-c5`(빽도)·`rulebook-c7`(분기)·`yut.unit`(computeNextCell)에 추가.
+- **정책 변경 갱신**: YR-C7-008(지름길B 자동) / YR-C5-001(cell 1→19 워프) / YR-C3 capture(cell 2→1 잡기로 우회) 기댓값을 권위 룰로 갱신(변경 사유 파일 주석 명기).
+
+### 회귀 결과
+- **서버리스 회귀 327 passed**(이전 321 + 신규 6). 봇 스모크 **7/7 PASS**(포트 3104). 중첩 분기(YR-C16) 무영향 확인.
+
+### 권위 근거
+- 권위 룰 가이드 `docs/2026-06-15-yutnori-rule-research.md` C3/B6/B7 항목(§13-5 워프, §13-6 진입 경로별 출구).
+
+### 룰북 §13 카운트
+- 구현 vs 표준 차이 12건: 미해소 4 + 해소 8 (§13-5/§13-6 해소 추가). 직전 미해소 6 / 해소 6.
+
+### 참고
+- 스펙: `.claude/specs/2026-06-15-yutnori-center-backdo-standard-spec.md`
+- 연구 보고서: `docs/2026-06-15-yutnori-rule-research.md`
+
 ## [2026-06-15] — §13-12 윷·모 잡기 중복 보너스 차단
 
 ### 변경

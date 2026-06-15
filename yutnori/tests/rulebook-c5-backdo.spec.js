@@ -14,12 +14,14 @@ const HOME = -1;
 
 // ── §9-2 외곽/지름길/중앙 백도 ────────────────────────────────────
 
-test('YR-C5-001: cell 1 + backdo(-1) → cell 0 (외곽 1칸 뒤) (§9-2)', () => {
-  // Given: 칸 1
+test('YR-C5-001: cell 1 + backdo(-1) → cell 19 (첫칸 빽도 워프) (§9-2 §13-5)', () => {
+  // 갱신 사유: §13-5 해소(2026-06-15) — 첫칸(cell 1) 빽도 워프 규칙 적용.
+  //   이전 기댓값 toCell=0(단순 후퇴) → 변경 후 toCell=19(외곽 마지막 칸 워프).
+  // Given: 첫칸 1
   // When: 백도(-1)
-  // Then: 칸 0
+  // Then: 외곽 마지막 칸 19로 워프 (done=false, 완주 아님)
   const r = computeNextCell(1, -1);
-  expect(r.toCell).toBe(0);
+  expect(r.toCell).toBe(19);
   expect(r.awaitingBranch).toBe(false);
 });
 
@@ -124,11 +126,45 @@ test('YR-C5-009: 보드 위 말이 있을 때 backdo는 정상 적용 (§9-2)', 
   expect(computeNextCell(11, -1).toCell).toBe(10);
 });
 
-test('YR-C5-010: 외곽 임의 칸(3, 10, 19)에서 backdo → 각각 2, 9, 18 (§9-2)', () => {
-  // Given: 외곽 칸 3, 10, 19
+test('YR-C5-010: 외곽 임의 칸(3, 10)에서 backdo → 각각 2, 9 / cell 19는 워프 복귀 (§9-2 §13-5)', () => {
+  // 갱신 사유: §13-5 해소(2026-06-15) — cell 19 빽도가 워프 복귀(→1)로 변경됨.
+  //   이전 기댓값 cell 19 → 18(단순 후퇴) → 변경 후 cell 19 → 1(첫칸 워프 복귀, YR-C5-011 참조).
+  //   3/10은 범용 후퇴(cell-1) 무영향이므로 기존 그대로 유지.
+  // Given: 외곽 칸 3, 10 (범용 후퇴) + cell 19 (워프 복귀)
   // When: 백도 이동
-  // Then: 각각 1칸 뒤 (2, 9, 18)
+  // Then: 3→2, 10→9 (범용), 19→1 (워프 복귀)
   expect(computeNextCell(3, -1).toCell).toBe(2);
   expect(computeNextCell(10, -1).toCell).toBe(9);
-  expect(computeNextCell(19, -1).toCell).toBe(18);
+  expect(computeNextCell(19, -1).toCell).toBe(1);
+});
+
+// ── §13-5 첫칸 빽도 워프 (2026-06-15 해소) ──────────────────────────
+
+test('YR-C5-011: cell 19 + backdo(-1) → cell 1 (워프 복귀, 대칭) (§9-2 §13-5)', () => {
+  // §13-5 대칭 검증: 첫칸(1) 빽도 워프(→19)의 역방향.
+  // Given: 외곽 마지막 칸 19
+  // When: 백도(-1)
+  // Then: 첫칸 1로 복귀 (done=false)
+  const r = computeNextCell(19, -1);
+  expect(r.toCell).toBe(1);
+  expect(r.awaitingBranch).toBe(false);
+});
+
+test('YR-C5-012: cell 1 빽도 워프(→19) 후 도(1) → GOAL (워프 후 자연 완주) (§9-2 §13-5)', () => {
+  // §13-5 워프 후 완주 확인: cell 19에서 도(1)는 기존 advanceOneCell(19→GOAL)로 자연 완주.
+  // Given: 첫칸 1에서 빽도 → cell 19 착지
+  const warp = computeNextCell(1, -1);
+  expect(warp.toCell).toBe(19);
+  // When: cell 19에서 도(1) 이동
+  const goal = computeNextCell(19, 1);
+  // Then: GOAL 완주 (추가 변경 없이 기존 로직으로 동작)
+  expect(goal.toCell).toBe(99); // GOAL
+  expect(goal.passedStart).toBe(true);
+});
+
+test('YR-C5-013: cell 2~18 backdo → 여전히 cell-1 (범용 후퇴 무영향) (§9-2 §13-5)', () => {
+  // 사이드이펙트 방어: cell 1/19 특례가 범용 후퇴 범위(2~18)를 침범하지 않음을 확인.
+  expect(computeNextCell(2, -1).toCell).toBe(1);
+  expect(computeNextCell(9, -1).toCell).toBe(8);
+  expect(computeNextCell(18, -1).toCell).toBe(17);
 });

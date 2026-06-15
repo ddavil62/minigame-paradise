@@ -4,7 +4,14 @@
 
 ## 현재 상태 (2026-06-15)
 
-**§13-12 윷·모 잡기 중복 보너스 차단 해소** — `server.js` MOVE_PIECE/CHOOSE_PATH capturedBonus 부여에 `useResult !== 'yut' && useResult !== 'mo'` 가드 추가. 윷·모로 잡아도 잡기 보너스 미부여(중복 차단), 도/개/걸 잡기는 +1 유지. 신규 회귀 YR-C19 6건 + 기존 YR-C8-009 기댓값 갱신. 권위 근거: 딥리서치 룰 가이드(`docs/2026-06-15-yutnori-rule-research.md`). 회귀 게이트 **서버리스 321 + 봇 smoke 7/7 PASS**.
+**§13-6 지름길B 중앙 자동 라우팅 + §13-5 첫칸 빽도 워프 해소** — §13-6: 지름길B(우상 10→26→27→23) 경유로 중앙 정확 정착 시 다음 이동 자동 centerExitB(bottom), BRANCH_REQUEST 미발송(자동 조건 `piece.cell===23 && piece.lastPath==='shortcutB'`). 지름길A 경유는 자유 선택 유지. `computeNextCell` 반환 `finalPath` + `piece.lastPath` 저장(STATE 스키마/클라 무변경). §13-5: 첫칸(cell 1) 빽도 → cell 19(참먹이) 워프, cell 19 빽도 → cell 1 복귀(done=false). 신규 6건. 권위 근거: 룰 가이드(`docs/2026-06-15-yutnori-rule-research.md` C3/B6/B7). 회귀 게이트 **서버리스 327 + 봇 smoke 7/7 PASS**.
+
+### 2026-06-15 주요 변경 (§13-5 / §13-6 해소)
+- **§13-6 — 지름길B 중앙 자동 라우팅**: `server.js computeNextCell` 반환에 `finalPath` 추가 + `movePiece`가 `piece.lastPath`에 저장. MOVE_PIECE 자동 조건 `piece.cell===23 && piece.lastPath==='shortcutB'`이면 BRANCH_REQUEST 없이 centerExitB(bottom) 자동. 지름길A 경유는 자유 선택 유지, 중첩 분기(cell 5/10)는 자동 조건과 비충돌(YR-C16 무영향). STATE 스키마/클라 무변경.
+- **§13-5 — 첫칸 빽도 워프**: `computeNextCell` steps=-1에서 cell 1↔19 양방향 워프(외곽 범용 후퇴 범위 2~18로 좁힘). done=false. HOME 빽도 자동 폐기·cell 0 정책 유지.
+- **테스트**: 신규(지름길B 자동/지름길A 선택유지/cell1↔19 양방향/워프 후 완주) + 정책 변경 갱신 YR-C7-008·YR-C5-001·YR-C3 capture. rulebook-c5/c7/yut.unit에 반영.
+- 회귀: 서버리스 **327 passed**(이전 321 + 신규 6), 봇 smoke 7/7 PASS. 중첩 분기 무영향.
+- 룰북 §13: 구현 vs 표준 차이 12건 → 미해소 4 + 해소 8 (§13-5/§13-6 해소 추가).
 
 ### 2026-06-15 주요 변경 (§13-12 해소)
 - **`server.js`**: MOVE_PIECE(~972)·CHOOSE_PATH(~1066) capturedBonus 부여 가드(`useResult !== 'yut' && useResult !== 'mo'`). 윷·모 자체 보너스와 잡기 보너스 중복 차단(한 행위 최대 1회), 도/개/걸 잡기는 +1 유지.
@@ -62,6 +69,8 @@
 
 - ~~모서리에 정확히 멈춘 다음 턴은 자동 지름길 진입~~ → **2026-06-11 FIX-2로 외곽/지름길 선택 모달 적용** (§13-1 해소). 모서리(corner) + 중앙(center) 모두 분기 모달, 모서리 지름길 후 중앙 통과 시 2단계 중첩 모달.
 - ~~중앙→좌하 출구는 직접 완주 처리~~ → **2026-06-11 FIX-3로 23→24→25→GOAL 잔여 소진** (§13-2 해소, 칸 24/25 활성화).
+- ~~중앙 분기는 진입 경로 무관 top/bottom 자유 선택~~ → **2026-06-15 §13-6 해소**: 지름길B 경유 중앙 정착(`piece.lastPath==='shortcutB'`)은 자동 centerExitB(bottom), 지름길A 경유는 자유 선택 유지.
+- ~~첫칸(cell 1) 빽도는 단순 후퇴(cell 0)~~ → **2026-06-15 §13-5 해소**: cell 1↔19 워프(done=false). HOME 빽도 자동 폐기는 유지.
 - ~~백도(빽도) 변형 룰 미적용~~ → **Phase 2에서 추가** (마크 가락 0번).
 - 백도(빽도) X자 표식 가락 변형 룰 미적용(현행 유지).
 
@@ -85,9 +94,9 @@
 
 ## 테스트 현황 (2026-06-15)
 
-- **봇 smoke (YBOT-001~005, 포트 3104): 7/7 PASS**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`. §13-12 가드 후에도 YBOT-005 capturedBonus(do/gae/geol 잡기) 정상 관측.
-- **서버리스 회귀 295 + QA 엣지 26 = 321/321 PASS**: 이전 315 + 신규 YR-C19 6건(§13-12 윷·모 잡기 중복 차단). YR-C8-009는 해소 룰로 기댓값 갱신(순증가 6).
-  - 룰북 (YR-C1~C19): 룰북 §1~§13 + 부록 커버, §13 12건 커버. c15 재입장 / c16 모서리 분기(중첩 포함) / c17 centerExitB / c18 보너스 정밀화 / c19 §13-12 윷·모 잡기 중복 차단.
+- **봇 smoke (YBOT-001~005, 포트 3104): 7/7 PASS**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`. §13-5/§13-6 변경 후에도 데드락 0.
+- **서버리스 회귀 327/327 PASS**: 이전 321 + 신규 6건(§13-5 첫칸 빽도 워프 + §13-6 지름길B 중앙 자동 라우팅). 정책 변경 갱신 YR-C7-008·YR-C5-001·YR-C3 capture는 권위 룰로 기댓값 갱신(순증가 6).
+  - 룰북 (YR-C1~C19): 룰북 §1~§13 + 부록 커버, §13 12건 커버. c15 재입장 / c16 모서리 분기(중첩 포함) / c17 centerExitB / c18 보너스 정밀화 / c19 §13-12 윷·모 잡기 중복 차단. c5 빽도(cell1↔19 워프) / c7 분기(지름길B 자동).
   - 신규 파일: `rulebook-c19-capture-bonus-no-stack.spec.js`(YR-C19 6). 기존 `qa-rulefix-edge.spec.js`(QA 엣지 26), `rulebook-c15~c18-*.spec.js`.
 - **E2E 25/25 PASS**: `e2e-scenarios.spec.js` (서버 가동 시 별도 회귀).
 - `tests/smoke.test.js`: 시나리오 1~8 36 assert + 모서리 분기 보조 assert, 풀 실행 **40 PASS** (레거시 유지). 8b "참고용" WS 샘플러는 환경 의존 장기 실행으로 기능 무관.

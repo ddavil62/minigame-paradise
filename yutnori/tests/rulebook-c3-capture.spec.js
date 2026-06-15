@@ -215,11 +215,14 @@ test('YR-C3-006: 잡기 보너스 사용 가능 — 큐 비어도 THROW_YUT 허�
   }
 });
 
-test('YR-C3-007: 칸 0(출발선)에서 잡기 → 상대 말 HOME 복귀 (§7-3)', async () => {
-  // Given: P1 cell=HOME, P2 cell=0 (출발선), 큐=['do']
-  // When: P1 do(1) → 정통 매핑 HOME+do=칸 1 (잡기 미발생) — 대안: 백도 시나리오
-  //       대신: P1 cell=1에 두고 backdo로 cell 0의 P2 잡기
-  // Then: 칸 0의 P2 잡힘
+test('YR-C3-007: 백도 후퇴 착지 칸에서 잡기 → 상대 말 HOME 복귀 (§7-3)', async () => {
+  // 갱신 사유: §13-5 해소(2026-06-15) — cell 1 빽도가 cell 0이 아닌 cell 19로 워프하게 되어
+  //   "cell 1 backdo로 cell 0 잡기" 시나리오가 더 이상 성립하지 않는다(워프 규칙 우선).
+  //   잡기 메커니즘(§7-3) 자체는 동일하므로, 워프 미적용 범용 후퇴 구간(cell 2→1)으로
+  //   동등한 백도 잡기 시나리오를 검증한다.
+  // Given: P1 cell=2, P2 cell=1, 큐=['backdo']
+  // When: P1 backdo → cell 2→1 (범용 후퇴, 워프 미적용) → cell 1의 P2 잡기
+  // Then: cell 1의 P2 잡힘 (HOME 복귀)
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
@@ -227,8 +230,8 @@ test('YR-C3-007: 칸 0(출발선)에서 잡기 → 상대 말 HOME 복귀 (§7-3
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['backdo'],
       pieces: {
-        p1: [{ cell: 1, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
-        p2: [{ cell: 0, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
+        p1: [{ cell: 2, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
+        p2: [{ cell: 1, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
       },
     });
     await p1.next('STATE');
@@ -238,7 +241,7 @@ test('YR-C3-007: 칸 0(출발선)에서 잡기 → 상대 말 HOME 복귀 (§7-3
     const state = await p1.next('STATE');
     const p1Pieces = state.players.find((p) => p.id === 'p1').pieces;
     const p2Pieces = state.players.find((p) => p.id === 'p2').pieces;
-    expect(p1Pieces[0].cell).toBe(0);
+    expect(p1Pieces[0].cell).toBe(1);
     expect(p2Pieces[0].cell).toBe(HOME);
   } finally {
     p1.close(); p2.close();

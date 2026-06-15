@@ -173,11 +173,14 @@ function isBottomExit(branchChoice) {
  *     'shortcut-top' | 'shortcut-bottom'. 모서리에 멈춘 말이 윷/모로 지름길을 타고
  *     중앙을 통과할 때, 1차 모서리 선택('shortcut')과 2차 중앙 선택('top'/'bottom')을
  *     한 값으로 합성하여 재호출하는 데 사용한다 (CHOOSE_PATH 2차 응답 합성).
- * @returns {{ toCell: number, awaitingBranch: boolean, passedStart: boolean }}
+ * @returns {{ toCell: number, awaitingBranch: boolean, passedStart: boolean, finalPath: (string|null) }}
  *
  *   toCell: 도착 칸 (GOAL 가능)
  *   awaitingBranch: 중앙에서 분기 결정이 필요하면 true → 클라가 CHOOSE_PATH로 응답
  *   passedStart: 시작점(0)을 통과하거나 도착하여 완주했는지
+ *   finalPath: 이동 완료 시 착지 경로(pathContext)
+ *     ('outer'|'shortcutA'|'shortcutB'|'centerExitA'|'centerExitB'|null).
+ *     §13-6 지름길B 경유 중앙 자동 출구 판단에 사용. awaitingBranch=true이거나 백도(-1)이면 null.
  */
 export function computeNextCell(fromCell, steps, branchChoice = null) {
   // 백도(-1): 한 칸 뒤로. HOME 말은 호출자에서 사전 차단됨.
@@ -189,25 +192,39 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
   //  - 중앙(23) 백도 → 마지막 통과 칸을 알 수 없으므로 22로 통일 (지름길A 경로 기준).
   //    (한국 정통 룰에도 명확한 정의 없음 — 친구 대전 단순화)
   if (steps === -1) {
+    // 백도는 경로 방향성이 없으므로 finalPath는 항상 null (다음 이동 자동 출구 판단 무효).
     if (fromCell === HOME || fromCell === GOAL) {
-      return { toCell: fromCell, awaitingBranch: false, passedStart: false };
+      return { toCell: fromCell, awaitingBranch: false, passedStart: false, finalPath: null };
     }
     if (fromCell === 0) {
-      // 출발선 뒤로는 못 감 → 그대로 유지
-      return { toCell: 0, awaitingBranch: false, passedStart: false };
+      // 출발선(참먹이) 뒤로는 못 감 → 그대로 유지
+      return { toCell: 0, awaitingBranch: false, passedStart: false, finalPath: null };
     }
-    if (fromCell >= 1 && fromCell <= 19) {
-      return { toCell: fromCell - 1, awaitingBranch: false, passedStart: false };
+    // §13-5 해소(2026-06-15): 첫칸(cell 1) 빽도 → 외곽 마지막 칸(cell 19) 워프.
+    // 정통 룰: 출발 직후(칸 1)에서 빽도는 한 바퀴를 거의 다 돌아온 것과 동일하게 처리한다.
+    // done=false 유지(완주 아님). 이 칸에서 도 이상 이동 시 기존 advanceOneCell(19→GOAL)이 자연 처리.
+    // 언더플로우 방어: 외곽 범용 분기(fromCell-1) 앞에 배치한다.
+    if (fromCell === 1) {
+      return { toCell: 19, awaitingBranch: false, passedStart: false, finalPath: null };
     }
-    if (fromCell === 21) return { toCell: 5, awaitingBranch: false, passedStart: false };
-    if (fromCell === 22) return { toCell: 21, awaitingBranch: false, passedStart: false };
-    if (fromCell === 26) return { toCell: 10, awaitingBranch: false, passedStart: false };
-    if (fromCell === 27) return { toCell: 26, awaitingBranch: false, passedStart: false };
-    if (fromCell === 23) return { toCell: 22, awaitingBranch: false, passedStart: false };
+    // §13-5 해소(2026-06-15): 외곽 마지막 칸(cell 19) 빽도 → 첫칸(cell 1) 복귀 (워프 대칭).
+    // 기존 18로의 단순 후퇴를 대체한다.
+    if (fromCell === 19) {
+      return { toCell: 1, awaitingBranch: false, passedStart: false, finalPath: null };
+    }
+    // 범용 외곽 후퇴 (cell 1/19 특례 제거 후 범위 2~18로 좁힘).
+    if (fromCell >= 2 && fromCell <= 18) {
+      return { toCell: fromCell - 1, awaitingBranch: false, passedStart: false, finalPath: null };
+    }
+    if (fromCell === 21) return { toCell: 5, awaitingBranch: false, passedStart: false, finalPath: null };
+    if (fromCell === 22) return { toCell: 21, awaitingBranch: false, passedStart: false, finalPath: null };
+    if (fromCell === 26) return { toCell: 10, awaitingBranch: false, passedStart: false, finalPath: null };
+    if (fromCell === 27) return { toCell: 26, awaitingBranch: false, passedStart: false, finalPath: null };
+    if (fromCell === 23) return { toCell: 22, awaitingBranch: false, passedStart: false, finalPath: null };
     // FIX-3 (§9-2): centerExitB 중간 칸 백도 복귀 — 25 → 24, 24 → 23.
-    if (fromCell === 25) return { toCell: 24, awaitingBranch: false, passedStart: false };
-    if (fromCell === 24) return { toCell: 23, awaitingBranch: false, passedStart: false };
-    return { toCell: fromCell, awaitingBranch: false, passedStart: false };
+    if (fromCell === 25) return { toCell: 24, awaitingBranch: false, passedStart: false, finalPath: null };
+    if (fromCell === 24) return { toCell: 23, awaitingBranch: false, passedStart: false, finalPath: null };
+    return { toCell: fromCell, awaitingBranch: false, passedStart: false, finalPath: null };
   }
 
   // 정통 룰: HOME(출발점) → 첫 던지기에서 출발 칸은 카운트하지 않는다.
@@ -238,7 +255,7 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
     // branchChoice가 없으면 분기 선택 요청(awaitingBranch)을 반환하고 piece는 이동하지 않는다.
     // 'shortcut' → 지름길A 진입, 'outer'(그 외) → 외곽 유지.
     if (!branchChoice) {
-      return { toCell: 5, awaitingBranch: true, passedStart: false };
+      return { toCell: 5, awaitingBranch: true, passedStart: false, finalPath: null };
     }
     // 모서리 지름길 판정: 'shortcut' 또는 복합값 'shortcut-top'/'shortcut-bottom' → 지름길A.
     // 'outer'(그 외) → 외곽 유지.
@@ -246,7 +263,7 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
   } else if (cell === 10) {
     // FIX-2 (§10-2, §13-1 해소): 우상 모서리 — 외곽/지름길B 선택 분기.
     if (!branchChoice) {
-      return { toCell: 10, awaitingBranch: true, passedStart: false };
+      return { toCell: 10, awaitingBranch: true, passedStart: false, finalPath: null };
     }
     pathContext = isShortcutChoice(branchChoice) ? 'shortcutB' : 'outer';
   } else if (cell >= 21 && cell <= 22) {
@@ -259,7 +276,7 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
   } else if (cell === 23) {
     // 중앙에서 출발 — branchChoice 필요
     if (!branchChoice) {
-      return { toCell: 23, awaitingBranch: true, passedStart: false };
+      return { toCell: 23, awaitingBranch: true, passedStart: false, finalPath: null };
     }
     pathContext = isBottomExit(branchChoice) ? 'centerExitB' : 'centerExitA';
   }
@@ -277,17 +294,17 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
         branchChoice === 'top' || branchChoice === 'bottom'
         || branchChoice === 'shortcut-top' || branchChoice === 'shortcut-bottom';
       if (i < steps - 1 && !isCenterChoice) {
-        return { toCell: 23, awaitingBranch: true, passedStart: false };
+        return { toCell: 23, awaitingBranch: true, passedStart: false, finalPath: null };
       }
       if (isCenterChoice) {
         pathContext = isBottomExit(branchChoice) ? 'centerExitB' : 'centerExitA';
       }
     } else if (cell === GOAL) {
       passedStart = true;
-      return { toCell: GOAL, awaitingBranch: false, passedStart: true };
+      return { toCell: GOAL, awaitingBranch: false, passedStart: true, finalPath: pathContext };
     }
   }
-  return { toCell: cell, awaitingBranch: false, passedStart };
+  return { toCell: cell, awaitingBranch: false, passedStart, finalPath: pathContext };
 }
 
 /**
@@ -464,6 +481,10 @@ export function createApp(opts = {}) {
  * @property {number} stack      같이 업힌 말 개수 (1=단독, 2이상=업힘 묶음의 대표)
  *                                업힌 말의 cell은 동일하게 갱신되므로 별도 추적 불필요.
  * @property {boolean} done      완주 여부
+ * @property {(string|null)} lastPath  착지 시 경로 컨텍스트
+ *                                ('outer'|'shortcutA'|'shortcutB'|'centerExitA'|'centerExitB'|null).
+ *                                §13-6 지름길B 경유 중앙 자동 출구 판단에 사용.
+ *                                서버 내부 필드 — STATE broadcast 미포함.
  */
 
 /**
@@ -525,7 +546,7 @@ function resetGame() {
 }
 
 function createPiece() {
-  return { cell: HOME, stack: 1, done: false };
+  return { cell: HOME, stack: 1, done: false, lastPath: null };
 }
 
 /**
@@ -745,6 +766,11 @@ function movePiece(mover, pieceIdx, resultName, branchChoice = null) {
     mp.cell = res.toCell;
     if (res.toCell === GOAL) {
       mp.done = true;
+      mp.lastPath = null; // 완주 후 경로 무효
+    } else {
+      // §13-6: 착지 경로 기록. 다음 이동 시 중앙(23) 자동 출구 판단에 사용.
+      // 업힌 묶음(groupIndices) 전체에 동일한 lastPath를 동기화한다.
+      mp.lastPath = res.finalPath || null;
     }
   }
 
@@ -936,7 +962,15 @@ wss.on('connection', (ws, req) => {
           sendTo(player, { type: 'ERROR', message: '완주한 말은 옮길 수 없습니다.' });
           break;
         }
-        const moveRes = movePiece(player, pieceIdx, useResult, null);
+        // §13-6 해소(2026-06-15): 지름길B 경유로 중앙(23)에 정확히 정착한 말 →
+        // 자동 centerExitB(bottom) 적용. BRANCH_REQUEST 없이 즉시 이동한다.
+        // piece.lastPath==='shortcutB' 이고 현재 cell===23이면 진입 경로가 지름길B로 확정.
+        // 중첩분기(중앙 통과 awaitingBranch=true)와 구별: 이 조건은 awaitingBranch=false로
+        // 정확히 23에 정착한 말의 '다음 이동'에서만 평가된다. 중첩분기는 piece.cell이
+        // 5/10인 말에서 발생하므로 cell===23 조건과 겹치지 않는다.
+        const autoBottomChoice =
+          piece.cell === 23 && piece.lastPath === 'shortcutB' ? 'bottom' : null;
+        const moveRes = movePiece(player, pieceIdx, useResult, autoBottomChoice);
         if (!moveRes.ok) {
           sendTo(player, { type: 'ERROR', message: moveRes.error || '이동 실패' });
           break;
@@ -1032,7 +1066,16 @@ wss.on('connection', (ws, req) => {
         game.awaitingBranchResult = null;
         game.awaitingBranchType = null; // FIX-2: 분기 응답 후 유형 초기화
 
-        const moveRes = movePiece(player, pieceIdx, useResult, choice);
+        // §13-6 방어(2026-06-15): CHOOSE_PATH가 지름길B 경유 중앙 정착 말에 대해 호출되는 경우
+        // 자동 bottom(centerExitB) 강제. 정상 흐름에서는 MOVE_PIECE에서 이미 자동 bottom을 적용해
+        // BRANCH_REQUEST를 보내지 않으므로 이 경로에는 도달하지 않는다. 비정상 메시지나 미래 코드
+        // 변경 대비 방어 코드. branchPiece(L1022 정의)는 player.pieces[pieceIdx]와 동일.
+        const effectiveChoice =
+          branchPiece && branchPiece.cell === 23 && branchPiece.lastPath === 'shortcutB'
+            ? 'bottom'
+            : choice;
+
+        const moveRes = movePiece(player, pieceIdx, useResult, effectiveChoice);
         if (!moveRes.ok) {
           sendTo(player, { type: 'ERROR', message: moveRes.error || '분기 이동 실패' });
           broadcastState();
