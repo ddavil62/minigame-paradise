@@ -257,6 +257,16 @@ const server = http.createServer((req, res) => {
   // 콜백 최상단: 라우팅 이전에 위젯 주입기를 부착 (text/html 응답에만 실제 동작)
   attachWidgetInjector(res);
 
+  // Express 정적 서빙(yutnori/tetris-battle)은 ETag/Last-Modified를 붙이므로, 브라우저가
+  // 재방문 시 조건부 요청(If-None-Match)을 보내면 304(빈 본문)를 응답한다. 그러면 주입할
+  // 본문이 없어 브라우저가 캐시된 "위젯 없는" HTML을 재사용하는 버그가 생긴다.
+  // → HTML 문서 요청(Accept: text/html)에 한해 조건부 헤더를 제거해 항상 200+전체본문이
+  //   나오게 강제한다(주입 보장). JS/CSS/PNG 등 정적 자산 요청은 그대로 두어 304 캐시 유지.
+  if ((req.headers['accept'] || '').includes('text/html')) {
+    delete req.headers['if-none-match'];
+    delete req.headers['if-modified-since'];
+  }
+
   const reqUrl = req.url || '/';
   const urlPath = reqUrl.split('?')[0];
   const queryStr = reqUrl.includes('?') ? reqUrl.slice(reqUrl.indexOf('?')) : '';
