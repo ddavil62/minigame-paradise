@@ -1,5 +1,32 @@
 # Yutnori — 변경 이력
 
+## [2026-06-16] — 버그A 중앙 통과 자동 라우팅 + 버그B centerExitA 28/29
+
+### 변경
+- **버그A 해소 — 중앙(23) 통과 시 자동 라우팅**: 말이 중앙(23)을 잔여 steps로 **정확히 안 멈추고 통과**하면 `BRANCH_REQUEST`를 발송하지 않고 **진입 지름길 기준으로 자동 출구 라우팅**한다.
+  - 지름길A 통과 → centerExitA(28/29 경유), 지름길B 통과 → centerExitB(24/25 경유). 출구 선택은 `piece.lastPath`(`shortcutA`/`shortcutB`) 기준.
+  - **분기 결정(BRANCH_REQUEST/분기 모달)은 모서리(5/10)·중앙(23) 정확 착지 시에만** 무장.
+  - 중앙 **정확 착지**는 기존 동작 유지: 지름길A 경유 → 다음 이동 `BRANCH center` 자유 선택 / 지름길B 경유 → 자동 centerExitB(bottom)(§13-6, 2026-06-15).
+  - 중첩 분기(모서리 5/10 정확 착지 후 shortcut→중앙 통과)는 `shortcut-top`/`shortcut-bottom` 합성 경로로 piece.cell이 5/10이라 통과 자동 라우팅과 겹치지 않음(YR-C16 무영향).
+  - `server.js` 수정. STATE 스키마/클라 프로토콜 무변경.
+- **버그B 해소 — centerExitA 28/29 대칭 신설**: centerExitA가 centerExitB(24/25)와 거울 대칭이 되도록 중간 칸 28/29를 신설했다(이전 `23→15` 직행).
+  - `server.js advanceOneCell` centerExitA: `23→28→29→15→16→17→18→19→GOAL` 잔여 steps 소진. 백도 복귀 `29→28`/`28→23`. 시작 칸 28/29 이동은 `pathContext='centerExitA'`로 잔여 소진. 28/29 칸에서 잡기/업기/백도 정상 동작.
+  - `public/js/board.js`: `buildCenterExitA()`/`CENTER_EXIT_A` 좌표 신설(28=(356.67,356.67), 29=(433.33,433.33) — 중앙(23)→우하(15) 대각선 1/3·2/3 지점), 28/29 칸 렌더링·hit-test·경로선 추가. centerExitB와 x=280 수직 거울 대칭.
+
+### 추가 (테스트)
+- **신규 케이스 11건**: 중앙 통과 자동 라우팅(지름길A→centerExitA / 지름길B→centerExitB) + centerExitA 28/29 경유/잡기/업기/백도. `rulebook-c7`(중앙 분기)·`yut.unit`(computeNextCell) 등에 추가.
+- **bot-smoke YBOT-004 결정적 inject 프로브 보강**: 자연 발생 카운트 대신 결정적 inject로 중앙 통과 자동 라우팅을 검증. bot-smoke 7/7 → 10/10.
+
+### 수정 (테스트 기댓값 갱신)
+- 정책 변경으로 기댓값이 바뀐 9파일 갱신(갱신 사유 파일 주석 명기): `yut.unit`, `rulebook-c2/c7/c11/c12/c13/c14/c16`, `ws.scenarios`, `qa-rulefix-edge`, `bot-smoke`.
+
+### 회귀 결과
+- **서버리스 회귀 338 passed**(이전 327 + 신규 11). **bot-smoke 10/10**(YBOT-004 결정적 프로브). **E2E 25 passed**. 중첩 분기(YR-C16) 무영향 확인.
+- **QA PASS(결함 0)**, **AD3 APPROVED** — 28=(356.67,356.67)/29=(433.33,433.33), 기존 칸과 겹침 0.
+
+### 룰북 §13
+- §13-2(centerExitA 28/29 대칭 신설)·§13-6(중앙 통과 자동 라우팅) 보강. 구현 vs 표준 차이 12건: 미해소 4 + 해소 8 유지.
+
 ## [2026-06-15] — §13-6 지름길B 중앙 자동 라우팅 + §13-5 첫칸 빽도 워프
 
 ### 변경

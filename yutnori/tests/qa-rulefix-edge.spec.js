@@ -230,7 +230,10 @@ test.describe('QA-RF2 FIX-2 모서리 분기', () => {
     p1.close(); p2.close();
   });
 
-  test('QA-RF2-006: 중첩 분기 5+윷 → shortcut → center 재요청 → top → 큐 1회 차감, 정착 칸 15', async () => {
+  test('QA-RF2-006: 모서리5+윷 → shortcut → 자동 centerExitA cell 28 (center 재요청 없음, 큐 1회 차감, 버그A 2026-06-16)', async () => {
+    // 갱신 사유: 버그A 수정(2026-06-16) — 지름길A로 중앙(23)을 통과(잔여 steps)하면 더 이상
+    //   중앙 분기를 재요청(corner→center 중첩 모달)하지 않고 자동 centerExitA로 라우팅한다.
+    //   따라서 corner 1회 선택만으로 말이 출구(cell 28)까지 한 번에 이동하고 center 재요청은 없다.
     ctx = await boot();
     const { p1, p2 } = await setupGame(ctx.port);
     await injectAndDrain(ctx.port, p1, p2, {
@@ -242,31 +245,23 @@ test.describe('QA-RF2 FIX-2 모서리 분기', () => {
     expect(br1.branchType).toBe('corner');
     await p1.next('STATE');
 
-    // 1차: shortcut → 중앙 통과 → center 재요청
+    // shortcut → 5→21→22→23(통과)→28 자동 centerExitA. center 재요청 없이 STATE만 수신.
     p1.send({ type: 'CHOOSE_PATH', pathChoice: 'shortcut' });
-    const br2 = await p1.next('BRANCH_REQUEST');
-    expect(br2.branchType).toBe('center');
-    const stMid = await p1.next('STATE');
-    // 큐 미차감 (yut 아직 남음)
-    expect(stMid.pendingResults).toEqual(['yut']);
-    // piece 아직 cell 5 (이동 전)
-    expect(stMid.players.find((p) => p.id === 'p1').pieces[0].cell).toBe(5);
-
-    // 2차: top → centerExitA → 5→21→22→23→15 = cell 15
-    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'top' });
     const stFinal = await p1.next('STATE');
-    expect(stFinal.players.find((p) => p.id === 'p1').pieces[0].cell).toBe(15);
-    // 큐 정확히 1회 차감 (빔)
+    expect(stFinal.players.find((p) => p.id === 'p1').pieces[0].cell).toBe(28);
+    // 큐 정확히 1회 차감 (빔) + 분기 대기 해제
     expect(stFinal.pendingResults).toEqual([]);
+    expect(stFinal.awaitingBranchAt).toBe(null);
+    expect(stFinal.awaitingBranchType).toBe(null);
     p1.close(); p2.close();
   });
 
-  test('QA-RF2-007: 방어 — 중첩 center 대기 중 CHOOSE_PATH에 outer/shortcut 재전송 (비정상 입력)', async () => {
-    // 중첩 분기 2차(center) 대기 중 클라가 'outer' 또는 'shortcut'을 보내면?
-    // 서버: branchPiece.cell === 5 이고 choice가 top/bottom이 아니므로 합성 안 함.
-    //   - 'outer' → isBottomExit(outer)=false → isShortcutChoice(outer)=false
-    //     → computeNextCell(5,4,'outer') = 외곽 5→6→7→8→9 = cell 9 (지름길 미진입, 중앙 미통과)
-    //   - 'shortcut' → computeNextCell(5,4,'shortcut') → 중앙 통과 잔여 → awaitingBranch (무한 재대기 위험)
+  test('QA-RF2-007: 방어 — 자동 라우팅 후 분기 미대기 상태의 stray CHOOSE_PATH는 조용히 무시 (버그A 2026-06-16 갱신)', async () => {
+    // 갱신 사유: 버그A 수정(2026-06-16) — 모서리5+윷+shortcut은 더 이상 center를 재요청(중첩 모달)하지
+    //   않고 지름길A로 중앙(23)을 통과해 자동 centerExitA(cell 28)로 라우팅된다. 따라서 "중첩 center
+    //   대기 중 재전송" 전제가 구조적으로 사라졌다. 대신 자동 라우팅 직후(awaitingBranchAt=null) 들어온
+    //   비정상 CHOOSE_PATH가 서버 가드(`awaitingBranchAt===null` → break)로 조용히 무시되는지
+    //   (크래시·영구 잠금·STATE 오발송 없음)를 방어 검증한다.
     ctx = await boot();
     const { p1, p2 } = await setupGame(ctx.port);
     await injectAndDrain(ctx.port, p1, p2, {
@@ -274,21 +269,26 @@ test.describe('QA-RF2 FIX-2 모서리 분기', () => {
       pieces: { p1: [{ cell: 5 }, { cell: HOME }, { cell: HOME }, { cell: HOME }] },
     });
     p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'yut' });
-    await p1.next('BRANCH_REQUEST');
-    await p1.next('STATE');
-    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'shortcut' });
-    await p1.next('BRANCH_REQUEST'); // center 재요청
+    const br = await p1.next('BRANCH_REQUEST');
+    expect(br.branchType).toBe('corner');
     await p1.next('STATE');
 
-    // 비정상: center 대기 중 'outer' 재전송
-    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'outer' });
+    // shortcut → 5→21→22→23(통과)→28 자동 centerExitA. center 재요청 없이 STATE만 수신.
+    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'shortcut' });
     const st = await p1.next('STATE');
     const piece = st.players.find((p) => p.id === 'p1').pieces[0];
-    // 결과 기록: 서버가 어떻게 처리했는지 (cell 9 = 외곽, 또는 다른 값)
-    // 핵심: 서버가 크래시하지 않고 STATE를 정상 broadcast 하는지.
-    expect(typeof piece.cell).toBe('number');
-    // 분기 대기가 풀렸는지 (영구 잠금 아님)
-    expect(st.awaitingBranchAt === null || typeof st.awaitingBranchAt === 'number').toBe(true);
+    expect(piece.cell).toBe(28);
+    expect(st.awaitingBranchAt).toBe(null);
+
+    // 비정상: 분기 미대기 상태에서 stray CHOOSE_PATH 'outer' 재전송 → 서버 가드로 무시(브로드캐스트 없음).
+    // STATE가 오면 무시 실패(오작동) 신호. 정상은 짧은 타임아웃(무응답).
+    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'outer' });
+    let strayBroadcast = false;
+    try {
+      await p1.next('STATE', 600);
+      strayBroadcast = true;
+    } catch (e) { /* timeout 기대 — 조용히 무시됨이 정상 */ }
+    expect(strayBroadcast).toBe(false);
     p1.close(); p2.close();
   });
 
@@ -557,11 +557,12 @@ test.describe('QA-RFX 교차/방어', () => {
     expect(br.branchType).toBe('center');
     await p1.next('STATE');
     // 비정상: center 대기 중 'shortcut' 수신. branchPiece.cell=23(5/10 아님) → 합성 안 함.
-    // isBottomExit('shortcut')=false → centerExitA. 23+do → 15.
+    // isBottomExit('shortcut')=false → centerExitA. 23+do → 28.
+    // 갱신 사유: 버그B 수정(2026-06-16) — centerExitA에 중간 칸 28/29 신설로 23+do는 이전 15가 아니라 28.
     p1.send({ type: 'CHOOSE_PATH', pathChoice: 'shortcut' });
     const st = await p1.next('STATE');
     const piece = st.players.find((p) => p.id === 'p1').pieces[0];
-    expect(piece.cell).toBe(15); // centerExitA top 경로로 처리됨
+    expect(piece.cell).toBe(28); // centerExitA 첫 중간 칸 (버그B: 23→28)
     expect(st.awaitingBranchAt).toBe(null);
     p1.close(); p2.close();
   });

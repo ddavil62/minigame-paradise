@@ -127,9 +127,12 @@ test('YR-C11-005: MOVE_PIECE 유효 → STATE 말 위치 갱신 (부록 §5)', a
 });
 
 test('YR-C11-006: CHOOSE_PATH 후 분기 이동 완료 (부록 §10-3)', async () => {
-  // Given: piece 0=cell 22, 큐=['gae'] → MOVE_PIECE 후 BRANCH_REQUEST
+  // 갱신 사유: 버그A 수정(2026-06-16) — cell 22 통과는 자동 라우팅이라 BRANCH_REQUEST 없음.
+  //   중앙 분기 모달은 cell 23 정착 후 다음 이동 시 발생하므로 setup을 cell 23으로 변경.
+  //   버그B 수정 — top(centerExitA) 출구가 23→28→29→15 경로화. gae(2) → cell 29.
+  // Given: piece 0=cell 23, 큐=['gae'] → MOVE_PIECE 후 BRANCH_REQUEST(center)
   // When: CHOOSE_PATH(top)
-  // Then: piece 0 = cell 15 (centerExitA)
+  // Then: piece 0 = cell 29 (centerExitA: 23→28→29)
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
@@ -137,7 +140,7 @@ test('YR-C11-006: CHOOSE_PATH 후 분기 이동 완료 (부록 §10-3)', async (
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['gae'],
       pieces: {
-        p1: [{ cell: 22, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
+        p1: [{ cell: 23, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
       },
     });
     await p1.next('STATE');
@@ -150,7 +153,7 @@ test('YR-C11-006: CHOOSE_PATH 후 분기 이동 완료 (부록 §10-3)', async (
     p1.send({ type: 'CHOOSE_PATH', pathChoice: 'top' });
     const st = await p1.next('STATE');
     const pieces = st.players.find((p) => p.id === 'p1').pieces;
-    expect(pieces[0].cell).toBe(15);
+    expect(pieces[0].cell).toBe(29);
   } finally {
     p1.close(); p2.close();
     await stopServer(server);
@@ -297,7 +300,8 @@ test('YR-C11-012: inject로 pieces 배치 → STATE 즉시 반영 (부록)', asy
 });
 
 test('YR-C11-013: awaitingBranchAt 상태에서 THROW_YUT → ERROR (부록 §10-3)', async () => {
-  // Given: piece 0=22, 큐=['gae'] → MOVE → BRANCH_REQUEST
+  // 갱신 사유: 버그A 수정(2026-06-16) — cell 22 통과는 자동 라우팅. 중앙 정착(cell 23)으로 변경.
+  // Given: piece 0=23, 큐=['gae'] → MOVE → BRANCH_REQUEST(center)
   // When: P1 THROW_YUT
   // Then: ERROR(분기...)
   const app = createApp({});
@@ -307,7 +311,7 @@ test('YR-C11-013: awaitingBranchAt 상태에서 THROW_YUT → ERROR (부록 §10
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['gae'],
       pieces: {
-        p1: [{ cell: 22, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
+        p1: [{ cell: 23, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
       },
     });
     await p1.next('STATE');

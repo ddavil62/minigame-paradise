@@ -6,7 +6,7 @@
  * - 말 이동/잡기/업기 판정도 모두 서버. 클라이언트는 입력 전달 + 상태 렌더링만.
  * - 매 액션 후 `STATE` 메시지로 전체 게임 상태를 양쪽에 broadcast 한다.
  *
- * 보드 모델: 칸 인덱스 0~28 (총 29칸).
+ * 보드 모델: 칸 인덱스 0~29 (총 30칸, centerExitA 28/29 포함).
  *  - 0~19: 외곽 사각형 (시계 반대 방향 진행: 0=시작점, 5=우상 모서리, 10=좌상 모서리, 15=좌하 모서리, 20=출구 = 0과 동일 취급)
  *  - 우상 모서리에서 진입 가능한 지름길: 21,22 → 24(중앙) → 25,26 → 좌하 출구로 합류
  *  - 우하(=시작점에서 5번째? 본 구현에선 외곽 동선 단순화로 모서리 4개를 [0(=좌하 시작), 5, 10, 15]로 둠)
@@ -117,7 +117,8 @@ export function throwYutSticks() {
 //     15 = 우하 모서리 (외곽만, 지름길 없음 — 한국 윷놀이는 모서리 2곳에 지름길 분기)
 //     16~19 = 하단 변 → 19 다음 외곽 진행 시 0(=완주)
 //   지름길A (좌상 → 중앙 → 우하 출구):
-//     21, 22, 23(중앙), → 외곽 15로 합류 (지름길A 끝)
+//     21, 22, 23(중앙), 28, 29 → 외곽 15로 합류 (지름길A 끝)
+//     centerExitA 중간 칸: 28, 29 (2026-06-16 버그B 수정 — centerExitB 24/25 대칭)
 //   지름길B (우상 → 중앙 → 좌하 출구):
 //     26, 27, 23(중앙 공유), → 외곽 0(완주 직전 19 위치로 합류해도 되지만,
 //     단순화를 위해 중앙에서 좌하 시작점 0으로 직접 합류)
@@ -224,6 +225,10 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
     // FIX-3 (§9-2): centerExitB 중간 칸 백도 복귀 — 25 → 24, 24 → 23.
     if (fromCell === 25) return { toCell: 24, awaitingBranch: false, passedStart: false, finalPath: null };
     if (fromCell === 24) return { toCell: 23, awaitingBranch: false, passedStart: false, finalPath: null };
+    // 버그B (2026-06-16): centerExitA 중간 칸 백도 복귀 — 29 → 28, 28 → 23.
+    // centerExitB(25→24, 24→23)와 대칭.
+    if (fromCell === 29) return { toCell: 28, awaitingBranch: false, passedStart: false, finalPath: null };
+    if (fromCell === 28) return { toCell: 23, awaitingBranch: false, passedStart: false, finalPath: null };
     return { toCell: fromCell, awaitingBranch: false, passedStart: false, finalPath: null };
   }
 
@@ -273,6 +278,9 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
   } else if (cell === 24 || cell === 25) {
     // FIX-3 (§10-4, §13-2 해소): centerExitB 중간 칸에서 출발 — 잔여 steps 소진.
     pathContext = 'centerExitB';
+  } else if (cell === 28 || cell === 29) {
+    // 버그B (2026-06-16): centerExitA 중간 칸에서 출발 — 잔여 steps 소진.
+    pathContext = 'centerExitA';
   } else if (cell === 23) {
     // 중앙에서 출발 — branchChoice 필요
     if (!branchChoice) {
@@ -293,11 +301,26 @@ export function computeNextCell(fromCell, steps, branchChoice = null) {
       const isCenterChoice =
         branchChoice === 'top' || branchChoice === 'bottom'
         || branchChoice === 'shortcut-top' || branchChoice === 'shortcut-bottom';
-      if (i < steps - 1 && !isCenterChoice) {
-        return { toCell: 23, awaitingBranch: true, passedStart: false, finalPath: null };
-      }
-      if (isCenterChoice) {
-        pathContext = isBottomExit(branchChoice) ? 'centerExitB' : 'centerExitA';
+      if (i < steps - 1) {
+        if (isCenterChoice) {
+          // 복합값: 중앙 출구 정보를 이미 포함 — 재대기 없이 출구로 진행.
+          pathContext = isBottomExit(branchChoice) ? 'centerExitB' : 'centerExitA';
+        } else if (pathContext === 'shortcutA') {
+          // 버그A 수정(2026-06-16): 지름길A 경유 통과 — 자동 centerExitA (정확 착지가 아니므로 분기 불필요).
+          pathContext = 'centerExitA';
+        } else if (pathContext === 'shortcutB') {
+          // 버그A 수정(2026-06-16): 지름길B 경유 통과 — 자동 centerExitB.
+          pathContext = 'centerExitB';
+        } else {
+          // branchChoice 없는 경우 (외곽에서 직접 중앙 통과 불가 상황 — 안전망)
+          return { toCell: 23, awaitingBranch: true, passedStart: false, finalPath: null };
+        }
+      } else {
+        // i === steps-1: 중앙에 정확 착지.
+        if (isCenterChoice) {
+          pathContext = isBottomExit(branchChoice) ? 'centerExitB' : 'centerExitA';
+        }
+        // isCenterChoice 아니면: 중앙 정착 (awaitingBranch 없음 — 다음 이동 시 23 출발 분기 처리)
       }
     } else if (cell === GOAL) {
       passedStart = true;
@@ -341,8 +364,11 @@ function advanceOneCell(cell, pathContext) {
     return GOAL;
   }
   if (pathContext === 'centerExitA') {
-    // 중앙 → 외곽 15(우하 출구) → 16 → 17 → 18 → 19 → GOAL
-    if (cell === 23) return 15;
+    // 버그B 수정 (2026-06-16): 중앙 → 28(날밭A-1) → 29(날밭A-2) → 15(우하 출구) → ... → GOAL
+    // centerExitB(23→24→25→GOAL)와 대칭 구조.
+    if (cell === 23) return 28;
+    if (cell === 28) return 29;
+    if (cell === 29) return 15;
     if (cell >= 15 && cell < 19) return cell + 1;
     if (cell === 19) return GOAL;
     return GOAL;

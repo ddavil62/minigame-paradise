@@ -23,34 +23,39 @@ test('YR-C7-001: cell 23 + do(1) + branchChoice=null → awaitingBranch=true (§
   expect(r.awaitingBranch).toBe(true);
 });
 
-test('YR-C7-002: cell 23 + do(1) + top → cell 15 (centerExitA) (§10-3)', () => {
+test('YR-C7-002: cell 23 + do(1) + top → cell 28 (centerExitA 중간 칸, 버그B 2026-06-16) (§10-3)', () => {
+  // 갱신 사유: 버그B 수정(2026-06-16) — centerExitA가 23→15 즉시 합류에서
+  //   23→28→29→15로 변경(centerExitB 24/25와 대칭). 도(1)이면 첫 중간 칸 28.
   // Given: 중앙 23
   // When: top 분기 + 도(1)
-  // Then: 칸 15 (우하 출구 합류)
-  expect(computeNextCell(23, 1, 'top').toCell).toBe(15);
+  // Then: 칸 28 (centerExitA 첫 중간 칸)
+  expect(computeNextCell(23, 1, 'top').toCell).toBe(28);
 });
 
-test('YR-C7-003: cell 23 + gae(2) + top → cell 16 (§10-3)', () => {
+test('YR-C7-003: cell 23 + gae(2) + top → cell 29 (23→28→29, 버그B 2026-06-16) (§10-3)', () => {
+  // 갱신 사유: 버그B 수정 — 23→28→29.
   // Given: 중앙 23
-  // When: top + 개(2) — 23→15→16
-  // Then: 칸 16
-  expect(computeNextCell(23, 2, 'top').toCell).toBe(16);
+  // When: top + 개(2)
+  // Then: 칸 29 (centerExitA 둘째 중간 칸)
+  expect(computeNextCell(23, 2, 'top').toCell).toBe(29);
 });
 
-test('YR-C7-004: cell 23 + mo(5) + top → cell 19 (§10-3)', () => {
+test('YR-C7-004: cell 23 + mo(5) + top → cell 17 (23→28→29→15→16→17, 버그B 2026-06-16) (§10-3)', () => {
+  // 갱신 사유: 버그B 수정 — 중간 칸 28/29 추가로 외곽 합류 2칸 늦어짐.
   // Given: 중앙 23
-  // When: top + 모(5) — 23→15→16→17→18→19
-  // Then: 칸 19
-  expect(computeNextCell(23, 5, 'top').toCell).toBe(19);
+  // When: top + 모(5) — 23→28→29→15→16→17
+  // Then: 칸 17
+  expect(computeNextCell(23, 5, 'top').toCell).toBe(17);
 });
 
-test('YR-C7-005: cell 23 + 6 + top → GOAL (잔여 통과 완주) (§10-3 §11-3)', () => {
+test('YR-C7-005: cell 23 + 6 + top → cell 18 (23→28→29→15→16→17→18, 버그B 2026-06-16) (§10-3 §11-3)', () => {
+  // 갱신 사유: 버그B 수정 — 중간 칸 2개 추가로 6칸이어도 GOAL 미도달(cell 18 정착).
   // Given: 중앙 23
-  // When: top + 6칸 — 23→15→16→17→18→19→GOAL
-  // Then: GOAL
+  // When: top + 6칸 — 23→28→29→15→16→17→18
+  // Then: 칸 18 (완주 직전, passedStart=false)
   const r = computeNextCell(23, 6, 'top');
-  expect(r.toCell).toBe(GOAL);
-  expect(r.passedStart).toBe(true);
+  expect(r.toCell).toBe(18);
+  expect(r.passedStart).toBe(false);
 });
 
 // ── §10-4 §13-2 centerExitB (bottom) — 24/25 거쳐 완주 ───────────
@@ -139,10 +144,13 @@ test('YR-C7-009: 지름길A(5→) 진입 후에도 bottom 출구 선택 가능 (
 
 // ── §10-3 WS 통합: awaitingBranchAt STATE 반영 ───────────────────
 
-test('YR-C7-010: 중앙 도달 후 awaitingBranchAt=pieceIdx STATE 반영 (§10-3)', async () => {
-  // Given: cell 22에 P1 말 + pendingResults=['gae']
-  // When: MOVE_PIECE → 22→23(잔여) → BRANCH_REQUEST
-  // Then: STATE의 awaitingBranchAt === 이동한 pieceIdx
+test('YR-C7-010: 중앙(23) 정착 말이 다음 이동 시 awaitingBranchAt=pieceIdx STATE 반영 (§10-3)', async () => {
+  // 갱신 사유: 버그A 수정(2026-06-16) — 지름길 경유 중앙 "통과"는 자동 라우팅으로 바뀌어
+  //   더 이상 통과 시 BRANCH_REQUEST가 발생하지 않는다. 중앙 분기 모달은 말이 중앙(23)에
+  //   **정확히 정착**한 상태에서 다음 이동을 할 때 발생한다. 따라서 setup을 cell 23 정착으로 변경.
+  // Given: cell 23에 P1 말 + pendingResults=['gae'] (지름길A 경유 정착 가정 — lastPath 미설정 자유 분기)
+  // When: MOVE_PIECE → 23 출발 분기 필요 → BRANCH_REQUEST(center)
+  // Then: STATE의 awaitingBranchAt === 이동한 pieceIdx, branchType=center
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
@@ -153,7 +161,7 @@ test('YR-C7-010: 중앙 도달 후 awaitingBranchAt=pieceIdx STATE 반영 (§10-
       pendingResults: ['gae'],
       pieces: {
         p1: [
-          { cell: 22, stack: 1, done: false },
+          { cell: 23, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
@@ -164,7 +172,8 @@ test('YR-C7-010: 중앙 도달 후 awaitingBranchAt=pieceIdx STATE 반영 (§10-
     await p2.next('STATE');
 
     p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'gae' });
-    await p1.next('BRANCH_REQUEST');
+    const br = await p1.next('BRANCH_REQUEST');
+    expect(br.branchType).toBe('center');
     const state = await p1.next('STATE');
     expect(state.awaitingBranchAt).toBe(0);
     expect(state.awaitingBranchResult).toBe('gae');

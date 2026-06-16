@@ -214,6 +214,122 @@ async function runBotVsBot(games, timeoutMs) {
   return counters;
 }
 
+/**
+ * 수동(passive) WS 드라이버 — 자동 행동 없이 테스트가 직접 send + waitFor 한다.
+ * makeInlinePlayer(자동 휴리스틱)와 달리 결정적 시나리오 운전용.
+ * @param {string} url
+ * @returns {{ send: Function, waitFor: Function, close: Function }}
+ */
+function makeDriver(url) {
+  const ws = new WebSocket(url);
+  const buf = [];
+  const waiters = [];
+  ws.on('error', () => {});
+  ws.on('open', () => ws.send(JSON.stringify({ type: 'JOIN', playerName: '프로브' })));
+  ws.on('message', (data) => {
+    let m;
+    try { m = JSON.parse(data.toString()); } catch { return; }
+    buf.push(m);
+    for (let i = waiters.length - 1; i >= 0; i--) {
+      if (!m.__c && waiters[i].pred(m)) {
+        m.__c = true;
+        clearTimeout(waiters[i].timer);
+        waiters[i].resolve(m);
+        waiters.splice(i, 1);
+      }
+    }
+  });
+  function send(msg) { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+  function waitFor(pred, timeoutMs = 8000) {
+    const hit = buf.find((m) => !m.__c && pred(m));
+    if (hit) { hit.__c = true; return Promise.resolve(hit); }
+    return new Promise((resolve, reject) => {
+      const w = { pred, resolve, timer: null };
+      w.timer = setTimeout(() => {
+        const k = waiters.indexOf(w);
+        if (k >= 0) waiters.splice(k, 1);
+        reject(new Error('waitFor timeout'));
+      }, timeoutMs);
+      waiters.push(w);
+    });
+  }
+  return { ws, send, waitFor, close: () => new Promise((res) => { ws.once('close', res); ws.close(); }) };
+}
+
+/**
+ * YBOT-004 결정적 center 분기 프로브.
+ *
+ * 버그A 수정(2026-06-16) 이후 center 분기는 "지름길A로 중앙(23)에 정확히 착지한 뒤 다음 이동"
+ * 시에만 발생한다(중앙 통과는 자동 라우팅, 지름길B 착지는 §13-6 자동 bottom). 자연 발생이 드물어
+ * 봇 vs 봇 N판 집계는 flaky하므로, inject로 중앙(23) 정착 상태를 만들어 ① center 분기 요청 발생
+ * ② 봇 스타일 top 응답 수락 ③ centerExitA 첫 칸(28, 버그B 신설) 도달 ④ 분기 대기 해제(데드락 없음)를
+ * 결정적으로 검증한다. (서버 측 동선은 yut.unit / qa-rulefix-edge가 추가로 커버.)
+ *
+ * @returns {Promise<{centerBranchSeen:boolean, finalCell:(number|null), awaitingCleared:(boolean|null), error:(string|null)}>}
+ */
+async function runCenterBranchProbe() {
+  // getBotUrl=null → 봇 자식 spawn 안 함. 두 드라이버를 직접 운전(mode=human).
+  const app = createApp({ hostUrl: '', getBotUrl: () => null });
+  const server = http.createServer(app.handleHttp);
+  server.on('upgrade', app.handleUpgrade);
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(PORT, '127.0.0.1', resolve);
+  });
+  const result = { centerBranchSeen: false, finalCell: null, awaitingCleared: null, error: null };
+  let p1 = null;
+  let p2 = null;
+  try {
+    p1 = makeDriver(`ws://127.0.0.1:${PORT}/ws?mode=human`);
+    p2 = makeDriver(`ws://127.0.0.1:${PORT}/ws?mode=human`);
+    await p1.waitFor((m) => m.type === 'JOINED');
+    await p2.waitFor((m) => m.type === 'JOINED');
+    p1.send({ type: 'READY' });
+    p2.send({ type: 'READY' });
+    await p1.waitFor((m) => m.type === 'START');
+    // p1 말 0을 중앙(23)에 정착시키고 결과 큐에 do 1개 주입.
+    await fetch(`http://127.0.0.1:${PORT}/test/inject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        started: true, currentTurn: 'p1', pendingResults: ['do'],
+        awaitingBranchAt: null, awaitingBranchType: null, capturedBonus: false,
+        pieces: {
+          p1: [{ cell: 23 }, { cell: -1 }, { cell: -1 }, { cell: -1 }],
+          p2: [{ cell: -1 }, { cell: -1 }, { cell: -1 }, { cell: -1 }],
+        },
+      }),
+    });
+    // inject가 반영된 STATE(말0 cell=23)를 확실히 식별해 race 회피.
+    await p1.waitFor((m) =>
+      m.type === 'STATE'
+      && (m.players || []).find((p) => p.id === 'p1')?.pieces?.[0]?.cell === 23);
+    // 중앙(23)에서 do → 출발 칸이 23이므로 center 분기 요청 발생 기대.
+    p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'do' });
+    const br = await p1.waitFor((m) => m.type === 'BRANCH_REQUEST', 5000);
+    result.centerBranchSeen = br.branchType === 'center';
+    // 봇 스타일 응답: top → centerExitA.
+    // 최종 STATE 식별: 분기 해제(awaitingBranchAt=null) + 말0이 HOME(-1)/중앙(23) 아님.
+    // (START 단계의 미소비 STATE(cell=-1)나 분기 대기 STATE(cell=23)를 오매칭하지 않도록 정밀화.)
+    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'top' });
+    const st = await p1.waitFor((m) => {
+      if (m.type !== 'STATE' || m.awaitingBranchAt !== null) return false;
+      const c = (m.players || []).find((p) => p.id === 'p1')?.pieces?.[0]?.cell ?? -1;
+      return c !== -1 && c !== 23;
+    }, 5000);
+    const me = (st.players || []).find((p) => p.id === 'p1');
+    result.finalCell = me.pieces[0].cell;
+    result.awaitingCleared = st.awaitingBranchAt === null;
+  } catch (e) {
+    result.error = e.message;
+  } finally {
+    if (p1) await p1.close();
+    if (p2) await p2.close();
+    await new Promise((res) => server.close(res));
+  }
+  return result;
+}
+
 // ── YBOT-001: 봇 vs 봇 1판 완주 ─────────────────────────────────
 async function main() {
   section('YBOT-001: 봇 vs 봇 1판 완주');
@@ -233,9 +349,19 @@ async function main() {
   assertTrue(c2.cornerBranches >= 1,
     `corner 분기 ≥1건 응답 (cornerBranches=${c2.cornerBranches}) — 응답 후 서버 에러 없이 진행`);
 
-  section('YBOT-004: center 분기 응답 확인');
-  assertTrue(c2.centerBranches >= 1,
-    `center 분기 ≥1건 응답 (centerBranches=${c2.centerBranches})`);
+  // YBOT-004: 버그A 수정(2026-06-16)으로 center 분기는 지름길A 중앙 정확 착지 후 다음 이동 시에만
+  // 발생해 자연 집계가 드물다(flaky). 결정적 inject 프로브로 분기 발생 + top 응답 + centerExitA(28) 도달을 검증.
+  section('YBOT-004: center 분기 응답 확인 (결정적 inject 프로브)');
+  console.log(`    (참고) 3판 자연 발생 center 분기 = ${c2.centerBranches}건`);
+  const probe = await runCenterBranchProbe();
+  assertTrue(probe.error === null,
+    `프로브 실행 오류 없음 (error=${probe.error})`);
+  assertTrue(probe.centerBranchSeen === true,
+    `중앙(23) 정착 후 MOVE → center 분기 요청 발생 (branchType=center)`);
+  assertTrue(probe.finalCell === 28,
+    `top 응답 수락 → centerExitA 첫 칸 28 도달 (finalCell=${probe.finalCell})`);
+  assertTrue(probe.awaitingCleared === true,
+    `분기 대기 해제 (영구 잠금/데드락 없음, awaitingBranchAt=null)`);
 
   section('YBOT-005: 잡기 보너스 처리');
   assertTrue(c2.capturedBonusSeen >= 1,

@@ -82,10 +82,13 @@ test('YR-C14-003: 분기 대기 중 THROW_YUT → ERROR (§10-3)', async () => {
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
   try {
+    // 갱신 사유: 버그A 수정(2026-06-16) — 지름길 경유 중앙 통과는 자동 라우팅으로 BRANCH_REQUEST가
+    //   더 이상 발생하지 않는다. 분기 대기는 말이 중앙(23)에 **정확 정착**한 뒤 다음 이동 시 발생.
+    //   따라서 setup을 cell 23 정착으로 변경.
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['gae'],
       pieces: {
-        p1: [{ cell: 22, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
+        p1: [{ cell: 23, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
       },
     });
     await p1.next('STATE');
@@ -111,11 +114,12 @@ test('YR-C14-004: 분기 대기 중 MOVE_PIECE → ERROR (§10-3)', async () => 
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
   try {
+    // 갱신 사유: 버그A 수정(2026-06-16) — cell 22 통과는 자동 라우팅. 중앙 정착(cell 23)으로 변경.
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['gae', 'do'],
       pieces: {
         p1: [
-          { cell: 22, stack: 1, done: false },
+          { cell: 23, stack: 1, done: false },
           { cell: 0, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
           { cell: HOME, stack: 1, done: false },
@@ -153,22 +157,26 @@ test('YR-C14-006: 모서리 10 통과 — 외곽 계속 진행 (§10-1 §10-2)',
   expect(computeNextCell(9, 2).toCell).toBe(11);
 });
 
-test('YR-C14-007: 지름길A 진입 중(cell 22)에서 잔여 steps로 중앙 통과 → awaitingBranch=true (§10-3)', () => {
+test('YR-C14-007: 지름길A 진입 중(cell 22)에서 잔여 steps로 중앙 통과 → 자동 centerExitA (버그A 2026-06-16) (§10-3)', () => {
+  // 갱신 사유: 버그A 수정(2026-06-16) — 통과는 분기 의미가 없으므로 자동 centerExitA 라우팅.
   // Given: cell 22
-  // When: gae(2) — 22→23(잔여 1) → 분기 필요
-  // Then: awaitingBranch=true
+  // When: gae(2) — 22→23(잔여 1, 자동)→28
+  // Then: awaitingBranch=false, toCell=28
   const r = computeNextCell(22, 2);
-  expect(r.toCell).toBe(23);
-  expect(r.awaitingBranch).toBe(true);
+  expect(r.toCell).toBe(28);
+  expect(r.awaitingBranch).toBe(false);
+  expect(r.finalPath).toBe('centerExitA');
 });
 
-test('YR-C14-008: 지름길B 진입 중(cell 27)에서 잔여 steps로 중앙 통과 → awaitingBranch=true (§10-3)', () => {
+test('YR-C14-008: 지름길B 진입 중(cell 27)에서 잔여 steps로 중앙 통과 → 자동 centerExitB (버그A 2026-06-16) (§10-3)', () => {
+  // 갱신 사유: 버그A 수정(2026-06-16) — 자동 centerExitB 라우팅.
   // Given: cell 27
-  // When: gae(2) — 27→23(잔여 1) → 분기 필요
-  // Then: awaitingBranch=true
+  // When: gae(2) — 27→23(잔여 1, 자동)→24
+  // Then: awaitingBranch=false, toCell=24
   const r = computeNextCell(27, 2);
-  expect(r.toCell).toBe(23);
-  expect(r.awaitingBranch).toBe(true);
+  expect(r.toCell).toBe(24);
+  expect(r.awaitingBranch).toBe(false);
+  expect(r.finalPath).toBe('centerExitB');
 });
 
 test('YR-C14-009: GAME_OVER 후 MOVE_PIECE → 차단 (§11-2)', async () => {

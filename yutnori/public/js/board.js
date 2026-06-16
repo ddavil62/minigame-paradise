@@ -10,7 +10,7 @@
  *     6~9(상단 변), 10(우상 모서리),
  *     11~14(우측 변), 15(우하 모서리), 16~19(하단 변)
  *   지름길A (좌상 → 중앙 → 우하):
- *     21, 22, 23(중앙)
+ *     21, 22, 23(중앙), 28, 29 (centerExitA 중간 칸 — 2026-06-16 버그B 신설)
  *   지름길B (우상 → 중앙 → 좌하):
  *     26, 27, 23(중앙 공유)
  *
@@ -148,6 +148,31 @@ function buildCenterExitB() {
 export const CENTER_EXIT_B = buildCenterExitB();
 
 /**
+ * 버그B 수정 (2026-06-16): centerExitA 경로(중앙 → 우하 출구)의 중간 칸 28, 29.
+ * 28, 29는 중앙(23)과 우하 모서리(15) 사이의 1/3, 2/3 지점.
+ * (server.js의 centerExitA 23→28→29→15→... 동선과 인덱스 동기화)
+ *
+ * @returns {Array<{x:number, y:number, big:boolean}>}
+ */
+function buildCenterExitA() {
+  const start = CENTER_COORD;       // 중앙(23)
+  const end = OUTER_COORDS[15];     // 우하 모서리(15)
+  const list = [];
+  for (let i = 1; i <= 2; i++) {
+    const t = i / 3;
+    list.push({
+      x: start.x + (end.x - start.x) * t,
+      y: start.y + (end.y - start.y) * t,
+      big: false,
+    });
+  }
+  return list;
+}
+
+/** centerExitA 중간 칸 좌표 (인덱스 28, 29). */
+export const CENTER_EXIT_A = buildCenterExitA();
+
+/**
  * 칸 인덱스 → 좌표 매핑 (대표 좌표).
  * 0~19: 외곽. 21,22: 지름길A. 26,27: 지름길B. 23: 중앙.
  *
@@ -164,6 +189,9 @@ export function cellToCoord(cell) {
   // FIX-3: centerExitB 중간 칸 24/25.
   if (cell === 24) return CENTER_EXIT_B[0];
   if (cell === 25) return CENTER_EXIT_B[1];
+  // 버그B: centerExitA 중간 칸 28/29.
+  if (cell === 28) return CENTER_EXIT_A[0];
+  if (cell === 29) return CENTER_EXIT_A[1];
   return null;
 }
 
@@ -185,6 +213,9 @@ export function allCells() {
   // FIX-3: centerExitB 중간 칸 24/25 렌더링/hit-test 대상에 포함.
   list.push({ cell: 24, x: CENTER_EXIT_B[0].x, y: CENTER_EXIT_B[0].y, big: false });
   list.push({ cell: 25, x: CENTER_EXIT_B[1].x, y: CENTER_EXIT_B[1].y, big: false });
+  // 버그B (2026-06-16): centerExitA 중간 칸 28/29 렌더링/hit-test 대상에 포함.
+  list.push({ cell: 28, x: CENTER_EXIT_A[0].x, y: CENTER_EXIT_A[0].y, big: false });
+  list.push({ cell: 29, x: CENTER_EXIT_A[1].x, y: CENTER_EXIT_A[1].y, big: false });
   return list;
 }
 

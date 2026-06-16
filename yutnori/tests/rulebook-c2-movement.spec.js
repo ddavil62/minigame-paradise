@@ -106,13 +106,14 @@ test('YR-C2-012: 인덱스 20은 어떤 외곽 이동에서도 반환되지 않�
   expect(computeNextCell(19, 2).toCell).toBe(GOAL);
 });
 
-test('YR-C2-013: 인덱스 28은 어떤 이동에서도 반환되지 않음 (§2-2 §13-8)', () => {
-  // 갱신 사유: §13-2 해소(FIX-3) — 24/25가 centerExitB 중간 칸으로 활성화됨.
-  //            forbidden에서 24/25 제거(28만 미사용). 모서리 샘플은 shortcut 명시로 갱신(FIX-2).
-  // Given: 28은 표준 인덱스 매핑에서 미사용
-  // When: 외곽/지름길/중앙 출구(top) 다양한 이동 (centerExitB는 별도 시리즈에서 검증)
-  // Then: 결과 인덱스가 28에 속하지 않음
-  const forbidden = new Set([28]);
+test('YR-C2-013: 인덱스 20은 어떤 이동에서도 반환되지 않음 (§2-2 §13-8)', () => {
+  // 갱신 사유: 버그B 해소(2026-06-16) — 28/29가 centerExitA 중간 칸으로 활성화됨.
+  //            §13-2 해소(FIX-3)로 24/25(centerExitB)도 이미 활성. 미사용 외곽 인덱스는
+  //            이제 20만 남는다(20은 0과 동일 취급되는 완주점이라 별도 반환하지 않음).
+  // Given: 20은 표준 인덱스 매핑에서 미사용 (완주는 GOAL=99로 표현)
+  // When: 외곽/지름길/중앙 출구(top) 다양한 이동 (centerExitA/B는 별도 시리즈에서 검증)
+  // Then: 결과 인덱스가 20에 속하지 않음
+  const forbidden = new Set([20]);
   const samples = [
     computeNextCell(HOME, 5),
     computeNextCell(5, 1, 'shortcut'),
@@ -121,8 +122,8 @@ test('YR-C2-013: 인덱스 28은 어떤 이동에서도 반환되지 않음 (§2
     computeNextCell(10, 2, 'shortcut'),
     computeNextCell(22, 1),
     computeNextCell(27, 1),
-    computeNextCell(23, 1, 'top'),
-    computeNextCell(23, 2, 'top'),
+    computeNextCell(23, 1, 'top'),   // → 28 (centerExitA 활성, 정상)
+    computeNextCell(23, 2, 'top'),   // → 29 (centerExitA 활성, 정상)
     computeNextCell(23, 3, 'top'),
     computeNextCell(23, 4, 'top'),
     computeNextCell(23, 5, 'top'),

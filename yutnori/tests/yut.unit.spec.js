@@ -317,11 +317,13 @@ test('U-38: cell 22 + do(1) → cell 23 (awaitingBranch=false)', () => {
   expect(r.awaitingBranch).toBe(false);
 });
 
-test('U-39: cell 22 + gae(2) → awaitingBranch=true (중앙 통과 중 잔여 스텝 있음)', () => {
-  // 22→23(i=0, steps-1=1, 0<1 → awaitingBranch=true 즉시 반환)
+test('U-39: cell 22 + gae(2) → cell 28 (지름길A 경유 중앙 통과 → 자동 centerExitA, 버그A 2026-06-16)', () => {
+  // 갱신 사유: 버그A 수정(2026-06-16) — 지름길A 경유로 중앙(23)을 통과(잔여 steps)하면
+  //   더 이상 중앙 분기를 재대기하지 않고 자동으로 centerExitA로 진행한다.
+  //   22→23(i=0, shortcutA→centerExitA 자동)→28(i=1).
   const r = computeNextCell(22, 2);
-  expect(r.toCell).toBe(23);
-  expect(r.awaitingBranch).toBe(true);
+  expect(r.toCell).toBe(28);
+  expect(r.awaitingBranch).toBe(false);
 });
 
 // ── §6 computeNextCell — 지름길B (10→26→27→23) ───────────────────
@@ -353,11 +355,12 @@ test('U-44: cell 27 + do(1) → cell 23 (awaitingBranch=false)', () => {
   expect(r.awaitingBranch).toBe(false);
 });
 
-test('U-45: cell 27 + gae(2) → awaitingBranch=true', () => {
-  // 27→23(i=0), steps=2, i<steps-1 → awaitingBranch
+test('U-45: cell 27 + gae(2) → cell 24 (지름길B 경유 중앙 통과 → 자동 centerExitB, 버그A 2026-06-16)', () => {
+  // 갱신 사유: 버그A 수정(2026-06-16) — 지름길B 경유로 중앙(23)을 통과하면
+  //   자동으로 centerExitB로 진행한다. 27→23(i=0, shortcutB→centerExitB 자동)→24(i=1).
   const r = computeNextCell(27, 2);
-  expect(r.toCell).toBe(23);
-  expect(r.awaitingBranch).toBe(true);
+  expect(r.toCell).toBe(24);
+  expect(r.awaitingBranch).toBe(false);
 });
 
 test('U-46: cell 26 + gae(2) → cell 23 (awaitingBranch=false, 마지막 스텝 도달)', () => {
@@ -375,26 +378,29 @@ test('U-47: cell 23 + steps=1, branchChoice=null → awaitingBranch=true', () =>
   expect(r.awaitingBranch).toBe(true);
 });
 
-test('U-48: cell 23 + do(1), branchChoice=top → cell 15 (centerExitA)', () => {
-  // centerExitA: 23→15→...
+test('U-48: cell 23 + do(1), branchChoice=top → cell 28 (centerExitA 중간 칸, 버그B 2026-06-16)', () => {
+  // 갱신 사유: 버그B 수정(2026-06-16) — centerExitA가 23→15 즉시 합류에서
+  //   23→28→29→15로 변경(centerExitB 24/25와 대칭). 도(1)이면 첫 중간 칸 28에 정착.
   const r = computeNextCell(23, 1, 'top');
-  expect(r.toCell).toBe(15);
+  expect(r.toCell).toBe(28);
   expect(r.awaitingBranch).toBe(false);
 });
 
-test('U-49: cell 23 + gae(2), branchChoice=top → cell 16', () => {
-  // 23→15→16
-  expect(computeNextCell(23, 2, 'top').toCell).toBe(16);
+test('U-49: cell 23 + gae(2), branchChoice=top → cell 29 (23→28→29, 버그B 2026-06-16)', () => {
+  // 갱신 사유: 버그B 수정 — 23→28→29.
+  expect(computeNextCell(23, 2, 'top').toCell).toBe(29);
 });
 
-test('U-50: cell 23 + mo(5), branchChoice=top → cell 19 (23→15→16→17→18→19)', () => {
-  expect(computeNextCell(23, 5, 'top').toCell).toBe(19);
+test('U-50: cell 23 + mo(5), branchChoice=top → cell 17 (23→28→29→15→16→17, 버그B 2026-06-16)', () => {
+  // 갱신 사유: 버그B 수정 — 중간 칸 28/29 추가로 외곽 합류가 2칸 늦어짐.
+  expect(computeNextCell(23, 5, 'top').toCell).toBe(17);
 });
 
-test('U-51: cell 23 + 6, branchChoice=top → GOAL (23→15→16→17→18→19→GOAL)', () => {
+test('U-51: cell 23 + 6, branchChoice=top → cell 18 (23→28→29→15→16→17→18, 버그B 2026-06-16)', () => {
+  // 갱신 사유: 버그B 수정 — 중간 칸 2개 추가로 6칸이어도 GOAL 미도달(cell 18 정착).
   const r = computeNextCell(23, 6, 'top');
-  expect(r.toCell).toBe(GOAL);
-  expect(r.passedStart).toBe(true);
+  expect(r.toCell).toBe(18);
+  expect(r.passedStart).toBe(false);
 });
 
 test('U-52: cell 23 + do(1), branchChoice=bottom → cell 24 (centerExitB 중간 칸)', () => {
@@ -415,9 +421,9 @@ test('U-54: cell 15 + mo(5) → GOAL (15→16→17→18→19→GOAL)', () => {
   expect(r.passedStart).toBe(true);
 });
 
-test('U-55: cell 23 + steps=3, branchChoice=top → cell 17', () => {
-  // 23→15→16→17
-  expect(computeNextCell(23, 3, 'top').toCell).toBe(17);
+test('U-55: cell 23 + steps=3, branchChoice=top → cell 15 (23→28→29→15, 버그B 2026-06-16)', () => {
+  // 갱신 사유: 버그B 수정 — 23→28→29→15. 걸(3)이면 외곽 우하 출구(15)에 정착.
+  expect(computeNextCell(23, 3, 'top').toCell).toBe(15);
 });
 
 // ── §8 computeNextCell — 백도(-1) ────────────────────────────────
@@ -488,22 +494,26 @@ test('U-65: 외곽 임의 칸에서 백도 — 이전 칸 (cell 19는 워프 복
 // 1차 모서리 선택('shortcut')과 2차 중앙 선택('top'/'bottom')을 'shortcut-top'/'shortcut-bottom'
 // 복합값으로 합성하여 한 번에 계산한다.
 
-test('U-66: cell 5 + yut(4) + shortcut → 중앙 통과 잔여로 awaitingBranch=true (§10-2 §10-3)', () => {
-  // 5→21→22→23(i=2, steps-1=3, 2<3) → 잔여 steps 있이 중앙 도달 → 중앙 분기 재대기.
+test('U-66: cell 5 + yut(4) + shortcut → cell 28 (지름길A 경유 중앙 통과 → 자동 centerExitA, 버그A 2026-06-16)', () => {
+  // 갱신 사유: 버그A 수정(2026-06-16) — 지름길A로 중앙을 통과(잔여 steps)하면 더 이상
+  //   awaitingBranch=true로 중앙 분기를 재대기하지 않고 자동 centerExitA로 진행한다.
+  //   5→21(i=0)→22(i=1)→23(i=2, shortcutA→centerExitA 자동)→28(i=3).
   const r = computeNextCell(5, 4, 'shortcut');
-  expect(r.toCell).toBe(23);
-  expect(r.awaitingBranch).toBe(true);
-});
-
-test('U-67: cell 5 + yut(4) + shortcut-top → cell 15 (지름길A→centerExitA) (§10-2 §10-3)', () => {
-  // 5→21→22→23→15. 복합값이므로 중앙 재대기 없이 출구A로 진행.
-  const r = computeNextCell(5, 4, 'shortcut-top');
-  expect(r.toCell).toBe(15);
+  expect(r.toCell).toBe(28);
   expect(r.awaitingBranch).toBe(false);
 });
 
-test('U-68: cell 5 + mo(5) + shortcut-top → cell 16 (5→21→22→23→15→16) (§10-3)', () => {
-  expect(computeNextCell(5, 5, 'shortcut-top').toCell).toBe(16);
+test('U-67: cell 5 + yut(4) + shortcut-top → cell 28 (지름길A→centerExitA 중간 칸, 버그B 2026-06-16)', () => {
+  // 갱신 사유: 버그B 수정 — centerExitA 23→28→29→15 경로화.
+  //   5→21→22→23→28. 복합값이므로 중앙 재대기 없이 출구A로 진행.
+  const r = computeNextCell(5, 4, 'shortcut-top');
+  expect(r.toCell).toBe(28);
+  expect(r.awaitingBranch).toBe(false);
+});
+
+test('U-68: cell 5 + mo(5) + shortcut-top → cell 29 (5→21→22→23→28→29, 버그B 2026-06-16)', () => {
+  // 갱신 사유: 버그B 수정 — centerExitA 중간 칸 28/29 경유.
+  expect(computeNextCell(5, 5, 'shortcut-top').toCell).toBe(29);
 });
 
 test('U-69: cell 5 + yut(4) + shortcut-bottom → cell 24 (지름길A→centerExitB) (§10-3)', () => {
@@ -527,4 +537,83 @@ test('U-72: cell 5 + geol(3) + shortcut → cell 23 정착 (잔여 없음, await
   const r = computeNextCell(5, 3, 'shortcut');
   expect(r.toCell).toBe(23);
   expect(r.awaitingBranch).toBe(false);
+});
+
+// ── §10 버그A — 지름길 경유 중앙 통과 자동 라우팅 (U-73~U-77, 2026-06-16) ──
+//
+// 버그A: 모서리(5/10)에서 'shortcut'으로 지름길을 타고 잔여 steps로 중앙(23)을 **통과**할 때,
+// 이전 구현은 awaitingBranch=true로 중앙 분기를 재대기시켰다(2단계 중첩 분기).
+// 수정: 통과(정확 착지 아님)는 분기 선택 의미가 없으므로 지름길 방향대로 자동 라우팅한다.
+//   - shortcutA 경유 통과 → centerExitA 자동
+//   - shortcutB 경유 통과 → centerExitB 자동
+// 정확 착지(잔여 0)는 여전히 중앙 정착(U-72) → 다음 이동 시 23 출발 분기.
+
+test('U-73: cell 5 + mo(5) + shortcut → cell 29 (지름길A 통과 자동 centerExitA, 버그A)', () => {
+  // 5→21(i0)→22(i1)→23(i2, 자동 centerExitA)→28(i3)→29(i4).
+  const r = computeNextCell(5, 5, 'shortcut');
+  expect(r.toCell).toBe(29);
+  expect(r.awaitingBranch).toBe(false);
+  expect(r.finalPath).toBe('centerExitA');
+});
+
+test('U-74: cell 10 + yut(4) + shortcut → cell 24 (지름길B 통과 자동 centerExitB, 버그A)', () => {
+  // 10→26(i0)→27(i1)→23(i2, 자동 centerExitB)→24(i3).
+  const r = computeNextCell(10, 4, 'shortcut');
+  expect(r.toCell).toBe(24);
+  expect(r.awaitingBranch).toBe(false);
+  expect(r.finalPath).toBe('centerExitB');
+});
+
+test('U-75: cell 10 + mo(5) + shortcut → cell 25 (지름길B 통과 자동 centerExitB, 버그A)', () => {
+  // 10→26→27→23(자동)→24→25.
+  const r = computeNextCell(10, 5, 'shortcut');
+  expect(r.toCell).toBe(25);
+  expect(r.awaitingBranch).toBe(false);
+});
+
+test('U-76: cell 22 + geol(3) + shortcut → 자동 centerExitA (22→23 통과, 버그A)', () => {
+  // 22→23(i0, 자동 centerExitA)→28(i1)→29(i2). 잔여 통과 → 재대기 없음.
+  const r = computeNextCell(22, 3, 'shortcut');
+  expect(r.toCell).toBe(29);
+  expect(r.awaitingBranch).toBe(false);
+});
+
+test('U-77: cell 27 + geol(3) → 자동 centerExitB (27→23 통과, 버그A)', () => {
+  // 27→23(i0, shortcutB→centerExitB 자동)→24(i1)→25(i2). branchChoice 불필요.
+  const r = computeNextCell(27, 3);
+  expect(r.toCell).toBe(25);
+  expect(r.awaitingBranch).toBe(false);
+});
+
+// ── §11 버그B — centerExitA 중간 칸 28/29 (U-78~U-83, 2026-06-16) ──
+//
+// 버그B: centerExitA가 23→15로 즉시 합류했으나, centerExitB(23→24→25)와 비대칭이었다.
+// 수정: 중앙(23)→28→29→15(우하 출구)→16→...→GOAL. 중간 칸 28/29 신설(centerExitB 24/25 대칭).
+
+test('U-78: cell 28 + do(1) → cell 29 (centerExitA 중간 칸 전진)', () => {
+  expect(computeNextCell(28, 1, 'centerExitA').toCell).toBe(29);
+});
+
+test('U-79: cell 28 + gae(2) → cell 15 (28→29→15 외곽 합류)', () => {
+  expect(computeNextCell(28, 2, 'centerExitA').toCell).toBe(15);
+});
+
+test('U-80: cell 29 + do(1) → cell 15 (centerExitA 마지막 중간 칸 → 외곽)', () => {
+  expect(computeNextCell(29, 1, 'centerExitA').toCell).toBe(15);
+});
+
+test('U-81: cell 29 + mo(5) → GOAL (29→15→16→17→18→19, 외곽 합류 후 완주 직전)', () => {
+  // 29→15(i0)→16(i1)→17(i2)→18(i3)→19(i4). cell 19 정착 (GOAL 아님).
+  expect(computeNextCell(29, 5, 'centerExitA').toCell).toBe(19);
+});
+
+test('U-82: cell 29 + 6 → GOAL (29→15→16→17→18→19→GOAL)', () => {
+  const r = computeNextCell(29, 6, 'centerExitA');
+  expect(r.toCell).toBe(GOAL);
+  expect(r.passedStart).toBe(true);
+});
+
+test('U-83: centerExitA 중간 칸 백도 복귀 — 29 → 28, 28 → 23 (centerExitB 대칭)', () => {
+  expect(computeNextCell(29, -1).toCell).toBe(28);
+  expect(computeNextCell(28, -1).toCell).toBe(23);
 });

@@ -115,7 +115,9 @@ test('YR-C13-006: §13-11 회귀 — capturedBonus=false 후 큐 없는 상태�
 });
 
 test('YR-C13-007: §13-11 회귀 — CHOOSE_PATH 후 passTurn → capturedBonus 리셋 (§13-11 §6-2)', async () => {
-  // Given: piece 0=22 + 큐=['gae'] → MOVE → BRANCH_REQUEST → CHOOSE_PATH(top) → 23→15
+  // 갱신 사유: 버그A 수정(2026-06-16) — cell 22 통과는 자동 라우팅이라 BRANCH_REQUEST 없음.
+  //   중앙 분기 CHOOSE_PATH 경로를 타려면 cell 23 정착 setup 필요.
+  // Given: piece 0=23 + 큐=['gae'] → MOVE → BRANCH_REQUEST(center) → CHOOSE_PATH(top) → 23→28→29
   // When: CHOOSE_PATH 처리 후 큐 비고 보너스 없음 → passTurn
   // Then: currentTurn=p2 + P2 THROW_YUT 허용 (capturedBonus 잔류 없음)
   const app = createApp({});
@@ -125,7 +127,7 @@ test('YR-C13-007: §13-11 회귀 — CHOOSE_PATH 후 passTurn → capturedBonus 
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['gae'], capturedBonus: false,
       pieces: {
-        p1: [{ cell: 22, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
+        p1: [{ cell: 23, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }, { cell: HOME, stack: 1, done: false }],
       },
     });
     await p1.next('STATE');

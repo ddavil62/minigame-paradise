@@ -1,6 +1,6 @@
 # Yutnori — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. **2026-06-15 §13-5·§13-6 해소 (첫칸 빽도 워프 cell 1↔19 + 지름길B 중앙 자동 centerExitB, 신규 6건).** 2026-06-15 §13-12 해소 (윷·모 잡기 중복 보너스 차단, YR-C19 6건). 2026-06-12 AI 봇 추가 (bot-smoke 7/7×4 PASS). 2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 QA PASS. 회귀 게이트: 서버리스 327 + E2E 25 + smoke 40 + bot-smoke 7. 룰북 §13 12건(미해소 4 + 해소 8) — §13-1/§13-2/§13-5/§13-6/§13-12 해소.
+> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. **2026-06-16 버그A/B 해소 (버그A: 중앙(23) 통과 시 BRANCH 미발송 + 진입 지름길 기준 자동 라우팅, 정확 착지에만 분기 / 버그B: centerExitA에 중간 칸 28/29 신설, `23→28→29→15→…→GOAL`, centerExitB 24/25와 거울 대칭).** 2026-06-15 §13-5·§13-6 해소 (첫칸 빽도 워프 cell 1↔19 + 지름길B 중앙 자동 centerExitB). 2026-06-15 §13-12 해소 (윷·모 잡기 중복 보너스 차단). 2026-06-12 AI 봇 추가. 2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 QA PASS. 회귀 게이트: 서버리스 **338** + E2E **25** + smoke 40 + bot-smoke **10**. 룰북 §13 12건(미해소 4 + 해소 8) — §13-1/§13-2/§13-5/§13-6/§13-12 해소.
 
 ## 룰북 (필수 숙지)
 
@@ -34,8 +34,8 @@
    - 3000~3010 자동 시도. `wss = new WebSocketServer({ server })`가 HTTP server를 공유하므로 EADDRINUSE 시 **양 채널에 error 핸들러 필수** (tetris-battle 함정 동일).
 4. **단순화 결정**
    - 모서리(5, 10)에 정확히 멈추면 다음 이동 시 **외곽 계속 / 지름길 진입 선택 모달** 표시(정통 룰 적용, 2026-06-11 FIX-2). 이전 자동 지름길 진입 단순화는 해소 — 룰북 §13-1 해소.
-   - 중앙(23)·모서리(5/10) 모두 분기 모달로 경로 선택. 모서리 지름길 + 중앙 통과 시 corner→center 2단계 모달(중첩 분기).
-   - **지름길B 경유 중앙 정착 → 자동 centerExitB(bottom)** (정통 룰 적용, 2026-06-15 §13-6 해소). `piece.lastPath==='shortcutB' && cell===23`이면 BRANCH_REQUEST 없이 자동 라우팅. 지름길A 경유는 기존 자유 선택 유지. 이전 "진입 경로 무관 양방향 자유" 단순화는 해소 — 룰북 §13-6 해소.
+   - 분기 결정은 모서리(5/10)·중앙(23)에 **정확히 착지**한 경우에만 발생. **중앙을 통과(정확히 안 멈춤)하면 BRANCH_REQUEST 미발송 + 진입 지름길 기준 자동 라우팅**(2026-06-16 버그A 해소): 지름길A 통과 → centerExitA, 지름길B 통과 → centerExitB. 모서리 지름길 + 중앙 통과 시 corner→center 2단계 모달(중첩 분기, 정확 착지 케이스)은 유지.
+   - **중앙 정확 착지**: 지름길A 경유 → 다음 이동 BRANCH center 자유 선택 / 지름길B 경유 → 자동 centerExitB(bottom) (`piece.lastPath==='shortcutB' && cell===23`, BRANCH 미발송, 2026-06-15 §13-6 해소). 이전 "진입 경로 무관 양방향 자유" 단순화는 해소.
    - 백도(빽도, X자 표식 가락) 변형 룰 미적용. 단 **첫칸 빽도 워프**는 적용(2026-06-15 §13-5 해소): cell 1↔19 워프. HOME 백도 자동 폐기는 유지.
    - 중앙→좌하 출구는 **23→24→25→GOAL 잔여 steps 소진**(정통 룰 적용, 2026-06-11 FIX-3). 이전 즉시 완주 단순화는 해소 — 룰북 §13-2 해소.
    - HOME → 보드 진입은 **2026-05-31부로 정통 룰 매핑 적용** (HOME → 칸 N). 이전 단순화(HOME → 칸 N-1)는 해소. 룰북 §13-10 참조.
@@ -62,13 +62,13 @@ yutnori/
 │       ├── main.js           # 진입점
 │       ├── network.js        # WebSocket
 │       ├── game.js           # 클라 상태 캐시 + 검증 헬퍼
-│       ├── board.js          # 칸 좌표 + 경로 정의 (서버 인덱스와 동기화)
+│       ├── board.js          # 칸 좌표 + 경로 정의 (서버 인덱스와 동기화. 24/25 centerExitB + 28/29 centerExitA)
 │       ├── yut.js            # 윷 결과명/한글/가락 렌더링
 │       ├── piece.js          # 클릭 hit-test
 │       └── ui.js             # Canvas 보드/말 + DOM HUD
 └── tests/
     ├── smoke.test.js                       # 레거시 smoke (node 직접 실행, 시나리오 1~8 + 모서리 분기/shortcut 보조 assert)
-    ├── bot-smoke.test.js                   # 봇 smoke (node 직접 실행, YBOT-001~005, 포트 3104. 인라인 봇 vs 서버 spawn bot.js)
+    ├── bot-smoke.test.js                   # 봇 smoke (node 직접 실행, YBOT-001~005, 포트 3104. 인라인 봇 vs 서버 spawn bot.js. 10/10 — YBOT-004 결정적 inject 프로브 보강, 2026-06-16)
     ├── yut.unit.spec.js                    # Playwright 단위 — throwYutSticks/computeNextCell (U-66~U-72 중첩 분기 포함)
     ├── ws.scenarios.spec.js                # Playwright WS — 메시지 프로토콜/게임 흐름
     ├── e2e-scenarios.spec.js               # Playwright E2E 25개 — 브라우저 2페이지 실전 검증
@@ -82,7 +82,7 @@ yutnori/
 
 ### Playwright (주력 테스트 스위트)
 
-> 2026-06-15 기준: 서버리스 회귀 295 + QA 엣지 26 = **321 PASS**, E2E 25(서버 필요). 신규 파일 `rulebook-c15~c18-*.spec.js`, `qa-rulefix-edge.spec.js`, `rulebook-c19-capture-bonus-no-stack.spec.js`(YR-C19 §13-12 6건).
+> 2026-06-16 기준: 서버리스 회귀 **338 PASS**(직전 327 + 버그A/B 신규 11), E2E 25(서버 필요), bot-smoke 10/10(YBOT-004 결정적 inject 프로브 보강). 신규 케이스: 중앙 통과 자동 라우팅(버그A) + centerExitA 28/29 경유(버그B). 갱신 테스트 9: yut.unit, rulebook-c2/c7/c11/c12/c13/c14/c16, ws.scenarios, qa-rulefix-edge, bot-smoke.
 
 ```powershell
 cd C:\LazySlimeStudio\minigames\yutnori
@@ -120,11 +120,11 @@ node tests/smoke.test.js --port 3088
 node tests/bot-smoke.test.js
 ```
 
-기대: `7/7 PASS` (봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기, 데드락 0). 인라인 봇(테스트 운전) vs 서버 spawn한 실제 `bot.js` 자식 프로세스 대전으로 `mode=ai → spawnBotChild → mode=bot` 경로까지 검증. 포트 3104는 bot-smoke 전용으로 사용자 launcher(3000)와 무영향. 환경변수 `YUTNORI_BOT_DELAY_MIN/RAND`로 봇 속도 조정(테스트는 짧게 단축, 기본 300~800ms).
+기대: `10/10 PASS` (봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기, 데드락 0. 2026-06-16 YBOT-004를 결정적 inject 프로브로 보강 — 중앙 통과 자동 라우팅 검증). 인라인 봇(테스트 운전) vs 서버 spawn한 실제 `bot.js` 자식 프로세스 대전으로 `mode=ai → spawnBotChild → mode=bot` 경로까지 검증. 포트 3104는 bot-smoke 전용으로 사용자 launcher(3000)와 무영향. 환경변수 `YUTNORI_BOT_DELAY_MIN/RAND`로 봇 속도 조정(테스트는 짧게 단축, 기본 300~800ms).
 
 ### 회귀 게이트
 
-- 모든 변경은 **서버리스 회귀 295 + QA 엣지 26 = 321/321 PASS**를 유지해야 한다 (2026-06-15 기준). E2E 25는 서버 가동 시 별도 회귀.
+- 모든 변경은 **서버리스 회귀 338/338 PASS**를 유지해야 한다 (2026-06-16 기준, 직전 327 + 버그A/B 신규 11). E2E 25는 서버 가동 시 별도 회귀. bot-smoke 10/10(YBOT-004 결정적 inject 프로브 보강).
 - smoke도 유지한다 (시나리오 1~8, 36 assert PASS. 8b "참고용" WS 샘플러는 환경 의존 장기 실행으로 기능 무관).
 - 룰북 시나리오(YR-C1~C19)는 §13 12건을 커버. 새 게임 로직 변경 시 영향 받는 카테고리를 우선 회귀 실행한다.
 - 신규 시나리오는 추가하되 기존 시나리오는 수정/삭제하지 않는다. **단, 정통 룰로 기댓값이 바뀐 경우 갱신 사유를 파일 주석에 명기하고 수정 허용**(2026-06-11 §13-1/§13-2 해소로 YR-C6/C7/C12, qa-defect2, smoke/unit 일부 갱신).
@@ -170,7 +170,7 @@ WS 연결 URL(`/ws?mode=...`)에 모드 쿼리를 부착한다. `network.js`가 
 | 항목 | 함정 |
 |---|---|
 | `wss = new WebSocketServer({ server })` | server와 wss 양쪽에 error 핸들러 필요. wss에만 또는 server에만 등록하면 EADDRINUSE 시 unhandled로 즉시 종료. |
-| `board.js` 칸 좌표 vs `server.js` 인덱스 | 칸 인덱스 매핑은 양쪽이 **반드시 일치**해야 함 (0~19 외곽, 21/22 지름길A, 26/27 지름길B, 23 중앙, **24/25 centerExitB** — 2026-06-11 FIX-3 신설, board.js `CENTER_EXIT_B`/`buildCenterExitB`). 변경 시 양쪽 동시 갱신. |
+| `board.js` 칸 좌표 vs `server.js` 인덱스 | 칸 인덱스 매핑은 양쪽이 **반드시 일치**해야 함 (0~19 외곽, 21/22 지름길A, 26/27 지름길B, 23 중앙, **24/25 centerExitB** — 2026-06-11 FIX-3 신설, board.js `CENTER_EXIT_B`/`buildCenterExitB`, **28/29 centerExitA** — 2026-06-16 버그B 신설, board.js `CENTER_EXIT_A`/`buildCenterExitA`, 중앙(23)→우하(15) 대각 1/3·2/3 지점 (356.67,356.67)·(433.33,433.33), centerExitB와 x=280 수직 대칭). 변경 시 양쪽 동시 갱신. |
 | `MOVE_PIECE`의 `useResult` 검증 | 서버는 `pendingResults`에 해당 결과명이 있는지 indexOf로 검사. 큐에 없으면 ERROR. |
 | 보너스 턴 처리 | `lastResult === 'yut' || 'mo'`이면 큐가 비어도 다시 던질 수 있음. 잡기 보너스는 `game.capturedBonus` 플래그로 별도. 턴 종료 판단 시 `hasBonus` 체크 필수. |
 | `capturedBonus` 라이프사이클 | **3개 분기 모두에 명시 리셋 필요** (2026-05-31 §13-11 + 보강 해소): ① MOVE_PIECE/CHOOSE_PATH 핸들러의 `passTurn()` 직후 `game.capturedBonus = false`, ② THROW_YUT 핸들러에서 잡기 보너스 권리로 진입한 던지기에서만 1회 소진 — **2026-06-11 FIX-4: 소진 조건을 `enteredViaCapturedBonus = pendingResults.length === 0 && capturedBonus === true`로 한정**(큐에 yut/mo 잔여 시 보존). 무조건 소진하면 윷·모 보너스 진입 던지기에서 잡기 보너스 권리를 부당하게 잃음. ③ `resetGame()` / `softResetRoom()` 명시 초기화. 누락하면 잡기 후 보너스 결과가 yut/mo가 아닐 경우 87.5% 확률로 결정적 턴 잠금 (QA-D2-001/002 회귀 가드). 보너스 진입 검사식: `hasBonus = capturedBonus===true || lastResult==='yut' || lastResult==='mo'`. |
@@ -179,6 +179,8 @@ WS 연결 URL(`/ws?mode=...`)에 모드 쿼리를 부착한다. `network.js`가 
 | 첫칸 빽도 워프 범위 조정 (2026-06-15 §13-5) | `computeNextCell` `steps === -1` 분기에서 cell 1→19 / cell 19→1 특례를 **외곽 범용 후퇴(`fromCell-1`) 앞에** 배치하고, 범용 범위를 `1~19`에서 **`2~18`로 좁혀야** 한다. 특례를 뒤에 두거나 범위를 안 좁히면 cell 1이 0으로(언더플로우), cell 19가 18로 잘못 후퇴해 워프가 무효화된다. done=false 유지(toCell=19는 GOAL 아님 → movePiece가 done 미설정). |
 | 지름길B 중앙 자동 출구 — cell 23 조건 한정 (2026-06-15 §13-6) | MOVE_PIECE 자동 bottom 조건은 **`piece.cell === 23 && piece.lastPath === 'shortcutB'`** 로만 발동. 중첩 분기(cell 5/10에서 shortcut 후 중앙 통과)는 `awaitingBranch=true`로 BRANCH_REQUEST center 재무장 경로로 빠지고 piece.cell이 5/10이므로 자동 분기와 절대 겹치지 않는다. 조건을 cell 23 외로 넓히면 중첩 분기(YR-C16-011)·QA-RF2가 깨진다. `piece.lastPath`는 `computeNextCell` 반환 `finalPath`를 movePiece가 저장하는 **서버 내부 필드 — broadcastState 직렬화 목록에 절대 추가하지 말 것**(STATE 스키마 무변경, 클라이언트/봇 무영향). |
 | `computeNextCell` 반환 `finalPath` 누락 방지 (2026-06-15) | 모든 return에 `finalPath`를 포함해야 한다. 착지 return은 `pathContext`, awaitingBranch=true·백도(-1) return은 `null`. 누락하면 piece.lastPath가 `undefined`가 되어 자동 라우팅이 동작하지 않는다. |
+| 중앙 통과 자동 라우팅 — 정확 착지만 분기 (2026-06-16 버그A) | 말이 중앙(23)을 **정확히 멈추지 않고 통과**하는 이동은 BRANCH_REQUEST를 발송하지 않고 **진입 지름길 기준으로 자동 라우팅**한다(지름길A 통과 → centerExitA 28/29, 지름길B 통과 → centerExitB 24/25). `BRANCH_REQUEST`/분기 모달은 **중앙(23)·모서리(5/10) 정확 착지** 시에만 무장해야 한다. 통과 케이스에서 awaitingBranch를 켜면 말이 중앙에 멈춰 분기 모달이 잘못 뜬다. 중첩 분기(모서리 5/10 정확 착지 후 shortcut→중앙 통과)는 별도 경로(`shortcut-top`/`shortcut-bottom` 합성)로 piece.cell이 5/10이라 통과 자동 라우팅과 겹치지 않는다. 자동 라우팅 출구 선택은 `piece.lastPath`(`shortcutA`→centerExitA / `shortcutB`→centerExitB) 기준. |
+| centerExitA 28/29 추가 시 server.js↔board.js 대칭 (2026-06-16 버그B) | `advanceOneCell` centerExitA는 `23→28→29→15→16→17→18→19→GOAL`, 백도 복귀 `29→28`/`28→23`. centerExitB(24/25, `23→24→25→16…`)와 거울 대칭. 시작 칸 28/29 이동은 `pathContext='centerExitA'`로 잔여 소진. board.js `buildCenterExitA`/`CENTER_EXIT_A`로 28=(356.67,356.67)/29=(433.33,433.33) 렌더링·hit-test·경로선 동시 추가(누락 시 칸은 가지만 화면에 안 보임). |
 | 봇 dedup 키에 `awaitingBranchType` 필수 (2026-06-12) | `bot.js`/`bot-smoke.test.js` 인라인 봇의 중복 행동 방지 키(`${currentTurn}\|${pendingResults}\|${awaitingBranchAt}\|${awaitingBranchType}\|${capturedBonus}`)에서 **`awaitingBranchType`을 빼면 안 됨**. 중첩 분기(corner shortcut→center 재무장) 시 서버가 `pieceIndex`(awaitingBranchAt)·큐·capturedBonus를 그대로 둔 채 `awaitingBranchType`만 `corner→center`로 바꿔 STATE를 재발송하므로, 이 필드가 키에 없으면 키가 동일해져 봇이 2차 center 분기를 "이미 처리한 상태"로 무시 → **영구 턴 잠금**. 봇이 corner에서 shortcut을 고르고 잔여 steps가 정확히 중앙을 통과할 때만 발생하는 간헐(확률적) 데드락이라 재현이 까다로움. (bot.js:169, bot-smoke.test.js:120, HIGH 수정 사유) |
 | HOME → 보드 진입 칸 수 | `advanceOneCell()` cell === -1 분기는 **`return 1`** (정통 룰: HOME에서 도 = 칸 1). 추가로 `cell === 0`에서 `return 1` 안전망 필요. 이전 `return 0` 단순화는 정통과 1칸 차이를 유발했음. (2026-05-31 룰북 §13-10 해소 사유) |
 | 분기 대기 (`awaitingBranchAt`) | THROW/MOVE 모두 차단. 중앙 도달 시 piece는 **아직 이동시키지 않은 상태**로 두고 awaiting만 기록 → CHOOSE_PATH 시 movePiece 재호출. |
@@ -193,11 +195,11 @@ WS 연결 URL(`/ws?mode=...`)에 모드 쿼리를 부착한다. `network.js`가 
 | § | 항목 | 영향도 | 상태 | 한 줄 요약 |
 |---|---|---|---|---|
 | §13-1 | 모서리 분기 강제→선택 | **HIGH** | **2026-06-11 해소** | 외곽/지름길 선택 분기(FIX-2). `BRANCH_REQUEST corner` + `CHOOSE_PATH outer/shortcut` + 중첩 분기 2단계 모달. |
-| §13-2 | centerExitB 즉시 완주 | **HIGH** | **2026-06-11 해소** | `23→24→25→GOAL` 잔여 소진(FIX-3). 24/25 활성화, 잡기/업기/백도 동작, board.js `buildCenterExitB`. |
+| §13-2 | centerExitB 즉시 완주 | **HIGH** | **2026-06-11 해소 (2026-06-16 보강)** | `23→24→25→GOAL` 잔여 소진(FIX-3). 24/25 활성화. **2026-06-16 버그B**: centerExitA도 대칭 중간 칸 28/29 신설(`23→28→29→15→…→GOAL`), board.js `buildCenterExitA`/`CENTER_EXIT_A`. 잡기/업기/백도(29→28/28→23) 동작. |
 | §13-3 | 윷가락 확률 균등 50% | LOW | 미해소 | 물리 가락은 60~65% 뒤집힘 편향. 디지털 단순화. |
 | §13-4 | 윷가락 매핑 회귀 위험 | MED | 미해소 | Phase 2→2.1 이력. 현재 정상. 회귀 테스트 필수. |
 | §13-5 | 첫칸 빽도 워프 | LOW | **2026-06-15 해소** | `computeNextCell` steps=-1: cell 1↔19 워프(범용 후퇴 2~18로 좁힘). done=false. HOME 백도 자동 폐기·cell 0 정책은 유지. YR-C5-001/010/011/012/013, U-56b. |
-| §13-6 | 중앙 분기 진입 경로별 출구 | LOW | **2026-06-15 해소** | 지름길B 경유 중앙(23) 정확 정착(`piece.lastPath==='shortcutB'`) → 다음 이동 자동 centerExitB(bottom), BRANCH_REQUEST 미발송. 지름길A 자유 선택 유지. `finalPath`/`lastPath`(STATE 미노출). YR-C7-008/011/012. |
+| §13-6 | 중앙 분기 진입 경로별 출구 | LOW | **2026-06-15 해소 (2026-06-16 보강)** | 지름길B 경유 중앙(23) 정확 정착(`piece.lastPath==='shortcutB'`) → 다음 이동 자동 centerExitB(bottom), BRANCH_REQUEST 미발송. 지름길A 자유 선택 유지. **2026-06-16 버그A**: 중앙 **통과**(정확히 안 멈춤) 시에도 BRANCH 미발송 + 진입 지름길 기준 자동 라우팅(지름길A→centerExitA, 지름길B→centerExitB). 결정은 정확 착지에만. `finalPath`/`lastPath`(STATE 미노출). YR-C7-008/011/012. |
 | §13-7 | 선후공 결정 절차 생략 | LOW | 미해소 | 정통은 첫 던지기로 결정. 본 구현은 p1 고정. |
 | §13-8 | 외곽 인덱스 20/28 미사용 | LOW | 미해소 | 단순화. 24/25는 2026-06-11 centerExitB로 활성화(§13-2). |
 | §13-9 | HOME 시작 위치 좌우 분리 | LOW | **2026-05-31 해소** | 이전 P1 좌하/P2 우상 → 양 팀 좌하 통일 (`public/js/ui.js`). |

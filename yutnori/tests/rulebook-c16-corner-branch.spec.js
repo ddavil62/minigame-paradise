@@ -66,13 +66,16 @@ test('YR-C16-006: cell 4 + gae(2) → cell 6 (모서리 5 통과, 분기 없음)
   expect(r.awaitingBranch).toBe(false);
 });
 
-test('YR-C16-007: cell 5 + yut(4) + shortcut → 중앙 도달 시 awaitingBranch=true (§10-2 §10-3 §13-1)', () => {
+test('YR-C16-007: cell 5 + yut(4) + shortcut → 중앙 통과 자동 centerExitA cell 28 (버그A 2026-06-16) (§10-2 §10-3 §13-1)', () => {
+  // 갱신 사유: 버그A 수정(2026-06-16) — 지름길A로 중앙(23)을 잔여 steps 있이 통과하면
+  //   더 이상 중앙 분기를 재대기(awaitingBranch=true)하지 않고 자동 centerExitA로 진행한다.
   // Given: 모서리 5
-  // When: 윷(4) + 지름길 선택 — 5→21→22→23(중앙, 잔여 1) → 중앙 분기 대기
-  // Then: 중앙(23) 도달 후 새 분기(center) 대기. corner 선택값('shortcut')은 중앙 출구로 해석되지 않음.
+  // When: 윷(4) + 지름길 선택 — 5→21→22→23(통과)→28(centerExitA 첫 칸)
+  // Then: awaitingBranch=false, toCell=28, finalPath=centerExitA
   const r = computeNextCell(5, 4, 'shortcut');
-  expect(r.toCell).toBe(23);
-  expect(r.awaitingBranch).toBe(true);
+  expect(r.toCell).toBe(28);
+  expect(r.awaitingBranch).toBe(false);
+  expect(r.finalPath).toBe('centerExitA');
 });
 
 // ── §10-2 WS 통합: BRANCH_REQUEST branchType / CHOOSE_PATH ────────
@@ -156,14 +159,16 @@ test('YR-C16-009: WS — CHOOSE_PATH(shortcut) 후 cell 21 STATE 반영 (§10-2 
   }
 });
 
-// ── §10-2 §10-3 WS 통합: 모서리 지름길 → 중앙 통과 중첩 분기 (FIX-2 결함 수정) ──
+// ── §10-2 §10-3 WS 통합: 모서리 지름길 → 중앙 통과 자동 라우팅 (버그A 수정 2026-06-16) ──
 //
-// 결함(2026-06-11): 모서리5/10 + 윷(4)/모(5) → 'shortcut' 선택 시 지름길로 중앙을 통과하는데,
-//   CHOOSE_PATH 핸들러가 awaitingBranch를 처리하지 않아 큐만 차감되고 말은 제자리에 남았다
-//   (윷/모 결과 증발 + 말 미이동, HIGH). 수정: 중앙 분기를 재대기(center)시키고, 2차 'top'/'bottom'을
-//   모서리 지름길 선택과 합성('shortcut-top'/'shortcut-bottom')하여 출구까지 한 번에 계산한다.
+// 갱신 사유: 버그A 수정(2026-06-16) — 모서리5/10 + 윷(4)/모(5) → 'shortcut' 선택 시
+//   지름길로 중앙(23)을 잔여 steps 있이 **통과**하면, 이전(2026-06-11)에는 중앙 분기를
+//   재대기(corner→center 2단계 중첩 모달)시켰다. 그러나 통과는 분기 선택 의미가 없으므로
+//   이제 지름길 방향대로 자동 라우팅한다(shortcut→centerExitA/B). 따라서 corner 1회 선택만으로
+//   말이 출구까지 한 번에 이동하고, center 재요청(BRANCH_REQUEST) 자체가 발생하지 않는다.
+//   (중앙 분기 모달은 말이 중앙 23에 **정확 정착**한 뒤 다음 이동 시에만 발생 — c7/c11 참조)
 
-test('YR-C16-010: WS — 모서리5+윷 → shortcut → center 재수신(큐 미차감) → top → 칸 15 (§10-2 §10-3)', async () => {
+test('YR-C16-010: WS — 모서리5+윷 → shortcut → 자동 centerExitA cell 28 (center 재요청 없음, 버그A) (§10-2 §10-3)', async () => {
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
@@ -190,34 +195,24 @@ test('YR-C16-010: WS — 모서리5+윷 → shortcut → center 재수신(큐 �
     await p1.next('STATE');
     p2.drain('BRANCH_REQUEST'); p2.drain('STATE');
 
-    // 2) CHOOSE_PATH('shortcut') → 지름길A 진입 후 중앙 통과(잔여 steps) → center 재대기.
+    // 2) CHOOSE_PATH('shortcut') → 지름길A 진입 후 중앙 통과 → 자동 centerExitA cell 28.
+    //    center 재요청 없이 바로 STATE만 수신(자동 라우팅 핵심).
     p1.send({ type: 'CHOOSE_PATH', pathChoice: 'shortcut' });
-    const centerReq = await p1.next('BRANCH_REQUEST');
-    expect(centerReq.branchType).toBe('center'); // 중첩 분기 재무장 핵심
-    const centerState = await p1.next('STATE');
-    p2.drain('BRANCH_REQUEST'); p2.drain('STATE');
-
-    // Then(중간): 큐 미차감 — 'yut' 잔존(결과 증발 방지) + 말 모서리5 유지.
-    expect(centerState.pendingResults).toEqual(['yut']);
-    expect(centerState.awaitingBranchType).toBe('center');
-    expect(centerState.players.find((p) => p.id === 'p1').pieces[0].cell).toBe(5);
-
-    // 3) CHOOSE_PATH('top') → 'shortcut-top' 합성 → 5→21→22→23→15.
-    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'top' });
     const finalState = await p1.next('STATE');
     p2.drain('STATE');
 
-    // Then: 말 칸 15 도착 + 큐 1회만 차감(빈 큐).
-    expect(finalState.players.find((p) => p.id === 'p1').pieces[0].cell).toBe(15);
+    // Then: 말 칸 28 도착(5→21→22→23→28) + 큐 1회 차감(빈 큐) + 분기 대기 해제.
+    expect(finalState.players.find((p) => p.id === 'p1').pieces[0].cell).toBe(28);
     expect(finalState.pendingResults).toEqual([]);
     expect(finalState.awaitingBranchAt).toBe(null);
+    expect(finalState.awaitingBranchType).toBe(null);
   } finally {
     p1.close(); p2.close();
     await stopServer(server);
   }
 });
 
-test('YR-C16-011: WS — 모서리10+모 → shortcut → center 재수신 → bottom → 칸 25 (§10-2 §10-3)', async () => {
+test('YR-C16-011: WS — 모서리10+모 → shortcut → 자동 centerExitB cell 25 (center 재요청 없음, 버그A) (§10-2 §10-3)', async () => {
   const app = createApp({});
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
@@ -244,23 +239,17 @@ test('YR-C16-011: WS — 모서리10+모 → shortcut → center 재수신 → b
     await p1.next('STATE');
     p2.drain('BRANCH_REQUEST'); p2.drain('STATE');
 
-    // 2) CHOOSE_PATH('shortcut') → 지름길B 진입 후 중앙 통과 → center 재대기.
+    // 2) CHOOSE_PATH('shortcut') → 지름길B 진입 후 중앙 통과 → 자동 centerExitB.
+    //    10→26→27→23→24→25 (모 5칸). center 재요청 없이 STATE만 수신.
     p1.send({ type: 'CHOOSE_PATH', pathChoice: 'shortcut' });
-    const centerReq = await p1.next('BRANCH_REQUEST');
-    expect(centerReq.branchType).toBe('center');
-    const centerState = await p1.next('STATE');
-    p2.drain('BRANCH_REQUEST'); p2.drain('STATE');
-    expect(centerState.pendingResults).toEqual(['mo']); // 큐 미차감
-
-    // 3) CHOOSE_PATH('bottom') → 'shortcut-bottom' 합성 → 10→26→27→23→24→25.
-    p1.send({ type: 'CHOOSE_PATH', pathChoice: 'bottom' });
     const finalState = await p1.next('STATE');
     p2.drain('STATE');
 
-    // Then: 말 칸 25 도착 + 큐 1회만 차감.
+    // Then: 말 칸 25 도착 + 큐 1회 차감 + 분기 대기 해제.
     expect(finalState.players.find((p) => p.id === 'p1').pieces[0].cell).toBe(25);
     expect(finalState.pendingResults).toEqual([]);
     expect(finalState.awaitingBranchAt).toBe(null);
+    expect(finalState.awaitingBranchType).toBe(null);
   } finally {
     p1.close(); p2.close();
     await stopServer(server);

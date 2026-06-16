@@ -2,9 +2,16 @@
 
 > 한국 전통 윷놀이 LAN 1:1 대전. 사용자가 친구와 즉시 플레이용으로 발주된 신규 프로젝트.
 
-## 현재 상태 (2026-06-15)
+## 현재 상태 (2026-06-16)
 
-**§13-6 지름길B 중앙 자동 라우팅 + §13-5 첫칸 빽도 워프 해소** — §13-6: 지름길B(우상 10→26→27→23) 경유로 중앙 정확 정착 시 다음 이동 자동 centerExitB(bottom), BRANCH_REQUEST 미발송(자동 조건 `piece.cell===23 && piece.lastPath==='shortcutB'`). 지름길A 경유는 자유 선택 유지. `computeNextCell` 반환 `finalPath` + `piece.lastPath` 저장(STATE 스키마/클라 무변경). §13-5: 첫칸(cell 1) 빽도 → cell 19(참먹이) 워프, cell 19 빽도 → cell 1 복귀(done=false). 신규 6건. 권위 근거: 룰 가이드(`docs/2026-06-15-yutnori-rule-research.md` C3/B6/B7). 회귀 게이트 **서버리스 327 + 봇 smoke 7/7 PASS**.
+**버그A 중앙 통과 자동 라우팅 + 버그B centerExitA 28/29 신설** — 버그A: 말이 중앙(23)을 **정확히 안 멈추고 통과**하면 BRANCH_REQUEST 미발송 + 진입 지름길 기준 자동 라우팅(지름길A 통과 → centerExitA, 지름길B 통과 → centerExitB). 분기 결정은 모서리(5/10)·중앙(23) **정확 착지** 시에만. 중앙 정확 착지는 기존 유지(지름길A → BRANCH center 자유 선택 / 지름길B → 자동 centerExitB). 버그B: centerExitA에 중간 칸 28/29 신설(`23→28→29→15→…→GOAL`), centerExitB(24/25)와 거울 대칭, 백도 복귀 `29→28`/`28→23`. board.js `buildCenterExitA`/`CENTER_EXIT_A`로 28=(356.67,356.67)/29=(433.33,433.33) 렌더링. 변경 파일: `server.js`, `public/js/board.js`. 회귀 게이트 **서버리스 338 + bot-smoke 10/10 + E2E 25 PASS**. QA PASS(결함 0), AD3 APPROVED(겹침 없음).
+
+### 2026-06-16 주요 변경 (버그A / 버그B 해소)
+- **버그A — 중앙 통과 자동 라우팅**: `server.js` — 중앙(23)을 잔여 steps로 통과하는 이동은 awaitingBranch를 켜지 않고 `piece.lastPath`(지름길 진입 경로) 기준으로 자동 출구 라우팅. 지름길A 통과 → centerExitA(28/29 경유), 지름길B 통과 → centerExitB(24/25 경유). BRANCH_REQUEST/분기 모달은 중앙·모서리 **정확 착지** 시에만 무장. 중첩 분기(모서리 정확 착지 후 shortcut→중앙 통과, piece.cell=5/10)와 비충돌.
+- **버그B — centerExitA 28/29 대칭 신설**: `server.js advanceOneCell` centerExitA `23→28→29→15→16→17→18→19→GOAL`(이전 `23→15` 직행), 백도 복귀 `29→28`/`28→23`, 시작 칸 28/29 이동은 `pathContext='centerExitA'` 잔여 소진. `board.js buildCenterExitA`/`CENTER_EXIT_A` 좌표·hit-test·경로선 추가. centerExitB(24/25)와 x=280 수직 거울 대칭. STATE 스키마/클라 프로토콜 무변경.
+- **테스트**: 신규 11건(중앙 통과 자동 라우팅 + centerExitA 28/29 경유/잡기/업기/백도). 갱신 9파일: yut.unit, rulebook-c2/c7/c11/c12/c13/c14/c16, ws.scenarios, qa-rulefix-edge, bot-smoke(YBOT-004 결정적 inject 프로브 보강).
+- 회귀: 서버리스 **338 passed**(이전 327 + 신규 11), bot-smoke **10/10**(YBOT-004 결정적 프로브), E2E 25 PASS. 중첩 분기(YR-C16) 무영향.
+- 룰북 §13: §13-2(centerExitA 28/29 대칭) + §13-6(중앙 통과 자동 라우팅) 보강. 미해소 4 + 해소 8 유지.
 
 ### 2026-06-15 주요 변경 (§13-5 / §13-6 해소)
 - **§13-6 — 지름길B 중앙 자동 라우팅**: `server.js computeNextCell` 반환에 `finalPath` 추가 + `movePiece`가 `piece.lastPath`에 저장. MOVE_PIECE 자동 조건 `piece.cell===23 && piece.lastPath==='shortcutB'`이면 BRANCH_REQUEST 없이 centerExitB(bottom) 자동. 지름길A 경유는 자유 선택 유지, 중첩 분기(cell 5/10)는 자동 조건과 비충돌(YR-C16 무영향). STATE 스키마/클라 무변경.
@@ -68,8 +75,9 @@
 ### 룰 단순화 현황 (2026-06-11 갱신)
 
 - ~~모서리에 정확히 멈춘 다음 턴은 자동 지름길 진입~~ → **2026-06-11 FIX-2로 외곽/지름길 선택 모달 적용** (§13-1 해소). 모서리(corner) + 중앙(center) 모두 분기 모달, 모서리 지름길 후 중앙 통과 시 2단계 중첩 모달.
-- ~~중앙→좌하 출구는 직접 완주 처리~~ → **2026-06-11 FIX-3로 23→24→25→GOAL 잔여 소진** (§13-2 해소, 칸 24/25 활성화).
+- ~~중앙→좌하 출구는 직접 완주 처리~~ → **2026-06-11 FIX-3로 23→24→25→GOAL 잔여 소진** (§13-2 해소, 칸 24/25 활성화). **2026-06-16 버그B**: centerExitA도 28/29 대칭 신설(`23→28→29→15→…→GOAL`).
 - ~~중앙 분기는 진입 경로 무관 top/bottom 자유 선택~~ → **2026-06-15 §13-6 해소**: 지름길B 경유 중앙 정착(`piece.lastPath==='shortcutB'`)은 자동 centerExitB(bottom), 지름길A 경유는 자유 선택 유지.
+- ~~중앙 통과(정확히 안 멈춤) 시 분기 모달~~ → **2026-06-16 버그A**: 중앙 통과는 BRANCH 미발송 + 진입 지름길 기준 자동 라우팅(지름길A→centerExitA, 지름길B→centerExitB). 분기 결정은 정확 착지에만.
 - ~~첫칸(cell 1) 빽도는 단순 후퇴(cell 0)~~ → **2026-06-15 §13-5 해소**: cell 1↔19 워프(done=false). HOME 빽도 자동 폐기는 유지.
 - ~~백도(빽도) 변형 룰 미적용~~ → **Phase 2에서 추가** (마크 가락 0번).
 - 백도(빽도) X자 표식 가락 변형 룰 미적용(현행 유지).
@@ -92,10 +100,10 @@
 | 낮음 | 던지기 애니메이션 (가락 회전 → 결과 노출) |
 | 낮음 | 사운드 효과 |
 
-## 테스트 현황 (2026-06-15)
+## 테스트 현황 (2026-06-16)
 
-- **봇 smoke (YBOT-001~005, 포트 3104): 7/7 PASS**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`. §13-5/§13-6 변경 후에도 데드락 0.
-- **서버리스 회귀 327/327 PASS**: 이전 321 + 신규 6건(§13-5 첫칸 빽도 워프 + §13-6 지름길B 중앙 자동 라우팅). 정책 변경 갱신 YR-C7-008·YR-C5-001·YR-C3 capture는 권위 룰로 기댓값 갱신(순증가 6).
+- **봇 smoke (YBOT-001~005, 포트 3104): 10/10 PASS**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 2026-06-16 YBOT-004를 결정적 inject 프로브로 보강(중앙 통과 자동 라우팅 검증). 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`. 데드락 0.
+- **서버리스 회귀 338/338 PASS**: 이전 327 + 신규 11건(버그A 중앙 통과 자동 라우팅 + 버그B centerExitA 28/29 경유/잡기/업기/백도). 갱신 9파일: yut.unit, rulebook-c2/c7/c11/c12/c13/c14/c16, ws.scenarios, qa-rulefix-edge.
   - 룰북 (YR-C1~C19): 룰북 §1~§13 + 부록 커버, §13 12건 커버. c15 재입장 / c16 모서리 분기(중첩 포함) / c17 centerExitB / c18 보너스 정밀화 / c19 §13-12 윷·모 잡기 중복 차단. c5 빽도(cell1↔19 워프) / c7 분기(지름길B 자동).
   - 신규 파일: `rulebook-c19-capture-bonus-no-stack.spec.js`(YR-C19 6). 기존 `qa-rulefix-edge.spec.js`(QA 엣지 26), `rulebook-c15~c18-*.spec.js`.
 - **E2E 25/25 PASS**: `e2e-scenarios.spec.js` (서버 가동 시 별도 회귀).

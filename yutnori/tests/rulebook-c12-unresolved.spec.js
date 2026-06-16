@@ -127,15 +127,15 @@ test('YR-C12-005: §13-5 PASS — HOME 말만 있을 때 backdo → discarded:tr
 
 test('YR-C12-006: §13-6 PASS — 지름길B(cell 10) 진입 후 중앙에서 top/bottom 모두 선택 가능 (§13-6 §10-5)', () => {
   // 갱신 사유: FIX-2 — 모서리는 분기 대기이므로 지름길 진입은 shortcut 명시.
-  //            §13-2 해소 — bottom 출구 첫 칸은 24.
-  // Given: cell 10 + geol(3) + shortcut → 중앙 23 (지름길B 경유)
+  //            버그B 해소(2026-06-16) — top 출구 첫 칸은 28(centerExitA 중간 칸).
+  // Given: cell 10 + geol(3) + shortcut → 중앙 23 (지름길B 경유 정확 정착)
   // When: top과 bottom 두 선택 모두 호출
   // Then: 둘 다 정상 진행 (양방향 자유 정책)
   const arrived = computeNextCell(10, 3, 'shortcut');
   expect(arrived.toCell).toBe(23);
-  // top 선택
-  expect(computeNextCell(23, 1, 'top').toCell).toBe(15);
-  // bottom 선택 (자유 정책 — 진입 경로 무관, 첫 칸 24)
+  // top 선택 (centerExitA 첫 칸 28)
+  expect(computeNextCell(23, 1, 'top').toCell).toBe(28);
+  // bottom 선택 (centerExitB 첫 칸 24)
   expect(computeNextCell(23, 1, 'bottom').toCell).toBe(24);
 });
 
@@ -158,22 +158,22 @@ test('YR-C12-007: §13-7 PASS — 게임 시작 후 currentTurn=p1 고정 (§13-
   }
 });
 
-// ── §13-8 외곽 인덱스 20/28 미사용 (LOW, 미해소) ─────────────────
+// ── §13-8 외곽 인덱스 20 미사용 (LOW, 미해소) ─────────────────────
 
-test('YR-C12-008: §13-8 PASS — computeNextCell이 20/28을 반환하지 않음 (§13-8 §2-2)', () => {
-  // 갱신 사유: §13-2 해소(FIX-3) — 24/25가 centerExitB 중간 칸으로 활성화됨.
-  //            따라서 forbidden 집합에서 24/25 제거, 20/28만 미사용 인덱스로 유지.
+test('YR-C12-008: §13-8 PASS — computeNextCell이 20을 반환하지 않음 (§13-8 §2-2)', () => {
+  // 갱신 사유: §13-2 해소(FIX-3)로 24/25(centerExitB), 버그B 해소(2026-06-16)로 28/29(centerExitA)가
+  //            합법 중간 칸으로 활성화됨. 미사용 외곽 인덱스는 이제 20만 남는다(완주는 GOAL=99).
   // Given: 외곽/지름길/중앙 출구의 다양한 이동
-  // When: 가능한 입력 조합 전수 검증
-  // Then: 결과 인덱스가 20/28 미반환 (24/25는 합법적으로 반환될 수 있음)
-  const forbidden = new Set([20, 28]);
+  // When: 가능한 입력 조합 전수 검증 (28/29 입력도 포함)
+  // Then: 결과 인덱스가 20 미반환 (24/25/28/29는 합법적으로 반환될 수 있음)
+  const forbidden = new Set([20]);
   const samples = [];
-  for (let c = -1; c <= 25; c++) {
-    if (c === 20 || c === 28) continue; // 입력으로도 미사용
+  for (let c = -1; c <= 29; c++) {
+    if (c === 20) continue; // 입력으로도 미사용
     for (let s = -1; s <= 5; s++) {
       if (s === 0) continue;
-      if (c === 23 || c === 24 || c === 25) {
-        // 중앙/centerExitB 중간 칸: bottom(centerExitB) 출구로 24/25 경유
+      if (c === 23) {
+        // 중앙: top(centerExitA)/bottom(centerExitB) 양 출구 검증
         samples.push(computeNextCell(c, s, 'top').toCell);
         samples.push(computeNextCell(c, s, 'bottom').toCell);
       } else {

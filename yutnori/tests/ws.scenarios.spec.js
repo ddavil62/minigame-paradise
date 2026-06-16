@@ -455,12 +455,15 @@ test('W-13: CHOOSE_PATH 후 분기 이동 완료', async () => {
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
   try {
-    // 말을 22번 칸에 배치 + gae(2) 결과 → MOVE_PIECE → 중앙 통과 시 BRANCH_REQUEST
+    // 갱신 사유: 버그A 수정(2026-06-16) — 지름길 경유 중앙 "통과"는 자동 라우팅이라
+    //   BRANCH_REQUEST가 발생하지 않는다. 중앙 분기 모달은 말이 중앙(23)에 **정확 정착**한
+    //   상태에서 다음 이동 시 발생하므로 setup을 cell 23으로 변경.
+    //   버그B 수정 — top(centerExitA)이 23→28→29→15 경로화. gae(2) → cell 29.
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['gae'],
       pieces: {
         p1: [
-          { cell: 22, stack: 1, done: false },
+          { cell: 23, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
@@ -470,12 +473,12 @@ test('W-13: CHOOSE_PATH 후 분기 이동 완료', async () => {
     await p1.next('STATE');
     await p2.next('STATE');
 
-    // MOVE_PIECE: 22에서 gae(2) → 23 통과(잔여 1스텝) → awaitingBranch
-    // 서버: BRANCH_REQUEST + broadcastState(임시 상태) 순으로 전송
+    // MOVE_PIECE: 중앙(23)에서 gae(2) 이동 시도 → branchChoice 필요 → BRANCH_REQUEST(center)
     p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'gae' });
     const branchReq = await p1.next('BRANCH_REQUEST');
     expect(branchReq.type).toBe('BRANCH_REQUEST');
     expect(branchReq.playerId).toBe('p1');
+    expect(branchReq.branchType).toBe('center');
     // MOVE_PIECE → broadcastState(awaitingBranch, 말 아직 이동 전) 소화
     await p1.next('STATE');
 
@@ -483,8 +486,8 @@ test('W-13: CHOOSE_PATH 후 분기 이동 완료', async () => {
     p1.send({ type: 'CHOOSE_PATH', pathChoice: 'top' });
     const state = await p1.next('STATE');
     const p1Data = state.players.find((p) => p.id === 'p1');
-    // 23→top → 15번 칸 (centerExitA: 23→15)
-    expect(p1Data.pieces[0].cell).toBe(15);
+    // 23→top → 28→29 (centerExitA: 23→28→29). gae(2) → cell 29.
+    expect(p1Data.pieces[0].cell).toBe(29);
   } finally {
     p1.close(); p2.close();
     await stopServer(server);
@@ -598,11 +601,12 @@ test('W-18: 분기 대기 중 THROW_YUT → ERROR', async () => {
   const { server, port } = await startServer(app);
   const { p1, p2 } = await setupGame(port);
   try {
+    // 갱신 사유: 버그A 수정(2026-06-16) — cell 22 통과는 자동 라우팅. 중앙 정착(cell 23)으로 변경.
     await inject(port, {
       started: true, currentTurn: 'p1', pendingResults: ['gae'],
       pieces: {
         p1: [
-          { cell: 22, stack: 1, done: false },
+          { cell: 23, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
           { cell: -1, stack: 1, done: false },
@@ -612,7 +616,7 @@ test('W-18: 분기 대기 중 THROW_YUT → ERROR', async () => {
     await p1.next('STATE');
     await p2.next('STATE');
 
-    // MOVE_PIECE → BRANCH_REQUEST
+    // MOVE_PIECE → BRANCH_REQUEST(center)
     p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'gae' });
     await p1.next('BRANCH_REQUEST');
 
