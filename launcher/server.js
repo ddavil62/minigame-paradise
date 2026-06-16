@@ -145,13 +145,178 @@ function serveLauncherStatic(req, res) {
   });
 }
 
+// ── 버그리포트 위젯 주입 미들웨어 ─────────────────────────────────
+/**
+ * 모든 text/html 응답의 마지막 `</body>` 앞에 삽입할 위젯 태그.
+ * `/bug-widget.css`·`/bug-widget.js`는 serveLauncherStatic이 launcher/public에서 서빙한다.
+ */
+const WIDGET_SNIPPET =
+  '<link rel="stylesheet" href="/bug-widget.css">' +
+  '<script src="/bug-widget.js" defer></script>';
+
+/**
+ * res.writeHead / res.write / res.end를 1회 wrap 해, text/html 응답에만 위젯 태그를 주입한다.
+ *
+ *   - text/html이 아닌 응답(js/css/json/png 등)은 원본 write/end를 즉시 통과시킨다(버퍼링 없음).
+ *   - text/html이면 청크를 버퍼링했다가 res.end 시점에 마지막 `</body>` 앞에 태그를 삽입한다.
+ *   - 삽입으로 길이가 달라지므로 Content-Length 헤더를 제거(chunked 전환)한다.
+ *   - writeHead를 거치지 않는 Express 응답(setHeader + write 직접 호출)도 커버하기 위해
+ *     res.write 첫 호출 시 getHeader('content-type')로 text/html 여부를 재확인한다.
+ *   - `</body>`가 없는 HTML은 끝에 append 한다(폴백).
+ *
+ * @param {http.ServerResponse} res 래핑 대상 응답 객체
+ * @returns {void}
+ */
+function attachWidgetInjector(res) {
+  const _writeHead = res.writeHead.bind(res);
+  const _write = res.write.bind(res);
+  const _end = res.end.bind(res);
+
+  let isHtml = false;   // text/html 응답 여부 (버퍼링 ON)
+  let decided = false;  // content-type 판정 완료 여부 (비HTML 확정 후 재검사 생략)
+  const chunks = [];    // 버퍼링된 응답 청크
+
+  /**
+   * 응답이 text/html이면 isHtml=ON + Content-Length 제거.
+   * @param {string} ct content-type 문자열
+   */
+  const decideHtml = (ct) => {
+    decided = true;
+    if (typeof ct === 'string' && ct.toLowerCase().startsWith('text/html')) {
+      isHtml = true;
+      res.removeHeader('content-length');
+    }
+  };
+
+  res.writeHead = function (statusCode, reasonOrHeaders, maybeHeaders) {
+    // writeHead(status, headers) 또는 writeHead(status, reason, headers) 시그니처 모두 지원
+    const headers = (maybeHeaders && typeof maybeHeaders === 'object')
+      ? maybeHeaders
+      : (reasonOrHeaders && typeof reasonOrHeaders === 'object' ? reasonOrHeaders : null);
+
+    // headers 인자 또는 이미 setHeader된 값에서 content-type 추출
+    let ct = '';
+    if (headers) {
+      ct = headers['content-type'] || headers['Content-Type'] || '';
+    }
+    if (!ct) ct = res.getHeader('content-type') || '';
+
+    decideHtml(String(ct));
+
+    if (isHtml && headers) {
+      // 인자로 넘어온 Content-Length도 제거 (삽입 후 길이 변경)
+      delete headers['content-length'];
+      delete headers['Content-Length'];
+    }
+    return _writeHead.apply(res, arguments);
+  };
+
+  res.write = function (chunk, encoding, callback) {
+    // writeHead를 거치지 않은 경로(Express setHeader+write) 대비 첫 호출 시 재판정
+    if (!decided) decideHtml(String(res.getHeader('content-type') || ''));
+    if (!isHtml) return _write(chunk, encoding, callback);
+
+    if (chunk) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding || 'utf8'));
+    }
+    if (typeof encoding === 'function') encoding();
+    else if (typeof callback === 'function') callback();
+    return true;
+  };
+
+  res.end = function (chunk, encoding, callback) {
+    if (!decided) decideHtml(String(res.getHeader('content-type') || ''));
+    if (!isHtml) return _end(chunk, encoding, callback);
+
+    if (chunk && typeof chunk !== 'function') {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding || 'utf8'));
+    }
+
+    let body = Buffer.concat(chunks).toString('utf8');
+
+    // 마지막 `</body>` 앞에 삽입 (대소문자 무시, 중첩 iframe 방어로 lastIndexOf)
+    const idx = body.toLowerCase().lastIndexOf('</body>');
+    if (idx !== -1) {
+      body = body.slice(0, idx) + WIDGET_SNIPPET + body.slice(idx);
+    } else {
+      // `</body>` 없는 HTML 폴백: 끝에 append
+      body += WIDGET_SNIPPET;
+    }
+
+    // 콜백 위치 정규화 (end(cb) / end(chunk, cb) / end(chunk, enc, cb))
+    let cb = callback;
+    if (typeof chunk === 'function') cb = chunk;
+    else if (typeof encoding === 'function') cb = encoding;
+
+    return _end(Buffer.from(body, 'utf8'), cb);
+  };
+}
+
 // ── HTTP 서버 (통합 라우터) ─────────────────────────────────────
 const server = http.createServer((req, res) => {
+  // 콜백 최상단: 라우팅 이전에 위젯 주입기를 부착 (text/html 응답에만 실제 동작)
+  attachWidgetInjector(res);
+
   const reqUrl = req.url || '/';
   const urlPath = reqUrl.split('?')[0];
   const queryStr = reqUrl.includes('?') ? reqUrl.slice(reqUrl.indexOf('?')) : '';
   const segments = urlPath.split('/').filter(Boolean);
   const first = segments[0] || '';
+
+  // POST /bug-report — 버그 신고 수신 + bug-reports.jsonl append (게임 라우팅보다 먼저 처리)
+  if (req.method === 'POST' && urlPath === '/bug-report') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk.toString(); });
+    req.on('end', () => {
+      let parsed;
+      try {
+        parsed = JSON.parse(body);
+      } catch (_) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'invalid JSON' }));
+        return;
+      }
+
+      // 필수 필드 검증: text가 비어있으면 거부
+      const text = (typeof parsed.text === 'string') ? parsed.text.trim() : '';
+      if (!text) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'text is required' }));
+        return;
+      }
+
+      const record = {
+        text,
+        gameId: typeof parsed.gameId === 'string' ? parsed.gameId : 'unknown',
+        timestamp: typeof parsed.timestamp === 'string' ? parsed.timestamp : new Date().toISOString(),
+        screenSize: (parsed.screenSize && typeof parsed.screenSize.w === 'number')
+          ? { w: parsed.screenSize.w, h: parsed.screenSize.h }
+          : null,
+        url: typeof parsed.url === 'string' ? parsed.url : '',
+      };
+
+      const line = JSON.stringify(record) + '\n';
+      const filePath = path.join(MINIGAMES_ROOT, 'bug-reports.jsonl');
+
+      fs.appendFile(filePath, line, 'utf8', (err) => {
+        if (err) {
+          console.error('[launcher] bug-report appendFile 실패:', err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'write failed' }));
+          return;
+        }
+        console.log(`[launcher] bug-report 기록: gameId=${record.gameId}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      });
+    });
+    req.on('error', (err) => {
+      console.error('[launcher] bug-report req 에러:', err.message);
+      res.writeHead(500);
+      res.end();
+    });
+    return;
+  }
 
   // POST /lobby/return — 게임 완료 후 양쪽 로비 복귀
   if (req.method === 'POST' && urlPath === '/lobby/return') {

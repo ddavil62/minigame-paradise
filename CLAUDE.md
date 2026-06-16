@@ -69,6 +69,46 @@ node matgo/server.js --port 3013
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | `POST` | `/lobby/return` | 게임 완료 화면에서 호출. 서버가 votes/mode 리셋 + RETURN_LOBBY broadcast. 204 응답 |
+| `POST` | `/bug-report` | 버그 신고 수신 → `bug-reports.jsonl`에 append. 200 `{ok:true}` / 빈 텍스트·비JSON 400. 게임 prefix 라우팅보다 **먼저** 매칭 (공통 버그리포트 위젯 참조) |
+
+## 공통 버그리포트 위젯 (2026-06-16 신규)
+
+게임 10종 + 로비 **전체**에 자동 표시되는 버그 신고 위젯. 게임/런처 `index.html`은 **무수정** — 런처 미들웨어가 일괄 주입한다.
+
+### 자동 주입 메커니즘 (`launcher/server.js`)
+
+- `http.createServer` 콜백 **최상단**(라우팅 이전)에서 `attachWidgetInjector(res)`가 `res.writeHead/write/end`를 1회 wrap한다.
+- **text/html 응답에만** `</body>` 앞(`lastIndexOf`, 대소문자 무시, iframe 방어)에 다음 스니펫을 삽입한다. `</body>`가 없으면 끝에 append.
+  ```html
+  <link rel="stylesheet" href="/bug-widget.css"><script src="/bug-widget.js" defer></script>
+  ```
+- Content-Type 판정: `writeHead` headers 인자 또는 `res.getHeader('content-type')`. `writeHead`를 거치지 않는 Express(`setHeader`+`write`) 경로 대비 `write`/`end` 첫 호출 시 재판정(`decided` 플래그로 1회만) → yutnori/tetris-battle 같은 Express 게임도 동작.
+- HTML 확정 시 `content-length` 헤더 제거 → Node가 `Transfer-Encoding: chunked` 자동 전환.
+- **비HTML·바이너리 무손상**: js/css/json/png 등은 버퍼링 없이 원본 write/end 즉시 통과(PNG 바이트 동일 검증 완료). 위젯 스크립트 자체에도 미주입.
+- WS upgrade(`server.on('upgrade')`)는 별도 이벤트라 wrap 영향 없음.
+
+### 신고 저장 (`POST /bug-report`)
+
+- 라우팅: `POST /lobby/return` 아래, **게임 prefix 라우팅보다 먼저** 매칭(게임 서버로 전달 방지).
+- `minigames/bug-reports.jsonl`에 `fs.appendFile`로 1행씩 append (JSON Lines, appendFile 원자성으로 동시 신고 인터리빙 안전).
+- 레코드 5필드: `gameId`(pathname 첫 세그먼트, 로비=`launcher`), `timestamp`(ISO), `screenSize{w,h}`, `url`, `text`.
+- 검증: 비JSON·`text` 누락·공백만 → 400. 서버측 길이 상한 미강제(스펙상 Out of Scope, LAN 한정).
+- `bug-reports.jsonl`은 `.gitignore` 등록(런타임 데이터, 커밋 제외).
+
+### 위젯 UX (`launcher/public/bug-widget.{js,css}`, 바닐라)
+
+- 우하단 `position:fixed` 🐛 FAB → 클릭 시 텍스트 패널 펼침 → 제출 시 패널 접힘 + "기록됨" 토스트(2초). 외부 클릭/✕ 닫기.
+- 빈 입력 무시, double-submit 방지(제출 즉시 `disabled`), 중복 주입 가드(`window.__bwWidgetLoaded`).
+- CSS는 `.bw-` prefix로만 한정(게임 전역 스타일 미오염), z-index 9001~9003(게임 오버레이 위).
+
+### "로그 확인" 워크플로우
+
+사용자가 **"버그 로그 보고 확인하라"**고 하면, Claude가 `C:\LazySlimeStudio\minigames\bug-reports.jsonl`을 Read해 신고 내역(gameId·url·text 등)을 보고 해당 버그를 해결한다. 이 파일이 신고 수집 채널의 단일 출처다.
+
+### 테스트
+
+- QA 자산: `tests/bug-report-widget-qa.spec.js`(Playwright 7/7 — FAB 표시·펼침·외부클릭 닫힘·제출→토스트·5필드·빈텍스트 미발송·더블클릭 1회·모바일 360px).
+- 회귀: omok smoke 106/106, WS upgrade, POST /lobby/return 204 무영향. AC-1~AC-11 + 예외 15건 전부 PASS. QA PASS(blocker 0), AD3 APPROVED.
 
 ## 기술 스택
 

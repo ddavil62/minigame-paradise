@@ -27,6 +27,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# 버그 신고 (런타임 데이터, 커밋 제외)
+bug-reports.jsonl
+
 # 시크릿
 .env
 .env.local

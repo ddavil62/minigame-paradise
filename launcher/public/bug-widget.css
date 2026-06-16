@@ -1,0 +1,126 @@
+/**
+ * @fileoverview 공통 버그리포트 위젯 스타일.
+ *
+ *   런처 미들웨어가 모든 HTML 페이지에 주입하므로, 게임 전역 CSS와 충돌하지
+ *   않도록 모든 셀렉터를 `.bw-` prefix로 한정한다 (`*`/`body`/`html` 셀렉터 없음).
+ *   z-index는 게임 오버레이(≥9000) 위에 오도록 9001~9003을 사용한다.
+ */
+
+/* ── FAB 버튼 — 우하단 고정 ──────────────────────────────── */
+.bw-fab {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(30, 30, 30, 0.85);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9001;
+  /* 밝은 링 + 강한 그림자 — 다크 배경 게임(테트리스/장기/하나비 등)에서도
+     FAB가 묻히지 않게 한다(AD2 가독성 WARN 대응). 밝은 배경에선 어두운 본체가 대비. */
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  padding: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  user-select: none;
+  transition: transform 0.15s ease;
+}
+.bw-fab:hover { transform: scale(1.1); }
+
+/* ── 패널 — FAB 바로 위 ────────────────────────────────── */
+.bw-panel {
+  position: fixed;
+  bottom: 64px;
+  right: 16px;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 9002;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  font-family: sans-serif;
+  color: #eee;
+  box-sizing: border-box;
+}
+
+/* hidden 속성으로 표시 제어 — 게임 CSS의 display 오버라이드 방어 */
+.bw-panel[hidden],
+.bw-toast[hidden] { display: none !important; }
+
+/* ── 패널 헤더 ───────────────────────────────────────────── */
+.bw-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #ccc;
+}
+.bw-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.bw-close:hover { color: #eee; }
+
+/* ── 텍스트 입력 ─────────────────────────────────────────── */
+.bw-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 13px;
+  padding: 8px;
+  resize: vertical;
+  min-height: 72px;
+  margin-bottom: 8px;
+  font-family: sans-serif;
+}
+.bw-textarea:focus { outline: 1px solid #888; }
+.bw-textarea::placeholder { color: #666; }
+
+/* ── 제출 버튼 ───────────────────────────────────────────── */
+.bw-submit {
+  width: 100%;
+  background: #3a7bd5;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bw-submit:hover:not(:disabled) { background: #4a8be5; }
+.bw-submit:disabled { background: #555; cursor: not-allowed; }
+
+/* ── 토스트 ──────────────────────────────────────────────── */
+.bw-toast {
+  position: fixed;
+  bottom: 72px;
+  right: 16px;
+  background: rgba(40, 167, 69, 0.92);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: sans-serif;
+  z-index: 9003;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
