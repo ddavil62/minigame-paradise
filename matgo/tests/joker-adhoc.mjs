@@ -99,13 +99,17 @@ it('JOKER-001: 덱 총 50장, 조커 2장, 분배 시 손/바닥/더미 합계 �
   eq(jokers.length, 2, '조커 2장');
   eq(jokers[0].id, 'm00_joker_a', 'joker_a id');
   eq(jokers[1].id, 'm00_joker_b', 'joker_b id');
-  // createGame 분배: 손 10+10, 바닥 8, 더미 22 = 50
+  // createGame 분배: 손 10+10, 바닥 8, 더미 22-N(바닥 조커 리필 N장 소비) = 50.
+  // (2026-06-15 바닥 리필 룰 — 함정 #11: deck === 22는 더 이상 불변이 아니다.
+  //  바닥에 조커가 깔리면 captured로 옮기고 deck.pop()으로 floor를 8로 복원하므로
+  //  deck.length === 22 - N. floor === 8과 총합 50은 불변.)
   const g = createGame();
   eq(g.hands.p1.length, 10, 'p1 손 10');
   eq(g.hands.p2.length, 10, 'p2 손 10');
-  eq(g.floor.length, 8, '바닥 8');
-  eq(g.deck.length, 22, '더미 22');
-  const all = [...g.hands.p1, ...g.hands.p2, ...g.floor, ...g.deck];
+  eq(g.floor.length, 8, '바닥 8 (리필 룰로 항상 복원)');
+  truthy(g.deck.length >= 20 && g.deck.length <= 22, '더미 22-N (N=바닥 조커 0~2)');
+  // 총합은 6개 zone 전부 합산 (바닥 조커는 captured로 이동했을 수 있음)
+  const all = [...g.hands.p1, ...g.hands.p2, ...g.floor, ...g.deck, ...g.captured.p1, ...g.captured.p2];
   eq(all.length, 50, '합계 50');
   const allJokers = all.filter((c) => c.type === 'joker');
   eq(allJokers.length, 2, '조커 2장 분배 후에도 유지');
@@ -136,8 +140,9 @@ it('JOKER-002: 케이스 A — 조커 → captured + 상대 피 1장 + 더미 1�
   // 손 보충: m08_gwang이 손에 들어옴 (손 갯수: 시작 2 - 1(낸 조커) + 1(보충) = 2)
   eq(g.hands.p1.length, 2, '손 갯수 유지');
   truthy(g.hands.p1.some((c) => c.id === 'm08_gwang'), 'm08_gwang 손 보충');
-  // 턴 종료
-  eq(g.turn, 'p2', '턴 교대');
+  // B4 확정 룰 (2026-06-16): 조커 케이스 A 후 턴 유지 (finishTurnKeepTurn).
+  eq(g.turn, 'p1', '턴 유지 (B4 확정 룰)');
+  eq(g.phase, 'awaiting_play', '손패를 다시 낼 수 있는 상태');
 });
 
 // ── JOKER-003: 케이스 A + 상대 피 0장 ─────────────────────
@@ -158,7 +163,35 @@ it('JOKER-003: 케이스 A — 상대 피 0장이면 피 뺏기 스킵, 나머�
   eq(g.captured.p2.length, 0, 'p2 그대로 0');
   // 더미 보충은 그대로
   truthy(g.hands.p1.some((c) => c.id === 'm07_kkeut'), '더미 보충 정상');
-  eq(g.turn, 'p2', '턴 교대');
+  // B4 확정 룰 (2026-06-16): 피 없어도 턴 유지.
+  eq(g.turn, 'p1', '턴 유지 — 피 없어도 동일');
+});
+
+// ── JOKER-002a: 케이스 A 연속 내기 — 조커 낸 후 같은 플레이어가 바로 다시 낼 수 있음 (B4) ──
+it('JOKER-002a: 케이스 A 턴 유지 — 조커 낸 후 p1이 연속으로 일반 카드를 낼 수 있다', () => {
+  const g = makeGame({
+    p1Hand: ['m00_joker_a', 'm01_gwang'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m02_kkeut_godori', 'm01_tti_hong'],  // 1월 1장(매칭 대상) + 2월 1장
+    deck:   ['m07_kkeut', 'm08_gwang'],            // top(pop) = m08_gwang → 손 보충(비조커)
+  });
+  g.captured.p2 = [card('m06_pi_a')];
+
+  // 1) 조커 내기 — 턴 유지 확인
+  const r1 = playCard(g, 'p1', 'm00_joker_a');
+  truthy(r1.ok, 'joker playCard ok');
+  eq(g.turn, 'p1', '조커 후 p1 턴 유지');
+  eq(g.phase, 'awaiting_play', 'awaiting_play 상태');
+  // 손 보충 카드가 조커가 아님을 확인 (재귀 없음)
+  truthy(g.hands.p1.some((c) => c.id === 'm08_gwang'), 'm08_gwang 손 보충(비조커)');
+  not(g.hands.p1.some((c) => c.type === 'joker'), '손에 조커 없음(재귀 없음)');
+
+  // 2) p1이 바로 일반 카드를 낼 수 있음 — m01_gwang 내기 (바닥 m01_tti_hong과 1매칭)
+  truthy(g.hands.p1.some((c) => c.id === 'm01_gwang'), 'm01_gwang 손에 있음');
+  const r2 = playCard(g, 'p1', 'm01_gwang');
+  truthy(r2.ok, '연속 playCard ok');
+  truthy(g.captured.p1.some((c) => c.id === 'm01_gwang'), 'm01_gwang captured');
+  truthy(g.captured.p1.some((c) => c.id === 'm01_tti_hong'), 'm01_tti_hong captured');
 });
 
 // ── JOKER-004: 케이스 B — 더미 뒤집은 게 조커 ──────────────
@@ -312,7 +345,8 @@ it('JOKER-009: 손 조커 내기 + 더미 0 → 손 보충 스킵, 정상 진행
   // 손은 1장 줄어듦 (보충 안 됨)
   eq(g.hands.p1.length, 1, '손 1장 (보충 없음)');
   truthy(g.hands.p1.some((c) => c.id === 'm05_kkeut'), 'm05_kkeut 남음');
-  eq(g.turn, 'p2', '턴 교대');
+  // B4 확정 룰 (2026-06-16): 케이스 A 턴 유지 (더미 0이어도 동일).
+  eq(g.turn, 'p1', '턴 유지');
 });
 
 // ── JOKER-010: 바닥 조커 0장 → 변동 없음 (2026-06-03 룰 정정) ──
@@ -716,7 +750,7 @@ it('REG-BOMB-SANGTONG: 조커는 폭탄/사통 트리거 안 됨', () => {
 
 // ── 결과 출력 ─────────────────────────────────────────────────
 console.log('');
-console.log(`조커 룰 ad-hoc 단위 검증 (${passed + failed}건, JOKER-001~021 + REG-DIST + REG-BOMB-SANGTONG)`);
+console.log(`조커 룰 ad-hoc 단위 검증 (${passed + failed}건, JOKER-001~021 + JOKER-002a + REG-DIST + REG-BOMB-SANGTONG)`);
 console.log('─'.repeat(60));
 for (const r of results) console.log(r);
 console.log('─'.repeat(60));

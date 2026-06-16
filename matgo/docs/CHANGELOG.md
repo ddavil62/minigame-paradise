@@ -1,5 +1,43 @@
 # Changelog
 
+## [2026-06-16] — 버그 4건 수정 (B1/B2/B3 fly 연출 + B4 조커 케이스 A 턴 룰)
+
+fly 연출 오류 3건(B1/B2/B3)과 조커 케이스 A 룰 오류(B4)를 수정. 수정 3파일: `game.js`, `public/client.js`, `tests/joker-adhoc.mjs`.
+
+### 수정 (B1 — 바닥 2장 먹기 fly 출처)
+- 증상: `awaiting_floor_choice` 통합 STATE(쓸/pair_from_flip 등)에서 **내가 손으로 낸 srcCard가 더미서 나온 것처럼** 보이던 버그.
+- 근본 원인: `client.js`의 `la.kind==='choice_made'` 가드가 같은 STATE의 sseul/pair_from_flip lastAction으로 덮여 무효화됨.
+- 수정: `game.js`에 `pendingChoiceSrcCardId` 필드 신설 — `startRound` 초기화(`game.js:138`) / `chooseFloorSteps` 단계1에서 `wasFromHand ? srcCard.id : null` 설정(`game.js:392`) / `finishTurn`(`game.js:856`)·`finishTurnKeepTurn`(`game.js:767`) 리셋. `snapshotForPlayer`가 `choiceFloorSrcCardId`로 노출(`game.js:1332`) → `client.js`(567~569)가 이 필드로 srcCard를 `drewIds`에서 제외(손패 출처=HAND_THROW, 덱만 DECK_THROW). `la.kind==='choice_made'` 폴백 유지(client.js 571~573).
+
+### 수정 (B2 — fly 경로 어긋남 + 텔레포트)
+- `client.js` `flyTo`(1499~1505)가 **left/top만 transition**(width/height 동시 transition 제거). 덱·바닥·손패 카드가 모두 60×85로 동일해 크기를 즉시 적용해도 점프 0.
+- DECK_THROW(client.js 1577~1581)를 **더블 rAF**로 처리해 snap 제거.
+
+### 수정 (B3 — 쓸 연출 미적용)
+- 서버 쓸 룰(`stealPi`)은 정상(G-40 입증). 증상은 B1과 동일한 통합 STATE 연출 누락이었음.
+- **B1 수정으로 강탈 피 fly(origin='opp-captured') + "N월 쓸!" 토스트가 정상화됨. 서버 무수정.**
+
+### 변경 (B4 — 조커 케이스 A: 턴 유지 룰)
+- **룰 변경**: 기존 "조커 손에서 내면 턴 교대"(`finishTurn`)를 **턴 유지**로 변경.
+- 케이스 A 처리 끝에 신규 `finishTurnKeepTurn`(`game.js:710~768`) 호출 — 점수/고스톱/술잔/라운드종료 평가는 `finishTurn`(`game.js:775~858`)과 동일하되 마지막 `g.turn = ...`(턴 교대) 한 줄만 제거 → **turn=본인 유지, phase=awaiting_play**.
+- 조커 captured + 상대 피 1 + 더미 1장 손 보충은 유지. 케이스 B(더미 뒤집은 게 조커)는 현행 유지(범위 외).
+- `finishTurnKeepTurn`은 `finishTurn` 복사본이라 향후 `finishTurn` 로직 변경 시 양쪽 동기화 필요(JSDoc 명시, 향후 `finishTurn(g,pid,{keepTurn})` 옵션 파라미터 리팩토링 권장 — QA LOW).
+
+### 변경 (테스트)
+- **joker-adhoc**: JOKER-002/003/009 턴 단언을 턴 유지로 수정 + 신규 **JOKER-002a**(phase=awaiting_play 단언). JOKER-001/REG-G-01의 stale 단언(`deck===22`, 2026-06-15 리필 룰로 폐기)을 현행 룰(`floor===8`, `deck===22-N`)로 정정. joker-adhoc **24/24**.
+
+### 검증
+- joker-adhoc **24/24** + sseul-adhoc **11/11** + bombdup-adhoc **7/7** + floor-joker-smoke **5/5** + game.unit+score.unit **98/98** + e2e-scenarios **30/30**(회귀 게이트 E-26~E-30 포함) + QA 능동 probe **10/10**(임시, 후 삭제) + QA 시각 e2e **2/2**(임시, 후 삭제) = **191건 전부 PASS**.
+- QA 능동 탐색: 보충 조커 무한루프 없음(P1), 조커 7점 도달 시 고/스톱 정상(P2), 술잔 분기(P3), 라운드 종료(P4), 더미 빈 케이스(P5), 연속 조커 2장(P6), 쓸 통합 STATE 3필드 공존(S1), srcCard 제외 교집합 독립성(S2) 전부 PASS.
+- QA PASS(결함 0), AD3 APPROVED(DECK_THROW stateTimer rAF2 외부 = WARN 1건, 비강제).
+
+### 비고
+- B3는 서버 무수정으로 B1 수정에 연동 해소(STATE-레벨 시뮬레이션 재입증).
+- QA LOW 2건(비강제 후속 권장): DECK_THROW `stateTimer`를 rAF2 내부로 이동, `finishTurnKeepTurn`을 옵션 파라미터로 리팩토링.
+- 참고: 스펙 `.claude/specs/2026-06-16-matgo-bugfix-4-spec.md`, QA `.claude/specs/2026-06-16-matgo-bugfix-4-qa-report.md`.
+
+---
+
 ## [2026-06-15] — 선공 바닥 조커 연출 수정 + 바닥 리필 룰
 
 선공 바닥 조커 처리의 연출 버그(사안 A)를 수정하고, 조커 제거 후 바닥을 항상 8장으로 채우는 리필 룰(사안 B)을 신설. `score.js` 무수정.

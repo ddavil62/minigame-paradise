@@ -134,6 +134,8 @@ export function startRound(game, firstTurn) {
   // 라운드 동안 누적된 뻑 개수 — 점수 multiplier(×2^N) 적용 + 3뻑 즉시 승리 판정에 사용
   game.ppeokCount = { p1: 0, p2: 0 };
   game.pendingFloorChoice = null;
+  // B1 수정: chooseFloor srcCard 보존 필드 — 라운드 시작 시 반드시 초기화(라운드 간 누수 방지).
+  game.pendingChoiceSrcCardId = null;
   game.turn = firstTurn;
   game.phase = 'awaiting_play';
   game.goCount = { p1: 0, p2: 0 };
@@ -318,8 +320,10 @@ export function* playCardSteps(g, playerId, cardId) {
       stoleFromOpp: 1, refilled,
     };
     yield { step: 'hand_played', card };
-    // 매치 단계 + 더미 뒤집기 단계 모두 스킵 — 곧바로 턴 마무리
-    finishTurn(g, playerId);
+    // B4 수정 (2026-06-16 확정 룰): 매치/덱 뒤집기 스킵 + 턴 유지(finishTurn 미호출).
+    // 조커는 '내가 한 번 더 낼 수 있는 특권'이므로 turn = playerId 유지.
+    // 단, 점수 평가 + 9월 술잔 + 고/스톱 + 3뻑 분기는 그대로 수행한다.
+    finishTurnKeepTurn(g, playerId);
     yield { step: 'turn_finished' };
     return;
   }
@@ -380,6 +384,12 @@ export function* chooseFloorSteps(g, playerId, cardId) {
   g.floor = g.floor.filter((c) => c.id !== cardId);
   g.captured[playerId].push(pending.srcCard, chosen);
   const wasFromHand = pending.fromHand;
+  // ── B1 수정: srcCard ID를 별도 필드로 보존 ──
+  // 통합 STATE(server.js shouldDeferBroadcast가 choice_made를 보류)에서는 도착 시
+  // la.kind가 단계 2의 최종 결과(sseul/ttadak 등)로 덮인다. 그러면 client의
+  // la.kind === 'choice_made' 가드가 발동하지 않아 손패(srcCard)가 더미 출처로
+  // 오인된다. 이 필드로 손패 출처를 확정 식별한다. finishTurn에서 리셋됨.
+  g.pendingChoiceSrcCardId = wasFromHand ? pending.srcCard.id : null;
   g.pendingFloorChoice = null;
   g.phase = 'awaiting_play';
   g.lastAction = { kind: 'choice_made', player: playerId, srcCard: pending.srcCard, chosen };
@@ -686,6 +696,78 @@ function flushHandsToCaptured(g) {
 }
 
 /**
+ * 점수 평가 + 고/스톱/술잔/3뻑 분기 수행 후 턴을 교대하지 않고 그대로 유지.
+ *
+ * B4 조커 케이스 A 전용: 손에서 조커를 냈을 때 플레이어는 턴을 유지하고
+ * 다음 카드를 낼 수 있다(확정 룰 2026-06-16). 단, 7점 도달 시 고/스톱 결정 기회는 그대로 부여한다.
+ *
+ * ⚠️ 본 함수는 finishTurn의 복사본으로, 마지막 "턴 교대" 한 줄만 제거한 버전이다.
+ *    향후 finishTurn 로직을 수정할 때 양쪽을 반드시 동기화해야 한다.
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ */
+function finishTurnKeepTurn(g, playerId) {
+  // 3뻑 즉시 승리
+  if (g.ppeokCount && g.ppeokCount[playerId] >= 3) {
+    g.lastAction = { kind: 'three_ppeok', player: playerId, count: g.ppeokCount[playerId] };
+    endRoundWin(g, playerId);
+    return;
+  }
+  // 9월 술잔 선택 대기
+  if (!g.kkeutChoiceMade[playerId] && g.captured[playerId].some((c) => c.id === 'm09_kkeut')) {
+    g.pendingKkeutChoice = { player: playerId };
+    g.phase = 'awaiting_kkeut_choice';
+    return;
+  }
+  // 점수 평가
+  const breakdown = calculateScore(g.captured[playerId], { kkeutAsSsangpi: g.kkeutAsSsangpi[playerId] });
+  if (breakdown.score >= SCORE_THRESHOLD_GO_STOP) {
+    const lastGoScore = g.lastGoScore?.[playerId] ?? null;
+    if (lastGoScore === null || breakdown.score > lastGoScore) {
+      const remainingCredit = g.bombDeckCredit?.[playerId] || 0;
+      const opp = playerId === 'p1' ? 'p2' : 'p1';
+      const oppRemaining = g.hands[opp].length + (g.bombDeckCredit?.[opp] || 0);
+      const selfStuck = g.hands[playerId].length === 0 && remainingCredit === 0;
+      const oppStuckAndSelfNoCredit = oppRemaining === 0 && remainingCredit === 0;
+      if (selfStuck || oppStuckAndSelfNoCredit) {
+        flushHandsToCaptured(g);
+        endRoundWin(g, playerId);
+        return;
+      }
+      g.phase = 'awaiting_go_stop';
+      g.lastAction = { ...g.lastAction, scoreReached: breakdown.score, by: playerId };
+      return;
+    }
+  }
+  // 라운드 종료 조건 (finishTurn과 동일)
+  const p1Hand = g.hands.p1.length;
+  const p2Hand = g.hands.p2.length;
+  const p1Credit = g.bombDeckCredit?.p1 || 0;
+  const p2Credit = g.bombDeckCredit?.p2 || 0;
+  const p1Done = (p1Hand + p1Credit) === 0;
+  const p2Done = (p2Hand + p2Credit) === 0;
+  if ((p1Done && p2Credit === 0) || (p2Done && p1Credit === 0)) {
+    flushHandsToCaptured(g);
+    const p1Final = calculateScore(g.captured.p1, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p1 }).score;
+    const p2Final = calculateScore(g.captured.p2, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p2 }).score;
+    if (p1Final >= SCORE_THRESHOLD_GO_STOP && p1Final >= p2Final) {
+      endRoundWin(g, 'p1');
+    } else if (p2Final >= SCORE_THRESHOLD_GO_STOP && p2Final > p1Final) {
+      endRoundWin(g, 'p2');
+    } else {
+      endRoundDraw(g);
+    }
+    return;
+  }
+  // ── 핵심 차이: 턴 교대 없이 그대로 유지 ──
+  // finishTurn은 여기서 g.turn = (상대)로 교대하지만, B4 조커 케이스 A는 턴을 유지한다.
+  g.phase = 'awaiting_play';
+  g.lastHandPlayed = null;
+  g.pendingChoiceSrcCardId = null;  // B1 수정과 연계
+}
+
+/**
  * 턴 끝에서 점수 평가 + 고/스톱 결정 단계로 이동 또는 다음 턴.
  * @param {GameState} g
  * @param {'p1'|'p2'} playerId
@@ -771,6 +853,7 @@ function finishTurn(g, playerId) {
   g.turn = playerId === 'p1' ? 'p2' : 'p1';
   g.phase = 'awaiting_play';
   // 턴 종료 시 손 origin 정보 reset (다음 턴 시각화에 잔존하면 잘못된 fly 발동).
+  g.pendingChoiceSrcCardId = null;  // B1 수정: chooseFloor srcCard 보존 필드도 리셋
   g.lastHandPlayed = null;
 }
 
@@ -1244,6 +1327,9 @@ export function snapshotForPlayer(g, playerId) {
     bombDeckCredit: { ...(g.bombDeckCredit || { p1: 0, p2: 0 }) },
     // 손 origin 추적: 단계 1+2 통합 STATE 시 client가 손에서 낸 카드를 식별하기 위함.
     lastHandPlayed: g.lastHandPlayed || null,
+    // B1 수정: chooseFloor srcCard ID 노출 — 통합 STATE에서 손패 출처 식별용.
+    // choice_made가 defer로 통합되어 la.kind가 이미 덮인 경우에도 client가 srcCard를 제외할 수 있다.
+    choiceFloorSrcCardId: g.pendingChoiceSrcCardId || null,
     lastAction: g.lastAction,
     money: { ...g.money },
     perPoint: g.perPoint,

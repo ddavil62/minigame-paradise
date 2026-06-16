@@ -253,12 +253,12 @@ it('REG-G-01: createGame — 손패 10+10, 카드 총 50장 일관성 (2026-06-0
   const g = createGame();
   eq(g.hands.p1.length, 10, 'p1 손 10장');
   eq(g.hands.p2.length, 10, 'p2 손 10장');
-  // 바닥 조커 자동 획득 룰로 바닥 장수와 덱 장수는 셔플에 따라 가변. 다만 카드 총합은 항상 50.
-  // 분배 직후 floor 슬롯 8장 → 조커 N장이 captured로 이동 → floor=8-N, captured=N, deck=22 (불변).
-  truthy(g.floor.length >= 6 && g.floor.length <= 8, `바닥 ${g.floor.length}장 (조커 ${8 - g.floor.length}장 이동)`);
-  eq(g.deck.length, 22, '덱 22장 (분배 후 잔여 — 불변)');
+  // 2026-06-15 바닥 리필 룰 (함정 #11): 바닥 조커 N장은 선공자 captured로 이동 후
+  // deck.pop()으로 floor를 8로 복원한다. 따라서 floor === 8(불변), deck === 22 - N(가변),
+  // captured = N. 카드 총합 50은 불변. (이전 "floor 6~8 / deck 22 고정" 단언은 폐기.)
+  eq(g.floor.length, 8, '바닥 8장 (리필 룰로 항상 복원)');
   const capturedTotal = g.captured.p1.length + g.captured.p2.length;
-  eq(capturedTotal, 8 - g.floor.length, 'captured = 이동한 바닥 조커 수');
+  eq(g.deck.length, 22 - capturedTotal, '덱 22-N (N=리필 소비, 바닥 조커 수)');
   // 카드 총합 50장 일관성
   const total = g.hands.p1.length + g.hands.p2.length + g.floor.length + g.deck.length
     + g.captured.p1.length + g.captured.p2.length;

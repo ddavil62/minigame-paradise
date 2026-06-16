@@ -561,6 +561,13 @@
     // chooseFloorSteps 단계 1 (choice_made): srcCard가 captured에 등장하는데, 이건
     // 사용자가 모달 선택 직전에 던진 자기 카드다. 덱 origin이 아니므로 drewIds에서 제외.
     // (그렇지 않으면 자기가 던진 카드가 더미에서 다시 등장하는 잘못된 fly가 발동된다.)
+    // ── B1 수정: la.kind === 'choice_made'에만 의존하면 통합 STATE(choice_made가
+    // server.js shouldDeferBroadcast로 보류되어 la.kind가 단계 2 결과로 덮임)에서
+    // 가드가 발동하지 않는다. s.choiceFloorSrcCardId를 1차 기준으로 사용한다. ──
+    if (s.choiceFloorSrcCardId) {
+      newCardIds.delete(s.choiceFloorSrcCardId);
+    }
+    // 폴백: choice_made가 개별 broadcast로 도착하는 경로(혹시 생기는 경우) 보호.
     if (la && la.kind === 'choice_made' && la.srcCard) {
       newCardIds.delete(la.srcCard.id);
     }
@@ -1479,10 +1486,21 @@
     const handLikeEntries = entries.filter((e) => e.origin === 'hand' || e.origin === 'opp-hand' || e.origin === 'opp-captured');
     const pairOnlyEntries = entries.filter((e) => e.origin === 'pair');
 
+    /**
+     * clone을 rect 위치로 이동시킨다.
+     * B2 수정: left/top만 transition — width/height를 동시에 transition하면 손패와
+     * 바닥 슬롯의 크기 차이(특히 우측 상단)가 cubic-bezier와 맞물려 이동 경로를
+     * 비선형으로 휘게 만든다. 크기는 transition 없이 즉시 목표값으로 적용한다.
+     * @param {HTMLElement} clone
+     * @param {DOMRect}     rect
+     * @param {number}      durMs
+     */
     function flyTo(clone, rect, durMs) {
-      clone.style.transition = `all ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1)`;
+      clone.style.transition = `left ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1), `
+                             + `top ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1)`;
       clone.style.left   = `${rect.left}px`;
       clone.style.top    = `${rect.top}px`;
+      // width/height는 transition 없이 즉시 목표 크기로 — 경로(left/top)에 영향 없음.
       clone.style.width  = `${rect.width}px`;
       clone.style.height = `${rect.height}px`;
     }
@@ -1548,13 +1566,19 @@
         }
         case 'DECK_THROW': {
           // 뒤집은 덱 카드 던지기 — 덱 → midRect.
+          // B2 수정: DECK_FLIP의 rotateY transform 전환 직후 layout이 확정되기 전에
+          // 바로 flyTo를 걸면 snap(순간이동)이 발생한다. transform 초기화(transition none)
+          // 후 더블 rAF로 layout을 커밋한 뒤 flyTo를 시작해 직선 이동을 보장한다.
           for (const e of deckEntries) {
             if (e.flipBack) { e.flipBack.remove(); e.flipBack = null; }
             e.clone.style.transition = 'none';
             e.clone.style.transform = '';
-            void e.clone.offsetHeight;
-            flyTo(e.clone, e.midRect, T.DECK_THROW);
           }
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            for (const e of deckEntries) {
+              flyTo(e.clone, e.midRect, T.DECK_THROW);
+            }
+          }));
           stateTimer = setTimeout(() => transition('DECK_LAND'), T.DECK_THROW);
           break;
         }
