@@ -39,8 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // UI
   const ui = createUI(els);
-  // Phase 4 C-2: 주소 복사 버튼 핸들러 등록 (한 번만)
-  ui.bindCopyUrlButton();
 
   // Game (콜백 주입은 network/input 생성 후 와이어업)
   let net = null;
@@ -69,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Network
   net = createNetwork({
-    onJoined: ({ playerId, waiting, hostUrl }) => {
+    onJoined: ({ playerId, waiting }) => {
       els.playerLabel.textContent = playerId === 'p1' ? '나 (P1)' : '나 (P2)';
       if (waiting) {
         ui.setStatus('상대방을 기다리는 중...');
@@ -78,17 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.setStatus('상대 입장. 준비 버튼을 눌러주세요.');
         els.opponentStatus.textContent = '입장 완료';
       }
-      // Phase 4 C-2: 대기 화면에서 친구 접속 안내 패널 표시.
-      // hostUrl은 서버가 자동 감지한 LAN URL (없으면 클라이언트가 폴백).
-      ui.showInvitePanel(hostUrl || '');
     },
     onStart: (countdown) => {
       // 카운트다운 표시 후 게임 시작
       ui.hideResult();
       els.readyBtn.classList.add('hidden');
       els.rematchBtn.classList.add('hidden');
-      // Phase 4 C-2: 게임 시작 시 친구 접속 안내 패널 숨김.
-      ui.hideInvitePanel();
       ui.setStatus('');
       els.opponentStatus.textContent = '대전 중';
       // Phase 2: 아이템 슬롯/효과/타이머 초기화 (재대결 시에도 안전하게)

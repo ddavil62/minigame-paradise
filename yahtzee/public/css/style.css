@@ -13,6 +13,19 @@
   --ink:#4a3a28; --ink-dim:#9a8463;
   --tomato:#d2562f; --tomato-2:#b8431f; --leaf:#5a7d3c;
   --woodtext:#fbf3e2;
+  /* 점수표 카테고리 행 높이 단일 소스. 행 구분선(tbody td border-bottom)이 이 높이 경계에 맞춰져
+   * 텍스트가 항상 행 가운데 오고 선에 걸치지 않는다. (F 버그 수정) */
+  --score-row-h:34px;
+  --score-line:rgba(216,195,154,.7);
+  /* 점수 상태 3종 구분용 전용 색/효과 (G 버그 수정. 기존 --tomato/--ink 값은 건드리지 않음).
+   *  - preview      : 선택 가능 미리보기(인터랙티브) → 잎새 초록 + 점선 테두리
+   *  - last-scored  : 직전 확정 강조(정적) → 토마토 + 채워진 배경 + 굵게
+   *  - recorded     : 일반 확정(차분) → 먹색 */
+  --score-preview:#3f6e22;        /* 잎새보다 진한 초록 (선택 가능) */
+  --score-preview-bg:rgba(90,125,60,.16);
+  --score-last:#b8431f;           /* 직전 확정 강조색 (토마토-2) */
+  --score-last-bg:rgba(210,86,47,.16);
+  --score-recorded:#4a3a28;       /* 일반 확정 = --ink */
 }
 * { box-sizing: border-box; }
 html, body { margin:0; padding:0; min-height:100%; }
@@ -221,9 +234,11 @@ body.theme-wood {
 
 /* ── 점수표 (table) ── */
 .zone-scoreboard {
-  background:
-    repeating-linear-gradient(0deg, transparent 0 33px, rgba(216,195,154,.5) 33px 34px),
-    linear-gradient(180deg,var(--paper),var(--paper-2));
+  /* [F 수정] 기존엔 repeating-linear-gradient 줄 무늬를 컨테이너 배경에 그렸으나,
+   * 배경 좌표계(.zone-scoreboard 기준)와 tbody 행(thead/padding 오프셋 포함)의 위상이
+   * 어긋나 글자가 선에 걸쳤다. → 줄 무늬를 제거하고 행 구분선을 tbody td에 직접 부여한다.
+   * 이 방식은 행마다 정확히 행 경계에 선이 오므로 위상 문제가 원천 제거된다. */
+  background:linear-gradient(180deg,var(--paper),var(--paper-2));
   border:3px solid var(--plank-edge); border-radius:14px; padding:6px;
   box-shadow:0 4px 10px rgba(0,0,0,.3);
 }
@@ -235,17 +250,43 @@ body.theme-wood {
 .scoreboard .col-cat { text-align:left; }
 .cat-label { font-size:13px; color:var(--ink); }
 .cat-rule { font-size:10px; color:var(--ink-dim); margin-top:1px; }
-.scoreboard tbody td { padding:2px 10px; height:34px; }
+/* [F 수정] 행 높이를 --score-row-h로 단일 소스화.
+ * box-sizing:border-box(* 전역) + line-height:1.1 + 상하 동일 padding으로
+ * 텍스트가 행 높이의 수직 중앙에 오고, border-bottom이 행 경계(=구분선)에 위치한다.
+ * 카테고리 셀은 두 줄(라벨+룰)이라 height를 min-height처럼 동작시켜 넘치면 자연 확장. */
+.scoreboard tbody td {
+  padding:0 10px; height:var(--score-row-h); line-height:1.1;
+  vertical-align:middle; border-bottom:1px solid var(--score-line);
+}
+/* 마지막 카테고리 행의 선은 tfoot 경계와 겹쳐 이중선이 되므로 제거(시각 일관성). */
+.scoreboard tbody tr:last-child td { border-bottom:none; }
 .score-cell { text-align:center; font-family:'Jua',sans-serif; font-size:16px; width:62px; position:relative; }
-.score-cell.recorded { color:var(--ink); }
-.score-cell.preview { color:var(--tomato-2); cursor:pointer; }
-.score-cell.preview::after { content:''; position:absolute; inset:4px 8px; border-radius:8px; background:rgba(210,86,47,.14); z-index:-1; }
+
+/* ── [G 수정] 점수 셀 3상태 시각 구분 ──
+ * 세 상태가 색만이 아니라 (테두리/배경/굵기) 보조 단서까지 다르게 가져
+ * 색맹 사용자도 구분 가능하도록 한다(WCAG 1.4.1).
+ *  ① recorded         : 일반 확정 — 차분한 먹색, 장식 없음
+ *  ② preview          : 선택 가능 미리보기 — 초록 + 점선 테두리(인터랙티브 단서) + 옅은 배경
+ *  ③ scored-persistent: 직전 확정 강조 — 토마토 + 채워진 배경 + 굵게 + 좌측 액센트 바 */
+
+/* ① 일반 확정 */
+.score-cell.recorded { color:var(--score-recorded); }
+
+/* ② 선택 가능 미리보기: 초록 글자 + 점선 테두리(클릭 가능 단서) + 옅은 초록 배경 */
+.score-cell.preview { color:var(--score-preview); cursor:pointer; font-weight:bold; }
+.score-cell.preview::after {
+  content:''; position:absolute; inset:3px 6px; border-radius:8px;
+  background:var(--score-preview-bg);
+  border:1.5px dashed var(--score-preview); z-index:-1;
+}
 .score-cell.preview:hover { color:#fff; }
-.score-cell.preview:hover::after { background:var(--tomato); inset:4px 6px; }
-.score-cell.preview.preview-zero { color:rgba(74,58,40,.35); }
-.score-cell.preview.preview-zero::after { background:transparent; }
+.score-cell.preview:hover::after { background:var(--score-preview); border-style:solid; inset:3px 5px; }
+/* 0점 미리보기: 선택 가능하나 점수가 0임을 흐린 회색 + 점선 테두리만으로 표현(양수 preview와 구분) */
+.score-cell.preview.preview-zero { color:rgba(74,58,40,.4); font-weight:normal; }
+.score-cell.preview.preview-zero::after { background:transparent; border-color:rgba(74,58,40,.3); }
 .score-cell.preview.preview-zero:hover { color:var(--ink); }
-.score-cell.preview.preview-zero:hover::after { background:rgba(74,58,40,.12); }
+.score-cell.preview.preview-zero:hover::after { background:rgba(74,58,40,.12); border-style:solid; }
+
 .score-cell.empty { color:rgba(74,58,40,.2); }
 /* 카테고리 기록 직후 강조: scale + 토마토 글로우 + 색상. CATEGORY_SCORED 수신 시 1.4초간 적용. */
 .score-cell.scored-flash {
@@ -263,13 +304,26 @@ body.theme-wood {
  * 정적 — pulse 애니메이션 없음. scored-flash(1.4s)와 동시 적용 가능하며 flash 종료 후에도 색상은 남는다.
  * flash가 animation으로 color/text-shadow를 일시 덮으므로 !important로 persistent 우선순위 확보 시
  * 두 효과가 충돌한다. 따라서 우선순위는 자연스러운 순서(flash 우선 → 종료 후 persistent 노출). */
+/* ③ 직전 확정 강조: preview(초록)·recorded(먹색)와 명확히 구분되도록
+ * 토마토 색 + 채워진 토마토 배경 + 굵게 + 좌측 액센트 바(비색 보조 단서)로 차별화한다.
+ * recorded 셀이 .scored-persistent를 함께 가지므로 recorded보다 셀렉터가 뒤에 와 우선 적용된다. */
 .score-cell.scored-persistent {
-  color:var(--tomato-2);
-  text-shadow:0 0 6px rgba(210,86,47,.55);
+  color:var(--score-last);
+  font-weight:bold;
 }
-.section-divider td {
+.score-cell.scored-persistent::before {
+  /* 채워진 배경 + 좌측 액센트 바. 색맹 대응 비색 단서. */
+  content:''; position:absolute; inset:3px 6px; border-radius:8px;
+  background:var(--score-last-bg);
+  border-left:3px solid var(--score-last); z-index:-1;
+}
+/* 섹션 헤더는 행 구분선 없이 헤더처럼 보이게 한다. `.scoreboard tbody td`(특이도 0,1,2)가
+ * border-bottom을 부여하므로, 특이도를 0,2,3으로 높여(.scoreboard + .section-divider 클래스 2개)
+ * 확실히 차단한다 (F 후속: 섹션 헤더 밑에 선이 새던 회귀 수정). */
+.scoreboard tbody tr.section-divider td {
   font-family:'Jua',sans-serif; font-size:11px; letter-spacing:1px; color:var(--tomato-2);
   padding:8px 10px 3px; text-transform:none;
+  height:auto; border-bottom:none;
 }
 /* 현재 턴 컬럼 강조 */
 .scoreboard.current-p1 tbody .col-p1, .scoreboard.current-p1 tfoot .col-p1,

@@ -1,5 +1,24 @@
 # Changelog
 
+## [2026-06-17] — 버그 A: 바닥 우측/스택 슬롯 fly 착지 좌표 어긋남 수정
+
+직전 B2(2026-06-16) fly 직선화가 못 잡은 **바닥 우측·스택 슬롯**에서 fly 클론 도착 좌표가 좌상단으로 밀리던 버그. `cloneNode(true)`가 바닥 슬롯 카드의 인라인 `transform: translate(-50%,-50%) [rotate(Ndeg)]`까지 복사해 도착 좌표를 어긋나게 한 것이 근본 원인. 서버·룰·점수 무수정(연출만).
+
+### 수정
+- `public/client.js` fly 생성 5개 함수(6개 클론 지점)에서 `cloneNode` 직후 `clone.style.transform = ''` 초기화:
+  - `startFlyFromHand` 통상 경로(`transition:'none'` **앞에** 배치 — 즉시 반영)·폴백 경로(R5/R8 통합 STATE)
+  - `startFlyFromOppHand` / `startFlyFromOppCaptured` / `startFlyFromDeck` / `spawnCardClone`(pair 클론 헬퍼)
+- `startFlyFromDeck`의 DECK_FLIP `rotateY(-180deg)` 별도 설정과 무충돌(이후 재설정 경로 확인).
+- `flyTo`·CSS `.flying-card` 무수정.
+
+### 추가 (테스트)
+- `tests/fly-right-slot-visual.spec.js` 신규 — 우측(VIS-A1)·스택(VIS-A2)·좌측(VIS-A3) 슬롯 fly 착지 정합 시각 검증.
+
+### 검증
+- 정량: 미수정 시 좌 ~30px / 상 ~42.5px 어긋남 → 수정 후 fly clone rect와 style.left/top 오차 **0.02px**, `computed transform=none`(VIS-A1 우측 dx=150 / VIS-A3 좌측 dx=-150 실측).
+- 단위 **100/100** + adhoc joker **24**/sseul **11**/bombdup **7**/floor-joker **5** + e2e **32/32**(E-26~E-32 fly 게이트 회귀) + VIS **3/3** = 전부 PASS.
+- 서버 로직 무변경이라 단위/adhoc 회귀 0. QA PASS(결함 0), AD3 APPROVED.
+
 ## [2026-06-17] — 신규 버그 4건 수정 (R5/R6 choice 손패 fly + R7 자뻑 풀이 2피 룰 + R8 조커 captured 표시)
 
 직전 B1(2026-06-16)이 손패 fly 누락을 남긴 R5/R6, 자뻑 풀이 룰 변경 R7, 조커 사용 후 사라짐 R8을 수정. R8은 1차 QA FAIL(조커 증발) → 재수정으로 해소. 수정 4파일: `game.js`, `public/client.js`, `tests/game.unit.spec.js`, `tests/e2e-scenarios.spec.js`.

@@ -93,8 +93,10 @@ test('E-01: P1 페이지 로드 — 타이틀에 "윷놀이" 포함', async ({ p
   await expect(page).toHaveTitle(/윷놀이/);
 });
 
-test('E-02: P1 JOIN 후 #invite-panel 표시', async ({ context }) => {
-  // 단독 P1 연결 — P2 없이 대기 중일 때 invite-panel이 표시되는지 확인
+test('E-02: P1 JOIN 후 #ready-status에 P1/P2 대기 표시', async ({ context }) => {
+  // 기댓값 변경 사유 (버그 C, 2026-06-17): 초대 패널(#invite-panel) 제거 → P1/P2
+  // 준비 상태 표시(#ready-status, yahtzee 패턴)로 대체. 단독 P1 입장(waiting=true) 시
+  // showReadyStatus(false,false)가 호출되어 양쪽 "대기"로 표시되는지 검증.
   // openTwoPlayers를 호출하면 서버 정원(2명)이 차서 soloPage가 거절되므로 사용하지 않는다.
   const soloPage = await context.newPage();
   await soloPage.goto(BASE_URL);
@@ -107,8 +109,10 @@ test('E-02: P1 JOIN 후 #invite-panel 표시', async ({ context }) => {
     null,            // waitForFunction(fn, arg, options) — arg 없음
     { timeout: 10000 },
   );
-  const invitePanel = soloPage.locator('#invite-panel');
-  await expect(invitePanel).not.toHaveClass(/hidden/, { timeout: 3000 });
+  const readyStatus = soloPage.locator('#ready-status');
+  await expect(readyStatus).not.toHaveClass(/hidden/, { timeout: 3000 });
+  await expect(soloPage.locator('#ready-mark-p1')).toHaveText('대기');
+  await expect(soloPage.locator('#ready-mark-p2')).toHaveText('대기');
 });
 
 test('E-03: P1 #player-label 에 "P1" 포함', async ({ context }) => {

@@ -11,8 +11,14 @@
  *  - Q3. GAME_OVER 후 ITEM_GRANT가 자기 자신에게도 도착하지 않아야 (lines=0 grant도 차단)
  *  - Q4. JOIN 이전(연결만 된 상태) GAME_OVER → 서버 크래시 없음
  *  - Q5. server.js HOST_URL 산출 — lanIps[0]이 가상 어댑터일 때 후순위 정렬 동작
- *  - Q6. ui.js의 클립보드 fallback이 navigator.clipboard 미지원 시 동작 (정적)
+ *  - Q6. (2026-06-17 C 작업으로 전환) ui.js에서 클립보드 복사 로직(copyToClipboard/execCommand 등)이
+ *        제거됐는지 — invite-panel/copy 버튼 제거에 따른 회귀 차단(다시 살아나면 실패).
  *  - Q7. 콘솔 ANSI 박스가 ASCII만 사용하는지 (cmd.exe 코드페이지 949 호환)
+ *
+ * ── 2026-06-17 C 작업(공통 초대패널 제거) 단언 전환 ──
+ * 사용자 승인 기능 제거(invite-panel/copy 버튼)로 ui.js의 copyToClipboard/navigator.clipboard/execCommand가
+ * 사라졌다. 이를 "존재"로 단언하던 Q6a~Q6d는 obsolete가 되어 "제거됨" positive 단언으로 전환한다.
+ * tetris CLAUDE.md "회귀 슈트 절대 수정 금지"의 명시적 예외(사용자 승인 기능 제거)다.
  */
 
 import { WebSocket, WebSocketServer } from 'ws';
@@ -280,22 +286,21 @@ function testHostUrlPriority() {
   expect('Q5e. HOST_URL localhost fallback', /HOST_URL\s*=\s*`http:\/\/localhost/.test(serverJs));
 }
 
-// ── Q6. ui.js 클립보드 fallback ─────────────────────────────────
+// ── Q6. ui.js 클립보드 복사 로직 제거 검증 (2026-06-17 C 작업으로 전환) ──
 function testClipboardFallback() {
-  section('Q6. ui.js copyToClipboard fallback 안전성 (정적 검증)');
+  section('Q6. ui.js 클립보드 복사 로직 제거 검증 (invite-panel 제거 회귀 차단)');
 
   const uiJs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'ui.js'), 'utf8');
-  // 1) navigator.clipboard 우선 시도 + try/catch
-  expect(
-    'Q6a. navigator.clipboard.writeText 호출 + try/catch',
-    /navigator\.clipboard.*writeText/s.test(uiJs) && /try\s*\{[\s\S]*?navigator\.clipboard/.test(uiJs),
-  );
-  // 2) execCommand fallback 존재
-  expect('Q6b. document.execCommand("copy") fallback 존재', /execCommand\s*\(\s*['"]copy['"]/.test(uiJs));
-  // 3) 폴백 토스트 ('복사 실패') 노출
-  expect('Q6c. 복사 실패 토스트 메시지 존재', /복사\s*실패/.test(uiJs));
-  // 4) 폴백 메시지(괄호로 시작)는 복사 차단
-  expect('Q6d. 폴백 메시지(괄호 시작) 복사 차단', /url\.startsWith\(['"]\(['"]\)/.test(uiJs));
+  // C 작업으로 copyToClipboard/navigator.clipboard/execCommand 복사 핸들러가 제거됐다.
+  // "제거됨"을 positive 검증한다 (초대 패널 복사 로직이 다시 살아나면 실패).
+  expect('Q6a. navigator.clipboard 복사 호출 제거됨 (C 작업)',
+    !/navigator\.clipboard/.test(uiJs));
+  expect('Q6b. document.execCommand("copy") fallback 제거됨 (C 작업)',
+    !/execCommand\s*\(\s*['"]copy['"]/.test(uiJs));
+  expect('Q6c. copyToClipboard 함수 제거됨 (C 작업)',
+    !/function\s+copyToClipboard/.test(uiJs) && !/copyToClipboard\s*=/.test(uiJs));
+  expect('Q6d. 주소 복사 토스트 문구 제거됨 (C 작업)',
+    !/복사\s*실패/.test(uiJs) && !/주소\s*복사/.test(uiJs));
 }
 
 // ── Q7. 콘솔 박스 ASCII-only ───────────────────────────────────

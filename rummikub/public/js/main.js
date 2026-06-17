@@ -39,9 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
     hdrP2Hand: document.getElementById('hdr-p2-hand'),
     hdrP1Played: document.getElementById('hdr-p1-played'),
     hdrP2Played: document.getElementById('hdr-p2-played'),
-    invitePanel: document.getElementById('invite-panel'),
-    inviteUrl: document.getElementById('invite-url'),
-    copyUrlBtn: document.getElementById('copy-url-btn'),
     readyPanel: document.getElementById('ready-panel'),
     readyBtn: document.getElementById('ready-btn'),
     p1ReadyMark: document.getElementById('p1-ready-mark'),
@@ -129,17 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── 네트워크 핸들러 ──────────────────────────────────────────
   const net = createNetwork({
     onOpen: () => { net.join('Player'); },
-    onJoined: ({ playerId, waiting, hostUrl }) => {
+    onJoined: ({ playerId, waiting }) => {
       myId = playerId;
       els.playerLabel.textContent = `${playerId === 'p1' ? 'P1 (호스트)' : 'P2 (게스트)'}`;
       els.statusMsg.textContent = waiting ? '상대방 대기 중' : '준비를 눌러주세요';
 
-      if (playerId === 'p1' && hostUrl) {
-        els.inviteUrl.textContent = hostUrl;
-        els.invitePanel.classList.remove('hidden');
-      } else {
-        els.invitePanel.classList.add('hidden');
-      }
+      // 초대 패널 제거: ready-panel(P1/P2 준비 마크)이 대기 상태 표시를 담당한다.
       els.readyPanel.classList.remove('hidden');
       const currentMode = new URLSearchParams(location.search).get('mode')
         || sessionStorage.getItem('rummikub:mode')
@@ -625,27 +617,6 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('rummikub.sortMode', sortMode);
     syncSortButtons();
     renderAll();
-  });
-
-  els.copyUrlBtn.addEventListener('click', async () => {
-    const url = els.inviteUrl.textContent;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast(els.toast, '초대 URL 복사 완료', 'success');
-    } catch (e) {
-      const range = document.createRange();
-      range.selectNode(els.inviteUrl);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      try {
-        document.execCommand('copy');
-        showToast(els.toast, '초대 URL 복사 완료', 'success');
-      } catch (e2) {
-        showToast(els.toast, '복사 실패 — 수동으로 복사하세요', 'error');
-      }
-      sel.removeAllRanges();
-    }
   });
 
   els.rematchBtn.addEventListener('click', () => {

@@ -1,5 +1,20 @@
 # Yahtzee CHANGELOG
 
+## 2026-06-17 — 점수표 가로줄 정렬(F) + 카테고리 색 3상태 차별화(G)
+
+사용자 신고: (F) 점수표 가로 구분선이 행과 어긋나 글자가 선에 걸친다. (G) 점수 셀 3상태(선택가능/직전확정/일반확정)가 모두 같은 토마토 색이라 구분이 안 된다. CSS만 수정, JS(`scoreboard.js`/`main.js`) 무수정 — 클래스명·`makeScoreCell` 시그니처·`scored-flash` 애니메이션 전부 유지.
+
+- **F — 점수표 가로줄 정렬 (방법 C: tbody td border-bottom 직접 부여)**
+  - `public/css/style.css`: `.zone-scoreboard`의 배경 `repeating-linear-gradient` 줄무늬 제거(이 stripe가 thead 높이·padding 오프셋에 위상이 의존해 행과 어긋나던 근본 원인). 대신 `tbody td`에 `border-bottom`을 직접 부여.
+  - 행 높이를 `--score-row-h: 34px` 단일 소스로 통일 + `line-height`/`vertical-align`로 텍스트 행 중앙·선 경계 정합.
+  - 섹션 헤더 행 선 회귀는 `.scoreboard tbody tr.section-divider td` 특이도 상향으로 차단(header border-bottom 차단·height:auto 유지). 760px 반응형도 정합(border 방식이라 컨테이너 오프셋 무관).
+- **G — 점수 카테고리 색 3상태 차별화 (색맹 대응)**
+  - `public/css/style.css`: 점수 상태 전용 변수 `--score-*` 5종 신설(기존 `--tomato`/`--ink` 등 값은 불변, 신규 변수로만 분리).
+  - 3상태 분리 + 비색 보조 단서: 선택가능 preview(초록 + 점선 테두리 + 옅은 배경) / 직전확정 scored-persistent(토마토 + 좌측 액센트 바 + 채운 배경 + 굵기) / 일반확정 recorded(중립 먹색).
+  - preview-zero(흐린 회색 + 점선만)와 양수 preview 구분 유지. `scored-flash` 1.4초 애니메이션 무변경.
+- **검증**: 회귀 **222/222 PASS**(smoke 155 + dice-render 42 + bot-smoke 25) + 시각(3상태 동시 노출: recorded 2 / preview 12 / persistent 2). 서버 무수정. QA PASS, AD3 APPROVED.
+- 리포트 스크린샷: `tests/screenshots/fg-scoreboard.png`(1280px), `fg-scoreboard-760.png`(반응형).
+
 ## 2026-06-09 — 실시간 keep 동기화 + 카테고리 강조 애니메이션
 
 사용자 요청: keep 토글이 본인 화면에만 보이는 게 어색하다(턴 끝나야 STATE로 동기화), 어떤 카테고리에 점수가 들어갔는지 한눈에 보이지 않는다.

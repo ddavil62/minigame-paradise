@@ -40,10 +40,7 @@ export function createUI(els) {
   const boardWrapEl = els.boardCanvas ? els.boardCanvas.parentElement : null;
   const darkOverlayEl = document.getElementById('dark-overlay');
   const freezeBadgeEl = document.getElementById('freeze-badge');
-  // Phase 4 C-2: 친구 접속 안내 패널 + 토스트 DOM
-  const invitePanelEl = document.getElementById('invite-panel');
-  const inviteUrlEl = document.getElementById('invite-url');
-  const copyUrlBtnEl = document.getElementById('copy-url-btn');
+  // 토스트 DOM
   const toastEl = document.getElementById('toast');
 
   // 캔버스 크기 강제 설정 (HTML attribute가 미설정일 경우 대비)
@@ -461,96 +458,6 @@ export function createUI(els) {
   let toastTimer = 0;
 
   /**
-   * 친구 접속 안내 패널을 표시한다 (대기 화면 진입 시 호출).
-   * 서버가 전달한 hostUrl이 비어있으면 현재 location 기반으로 폴백 추론한다.
-   *
-   * @param {string} hostUrl 서버에서 받은 LAN URL (예: http://192.168.1.5:3000)
-   */
-  function showInvitePanel(hostUrl) {
-    if (!invitePanelEl || !inviteUrlEl) return;
-    // 폴백: hostUrl이 비어있고 현재 페이지가 localhost가 아니면 location.host 사용
-    let url = hostUrl;
-    if (!url) {
-      const loc = window.location;
-      // localhost로 접속 중이면 친구에게 알려줄 IP가 없으므로 안내 텍스트로 대체
-      if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-        url = '(LAN IP 미감지 — ipconfig로 확인)';
-      } else {
-        url = `${loc.protocol}//${loc.host}`;
-      }
-    }
-    inviteUrlEl.textContent = url;
-    invitePanelEl.classList.remove('hidden');
-  }
-
-  /**
-   * 친구 접속 안내 패널을 숨긴다 (게임 시작/결과 시 호출).
-   */
-  function hideInvitePanel() {
-    if (!invitePanelEl) return;
-    invitePanelEl.classList.add('hidden');
-  }
-
-  /**
-   * 주소 복사 버튼에 클릭 핸들러를 등록한다.
-   * 클릭 시 inviteUrlEl의 텍스트를 클립보드에 복사하고 토스트 띄움.
-   * navigator.clipboard 미지원 환경에서는 fallback으로 document.execCommand 시도.
-   */
-  function bindCopyUrlButton() {
-    if (!copyUrlBtnEl || !inviteUrlEl) return;
-    copyUrlBtnEl.addEventListener('click', async () => {
-      const url = inviteUrlEl.textContent || '';
-      // 폴백 메시지(괄호 포함)는 복사 차단
-      if (!url || url.startsWith('(')) {
-        showToast('복사할 주소가 없습니다.', 'error');
-        return;
-      }
-      const ok = await copyToClipboard(url);
-      if (ok) {
-        showToast('주소가 복사되었습니다', 'success');
-        copyUrlBtnEl.classList.add('copied');
-        copyUrlBtnEl.textContent = '복사됨';
-        setTimeout(() => {
-          copyUrlBtnEl.classList.remove('copied');
-          copyUrlBtnEl.textContent = '주소 복사';
-        }, 1500);
-      } else {
-        showToast('복사 실패 — 직접 선택해서 복사하세요', 'error');
-      }
-    });
-  }
-
-  /**
-   * 클립보드 복사 헬퍼. 비동기 Clipboard API → execCommand 순으로 시도.
-   * @param {string} text
-   * @returns {Promise<boolean>}
-   */
-  async function copyToClipboard(text) {
-    try {
-      if (navigator.clipboard && window.isSecureContext !== false) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-    } catch (e) {
-      // 권한 거부 등은 fallback으로 흐름.
-    }
-    // Fallback: 임시 textarea + execCommand
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand && document.execCommand('copy');
-      document.body.removeChild(ta);
-      return !!ok;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /**
    * 화면 하단에 토스트 메시지를 띄운다.
    * @param {string} text
    * @param {'success'|'error'|''} [kind='']
@@ -588,10 +495,6 @@ export function createUI(els) {
     showBoardNotice,
     shakeBoard,
     setItemSlotsInteractive,
-    // Phase 4 C-2
-    showInvitePanel,
-    hideInvitePanel,
-    bindCopyUrlButton,
     showToast,
   };
 }

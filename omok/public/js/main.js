@@ -25,9 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     turnIndicator: document.getElementById('turn-indicator'),
     moveCount: document.getElementById('move-count'),
 
-    invitePanel: document.getElementById('invite-panel'),
-    inviteUrl: document.getElementById('invite-url'),
-    copyUrlBtn: document.getElementById('copy-url-btn'),
+    p1StatusMark: document.getElementById('p1-status-mark'),
+    p2StatusMark: document.getElementById('p2-status-mark'),
     aiPanel: document.getElementById('ai-panel'),
     btnStartAi: document.getElementById('btn-start-ai'),
 
@@ -52,6 +51,22 @@ document.addEventListener('DOMContentLoaded', () => {
   let prevBoard = null;
   /** 내가 리매치("한 판 더") 버튼을 눌렀는가(중복 클릭 방지). */
   let rematchRequested = false;
+
+  /**
+   * 대기 화면의 P1/P2 입장 상태 마크를 갱신한다.
+   * @param {boolean} bothPending true면 p1만 입장(p2 대기), false면 양쪽 입장 완료
+   */
+  function updateStatusMarks(bothPending) {
+    // p1은 항상 입장한 상태(대기 화면을 보고 있는 호스트 기준).
+    if (els.p1StatusMark) {
+      els.p1StatusMark.textContent = '입장';
+      els.p1StatusMark.classList.add('joined');
+    }
+    if (els.p2StatusMark) {
+      els.p2StatusMark.textContent = bothPending ? '대기' : '입장';
+      els.p2StatusMark.classList.toggle('joined', !bothPending);
+    }
+  }
 
   // ── 화면 전환 ────────────────────────────────────────────────
   function showScreen(name) {
@@ -127,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 네트워크 핸들러 ──────────────────────────────────────────
   const net = createNetwork({
-    onJoined: ({ playerId, color, waiting, hostUrl }) => {
+    onJoined: ({ playerId, color, waiting }) => {
       // 리매치 후 서버가 재전송하는 JOINED는 waiting=false → 화면 전환 없이 color만 갱신.
       const isRematch = !waiting;
       myId = playerId;
@@ -140,13 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       els.statusMsg.textContent = waiting ? '상대방 대기 중' : '게임 시작 준비';
 
-      // 초대 URL: 호스트(p1) + 단독 대기 시 노출.
-      if (playerId === 'p1' && hostUrl) {
-        els.inviteUrl.textContent = hostUrl;
-        els.invitePanel.classList.remove('hidden');
-      } else {
-        els.invitePanel.classList.add('hidden');
-      }
+      // P1/P2 입장 상태 라벨 갱신 (invite-panel 대체).
+      // waiting=true: p1만 입장(p2 대기). waiting=false: 양쪽 입장 완료.
+      updateStatusMarks(waiting);
 
       // "AI랑 시작" 버튼: 호스트(p1) + 단독 대기 + 현재 mode≠ai 일 때만.
       const currentMode = new URLSearchParams(location.search).get('mode')
@@ -214,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
       showScreen('waiting');
       els.screenGameOver.classList.add('hidden');
       els.statusMsg.textContent = '상대방 대기 중';
+      // 상대 이탈 → 다시 단독 대기 상태이므로 P2 마크를 "대기"로 리셋.
+      updateStatusMarks(true);
       // 다시 단독 대기 → AI 옵션 재노출.
       const currentMode = new URLSearchParams(location.search).get('mode')
         || sessionStorage.getItem('omok:mode')
@@ -274,29 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = new URL(location.href);
     url.searchParams.set('mode', 'ai');
     location.href = url.toString();
-  });
-
-  // ── 초대 URL 복사 ────────────────────────────────────────────
-  els.copyUrlBtn.addEventListener('click', async () => {
-    const url = els.inviteUrl.textContent;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast('초대 URL 복사 완료');
-    } catch (e) {
-      // execCommand 폴백.
-      const range = document.createRange();
-      range.selectNode(els.inviteUrl);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      try {
-        document.execCommand('copy');
-        showToast('초대 URL 복사 완료');
-      } catch (e2) {
-        showToast('복사 실패 — 수동으로 복사하세요', 'error');
-      }
-      sel.removeAllRanges();
-    }
   });
 
   // ── 재대결("한 판 더"): WS 동의 흐름. 양쪽 동의 시 새 판(reload 없음). ──

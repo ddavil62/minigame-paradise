@@ -210,37 +210,21 @@ body {
   }
 }
 
-.invite-panel {
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 14px;
-  margin: 8px 0;
+/* P1/P2 입장 상태 라벨 (invite-panel 대체, 다크 테마) */
+.player-status-panel { margin: 8px 0 14px; }
+.player-status-slot {
+  font-family: 'Jua', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
 }
-.invite-label { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
-.invite-url-row { display: flex; gap: 8px; align-items: center; }
-.invite-url {
-  flex: 1;
-  background: #0d1424;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px 10px;
+.player-status-divider { color: var(--text-dim); opacity: .6; margin: 0 8px; }
+.player-status-mark {
+  color: var(--text-dim);
+  font-weight: 600;
   font-size: 13px;
-  color: var(--accent);
-  overflow-x: auto;
-  white-space: nowrap;
 }
-.copy-btn {
-  background: var(--accent);
-  color: #1a1206;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.invite-hint { font-size: 12px; color: var(--text-dim); margin-top: 8px; }
+.player-status-mark.joined { color: var(--card-green); }
 
 /* ── 게임 화면 레이아웃 ─────────────────────────────────────── */
 .screen-game {

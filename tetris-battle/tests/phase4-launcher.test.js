@@ -5,12 +5,21 @@
  *  L1. JOIN → JOINED 응답에 hostUrl 필드가 존재한다 (string, http:// 접두사).
  *  L2. hostUrl이 비어있더라도 클라 폴백 동작이 안전하도록 항상 string 타입.
  *  L3. JOINED 응답에 기존 필드(playerId, waiting)가 그대로 보존 (backward compat).
- *  L4. (정적) public/index.html에 invite-panel 마크업이 포함된다.
- *  L5. (정적) public/index.html에 copy-url-btn 버튼이 포함된다.
- *  L6. (정적) public/index.html에 toast 컨테이너가 포함된다.
- *  L7. (정적) public/js/ui.js에 showInvitePanel/bindCopyUrlButton/showToast 함수가 정의된다.
- *  L8. (정적) public/js/network.js가 hostUrl을 onJoined 콜백에 전달한다.
+ *  L4. (정적) public/index.html에서 invite-panel/invite-url 마크업이 제거됐다 (회귀 차단: 다시 살아나면 실패).
+ *  L5. (정적) public/index.html에서 copy-url-btn 버튼이 제거됐다 (회귀 차단).
+ *  L6. (정적) public/index.html에 toast 컨테이너가 포함된다 (showToast 용도로 유지됨).
+ *  L7. (정적) public/js/ui.js에서 invite 패널 함수(showInvitePanel/hideInvitePanel/bindCopyUrlButton)가 제거됐고,
+ *      showToast는 다른 용도(아이템/방어막 알림 등)로 유지된다.
+ *  L8. (정적) public/js/network.js가 hostUrl을 onJoined 콜백에 전달한다 (서버 프로토콜 하위 호환 유지).
  *  L9. (정적) start.bat과 stop.bat 파일이 존재하고 기본 명령을 포함한다.
+ *
+ * ── 2026-06-17 C 작업(공통 초대패널 제거)으로 인한 단언 retire/전환 ──
+ * 사용자 승인 기능 제거(invite-panel/copy 버튼 → 런처 로비 카드 클릭 진입으로 통일)에 따라,
+ * 제거된 DOM/함수의 "존재"를 단언하던 L4/L4b/L5/L7a/L7b/L7c/L7e는 더 이상 유효하지 않다.
+ * tetris CLAUDE.md "회귀 슈트 절대 수정 금지" 정책의 명시적 예외(사용자 승인 기능 제거)다.
+ * 단순 삭제 대신 "제거됨을 검증하는 positive 단언"으로 전환하여 회귀게이트 정신을 유지한다
+ * (초대 패널이 다시 살아나면 테스트가 실패한다).
+ * hostUrl 서버 프로토콜(L1~L3, L8)·#toast(L6)·showToast(L7d)·배치 파일(L9)은 코드에 남아있어 그대로 보존한다.
  *
  * 사전 조건: 서버 실행 중 (`node server.js --port 3055`)
  * 실행: node tests/phase4-launcher.test.js [--port 3055]
@@ -121,37 +130,41 @@ async function run() {
     await sleep(150);
   }
 
-  // ── L4~L6. 정적 HTML 마크업 검증 ───────────────────────────
-  section('L4~L6. public/index.html 신규 마크업');
+  // ── L4~L6. 정적 HTML 마크업 검증 (C 작업 후 현실 반영) ──────
+  section('L4~L6. public/index.html 마크업 (invite-panel 제거 검증 + toast 유지)');
   {
     const htmlPath = path.join(ROOT, 'public', 'index.html');
     const html = fs.readFileSync(htmlPath, 'utf8');
-    assert(html.includes('id="invite-panel"'),
-      'L4. index.html에 #invite-panel 영역 포함');
-    assert(html.includes('id="copy-url-btn"'),
-      'L5. index.html에 #copy-url-btn 버튼 포함');
+    // L4/L4b/L5: 2026-06-17 C 작업으로 제거됨 → "제거됨"을 positive 검증 (다시 살아나면 실패)
+    assert(!html.includes('id="invite-panel"'),
+      'L4. index.html에서 #invite-panel 영역 제거됨 (C 작업)');
+    assert(!html.includes('id="invite-url"'),
+      'L4b. index.html에서 #invite-url 표시 영역 제거됨 (C 작업)');
+    assert(!html.includes('id="copy-url-btn"'),
+      'L5. index.html에서 #copy-url-btn 버튼 제거됨 (C 작업)');
+    // L6: #toast는 showToast(아이템/방어막 알림 등) 용도로 유지됨
     assert(html.includes('id="toast"'),
-      'L6. index.html에 #toast 컨테이너 포함');
-    assert(html.includes('id="invite-url"'),
-      'L4b. index.html에 #invite-url 표시 영역 포함');
+      'L6. index.html에 #toast 컨테이너 포함 (유지)');
   }
 
-  // ── L7. ui.js 신규 함수 정의 ───────────────────────────────
-  section('L7. public/js/ui.js 신규 함수');
+  // ── L7. ui.js 함수 정의 (invite 함수 제거 검증 + showToast 유지) ─
+  section('L7. public/js/ui.js 함수 (invite 함수 제거 + showToast 유지)');
   {
     const uiPath = path.join(ROOT, 'public', 'js', 'ui.js');
     const ui = fs.readFileSync(uiPath, 'utf8');
-    assert(ui.includes('function showInvitePanel'),
-      'L7a. showInvitePanel 함수 정의');
-    assert(ui.includes('function hideInvitePanel'),
-      'L7b. hideInvitePanel 함수 정의');
-    assert(ui.includes('function bindCopyUrlButton'),
-      'L7c. bindCopyUrlButton 함수 정의');
+    // L7a/L7b/L7c/L7e: 2026-06-17 C 작업으로 제거됨 → "제거됨"을 positive 검증
+    assert(!ui.includes('function showInvitePanel'),
+      'L7a. showInvitePanel 함수 제거됨 (C 작업)');
+    assert(!ui.includes('function hideInvitePanel'),
+      'L7b. hideInvitePanel 함수 제거됨 (C 작업)');
+    assert(!ui.includes('function bindCopyUrlButton'),
+      'L7c. bindCopyUrlButton 함수 제거됨 (C 작업)');
+    // L7d: showToast는 다른 용도로 남아있어 유지 + export 유지 확인
     assert(ui.includes('function showToast'),
-      'L7d. showToast 함수 정의');
-    // export 객체에 포함
-    assert(/showInvitePanel\s*,/.test(ui),
-      'L7e. showInvitePanel이 return 객체에 export됨');
+      'L7d. showToast 함수 정의 (유지)');
+    // L7e: showInvitePanel이 더 이상 return 객체에 export되지 않음을 검증
+    assert(!/showInvitePanel\s*,/.test(ui),
+      'L7e. showInvitePanel이 return 객체에서 제거됨 (C 작업)');
   }
 
   // ── L8. network.js의 hostUrl 전달 ─────────────────────────

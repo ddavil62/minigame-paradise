@@ -236,9 +236,17 @@ test('YR-C8-009: 윷으로 잡은 경우 중복 보너스 차단 — §13-12 해
     const state = await p1.next('STATE');
     const p2Pieces = state.players.find((p) => p.id === 'p2').pieces;
     expect(p2Pieces[0].cell).toBe(HOME); // 잡기 발생 확인
-    // §13-12 해소: 윷으로 잡아도 잡기 보너스 미부여 → 중복 차단.
+    // §13-12 해소: 윷으로 잡아도 "잡기 보너스(capturedBonus)"는 미부여 → 중복 차단(이 단언은 유지).
     expect(state.capturedBonus).toBe(false);
-    expect(state.currentTurn).toBe('p2');
+    // ── 기댓값 변경 사유 (버그 D 수정, 2026-06-17) ──────────────────────────────
+    // 이전 단언 `currentTurn === 'p2'`는 "윷/모로 말을 이동하면 보너스 던지기가 소실되는
+    // 버그(D)"를 전제로 한 stale 단언이었다(주석의 "큐 소진 후 passTurn" 서술이 바로 그 버그).
+    // 윷/모는 잡기 여부와 무관하게 "윷/모 자체의 추가 던지기" 권리가 있고, 이 권리는 말을
+    // 윷/모로 이동해도 보존되어야 한다(D-SC-1/D-SC-6). server.js가 splice 이전에
+    // bonusFromConsumed(useResult==='yut') 플래그를 계산하도록 수정되어 큐가 비어도 턴이 유지된다.
+    // §13-12(잡기 보너스 중복 차단)와는 독립이며 충돌하지 않는다(capturedBonus는 여전히 false).
+    expect(state.currentTurn).toBe('p1');
+    expect(state.pendingResults).toEqual([]);
   } finally {
     p1.close(); p2.close();
     await stopServer(server);

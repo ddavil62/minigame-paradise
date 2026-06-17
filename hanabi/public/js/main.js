@@ -33,9 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     statusMsg: document.getElementById('status-msg'),
     turnLabel: document.getElementById('turn-label'),
     scoreLabel: document.getElementById('score-label'),
-    invitePanel: document.getElementById('invite-panel'),
-    inviteUrl: document.getElementById('invite-url'),
-    copyUrlBtn: document.getElementById('copy-url-btn'),
+    p1StatusMark: document.getElementById('p1-status-mark'),
+    p2StatusMark: document.getElementById('p2-status-mark'),
     opponentHand: document.getElementById('opponent-hand'),
     myHand: document.getElementById('my-hand'),
     deckCount: document.getElementById('deck-count'),
@@ -359,20 +358,22 @@ document.addEventListener('DOMContentLoaded', () => {
     els.screenGameOver.classList.remove('hidden');
   }
 
-  // ── 초대 URL 패널 ──
-  function showInvitePanel(hostUrl) {
-    if (!hostUrl) { els.invitePanel.classList.add('hidden'); return; }
-    els.inviteUrl.textContent = hostUrl;
-    els.invitePanel.classList.remove('hidden');
-  }
-  els.copyUrlBtn.addEventListener('click', () => {
-    const text = els.inviteUrl.textContent || '';
-    if (navigator.clipboard && text) {
-      navigator.clipboard.writeText(text)
-        .then(() => showToast('주소를 복사했습니다.'))
-        .catch(() => showToast('복사 실패 — 직접 선택해 주세요.', 'error'));
+  // ── P1/P2 입장 상태 라벨 (invite-panel 대체) ──
+  /**
+   * 대기 화면의 P1/P2 입장 상태 마크를 갱신한다.
+   * @param {boolean} bothPending true면 p1만 입장(p2 대기), false면 양쪽 입장 완료
+   */
+  function updateStatusMarks(bothPending) {
+    // p1은 항상 입장한 상태(대기 화면을 보고 있는 호스트 기준).
+    if (els.p1StatusMark) {
+      els.p1StatusMark.textContent = '입장';
+      els.p1StatusMark.classList.add('joined');
     }
-  });
+    if (els.p2StatusMark) {
+      els.p2StatusMark.textContent = bothPending ? '대기' : '입장';
+      els.p2StatusMark.classList.toggle('joined', !bothPending);
+    }
+  }
 
   // 입장 닉네임은 1회만 생성하여 재연결 시에도 유지한다.
   const playerName = `Player-${Math.floor(Math.random() * 1000)}`;
@@ -381,15 +382,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const net = createNetwork({
     // WS open 직후 JOIN 전송(고정 타이머 race 방지).
     onOpen: () => { net.join(playerName); },
-    onJoined: ({ playerId, waiting, hostUrl }) => {
+    onJoined: ({ playerId, waiting }) => {
       myId = playerId;
       els.playerLabel.textContent = playerId === 'p1' ? '나 (P1, 선공)' : '나 (P2, 후공)';
       if (waiting) {
         showScreen('waiting');
         els.statusMsg.textContent = '상대방 대기 중';
-        showInvitePanel(hostUrl);
+        updateStatusMarks(true);
       } else {
         els.statusMsg.textContent = '상대 입장 완료';
+        updateStatusMarks(false);
       }
     },
     onStart: () => {
@@ -420,6 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         showScreen('waiting');
         els.statusMsg.textContent = '상대방 대기 중';
+        updateStatusMarks(true);
       }
     },
     onRematchStatus: ({ p1Ready, p2Ready }) => {

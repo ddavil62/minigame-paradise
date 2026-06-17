@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-06-17] C — 초대 패널 제거 후속(회귀 테스트 단언 전환)
+
+### 배경
+- 공통 작업 C(미니게임 전반 초대 주소 패널 제거 → P1/P2 ready 패턴 통일)로 tetris-battle의 초대 패널(`#invite-panel`/copy 버튼)·관련 ui.js 함수가 이미 제거된 상태. 그로 인해 "제거된 DOM/함수의 **존재**"를 단언하던 회귀 슈트가 깨짐.
+- C 작업 본체(`public/index.html`·`css/style.css`·`js/{main,ui}.js`의 invite 제거, `#toast`/`showToast`/서버 hostUrl은 유지)는 이미 구현 완료분 — 본 후속은 테스트/문서만 갱신.
+
+### 변경
+- `tests/phase4-launcher.test.js`: L4/L4b/L5/L7a/L7b/L7c/L7e를 invite-panel/copy-url-btn/showInvitePanel 등의 "존재" 단언 → **"제거됨을 검증하는 positive 단언"으로 전환**(다시 추가되면 FAIL). L6(`#toast`)·L7d(`showToast`)·L8(hostUrl)·L9(bat)·L1~L3(서버 JOINED)는 여전히 유효해 보존.
+- `tests/phase3-4-qa-edge.test.js`: Q6a~Q6d(ui.js 클립보드 fallback 존재 단언)를 copyToClipboard/navigator.clipboard/execCommand "제거됨" 단언으로 전환.
+- `CLAUDE.md`: 회귀 게이트에 "사용자 승인 기능 제거 시 단언 전환 허용" 예외 1줄 추가.
+
+### 검증
+- tetris 9 슈트 격리 포트 3055 실행: **336 PASS / 1 FAIL**. 전환분(L4/L4b/L5/L7a~c/L7e + Q6a~d 11건) 전부 PASS.
+- 유일 FAIL(Q7b)은 invite 무관 **사전 결함** — server.js `printBanner` 함수 본문 주석의 박스문자(U+2500 `─`)를 Q7b 정규식이 매칭. 실제 배너 출력은 ASCII(`+ - |`)라 기능상 무해(false-positive). C 작업 이전 커밋부터 존재(기존 "337/337" 표기는 stale). server.js 무수정 정책 + 범위 밖이라 미수정(별도 트래킹 권장).
+- omok smoke 106/106, WS upgrade, POST /lobby/return 204 무영향. QA PASS, AD 미해당(테스트/문서만).
+
 ## [2026-05-25] Phase 5 — Vanish Zone 게임오버 판정 버그 수정
 
 ### 배경

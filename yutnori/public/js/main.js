@@ -41,9 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     myDoneEl: document.getElementById('my-done'),
     oppDoneEl: document.getElementById('opp-done'),
     lastThrowEl: document.getElementById('last-throw'),
-    invitePanelEl: document.getElementById('invite-panel'),
-    inviteUrlEl: document.getElementById('invite-url'),
-    copyUrlBtnEl: document.getElementById('copy-url-btn'),
     toastEl: document.getElementById('toast'),
     aiPanelEl: document.getElementById('ai-panel'),
     btnStartAiEl: document.getElementById('btn-start-ai'),
@@ -51,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ui = createUI(els);
   const game = createGame();
-  ui.bindCopyUrlButton();
 
   let net = null;
   let myId = null;
@@ -76,7 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         ui.setStatus('상대 입장. 준비 버튼을 눌러주세요.');
       }
-      ui.showInvitePanel(hostUrl || '');
+      // P1/P2 준비 상태 초기화 (입장 시점에는 양쪽 모두 아직 READY 전).
+      ui.showReadyStatus(false, false);
       // AI 버튼 노출: p1이고 혼자 대기 중이고 이미 ai 모드가 아닐 때만.
       // (이미 mode=ai면 곧 봇이 들어오므로 중복 버튼을 숨긴다.)
       const currentMode = new URLSearchParams(location.search).get('mode') || 'human';
@@ -91,7 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
       els.readyBtnEl.classList.add('hidden');
       els.rematchBtnEl.classList.add('hidden');
       els.aiPanelEl.classList.add('hidden'); // 게임 시작 시 AI 버튼 숨김
-      ui.hideInvitePanel();
+      ui.showReadyStatus(true, true); // 양쪽 준비 완료 반영 후 숨김
+      ui.hideReadyStatus();
       ui.setStatus('');
       runCountdown(countdown, () => {
         ui.setStatus('게임 시작!');
@@ -180,6 +178,12 @@ document.addEventListener('DOMContentLoaded', () => {
     net.ready();
     els.readyBtnEl.disabled = true;
     els.readyBtnEl.textContent = '준비 완료 (상대 대기)';
+    // 자기 자신 준비 상태 즉시 반영 (상대 상태는 START 시점에 양쪽 준비로 확정).
+    if (myId === 'p1') {
+      ui.showReadyStatus(true, false);
+    } else {
+      ui.showReadyStatus(false, true);
+    }
   });
 
   // ── AI랑 시작 버튼 ──

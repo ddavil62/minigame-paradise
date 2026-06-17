@@ -113,33 +113,22 @@ html, body {
   color: var(--wood-dark);
 }
 
-.invite-panel {
-  background: #fff;
-  border: 1px dashed var(--wood-dark);
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 16px;
+/* P1/P2 입장 상태 라벨 (invite-panel 대체, 요트다이스 ready-slot 패턴 준용) */
+.player-status-panel { margin: 12px 0 16px; }
+.player-status-slot {
+  font-family: 'Jua', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
 }
-.invite-label { font-size: 0.85rem; margin-bottom: 8px; color: var(--wood-dark); }
-.invite-url-row { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
-.invite-url {
-  background: #F3E6CC;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  word-break: break-all;
-}
-.copy-btn {
-  background: var(--wood-dark);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
+.player-status-divider { color: var(--wood-dark); opacity: .5; margin: 0 8px; }
+.player-status-mark {
+  color: #8a6a3a;
+  font-weight: 600;
   font-family: 'Gowun Dodum', sans-serif;
+  font-size: 13px;
 }
-.copy-btn:hover { filter: brightness(1.1); }
-.invite-hint { font-size: 0.78rem; color: #8a6a3a; margin-top: 8px; }
+.player-status-mark.joined { color: var(--accent-ai); }
 
 /* AI 진입 */
 .ai-panel { margin: 18px 0; }

@@ -1237,6 +1237,10 @@
       const clone = src.cloneNode(true);
       clone.classList.add('flying-card');
       clone.classList.remove('clickable');
+      // 잔류 transform 제거: 바닥 슬롯/스택 카드를 클론하면 translate(-50%,-50%)(+rotate)가
+      // 함께 복사돼 flyTo가 left/top을 잡아도 도착 좌표가 좌상단으로 어긋난다. (버그 A 근본 수정)
+      // transition:'none' 보다 앞에 둬야 즉시 반영된다. 손 카드 통상 경로는 보통 transform이 없으나 방어용.
+      clone.style.transform = '';
       clone.style.transition = 'none';
       clone.style.left   = `${rect.left}px`;
       clone.style.top    = `${rect.top}px`;
@@ -1270,6 +1274,9 @@
     const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
+    // 잔류 transform 제거(버그 A): 도착지가 floor 슬롯이면 translate(-50%,-50%)(+rotate)가
+    // 클론에 복사돼 착지 좌표가 좌상단으로 어긋난다.
+    clone.style.transform = '';
     clone.style.position = 'fixed';
     clone.style.margin = '0';
     clone.style.transition = 'none';
@@ -1320,6 +1327,8 @@
     const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
+    // 잔류 transform 제거(버그 A): 도착지 floor 슬롯의 translate(-50%,-50%)(+rotate) 복사로 인한 착지 어긋남 방지.
+    clone.style.transform = '';
     clone.style.position = 'fixed';
     clone.style.margin = '0';
     clone.style.transition = 'none';
@@ -1355,6 +1364,8 @@
     const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
+    // 잔류 transform 제거(버그 A): 도착지 floor 슬롯의 translate(-50%,-50%)(+rotate) 복사로 인한 착지 어긋남 방지.
+    clone.style.transform = '';
     clone.style.position = 'fixed';
     clone.style.margin = '0';
     clone.style.transition = 'none';
@@ -1386,6 +1397,9 @@
     const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
+    // 잔류 transform 제거(버그 A): 도착지(floor 슬롯) translate(-50%,-50%)(+rotate) 복사로 인한 착지 어긋남 방지.
+    // DECK_FLIP 단계에서 rotateY(-180deg)를 별도로 다시 설정하므로 무충돌(여기서 1회 리셋만).
+    clone.style.transform = '';
     clone.style.position = 'fixed';
     clone.style.margin = '0';
     clone.style.transition = 'none';
@@ -1415,6 +1429,9 @@
     const clone = src.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
+    // 잔류 transform 제거(버그 A): floor 슬롯 카드를 클론하면 translate(-50%,-50%)(+rotate)가
+    // 복사돼 pair 클론의 출발/도착 좌표가 어긋난다.
+    clone.style.transform = '';
     clone.style.position = 'fixed';
     clone.style.margin = '0';
     clone.style.transition = 'none';

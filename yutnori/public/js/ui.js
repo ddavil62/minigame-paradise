@@ -423,67 +423,32 @@ export function createUI(els) {
     if (els.lastThrowEl) els.lastThrowEl.textContent = text;
   }
 
-  /** 친구 초대 패널 표시/숨김 (tetris-battle 패턴). */
-  function showInvitePanel(hostUrl) {
-    if (!els.invitePanelEl || !els.inviteUrlEl) return;
-    let url = hostUrl;
-    if (!url) {
-      const loc = window.location;
-      if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-        url = '(LAN IP 미감지 — ipconfig로 확인)';
-      } else {
-        url = `${loc.protocol}//${loc.host}`;
-      }
+  /**
+   * P1/P2 준비 상태를 대기 화면에 표시한다 (yahtzee ready-mark 패턴).
+   * @param {boolean} p1Ready
+   * @param {boolean} p2Ready
+   */
+  function showReadyStatus(p1Ready, p2Ready) {
+    const status = document.getElementById('ready-status');
+    if (status) status.classList.remove('hidden');
+    const markP1 = document.getElementById('ready-mark-p1');
+    const markP2 = document.getElementById('ready-mark-p2');
+    if (markP1) {
+      markP1.textContent = p1Ready ? '✓ 준비' : '대기';
+      markP1.classList.toggle('ready', p1Ready);
     }
-    els.inviteUrlEl.textContent = url;
-    els.invitePanelEl.classList.remove('hidden');
+    if (markP2) {
+      markP2.textContent = p2Ready ? '✓ 준비' : '대기';
+      markP2.classList.toggle('ready', p2Ready);
+    }
   }
 
-  function hideInvitePanel() {
-    if (els.invitePanelEl) els.invitePanelEl.classList.add('hidden');
-  }
-
-  function bindCopyUrlButton() {
-    if (!els.copyUrlBtnEl || !els.inviteUrlEl) return;
-    els.copyUrlBtnEl.addEventListener('click', async () => {
-      const url = els.inviteUrlEl.textContent || '';
-      if (!url || url.startsWith('(')) {
-        showToast('복사할 주소가 없습니다.', 'error');
-        return;
-      }
-      const ok = await copyToClipboard(url);
-      if (ok) {
-        showToast('주소가 복사되었습니다', 'success');
-        els.copyUrlBtnEl.classList.add('copied');
-        els.copyUrlBtnEl.textContent = '복사됨';
-        setTimeout(() => {
-          els.copyUrlBtnEl.classList.remove('copied');
-          els.copyUrlBtnEl.textContent = '주소 복사';
-        }, 1500);
-      } else {
-        showToast('복사 실패 — 직접 선택해서 복사하세요', 'error');
-      }
-    });
-  }
-
-  async function copyToClipboard(text) {
-    try {
-      if (navigator.clipboard && window.isSecureContext !== false) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-    } catch (e) {}
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand && document.execCommand('copy');
-      document.body.removeChild(ta);
-      return !!ok;
-    } catch (e) { return false; }
+  /**
+   * 준비 상태 표시 블록을 숨긴다 (게임 시작 후 불필요).
+   */
+  function hideReadyStatus() {
+    const el = document.getElementById('ready-status');
+    if (el) el.classList.add('hidden');
   }
 
   let toastTimer = 0;
@@ -524,9 +489,8 @@ export function createUI(els) {
     hideResult,
     renderPieceStatus,
     setLastThrow,
-    showInvitePanel,
-    hideInvitePanel,
-    bindCopyUrlButton,
+    showReadyStatus,
+    hideReadyStatus,
     showToast,
     setThrowEnabled,
   };

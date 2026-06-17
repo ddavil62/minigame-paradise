@@ -27,13 +27,11 @@
   <section id="screen-waiting" class="screen screen-waiting">
     <div class="waiting-card">
       <div class="waiting-title">상대방을 기다리는 중...</div>
-      <div id="invite-panel" class="invite-panel hidden">
-        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
-        <div class="invite-url-row">
-          <code id="invite-url" class="invite-url">http://...</code>
-          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
-        </div>
-        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      <!-- P1/P2 입장 상태 (invite-panel 대체) -->
+      <div id="player-status-panel" class="player-status-panel">
+        <span class="player-status-slot">P1 <span id="p1-status-mark" class="player-status-mark">대기</span></span>
+        <span class="player-status-divider">/</span>
+        <span class="player-status-slot">P2 <span id="p2-status-mark" class="player-status-mark">대기</span></span>
       </div>
       <!-- 가이드 슬라이더 (7장 인포그래픽 룰 설명) -->
       <div class="guide-slider" id="guide-slider" aria-label="하나비 룰 가이드">

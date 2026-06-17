@@ -73,6 +73,7 @@ node --test tests/phase5-qa-edge.test.js
 ### 회귀 게이트
 - 어떤 변경도 위 9 슈트가 337/337 PASS를 유지해야 한다.
 - 신규 기능 추가 시 신규 슈트를 작성하되 기존 슈트는 절대 수정/삭제하지 않는다 (영구 회귀 차단용).
+  - 예외: **사용자 승인 기능 제거**로 단언 대상 자체가 사라진 경우(예: 2026-06-17 C 작업 — invite-panel/copy 버튼 제거)는 해당 단언을 "제거됨을 검증하는 positive 단언"으로 전환한다(`phase4-launcher.test.js` L4/L4b/L5/L7a~c/L7e). 회귀게이트 정신(되살아나면 실패)은 유지된다.
 - `phase3-4-qa-edge.test.js`는 QA에서 발견한 결함(Q1 포트 폴백 등)을 영구 차단하는 슈트 — 특히 보존.
 - `phase5-qa-edge.test.js`는 사용자 신고 버그(visible top 가득 시 게임오버) 재현 시나리오(QE3) 포함 — 특히 보존.
 

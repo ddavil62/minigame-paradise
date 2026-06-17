@@ -1019,6 +1019,10 @@ wss.on('connection', (ws, req) => {
           broadcastState();
           break;
         }
+        // D 수정: splice 이전에 "방금 소비한 결과가 보너스 대상(윷/모)인지" 확정.
+        // splice 후 큐가 비면 lastResult가 null이 되어 윷/모 보너스 권리가 사라지던 버그.
+        // 소비한 결과(useResult)가 윷/모면 큐가 비어도 보너스 던지기를 보존한다.
+        const bonusFromConsumed = useResult === 'yut' || useResult === 'mo';
         // 결과 큐에서 차감
         game.pendingResults.splice(queueIdx, 1);
 
@@ -1050,7 +1054,10 @@ wss.on('connection', (ws, req) => {
         // - 둘 다 아니면 턴 종료
         const lastIdx = game.pendingResults.length - 1;
         const lastResult = lastIdx >= 0 ? game.pendingResults[lastIdx] : null;
-        const hasBonus = game.capturedBonus === true || lastResult === 'yut' || lastResult === 'mo';
+        // D 수정: bonusFromConsumed(방금 소비한 윷/모)를 hasBonus 수식에 포함.
+        // capturedBonus(잡기 보너스)는 §13-12 가드대로 별도 계산·리셋되며 무관하게 병존.
+        const hasBonus = game.capturedBonus === true || bonusFromConsumed
+          || lastResult === 'yut' || lastResult === 'mo';
         if (game.pendingResults.length === 0 && !hasBonus) {
           passTurn();
           // capturedBonus 리셋 — 다음 턴에 잔류하면 상대 차례에 추가 던지기 권리가
@@ -1124,6 +1131,9 @@ wss.on('connection', (ws, req) => {
           broadcastState();
           break;
         }
+        // D 수정: splice 이전에 소비한 결과(useResult=game.awaitingBranchResult)가
+        // 윷/모인지 확정. MOVE_PIECE와 동일 패턴 — splice 후 빈 큐에서 보너스 소실 방지.
+        const bonusFromConsumed2 = useResult === 'yut' || useResult === 'mo';
         // 결과 큐 차감
         const queueIdx = game.pendingResults.indexOf(useResult);
         if (queueIdx >= 0) game.pendingResults.splice(queueIdx, 1);
@@ -1144,7 +1154,9 @@ wss.on('connection', (ws, req) => {
         }
         const lastIdx2 = game.pendingResults.length - 1;
         const lastResult2 = lastIdx2 >= 0 ? game.pendingResults[lastIdx2] : null;
-        const hasBonus2 = game.capturedBonus === true || lastResult2 === 'yut' || lastResult2 === 'mo';
+        // D 수정: bonusFromConsumed2(방금 소비한 윷/모)를 hasBonus2 수식에 포함.
+        const hasBonus2 = game.capturedBonus === true || bonusFromConsumed2
+          || lastResult2 === 'yut' || lastResult2 === 'mo';
         if (game.pendingResults.length === 0 && !hasBonus2) {
           passTurn();
           game.capturedBonus = false;

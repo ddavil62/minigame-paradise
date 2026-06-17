@@ -76,19 +76,7 @@
     <section class="center-area">
       <div class="vs-label">VS</div>
       <div id="countdown" class="countdown hidden">3</div>
-      <!--
-        Phase 4 C-2: 친구 PC 접속 안내 영역. 대기 화면(JOIN ~ READY 클릭 전)에만 표시.
-        서버 JOINED 응답의 hostUrl을 그대로 노출하여 친구가 직접 IP 타이핑할 필요 없음.
-        게임 시작(onStart) 시 .hidden 부착 → 게임 중 안 보임.
-      -->
-      <div id="invite-panel" class="invite-panel hidden">
-        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
-        <div class="invite-url-row">
-          <code id="invite-url" class="invite-url">http://...</code>
-          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
-        </div>
-        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
-      </div>
+      <!-- 대기 화면 P1/P2 입장 상태는 헤더의 #opponent-status가 표시한다(초대 패널 제거). -->
       <button id="ready-btn" class="primary-btn">준비</button>
     </section>
 
