@@ -10,7 +10,7 @@
 - 출처: 나무위키 맞고·고스톱 + 게임 코드 교차검증
 - 포함 내용: 화투 48장 구성, 족보 점수표, 박 기준, 고배수 공식, QA 체크리스트, 구현 버그 목록
 
-### 룰북 §13 보강 (2026-05-31 신규 5건 + 2026-06-02 폭탄 룰 정정·확정 + 2026-06-03 쓸 룰 추가 + 2026-06-03 조커 2장 룰 + 2026-06-03 바닥 조커 선공 자동 획득 정정 + 2026-06-08 조커 라운드 종료 불가 수정 + 2026-06-16 조커 케이스 A 턴 유지 룰 변경 + B1/B2/B3 fly 연출 수정)
+### 룰북 §13 보강 (2026-05-31 신규 5건 + 2026-06-02 폭탄 룰 정정·확정 + 2026-06-03 쓸 룰 추가 + 2026-06-03 조커 2장 룰 + 2026-06-03 바닥 조커 선공 자동 획득 정정 + 2026-06-08 조커 라운드 종료 불가 수정 + 2026-06-16 조커 케이스 A 턴 유지 룰 변경 + B1/B2/B3 fly 연출 수정 + 2026-06-17 R5~R8: choice 손패 fly·순서 + 자뻑 풀이 2피 룰 + 조커 captured pi 그룹 표시)
 
 | 항목 | 내용 |
 |---|---|
@@ -29,6 +29,9 @@
 | B1 바닥 2장 먹기 fly 출처 (2026-06-16) | awaiting_floor_choice 통합 STATE에서 손으로 낸 srcCard가 더미서 나온 것처럼 보이던 버그(`la.kind==='choice_made'` 가드가 sseul/pair_from_flip로 덮여 무효화). `game.js`에 `pendingChoiceSrcCardId` 필드 신설(startRound 초기화 / chooseFloorSteps 단계1에서 `wasFromHand ? srcCard.id : null` 설정 / finishTurn·finishTurnKeepTurn 리셋) + `snapshotForPlayer`에 `choiceFloorSrcCardId` 노출 → `client.js`가 이 필드로 srcCard를 drewIds에서 제외(손패 출처=HAND_THROW, 덱만 DECK_THROW), `la.kind` 폴백 유지. |
 | B2 fly 경로 직선화 + snap 제거 (2026-06-16) | `client.js flyTo`가 **left/top만 transition**(width/height 동시 transition 제거 — 덱·바닥·손패 카드 60×85 동일이라 크기 즉시 적용 시 점프 0) + DECK_THROW를 **더블 rAF**로 처리해 snap 제거. |
 | B3 쓸 연출 정상화 (2026-06-16) | 서버 쓸 룰(stealPi)은 정상(G-40 입증). 증상은 B1과 동일 통합 STATE 연출 누락 → **B1 수정으로 강탈 피 fly(origin='opp-captured') + "N월 쓸!" 토스트 정상화. 서버 무수정.** |
+| R5/R6 choice 손패 fly + 순서 (2026-06-17) | B1이 `choiceFloorSrcCardId`로 손패 srcCard를 더미 fly에서 **제외만** 하고 손 fly를 미등록 → 순간이동(R5) + fly 순서 어긋남(R6) 잔존. `client.js renderState`에서 `s.choiceFloorSrcCardId`를 `_choiceSrcFlyId`로 수집 → **renderMyHand 이후** `startFlyFromHand` 등록(원본 DOM 존재 필요) + `flyTargetIds` 추가. `startFlyFromHand`를 `startFlyFromDeck`보다 **먼저** 등록해 HAND_THROW→DECK 시퀀스 순서 자연 정합(R6). 결과: 내가 낸 손패가 손에서 captured로 정상 fly(부딪힘 연출). 회귀 게이트 e2e **E-31**. |
+| R7 자뻑 풀이 2피 (2026-06-17 룰 변경) | **이전 "자뻑 동일 처리(보너스 없음)" 폐기.** 내가 만든 뻑을 **내가** 풀 때만(`ppeokFlags[month]===playerId`) 상대 피 **2장**, **상대(타인) 뻑** 풀이는 1장 유지. `game.js`에 `isPpeokOwner(g, playerId, month)` 헬퍼 신설 → 뻑 풀이 stealPi **3지점**(resolveCardOnFloor 3매칭 / drawAndResolve sweep_from_flip / bonusFlipSteps bonus_ppeok_sweep)에서 `stealPi(..., isPpeokOwner ? 2 : 1)` + `stoleFromOpp` 동일 변수 사용. **반드시 `delete g.ppeokFlags[month]` 이전에 판정**(delete 후 소유자 식별 불가). `game.js` line 17 주석 갱신. `score.js` 무수정. 회귀 게이트 단위 **G-43a**(자뻑 2피)/**G-43b**(타인 뻑 1피). |
+| R8 조커 captured 표시 + 손패 fly (2026-06-17) | 2단계. (1) `client.js` `joker_play` STATE에서 조커를 손→captured `startFlyFromHand`(HAND_THROW) 등록(`_jokerFlyId`, `drewIds` 제외 + `flyTargetIds` 추가, origin='hand'). (2) **핵심(선존 결함)**: `renderCaptured`가 captured 그룹을 `{gwang,kkeut,tti,pi}`로 분류하는데 **joker 키가 없어** 조커(`type='joker'`)가 드롭 → 도착지 DOM 미생성 → `locateCard`가 못 찾아 `fadeEntries`로 분류 → fly clone이 fade(사라짐)되던 버그. → 조커를 **pi 그룹에 합류**(effectiveType='pi', `.joker-card` 스타일 유지) + pi count reduce에 **조커 1장당 +2**(score.js `piCount += joker.length*2`와 일치, `score.js` 무수정). 단일 `renderCaptured` 수정으로 **케이스 A·케이스 B·바닥 조커 자동획득** captured 표시 일괄 정상화. 회귀 게이트 e2e **E-32**. |
 
 ### QA 필수 준수 사항
 
@@ -59,12 +62,12 @@ matgo/
 └── tests/
     ├── score.unit.spec.js   — score.js 단위 테스트 (서버 불필요)
     ├── game.unit.spec.js    — game.js 단위 테스트 (서버 불필요)
-    ├── e2e-scenarios.spec.js — 브라우저 E2E 시나리오 (E-30까지 30개, 서버 필요)
+    ├── e2e-scenarios.spec.js — 브라우저 E2E 시나리오 (E-32까지 32개, 서버 필요)
     ├── v8-qa.spec.js        — 구버전 QA 테스트 (레거시)
     └── screenshots/         — E2E 스크린샷 출력
 ```
 
-> 단위 game.unit(42) + score.unit(56) 합계 98/98 PASS (2026-06-13 기준 — 레거시 G-22/G-23 제거 반영).
+> 단위 game.unit(44) + score.unit(56) 합계 100/100 PASS (2026-06-17 기준 — R7 G-43a/G-43b 추가. 2026-06-13 레거시 G-22/G-23 제거 반영).
 
 ## 서버 실행 (테스트용)
 
@@ -92,16 +95,18 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js --reporter=
 node server.js --port 3013 &
 npx playwright test tests/e2e-scenarios.spec.js --reporter=list
 
-# 전체 실행 (단위 98 + E2E 30 = 총 128개)
+# 전체 실행 (단위 100 + E2E 32 = 총 132개)
 npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-scenarios.spec.js --reporter=list
 ```
 
-### 테스트 현황 (2026-06-13 기준)
+### 테스트 현황 (2026-06-17 기준)
 
 | 파일 | 테스트 수 | 상태 | 서버 필요 |
 |------|----------|------|----------|
-| `score.unit.spec.js` (56) + `game.unit.spec.js` (42) | 합계 98개 | ✅ 98/98 PASS | ❌ |
-| `e2e-scenarios.spec.js` | E-30까지 30개 | ✅ 30 PASS / 0 skip / 0 fail (3회 연속 결정성) | ✅ (3013) |
+| `score.unit.spec.js` (56) + `game.unit.spec.js` (44) | 합계 100개 | ✅ 100/100 PASS | ❌ |
+| `e2e-scenarios.spec.js` | E-32까지 32개 | ✅ 32 PASS / 0 skip / 0 fail | ✅ (3013) |
+
+> **2026-06-17 R5~R8 반영**: 단위 98→100(R7 자뻑 풀이 2피 검증 G-43a/G-43b), e2e 30→32(E-31 R5 손패 fly 출처·E-32 R8 조커 captured 안착). adhoc node 러너 joker 24(케이스 A 턴 유지 반영)/sseul 11/bombdup 7/floor-joker 5 + TDZ 1 + QA 능동 probe 3 = 합계 183건 PASS, QA PASS(R8 1차 FAIL→재수정 해소), AD3 APPROVED(2회 — fly 순서 + 조커 pi 그룹 혼재 레이아웃).
 
 > **2026-06-13 flakiness 안정화**: 공유 룸 teardown 레이스(→ `POST /test/reset` + `beforeEach`/`afterEach`)와 랜덤 분배 바닥 조커 오프닝 fly 레이스(→ `waitForFlyIdle` + `pickSafePlayCard` 헬퍼)를 해소해 전체 e2e가 결정적이 됨.
 > **2026-06-13 E-15·E-16 복원**: 위 안정화 때 `test.skip` 처리했던 E-15·E-16을 현행 흔들기 모달 흐름으로 재작성해 복원. `/test/inject`로 P1 손에 1월 3장(+5월1)·바닥 1월 0장(폭탄 회피) 주입 → `waitForFlyIdle` → 1월 카드 클릭 → `#shake-modal` 표시(E-15) / `#btn-shake` 클릭 → 모달 닫힘 + `shaking.p1` 반영(배지 '흔들기 ×2')(E-16). 제거된 `shake_decision` phase 의존을 제거함. 결과: 전체 e2e가 **3회 연속 30 passed / 0 skipped / 0 failed**(28 passed/2 skipped → 30 passed/0 skipped).
@@ -117,6 +122,7 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 | §5 안정성 | E-23~E-25 | 콘솔 에러, AI봇 연결, 레이아웃 스크린샷 |
 | §6 연출-STATE 순서 | E-26~E-27 | (2026-06-13) E-26: chooseFloor 통합 STATE 1회 송신(획득 순간이동 방지) / E-27: 뻑 토스트 DECK_LAND 이후 표시 타이밍 |
 | §7 fly-출처 정합 | E-28~E-30 | (2026-06-13) E-28: 강탈 피 fly가 oppCapturedZone에서 출발(더미 아님, startFlyFromDeck 미호출) / E-29: 흔들기로 낸 카드 fly가 myCards에서 출발(startFlyFromDeck 미호출) / E-30: 폭탄 손 3장 fly가 myCards에서 출발(startFlyFromDeck 미호출) |
+| §8 R5/R8 fly·표시 | E-31~E-32 | (2026-06-17) E-31: 바닥 2장 선택 흐름에서 내 손패 srcCard fly가 myCards에서 출발(origin='hand', startFlyFromDeck 미호출, R5) / E-32: 조커를 내면 fly가 myCards에서 출발하고 조커가 `#my-captured-zone`에 안착(fade 없음, R8) |
 
 > **E-15·E-16 복원됨 (2026-06-13)** — 현행 흔들기 모달 흐름으로 재작성. E-15: inject(1월 손 3장+바닥 0장) → 카드 클릭 → `#shake-modal` 표시 검증. E-16: `#btn-shake` 클릭 → 모달 닫힘 + `shaking.p1` 반영(배지 '흔들기 ×2'). 제거된 `shake_decision` phase 의존 없음. 30 passed / 0 skipped.
 > **E-08 결정화 (2026-06-15)** — 랜덤 분배 의존으로 간헐 flaky하던 E-08을 `/test/inject`로 상태 고정해 결정화. 바닥 리필 룰 검증과 묶여 `deck 20~22`(`22 - N`) + `floor 8` 단언으로 안정화.
@@ -163,3 +169,6 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 18. **조커 케이스 A는 `finishTurnKeepTurn`으로 턴을 유지한다** (2026-06-16 룰 변경). 손 조커를 낸 뒤 `game.js`는 `finishTurn`(턴 교대)이 아니라 `finishTurnKeepTurn`(턴 유지)을 호출해야 한다. `finishTurnKeepTurn`은 `finishTurn` 복사본에서 마지막 `g.turn = ...` 한 줄만 제거한 것이라 — **향후 `finishTurn` 로직(점수/고스톱/술잔/라운드종료 평가)을 변경하면 `finishTurnKeepTurn`도 함께 동기화해야 한다**(JSDoc 명시). 누락 시 조커 후 턴이 상대로 넘어가거나 점수 평가가 어긋난다. 케이스 B(더미 뒤집은 게 조커)는 현행 유지(범위 외). 회귀: joker-adhoc JOKER-002/003/009(턴 유지) + JOKER-002a(phase=awaiting_play).
 19. **`pendingChoiceSrcCardId`는 손으로 낸 srcCard fly 출처 식별의 단일 출처다** (2026-06-16 B1 수정). `awaiting_floor_choice` 통합 STATE(쓸/pair_from_flip 등)에서 손으로 낸 카드(srcCard)가 더미서 나온 것처럼 보이던 버그를 막기 위해, `game.js`는 `chooseFloorSteps` 단계1에서 `pendingChoiceSrcCardId = wasFromHand ? srcCard.id : null`로 세팅하고 `startRound`/`finishTurn`/`finishTurnKeepTurn`에서 **반드시 리셋**한다. `snapshotForPlayer`가 이를 `choiceFloorSrcCardId`로 노출 → `client.js`가 이 ID를 `drewIds`에서 제외(손패=HAND_THROW, 덱만 DECK_THROW). `la.kind==='choice_made'` 폴백은 유지(필드 누락 시 안전망). 리셋 누락 시 다음 턴까지 잘못된 출처 식별이 샌다.
 20. **e2e 테스트는 격리가 필수다** (2026-06-13 flakiness 안정화). 전체 스위트는 단일 공유 룸 + `workers:1` 순차 실행이라 직전 테스트의 룸 잔여 상태가 다음 테스트로 새는 teardown 레이스가 있었다. (1) `beforeEach`에서 **`POST /test/reset`을 반드시 호출**(룸 강제 초기화)하고 `afterEach`에도 안전망으로 호출한다. (2) `joinAndStartGame` 헬퍼 말미에서 **`waitForFlyIdle`로 오프닝 fly를 대기**한다 — 랜덤 분배로 바닥 조커가 깔리면 오프닝에 fly 연출이 발생하는데 이를 기다리지 않고 카드를 클릭하면 fly race로 flaky해진다. (3) 카드 클릭은 무가드 `click` 대신 **`pickSafePlayCard` 헬퍼**를 쓴다(조커/흔들기·폭탄 트리거/바닥 선택 분기를 회피해 결정성 확보). 미준수 시 공유룸 레이스 또는 오프닝 fly race로 flaky해진다.
+21. **자뻑 풀이 2피 판정(`isPpeokOwner`)은 반드시 `delete g.ppeokFlags[month]` 이전에 호출한다** (2026-06-17 R7 룰 변경). 뻑 풀이 stealPi 3지점(resolveCardOnFloor 3매칭 / drawAndResolve sweep_from_flip / bonusFlipSteps bonus_ppeok_sweep)에서 `const count = isPpeokOwner(g, playerId, month) ? 2 : 1`을 계산해 `stealPi`와 `lastAction.stoleFromOpp`에 동일 변수를 쓴다. **`delete` 후에는 소유자 판정 불가** → delete 한 줄 위로 count 계산을 올려야 한다(특히 bonus_ppeok_sweep은 `flipped.month` 기준). 자뻑(내가 만든 뻑을 내가 풀이)만 2장, 타인 뻑 풀이는 1장 유지. `score.js` 무수정. 회귀 게이트: 단위 G-43a/G-43b.
+22. **`renderCaptured`의 captured 그룹 분류에 joker 키가 없다 — 조커는 pi 그룹에 합류시켜야 한다** (2026-06-17 R8 수정). `groups = {gwang,kkeut,tti,pi}`에 joker 키가 없어 `if (groups[effectiveType])` 가드가 `type==='joker'`를 **드롭**하던 선존 결함 → 조커 도착지 DOM이 안 생겨 `resolvePendingFlies`의 `locateCard`가 못 찾고 fly clone이 fade(사라짐)된다. 조커는 `effectiveType = (c.type==='joker') ? 'pi' : ...`로 **pi 그룹에 합류**(카드는 `.joker-card` 스타일 유지, 피로 변환 X)시키고, pi count reduce에 `if (c.type==='joker') return sum + 2`(score.js `piCount += joker.length*2`와 일치)를 추가한다. 단일 `renderCaptured` 수정이 케이스 A·케이스 B·바닥 조커 자동획득 표시를 일괄 정상화한다. 조커 분기는 쌍피/m09_kkeut 분기와 독립(month=0 전용)이라 회귀 0. 회귀 게이트: e2e E-32.
+23. **choice 흐름 srcCard·조커 손패 fly는 `renderMyHand` 이후 `startFlyFromHand`로 등록하고 `flyTargetIds`에 추가한다** (2026-06-17 R5/R8 수정). `startFlyFromHand`는 `myCardsEl`에서 `data-card-id`로 원본 DOM을 찾으므로 **반드시 `renderMyHand`(innerHTML 재생성) 이후** 호출해야 한다(`renderState`에서 `_choiceSrcFlyId`/`_jokerFlyId`로 ID만 수집 → 렌더 후 일괄 호출). 두 카드 ID를 `flyTargetIds`에 추가해야 `renderCaptured`가 도착지를 visibility:hidden으로 보존(이중 표시 방지). **`startFlyFromHand`를 `startFlyFromDeck`보다 먼저** 호출해야 HAND_THROW→DECK 시퀀스 순서가 정합된다(R6). 함정 16(renderMyHand 말미 pendingFlies hidden 재적용)은 startFlyFromHand 내 `visibility='hidden'`으로 자동 정합 — 기존 코드 수정 금지. 회귀 게이트: e2e E-31(R5)/E-32(R8).

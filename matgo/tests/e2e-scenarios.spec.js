@@ -1306,3 +1306,130 @@ test('E-25: 스크린샷 시각 검증 — 레이아웃 오류 없음', async ()
     await browser.close();
   }
 });
+
+test('E-31: 바닥 2장 선택 흐름에서 낸 손패 fly가 myCards에서 출발 — startFlyFromDeck 미호출 (R5)', async () => {
+  const browser = await chromium.launch();
+  const ctxP1 = await browser.newContext({ viewport: VIEWPORT });
+  const ctxP2 = await browser.newContext({ viewport: VIEWPORT });
+  const pageP1 = await ctxP1.newPage();
+  const pageP2 = await ctxP2.newPage();
+  try {
+    await installFlyRecorder(pageP1);
+    await joinAndStartGame(pageP1, pageP2);
+
+    // 바닥 2장 선택(쓸/choice) 시나리오: P1 손 m01_gwang(1월) + 필러 1장.
+    // 바닥에 1월 2장(m01_tti_hong/m01_pi_a) → 카드 클릭 시 2매칭 → awaiting_floor_choice.
+    // 더미는 비매칭(m11_pi_b) → choice 후 단순 매칭. 낸 손패(m01_gwang)는 손에서 출발해야 한다.
+    await inject({
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m01_gwang', 'm07_pi_a'),
+      p2Hand: cards('m06_kkeut'),
+      floor:  cards('m01_tti_hong', 'm01_pi_a'),
+      deck:   cards('m11_pi_b'),
+      captured: { p1: [], p2: [] },
+    });
+    await waitForHandCount(pageP1, 2);
+    await waitForFlyIdle(pageP1);
+    await pageP1.evaluate(() => { window.__matgoFlies = []; });
+
+    // 1월 카드 클릭 → 2매칭 → 바닥 선택 모달
+    await pageP1.click('#my-hand-cards .card[data-card-id="m01_gwang"]');
+    await pageP1.waitForFunction(
+      () => !document.getElementById('floor-choice-modal')?.classList.contains('hidden'),
+      { timeout: 5000 },
+    );
+    // 클릭 시점 fly 기록을 비운다 — 통합 STATE 재등록 fly만 검증한다.
+    await pageP1.evaluate(() => { window.__matgoFlies = []; });
+
+    // 바닥 후보 1장 선택
+    await pageP1.click('#floor-choice-cards .card');
+
+    // 낸 손패(m01_gwang) fly가 hand origin으로 재등록될 때까지 대기
+    await pageP1.waitForFunction(
+      () => (window.__matgoFlies || []).some((f) => f.cardId === 'm01_gwang'),
+      { timeout: 6000 },
+    );
+
+    const flies = await pageP1.evaluate(() => window.__matgoFlies.slice());
+    const played = flies.find((f) => f.cardId === 'm01_gwang');
+    expect(played).toBeTruthy();
+    // 핵심: 낸 손패는 hand origin (더미 'deck'이 아님)
+    expect(played.origin).toBe('hand');
+    expect(flies.some((f) => f.cardId === 'm01_gwang' && f.origin === 'deck')).toBe(false);
+
+    // 시작 좌표가 my-hand-cards rect 범위 안인지 검증
+    const myHandBox = await pageP1.locator('#my-hand-cards').boundingBox();
+    expect(myHandBox).toBeTruthy();
+    expect(played.startLeft).toBeGreaterThanOrEqual(myHandBox.x - 80);
+    expect(played.startLeft).toBeLessThanOrEqual(myHandBox.x + myHandBox.width + 80);
+    expect(played.startTop).toBeGreaterThanOrEqual(myHandBox.y - 80);
+    expect(played.startTop).toBeLessThanOrEqual(myHandBox.y + myHandBox.height + 80);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('E-32: 조커를 내면 조커 fly가 myCards에서 출발 — startFlyFromDeck 미호출 (R8)', async () => {
+  const browser = await chromium.launch();
+  const ctxP1 = await browser.newContext({ viewport: VIEWPORT });
+  const ctxP2 = await browser.newContext({ viewport: VIEWPORT });
+  const pageP1 = await ctxP1.newPage();
+  const pageP2 = await ctxP2.newPage();
+  try {
+    await installFlyRecorder(pageP1);
+    await joinAndStartGame(pageP1, pageP2);
+
+    // 조커 케이스 A: P1 손에 조커(m00_joker_a) + 필러 1장. 조커 클릭 → 케이스 A:
+    // 상대 피 1장 강탈 + 조커 본인 captured + 더미 1장 손 보충 + 턴 유지.
+    // 조커는 손에서 captured로 날아가야 한다(더미서 나온 인상 금지).
+    await inject({
+      turn:   'p1',
+      phase:  'awaiting_play',
+      p1Hand: cards('m00_joker_a', 'm07_pi_a'),
+      p2Hand: cards('m06_kkeut'),
+      floor:  cards('m08_pi_b'),
+      deck:   cards('m11_pi_b'),
+      captured: { p1: [], p2: cards('m05_pi_a') },
+    });
+    await waitForHandCount(pageP1, 2);
+    await waitForFlyIdle(pageP1);
+    await pageP1.evaluate(() => { window.__matgoFlies = []; });
+
+    // 조커 클릭 → joker_play (케이스 A)
+    await pageP1.click('#my-hand-cards .card[data-card-id="m00_joker_a"]');
+
+    // 조커 fly가 hand origin으로 등록될 때까지 대기
+    await pageP1.waitForFunction(
+      () => (window.__matgoFlies || []).some((f) => f.cardId === 'm00_joker_a'),
+      { timeout: 6000 },
+    );
+
+    const flies = await pageP1.evaluate(() => window.__matgoFlies.slice());
+    const joker = flies.find((f) => f.cardId === 'm00_joker_a');
+    expect(joker).toBeTruthy();
+    // 핵심: 조커는 hand origin (더미 'deck'이 아님)
+    expect(joker.origin).toBe('hand');
+    expect(flies.some((f) => f.cardId === 'm00_joker_a' && f.origin === 'deck')).toBe(false);
+
+    // 강탈 피(m05_pi_a)는 여전히 opp-captured에서 출발해야 한다(E-28 회귀 게이트).
+    await pageP1.waitForFunction(
+      () => (window.__matgoFlies || []).some((f) => f.cardId === 'm05_pi_a'),
+      { timeout: 4000 },
+    ).catch(() => { /* 강탈 피 fly 타이밍 차 — 아래에서 재확인 */ });
+    const fliesAfter = await pageP1.evaluate(() => window.__matgoFlies.slice());
+    const stolen = fliesAfter.find((f) => f.cardId === 'm05_pi_a');
+    if (stolen) {
+      expect(stolen.origin).toBe('opp-captured');
+      expect(fliesAfter.some((f) => f.cardId === 'm05_pi_a' && f.origin === 'deck')).toBe(false);
+    }
+
+    // 조커가 내 captured 영역에 표시되는지 확인 (더미서 나온 인상 아님)
+    await pageP1.waitForFunction(
+      () => !!document.querySelector('#my-captured-zone [data-card-id="m00_joker_a"]'),
+      { timeout: 5000 },
+    );
+  } finally {
+    await browser.close();
+  }
+});

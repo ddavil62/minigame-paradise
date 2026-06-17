@@ -14,7 +14,7 @@
  *   쓸    : 바닥 같은 월 2장에서 손패로 1장 매치(awaiting_floor_choice → 선택) 후
  *           더미 뒤집기가 같은 월 → 남은 바닥 1장과 매치되어 그 월 4장 전부 가져감 + 상대 피 1장.
  *           (효과는 따닥과 동일하나 식별·표시가 다르다 — 한국 표준 룰)
- *   자뻑  : 자기 뻑을 자기가 푸는 것 → 동일 처리 (보너스 없음, 일반 뻑 풀이와 동일)
+ *   자뻑  : 자기 뻑을 자기가 푸는 것 → 상대 피 2장 (R7 룰 변경 2026-06-16, 타인 뻑 풀이는 1장 유지)
  *   흔들기: 손패 10장 중 같은 월 3장 보유 시 선언 가능 → 점수 ×2 (선언자측만)
  *           라운드 시작 일괄 검사가 아니라, 그 월 첫 카드를 낼 때 클라이언트 모달로 선언.
  *   폭탄  : 손 3장 + 바닥 1장 같은 월 → 한번에 점수판 + 상대 피 1장 (표준 규칙)
@@ -475,13 +475,14 @@ function resolveCardOnFloor(g, playerId, card, fromHand) {
   const trio = sameMonth.slice();
   g.floor = g.floor.filter((c) => c.month !== month);
   g.captured[playerId].push(card, ...trio);
-  // 상대 피 1장 빼앗기
-  stealPi(g, playerId, opp, 1);
+  // R7(2026-06-16): 자뻑 풀이 시 상대 피 2장, 타인 뻑 풀이 시 1장. (delete 이전 판정)
+  const sweepPiCount = isPpeokOwner(g, playerId, month) ? 2 : 1;
+  stealPi(g, playerId, opp, sweepPiCount);
   // 뻑 플래그 해제 (만든 사람 무관, 그 월 뻑은 풀림)
   delete g.ppeokFlags[month];
   g.lastAction = {
     kind: fromHand ? 'sweep_from_hand' : 'sweep_from_flip',
-    player: playerId, card, trio, stoleFromOpp: 1,
+    player: playerId, card, trio, stoleFromOpp: sweepPiCount,
   };
   return { matched: 3 };
 }
@@ -627,9 +628,25 @@ function drawAndResolve(g, playerId, handCard) {
   const trio = sameMonth.slice();
   g.floor = g.floor.filter((c) => c.month !== flipped.month);
   g.captured[playerId].push(flipped, ...trio);
-  stealPi(g, playerId, opp, 1);
+  // R7(2026-06-16): 자뻑 풀이 시 상대 피 2장, 타인 뻑 풀이 시 1장. (delete 이전 판정)
+  const flipSweepCount = isPpeokOwner(g, playerId, flipped.month) ? 2 : 1;
+  stealPi(g, playerId, opp, flipSweepCount);
   delete g.ppeokFlags[flipped.month];
-  g.lastAction = { kind: 'sweep_from_flip', player: playerId, card: flipped, trio, stoleFromOpp: 1 };
+  g.lastAction = { kind: 'sweep_from_flip', player: playerId, card: flipped, trio, stoleFromOpp: flipSweepCount };
+}
+
+/**
+ * 특정 월의 뻑을 만든 사람이 현재 풀려는 사람과 동일한지 판정 (자뻑 회수 여부).
+ * R7 자뻑 풀이 룰(2026-06-16): 자뻑 풀이 시 상대 피 2장, 타인 뻑 풀이 시 1장.
+ * 반드시 `delete g.ppeokFlags[month]` 이전에 호출해야 한다 (delete 후엔 소유자 판정 불가).
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId - 뻑을 풀려는 플레이어
+ * @param {number} month       - 풀 뻑의 월
+ * @returns {boolean}
+ */
+function isPpeokOwner(g, playerId, month) {
+  return g.ppeokFlags[month] === playerId;
 }
 
 /**
@@ -1267,10 +1284,12 @@ function flipDeckBonus(g, playerId) {
   // 동월 3장 (뻑 풀이): 4장 모두 가져가기 + 상대 피 1장
   g.floor = g.floor.filter((c) => c.month !== flipped.month);
   g.captured[playerId].push(flipped, ...sameMonth);
+  // R7(2026-06-16): 자뻑 풀이 시 상대 피 2장, 타인 뻑 풀이 시 1장. (delete 이전 판정)
+  const bonusSweepCount = isPpeokOwner(g, playerId, flipped.month) ? 2 : 1;
   // 뻑이 풀렸으므로 ppeokFlags에서 제거
   if (g.ppeokFlags[flipped.month]) delete g.ppeokFlags[flipped.month];
-  stealPi(g, playerId, opp, 1);
-  g.lastAction = { kind: 'bonus_ppeok_sweep', player: playerId, flipped, count: sameMonth.length, stoleFromOpp: 1 };
+  stealPi(g, playerId, opp, bonusSweepCount);
+  g.lastAction = { kind: 'bonus_ppeok_sweep', player: playerId, flipped, count: sameMonth.length, stoleFromOpp: bonusSweepCount };
 }
 
 // ── 스냅샷 (시점별) ─────────────────────────────────────────

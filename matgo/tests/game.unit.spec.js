@@ -868,3 +868,46 @@ test('G-44: 쓸 — 바닥 같은 월 3장 시작이면 쓸 아님 (사용자 �
   // sweep_from_hand이지 sseul이 아님
   expect(g.lastAction.kind).toBe('sweep_from_hand');
 });
+
+// ============================================================
+// §R7 자뻑 풀이 2피 (2026-06-16 룰 변경 A안)
+//   자뻑(내가 만든 뻑을 내가 풀 때)만 상대 피 2장, 타인 뻑 풀이는 1장 유지.
+// ============================================================
+
+test('G-43a: 자뻑 풀이 시 상대 피 2장 강탈 (ppeokFlags[month] === playerId)', () => {
+  // 바닥 1월 3장(뻑) + p1이 만든 뻑(ppeokFlags[1]='p1') → p1이 1월 카드 내어 3매칭(자뻑 풀이).
+  // 기대: sweep_from_hand + stoleFromOpp === 2, p2 피 3장 중 2장이 p1으로 이동.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a', 'm01_pi_b'], // 1월 3장 (뻑)
+    deck:   [],
+  });
+  g.captured.p2 = [card('m06_pi_a'), card('m07_pi_a'), card('m08_pi_a')]; // 피 3장
+  g.ppeokFlags[1] = 'p1'; // p1이 만든 뻑 → 자뻑
+
+  playCard(g, 'p1', 'm01_gwang');
+  expect(g.lastAction.kind).toBe('sweep_from_hand');
+  expect(g.lastAction.stoleFromOpp).toBe(2);          // 자뻑 → 2장
+  expect(g.captured.p2.length).toBe(1);               // 3 - 2 = 1 (2장 빼앗김)
+  // 빼앗긴 2장이 p1 captured에 들어왔는지 — 강탈 피 m07/m08가 p1으로 이동했는지 확인.
+  expect(g.captured.p1.some((c) => c.id === 'm07_pi_a')).toBe(true);
+  expect(g.captured.p1.some((c) => c.id === 'm08_pi_a')).toBe(true);
+});
+
+test('G-43b: 타인 뻑 풀이 시 상대 피 1장 강탈 (ppeokFlags[month] !== playerId)', () => {
+  // 동일 픽스처지만 뻑을 p2가 만든 경우(ppeokFlags[1]='p2') → p1이 풀면 타인 뻑 풀이 → 1장.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a', 'm01_pi_b'],
+    deck:   [],
+  });
+  g.captured.p2 = [card('m06_pi_a'), card('m07_pi_a'), card('m08_pi_a')];
+  g.ppeokFlags[1] = 'p2'; // p2가 만든 뻑 → p1 입장에선 타인 뻑
+
+  playCard(g, 'p1', 'm01_gwang');
+  expect(g.lastAction.kind).toBe('sweep_from_hand');
+  expect(g.lastAction.stoleFromOpp).toBe(1);          // 타인 뻑 → 1장 유지
+  expect(g.captured.p2.length).toBe(2);               // 3 - 1 = 2
+});

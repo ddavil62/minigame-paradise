@@ -1,6 +1,6 @@
 # 맞고 (Matgo) — LAN 1:1 대전 기획서
 
-> 최종 업데이트: 2026-06-16
+> 최종 업데이트: 2026-06-17
 
 ## 프로젝트 개요
 
@@ -170,7 +170,7 @@ matgo/
 
 | 날짜 | 변경 |
 |---|---|
-| 2026-06-16 | 버그 4건 수정 — B1(바닥 2장 먹기 fly 출처: `pendingChoiceSrcCardId` 필드 + `choiceFloorSrcCardId` snapshot 노출로 손패 출처 식별) / B2(fly 경로 직선화: `flyTo` left/top만 transition + DECK_THROW 더블 rAF) / B3(쓸 연출: B1 수정에 연동 해소, 서버 무수정) / B4(조커 케이스 A **턴 유지** 룰 변경: `finishTurn` → 신규 `finishTurnKeepTurn`). 검증 191건 전부 PASS |
+| 2026-06-17 | 신규 버그 4건 수정 — R5(바닥 2장 먹기 손패 fly 누락: B1이 남긴 손 fly 미등록을 `client.js` `_choiceSrcFlyId` 수집 + `renderMyHand` 후 `startFlyFromHand` + `flyTargetIds`로 해소) / R6(선택 시 fly 순서: 손 fly를 덱 fly보다 먼저 등록, HAND_THROW→DECK 정합) / R7(자뻑 풀이 2피 **룰 변경**: 자뻑만 상대 피 2장·타인 뻑 1장, `game.js` `isPpeokOwner` 헬퍼 + stealPi 3지점 `delete ppeokFlags` 이전 판정, `score.js` 무수정) / R8(조커 사용 후 사라짐: `joker_play` 손 fly 등록 + **`renderCaptured`가 조커를 pi 그룹에 합류**(joker 키 부재로 드롭→fade되던 선존 결함) + 피 카운트 조커 +2). 단위 100·e2e 32(E-31/E-32 신규) 포함 검증 183건 전부 PASS |
 | 2026-06-03 | 조커 2장 룰 추가 — 덱 50장(화투 48 + `m00_joker_a/b`), 케이스 A(손 조커 → 매치 스킵 + 상대 피 1 + 더미 1장 손 보충 + **턴 유지** ※2026-06-16 룰 변경) / 케이스 B(더미 뒤집은 게 조커 → 상대 피 1 + 손에 추가 + 재귀 뒤집기). `piCount += joker × 2`. JOKER-001~009 회귀 9건 |
 | 2026-06-03 | 쓸 룰 추가 — 바닥 같은 월 2장 + 손 1 + 더미 1 = 4장 + 상대 피 1장. `lastAction.kind=sseul` 신규, `sweep_from_flip` 토스트 "쓸!" → "뻑 풀이!"로 정정 |
 | 2026-06-02 | 폭탄 룰 표준화 — `bombDeckCredit` 보너스 뒤집기 권리(+2) 모델로 정정. "기회 보존의 법칙"으로 양쪽 잔여 동기 |

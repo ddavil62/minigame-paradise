@@ -1,5 +1,44 @@
 # Changelog
 
+## [2026-06-17] — 신규 버그 4건 수정 (R5/R6 choice 손패 fly + R7 자뻑 풀이 2피 룰 + R8 조커 captured 표시)
+
+직전 B1(2026-06-16)이 손패 fly 누락을 남긴 R5/R6, 자뻑 풀이 룰 변경 R7, 조커 사용 후 사라짐 R8을 수정. R8은 1차 QA FAIL(조커 증발) → 재수정으로 해소. 수정 4파일: `game.js`, `public/client.js`, `tests/game.unit.spec.js`, `tests/e2e-scenarios.spec.js`.
+
+### 수정 (R5 — 바닥 2장 먹기 손패 fly 누락)
+- 증상: 바닥 2장 먹기(choice 흐름)에서 내가 낸 손패가 손에서 captured로 fly되지 않고 순간이동.
+- 근본 원인: 직전 B1 수정이 `choiceFloorSrcCardId`로 손패 srcCard를 더미 fly(`drewIds`)에서 **제외만** 하고, 올바른 손 fly(HAND_THROW)를 등록하지 않음.
+- 수정: `public/client.js` `renderState`에서 `s.choiceFloorSrcCardId`를 `_choiceSrcFlyId`로 수집 → **`renderMyHand` 이후** `startFlyFromHand` 등록(원본 DOM 존재 필요) + `flyTargetIds`에 추가. origin='hand'로 손에서 captured로 부딪힘 연출 정상화.
+
+### 수정 (R6 — 선택 시 fly 순서)
+- 손 fly(`startFlyFromHand`)를 덱 fly(`startFlyFromDeck`)보다 **먼저** 등록 → "내 낸 패 먼저 captured, 선택 바닥패 나중"이 어긋나던 것을 HAND_THROW→DECK 시퀀스 자연 정합으로 해소. R5 수정에 연동.
+
+### 변경 (R7 — 자뻑 풀이 2피, 룰 변경)
+- **룰 변경**: 내가 만든 뻑을 **내가** 풀 때만(`ppeokFlags[month]===playerId`) 상대 피 **2장**, **상대(타인) 뻑** 풀이는 1장 유지. 기존 "자뻑 동일 처리(보너스 없음)" 폐기.
+- `game.js`에 `isPpeokOwner(g, playerId, month)` 헬퍼 신설 → 뻑 풀이 stealPi **3지점**(resolveCardOnFloor 3매칭 / drawAndResolve sweep_from_flip / bonusFlipSteps bonus_ppeok_sweep)에서 `const count = isPpeokOwner ? 2 : 1`을 계산해 `stealPi(..., count)` + `lastAction.stoleFromOpp = count`에 동일 변수 사용.
+- **반드시 `delete g.ppeokFlags[month]` 이전에 판정**(delete 후 소유자 식별 불가). `game.js` line 17 "자뻑 동일 처리" 주석 갱신.
+- `score.js` 무수정. 회귀: 단위 **G-43a**(자뻑 2피, `stoleFromOpp===2`) / **G-43b**(타인 뻑 1피, `stoleFromOpp===1`).
+
+### 수정 (R8 — 조커 사용 후 조커 사라짐, 2단계)
+- 증상: 조커를 내면 손에서 날아간 뒤 captured에 안 보이고 fade(사라짐).
+- (1) fly 등록: `public/client.js` `joker_play` STATE에서 조커를 손→captured `startFlyFromHand`(HAND_THROW) 등록(`_jokerFlyId`, `drewIds` 제외 + `flyTargetIds` 추가, origin='hand').
+- (2) **핵심(선존 결함, 1차 QA FAIL 지점)**: `renderCaptured`가 captured 그룹을 `{gwang,kkeut,tti,pi}`로 분류하는데 **joker 키가 없어** `if (groups[effectiveType])` 가드가 조커(`type='joker'`)를 드롭 → 도착지 DOM 미생성 → `resolvePendingFlies`의 `locateCard`가 못 찾아 `fadeEntries`로 분류 → fly clone fade. → 조커를 `effectiveType='pi'`로 **pi 그룹에 합류**(카드는 `.joker-card` 스타일 유지, 피로 변환 X) + pi count reduce에 `if (c.type==='joker') return sum + 2`(score.js `piCount += joker.length*2`와 일치).
+- 단일 `renderCaptured` 수정으로 **케이스 A(`joker_play`)·케이스 B(`joker_flip`)·바닥 조커 자동획득(`floor_joker_to_first`)** captured 표시 일괄 정상화(셋 다 captured에 `type='joker'` 카드를 넣는 동일 경로). `score.js` 무수정(클라 표시만 정합).
+
+### 변경 (테스트)
+- 단위: **G-43a/G-43b** 신규(R7) → game.unit 42→44, 합계 98→100.
+- e2e: **E-31**(R5 — 손패 srcCard fly가 myCards 출발, startFlyFromDeck 미호출) / **E-32**(R8 — 조커 fly가 myCards 출발 + `#my-captured-zone` 안착, fade 없음) 신규 → 30→32.
+
+### 검증
+- 단위 **100/100**(G-43a/b 포함) + adhoc joker **24/24**/sseul **11/11**/bombdup **7/7**/floor-joker **5/5** + e2e **32/32**(E-31/E-32 + 회귀 게이트 E-26~E-30) + TDZ **1/1** + QA 능동 probe **3/3**(임시, 후 삭제) = **183건 전부 PASS**.
+- R8은 1차 QA FAIL(조커 증발) → `renderCaptured` 재수정으로 해소. QA 능동 probe: 조커 케이스 A 실플레이(captured DOM 안착·"피 3"·턴 유지·콘솔에러 0), 직접 주입(조커+피2 → "피 4"), 쌍피 회귀(조커 분기 오염 0) 전부 PASS.
+- QA PASS(결함 0), AD3 APPROVED(2회 — fly 순서 + pi 그룹 fan 안 joker-card 혼재 레이아웃, WARN 2건 비강제: fan 겹침 28px·조커1장→"피 2" 인지 불일치는 쌍피 기존 패턴과 동일).
+
+### 비고
+- R8 재수정은 `renderCaptured` 단일 함수(2개 인접 블록)만 변경. R5/R6/R7 코드는 회귀 방지를 위해 무변경.
+- 참고: 스펙 `.claude/specs/2026-06-16-matgo-bugfix-r5r8-spec.md`, 리포트 `.claude/specs/2026-06-16-matgo-bugfix-r5r8-report.md`, QA(2차) `.claude/specs/2026-06-16-matgo-bugfix-r5r8-qa-report-2.md`, AD(2차) `.claude/specs/2026-06-16-matgo-bugfix-r5r8-ad-review-2.md`.
+
+---
+
 ## [2026-06-16] — 버그 4건 수정 (B1/B2/B3 fly 연출 + B4 조커 케이스 A 턴 룰)
 
 fly 연출 오류 3건(B1/B2/B3)과 조커 케이스 A 룰 오류(B4)를 수정. 수정 3파일: `game.js`, `public/client.js`, `tests/joker-adhoc.mjs`.

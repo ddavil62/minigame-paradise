@@ -620,6 +620,33 @@
       for (const id of stolenPiIds) newCardIds.delete(id);
     }
 
+    // ── R8 수정 (2026-06-16): joker_play 조커 손패 HAND_THROW 등록 ──
+    // 손에서 낸 조커(케이스 A)는 서버가 captured로 옮기고 손에서 제거한다. 통합 STATE에서
+    // 조커는 newCapIds[me]에 등장하지만 손 origin 식별에 걸리지 않아 drewIds로 분류돼
+    // startFlyFromDeck(더미 fly)로 잘못 날아간다. 조커 ID를 newCardIds(→drewIds)에서
+    // 제외하고 렌더 후 startFlyFromHand로 손→captured fly를 등록한다.
+    // 강탈 피(stoleFromOpp=1)는 위 stolenPiIds 분기가 이미 처리(startFlyFromOppCaptured).
+    // 더미 보충 카드(refilled)는 newCapIds가 아니라 yourHand에 들어가 drewIds에 안 나타남
+    // → 렌더 후 손 카드 appear로 자연 처리(별도 fly 없음, 허용).
+    let _jokerFlyId = null; // R8: joker HAND_THROW 등록용 임시 변수 (renderState 로컬)
+    if (la && la.kind === 'joker_play' && la.player === me && la.card) {
+      _jokerFlyId = la.card.id;
+      newCardIds.delete(_jokerFlyId);
+    }
+
+    // ── R5 수정 (2026-06-16): choice 흐름 손패 HAND_THROW 등록 ──
+    // B1 수정이 s.choiceFloorSrcCardId를 newCardIds에서 제외해 잘못된 덱 fly는 막았으나,
+    // 손에서 낸 srcCard의 올바른 손 fly(HAND_THROW)를 등록하지 않아 순간이동이 남아 있었다.
+    // (클릭 시점에 등록된 fly는 awaiting_floor_choice STATE에서 도착지를 못 찾아 fade됨.)
+    // 통합 STATE에서 srcCard가 captured에 안착하므로 렌더 후 startFlyFromHand로 재등록한다.
+    // 라운드 시작 fly 억제(isRoundStart) 시엔 등록하지 않는다 (오프닝 appear 유지).
+    // 이미 pendingFlies에 같은 ID가 있으면 중복 등록을 피한다.
+    let _choiceSrcFlyId = null; // R5: choice srcCard HAND_THROW 등록용 임시 변수
+    if (s.choiceFloorSrcCardId && !isRoundStart) {
+      const already = pendingFlies.some((f) => f.cardId === s.choiceFloorSrcCardId);
+      if (!already) _choiceSrcFlyId = s.choiceFloorSrcCardId;
+    }
+
     const drewIds = new Set();
     if (!isRoundStart) {
       // 덱 fly 대상 = 새 카드 중 상대 손 origin이 아닌 것
@@ -646,6 +673,10 @@
     for (const id of oppHandOriginIds) flyTargetIds.add(id);
     // 강탈 피도 fly 대상 — 도착지(내 captured) appear 애니메이션 끄고 상대 captured에서 출발
     for (const id of stolenPiIds) flyTargetIds.add(id);
+    // R5/R8: choice srcCard / 조커도 fly 대상 — captured 도착지 appear 억제 후 손에서 출발.
+    // (누락 시 captured에 카드가 보였다가 fly clone이 도착하는 이중 표시 발생.)
+    if (_choiceSrcFlyId) flyTargetIds.add(_choiceSrcFlyId);
+    if (_jokerFlyId) flyTargetIds.add(_jokerFlyId);
 
     // 손패 / 바닥 / 점수판 렌더
     renderOppHand(s);
@@ -657,6 +688,19 @@
     // 매칭 가능 표시: 자기 턴 + awaiting_play 시 손패와 바닥 양쪽에 has-match 클래스를 토글한다.
     // (손패 has-match는 renderMyHand에서 이미 처리, 바닥 has-match는 여기서 처리)
     updateFloorMatchHints(s);
+
+    // ── R5 손 fly 후처리: 렌더 완료 후 startFlyFromHand 호출 (덱 fly보다 먼저 등록) ──
+    // startFlyFromDeck보다 먼저 호출해야 pendingFlies에 손 카드가 먼저 들어가
+    // HAND_THROW → DECK 시퀀스 순서가 자연 정합된다 (R6 순서 해소).
+    if (_choiceSrcFlyId) {
+      startFlyFromHand(_choiceSrcFlyId);
+      _choiceSrcFlyId = null;
+    }
+    // ── R8 조커 fly 후처리 ──
+    if (_jokerFlyId) {
+      startFlyFromHand(_jokerFlyId);
+      _jokerFlyId = null;
+    }
 
     // 덱 뒤집기 fly 시작 — 도착지(floor 또는 captured) DOM이 그려진 후 클론
     if (deckRectForFly && drewIds.size > 0) {
@@ -1074,7 +1118,12 @@
     const ssangpi = !!(s.kkeutAsSsangpi && s.kkeutAsSsangpi[pid]);
     const groups = { gwang: [], kkeut: [], tti: [], pi: [] };
     for (const c of cards) {
-      const effectiveType = (c.id === 'm09_kkeut' && ssangpi) ? 'pi' : c.type;
+      // 조커(type='joker')는 피 그룹에 합류시켜 captured에 표시한다.
+      // (카드 자체는 makeCardEl이 joker-card 스타일로 렌더, 피 가치만 +2 — score.js와 동일)
+      const effectiveType =
+        (c.type === 'joker') ? 'pi'
+        : (c.id === 'm09_kkeut' && ssangpi) ? 'pi'
+        : c.type;
       if (groups[effectiveType]) groups[effectiveType].push(c);
     }
 
@@ -1088,6 +1137,7 @@
       let count;
       if (type === 'pi') {
         count = groups.pi.reduce((sum, c) => {
+          if (c.type === 'joker') return sum + 2;          // 조커 1장 = 피 2 (score.js: piCount += joker.length*2)
           if (c.subtype === 'ssangpi') return sum + 2;
           if (c.id === 'm09_kkeut' && ssangpi) return sum + 2;
           return sum + 1;
@@ -1181,22 +1231,58 @@
    */
   function startFlyFromHand(cardId) {
     const src = myCardsEl.querySelector(`[data-card-id="${cardId}"]`);
-    if (!src) return;
-    const rect = src.getBoundingClientRect();
-    const clone = src.cloneNode(true);
+    if (src) {
+      // 통상 경로(클릭 시점): 카드가 아직 손 DOM에 있다. 손 카드 그대로 클론한다.
+      const rect = src.getBoundingClientRect();
+      const clone = src.cloneNode(true);
+      clone.classList.add('flying-card');
+      clone.classList.remove('clickable');
+      clone.style.transition = 'none';
+      clone.style.left   = `${rect.left}px`;
+      clone.style.top    = `${rect.top}px`;
+      clone.style.width  = `${rect.width}px`;
+      clone.style.height = `${rect.height}px`;
+      // 던지는 카드는 짝(가만 있는 카드) 위로 와야 한다. z-index 10.
+      clone.style.zIndex = '10';
+      flyOverlay.appendChild(clone);
+      void clone.offsetHeight;
+      src.style.visibility = 'hidden';
+      recordFlyOrigin(cardId, 'hand', rect.left, rect.top);
+      pendingFlies.push({ cardId, clone, startedAt: Date.now() });
+      return;
+    }
+    // ── R5/R8 폴백 (2026-06-16): 카드가 이미 손에서 빠진 통합 STATE 경로 ──
+    // 바닥 2장 선택(choice srcCard)이나 조커는 서버에서 이미 captured로 이동했고
+    // s.yourHand에서도 제거돼 손 DOM에 없다. 이 경우 도착지(captured/floor) DOM을
+    // 클론하되 시작 좌표를 손 영역 중앙으로 잡아 "손에서 날아가는" 연출을 유지한다.
+    // origin='hand'를 그대로 기록해 E2E fly-출처 게이트(E-31/E-32)와 정합한다.
+    const target =
+      myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      floorCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
+    if (!target) return;
+    const handRect = myCardsEl.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const w = targetRect.width || 60;
+    const h = targetRect.height || 85;
+    const startLeft = handRect.left + (handRect.width / 2) - (w / 2);
+    const startTop  = handRect.top  + (handRect.height / 2) - (h / 2);
+    const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
+    clone.style.position = 'fixed';
+    clone.style.margin = '0';
     clone.style.transition = 'none';
-    clone.style.left   = `${rect.left}px`;
-    clone.style.top    = `${rect.top}px`;
-    clone.style.width  = `${rect.width}px`;
-    clone.style.height = `${rect.height}px`;
-    // 던지는 카드는 짝(가만 있는 카드) 위로 와야 한다. z-index 10.
+    clone.style.left   = `${startLeft}px`;
+    clone.style.top    = `${startTop}px`;
+    clone.style.width  = `${w}px`;
+    clone.style.height = `${h}px`;
+    clone.style.visibility = 'visible';
     clone.style.zIndex = '10';
     flyOverlay.appendChild(clone);
     void clone.offsetHeight;
-    src.style.visibility = 'hidden';
-    recordFlyOrigin(cardId, 'hand', rect.left, rect.top);
+    target.style.visibility = 'hidden';
+    recordFlyOrigin(cardId, 'hand', startLeft, startTop);
     pendingFlies.push({ cardId, clone, startedAt: Date.now() });
   }
 
