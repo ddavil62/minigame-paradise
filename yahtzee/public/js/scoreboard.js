@@ -118,6 +118,11 @@ export function renderScoreboard(tbody, ctx) {
     ctx.currentTurn === ctx.myId &&
     ctx.rollCount >= 1;
 
+  // N3: 컵 애니메이션 진행 중이면 미리보기 억제. main.js가 canPreview=false를 전달한다.
+  // canPreview가 undefined인 경우(구 호출부 호환)에는 true로 간주하여 기존 동작 보존.
+  const allowPreview = ctx.canPreview !== false;
+  ctx.canSelectCategory = ctx.canSelectCategory && allowPreview;
+
   tbody.appendChild(makeSectionRow('Upper Section · 1~6'));
   for (const cat of UPPER_CATEGORIES) {
     tbody.appendChild(makeCategoryRow(cat, ctx));

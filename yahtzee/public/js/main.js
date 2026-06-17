@@ -153,6 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
       lastMyUpperBonus = 0;
       // 새 게임 — 양쪽 직전 선택 강조 초기화. renderAll에서 모든 셀의 .scored-persistent가 제거된다.
       lastScoredCategoryByPlayer = { p1: null, p2: null };
+      // N5: 직전 게임에서 재대결 버튼을 눌렀으면 disabled + '재대결 대기 중...' 상태가 남아 있다.
+      // 새 게임 시작 시 초기화하지 않으면 다음 GAME_OVER에서 재대결 버튼이 고착되어 연속 대전이 막힌다.
+      els.rematchBtn.disabled = false;
+      els.rematchBtn.textContent = '재대결';
       showScreen('game');
       els.screenGameOver.classList.add('hidden');
     },
@@ -271,6 +275,11 @@ document.addEventListener('DOMContentLoaded', () => {
         keep: pendingKeep,
         selectable,
         opponentTurn: !myTurn && state.phase === 'playing',
+        // N3: 컵 애니메이션이 완전히 끝나는 시점에 호출된다(dice.js가 _cupTimer를 null로 정리한 직후).
+        //  - 여기서 renderAll을 재실행하면 canPreview=!_cupTimer 가 true로 복원되어
+        //    사용자 상호작용(keep 토글/다음 STATE) 없이도 컵 착지 즉시 점수 미리보기가 노출된다.
+        //  - 재실행 시 dice 값이 동일하므로 dice.js의 rolledNow=false → 컵 애니메이션·onCupDone 재등록 없음(무한 루프 없음).
+        onCupDone: () => renderAll(),
         onToggle: (i) => {
           pendingKeep[i] = !pendingKeep[i];
           // 클릭 효과음 (매우 짧은 sine click).
@@ -289,6 +298,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderActionBar(els, state, myId);
 
+    // N3: 컵 애니메이션이 진행 중이면 점수 미리보기를 억제한다.
+    // dice.js가 컵 흔들기·착지 애니메이션 동안 컨테이너 DOM(els.diceArea)에 _cupTimer를 부착하므로,
+    // 그 값이 존재하면 아직 애니메이션 중 → canPreview=false. 완료 후(다음 STATE/keep 토글 시) 자연 복구.
+    const canPreview = !els.diceArea._cupTimer;
+
     renderScoreboard(els.scoreboardBody, {
       myId,
       currentTurn: state.currentTurn,
@@ -296,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dice: state.dice,
       sheets: state.sheets,
       phase: state.phase,
+      canPreview,
       onCategoryClick: (cat) => {
         net.scoreCategory(cat);
       },
@@ -360,6 +375,9 @@ document.addEventListener('DOMContentLoaded', () => {
   els.btnRoll.addEventListener('click', () => {
     const state = getState();
     if (!state) return;
+    // N4: 연타 차단 — 클릭 즉시 비활성화하여 동일 (turn, rollCount)로 ROLL_DICE가 2회 전송되는 것을 막는다.
+    // STATE 수신 후 renderActionBar가 canRoll(myTurn && rollCount<3)을 재계산해 자동 복구한다.
+    els.btnRoll.disabled = true;
     // 1차 굴림은 keep 무시(서버에서 강제). 2/3차는 pendingKeep 전송.
     net.rollDice(pendingKeep.slice());
     // 굴림 효과음(화이트노이즈 rattle ~0.4초). 서버 응답을 기다리지 않고 즉시 재생하여

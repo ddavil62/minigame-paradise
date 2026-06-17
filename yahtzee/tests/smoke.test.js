@@ -582,6 +582,135 @@ async function runToggleKeepScenario() {
 
 await runToggleKeepScenario();
 
+// ── YACHT-011: 2판 연속 REMATCH 사이클 (N5 회귀 게이트) ─────────
+section('YACHT-011: 2판 연속 GAME_OVER → REMATCH → START 정상 사이클');
+
+/**
+ * 1판 26턴 완주 → GAME_OVER → 양쪽 REMATCH → START(2판) → 26턴 완주 → GAME_OVER.
+ * 서버 WS 레벨에서 연속 대전 사이클이 ERROR 없이 진행되는지 검증한다.
+ * (클라 onStart의 rematchBtn 초기화는 DOM 영역이라 수동/Playwright로 별도 확인 — N5-T1.)
+ */
+async function runRematchCycleScenario() {
+  const PORT = 3098;
+  const app = createApp({ hostUrl: '' });
+  const server = http.createServer(app.handleHttp);
+  server.on('upgrade', app.handleUpgrade);
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(PORT, '127.0.0.1', resolve);
+  });
+
+  function makeClient() {
+    const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`);
+    const queue = [];
+    const waiters = [];
+    ws.on('message', (data) => {
+      const msg = JSON.parse(data.toString());
+      if (waiters.length) { waiters.shift()(msg); } else { queue.push(msg); }
+    });
+    function waitFor(type, timeoutMs = 3000) {
+      return new Promise((resolve, reject) => {
+        const t0 = Date.now();
+        function tryNext() {
+          while (queue.length) {
+            const m = queue.shift();
+            if (m.type === type) { resolve(m); return; }
+          }
+          if (Date.now() - t0 > timeoutMs) { reject(new Error(`timeout waiting for ${type}`)); return; }
+          waiters.push((m) => {
+            if (m.type === type) resolve(m);
+            else { queue.unshift(m); setTimeout(tryNext, 5); }
+          });
+        }
+        tryNext();
+      });
+    }
+    return {
+      ws,
+      open: () => new Promise((res) => ws.once('open', res)),
+      close: () => new Promise((res) => { ws.once('close', res); ws.close(); }),
+      send: (msg) => ws.send(JSON.stringify(msg)),
+      waitFor,
+    };
+  }
+
+  // 한 판 전체(26턴)를 진행하고 GAME_OVER를 반환하는 헬퍼.
+  async function playOneGame(c1, c2) {
+    const catIdx = { p1: 0, p2: 0 };
+    let currentTurn = 'p1';
+    for (let turn = 0; turn < TURNS_PER_PLAYER * 2; turn++) {
+      const me = currentTurn === 'p1' ? c1 : c2;
+      const other = currentTurn === 'p1' ? c2 : c1;
+      me.send({ type: 'ROLL_DICE', keep: [false, false, false, false, false] });
+      await me.waitFor('DICE_ROLLED');
+      await other.waitFor('DICE_ROLLED');
+      await me.waitFor('STATE');
+      await other.waitFor('STATE');
+      const cat = ALL_CATEGORIES[catIdx[currentTurn]];
+      catIdx[currentTurn] += 1;
+      me.send({ type: 'SCORE_CATEGORY', category: cat });
+      await me.waitFor('CATEGORY_SCORED');
+      await other.waitFor('CATEGORY_SCORED');
+      await me.waitFor('STATE');
+      await other.waitFor('STATE');
+      currentTurn = currentTurn === 'p1' ? 'p2' : 'p1';
+    }
+    const go1 = await c1.waitFor('GAME_OVER');
+    const go2 = await c2.waitFor('GAME_OVER');
+    return { go1, go2 };
+  }
+
+  const c1 = makeClient();
+  const c2 = makeClient();
+  await Promise.all([c1.open(), c2.open()]);
+  c1.send({ type: 'JOIN', playerName: 'A' });
+  c2.send({ type: 'JOIN', playerName: 'B' });
+  await c1.waitFor('JOINED');
+  await c2.waitFor('JOINED');
+  c1.send({ type: 'READY' });
+  c2.send({ type: 'READY' });
+  await c1.waitFor('START');
+  await c2.waitFor('START');
+  await c1.waitFor('STATE');
+  await c2.waitFor('STATE');
+
+  // ── 1판 ──
+  const g1 = await playOneGame(c1, c2);
+  assertTrue(['p1', 'p2', 'draw'].includes(g1.go1.winner), '1판 GAME_OVER winner 유효');
+
+  // ── 1판 → 2판 REMATCH ──
+  c1.send({ type: 'REMATCH' });
+  c2.send({ type: 'REMATCH' });
+  // 양쪽 REMATCH → 서버가 새 게임 시작(START + 초기 STATE).
+  await c1.waitFor('START');
+  await c2.waitFor('START');
+  const s2Init1 = await c1.waitFor('STATE');
+  const s2Init2 = await c2.waitFor('STATE');
+  assertEq(s2Init1.turnNumber, 1, '2판 초기 turnNumber=1 (새 게임)');
+  assertEq(s2Init1.rollCount, 0, '2판 초기 rollCount=0');
+  assertEq(s2Init1.currentTurn, 'p1', '2판 선공 p1');
+  assertEq(s2Init2.turnNumber, 1, '2판 초기 turnNumber=1 (p2 시점)');
+
+  // ── 2판 완주 → GAME_OVER ──
+  const g2 = await playOneGame(c1, c2);
+  assertTrue(['p1', 'p2', 'draw'].includes(g2.go1.winner), '2판 GAME_OVER winner 유효 (연속 대전 정상)');
+  assertEq(g2.go1.winner, g2.go2.winner, '2판 양쪽 winner 동일');
+
+  // ── 3판 REMATCH도 ERROR 없이 START 도달 ──
+  c1.send({ type: 'REMATCH' });
+  c2.send({ type: 'REMATCH' });
+  await c1.waitFor('START');
+  await c2.waitFor('START');
+  const s3Init = await c1.waitFor('STATE');
+  assertEq(s3Init.turnNumber, 1, '3판 초기 turnNumber=1 (연속 3판 사이클 정상)');
+
+  await c1.close();
+  await c2.close();
+  await new Promise((res) => server.close(res));
+}
+
+await runRematchCycleScenario();
+
 // ── 요약 ────────────────────────────────────────────────────
 console.log('\n────────────────────────────────────────');
 console.log(`총 ${passed + failed}건, PASS=${passed}, FAIL=${failed}`);

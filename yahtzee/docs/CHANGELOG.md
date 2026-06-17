@@ -1,5 +1,27 @@
 # Yahtzee CHANGELOG
 
+## 2026-06-17 — UX 버그/개선 5건 (N1~N5)
+
+사용자 신고: AI가 너무 빨리 굴려 선택을 못 본다(N1), 하단 총점이 턴 강조색에 덮여 안 보인다(N2), 미리보기가 컵 굴림 중에도 떠서 긴장감이 없다(N3), 굴리기 연타 시 효과음만 나고 기회가 날아간다(N4), 2판 연속 AI 재대결 시 버튼이 영구 고착된다(N5). 서버 `game.js`/`server.js` 무수정.
+
+### 변경
+- **N1 — 봇 행동 지연 2배**: `bot.js` `handleState` 지연 `600+rand*600`(600~1200ms) → `1200+Math.floor(rand*1200)`(1200~2400ms). AI 주사위 굴림 속도가 너무 빨라 선택 과정을 못 보던 문제. 모듈 상단 JSDoc에 행동 지연 명시.
+- **N2 — 총점 가독성**: `public/css/style.css` `current-p1/p2` 강조 셀렉터에서 `tfoot .col-p1/.col-p2` 제거 → 턴 강조가 tbody만 적용되고 하단 총점/소계(total-row 먹색+연황색)가 강조 배경에 안 덮여 가독성 회복. thead 강조(`color`)는 유지. 시각: `tfoot .total-row .col-p1` 배경 `rgb(74,58,40)`=`--ink(#4a3a28)` 유지 확인(스크린샷 `tests/screenshots/n2-scoreboard-total.png`).
+- **N3 — 미리보기 타이밍(긴장감)**: 컵 굴림 애니메이션 진행 중 카테고리 점수 미리보기 숨김 → 컵 착지 시점에 자동 노출. `scoreboard.js`(`ctx.canPreview !== false` 게이트로 `canSelectCategory` 한정, undefined=true 구 호출부 호환) + `dice.js`(컵 완료 시 `opts.onCupDone()` 호출, `renderDice` JSDoc에 옵션 명시) + `main.js`(`renderAll`에서 `canPreview = !els.diceArea._cupTimer` 계산 후 전달 + `renderDice` 호출부에 `onCupDone: () => renderAll()`). **무한 루프 가드**: 재렌더 시 dice 동일 → `dice.js`의 `rolledNow=false`(diceChanged=false) → 컵 분기 미진입 → onCupDone 재등록 없음. AD 모드3 1차 REVISE(컵 멈춘 뒤 자동 재렌더 누락) → onCupDone 콜백 방식으로 재수정 후 APPROVED. 시각: during=0 → after=13 자동 노출(`tests/screenshot-n3-cup-preview.js`, 스크린샷 `n3-cup-during-no-preview.png`/`n3-cup-after-preview-auto.png`).
+- **N4 — 굴리기 날림 차단**: `main.js` btnRoll 핸들러 첫 줄 `els.btnRoll.disabled = true` → 동일 굴림 중복 ROLL_DICE 송신(레이스) 차단. STATE 수신 후 `renderActionBar`가 canRoll 재계산으로 자동 복구. native 더블클릭은 disabled 동기 적용으로 2번째 click 억제 → 1회만 송신. (QA 소견 LOW: 인간형 더블클릭의 2차 송신은 본인 턴 내 정당한 추가 굴림으로 rollCount 서버 cap(3)·턴 손실 없음. 스펙 문구 "STATE 왕복 윈도우 내 중복 차단"으로 읽어 PASS. 원 버그 "효과음만 나고 기회 날림" 해소.)
+- **N5 — 재대결 고착 해소**: `main.js onStart` 콜백에 `rematchBtn.disabled=false; textContent='재대결'` 리셋 추가 → 2판 연속 AI 재대결 시 버튼이 "재대결 대기 중…"에 영구 고착되던 버그 해소.
+
+### 추가
+- `tests/smoke.test.js`: **YACHT-011** 신규 — 2판 연속 GAME_OVER → REMATCH → START 사이클 + 3판째 START 도달 검증(+8건). smoke 155 → **163**.
+
+### 검증
+- 회귀 **230/230 PASS**(smoke 163 + dice-render 42 + bot-smoke 25). 서버 `game.js`/`server.js` 무수정. bot-smoke는 무수정(기존 타임아웃이 1.2~2.4초 지연에 충분).
+- 실브라우저(격리 포트 3097, Playwright): N2 총점 가독성, N3 during=0→after=13 자동 노출, N4 native dblclick 1회/기회 유지, N5 2판 START 후 버튼 복구. QA PASS(결함 0, N4만 LOW 소견), AD3 APPROVED(N2 + N3 재검수).
+
+### 참고
+- 스펙: `.claude/specs/2026-06-17-yahtzee-bugs-n1n5-spec.md`, 리포트: `.claude/specs/2026-06-17-yahtzee-bugs-n1n5-report.md`
+- AD: `.claude/specs/2026-06-17-ad-yahtzee-n1n5-review.md`(N2 APPROVED/N3 REVISE) → `.claude/specs/2026-06-17-ad-yahtzee-n3-recheck.md`(N3 APPROVED)
+
 ## 2026-06-17 — 점수표 가로줄 정렬(F) + 카테고리 색 3상태 차별화(G)
 
 사용자 신고: (F) 점수표 가로 구분선이 행과 어긋나 글자가 선에 걸친다. (G) 점수 셀 3상태(선택가능/직전확정/일반확정)가 모두 같은 토마토 색이라 구분이 안 된다. CSS만 수정, JS(`scoreboard.js`/`main.js`) 무수정 — 클래스명·`makeScoreCell` 시그니처·`scored-flash` 애니메이션 전부 유지.

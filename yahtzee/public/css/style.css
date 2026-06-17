@@ -326,8 +326,9 @@ body.theme-wood {
   height:auto; border-bottom:none;
 }
 /* 현재 턴 컬럼 강조 */
-.scoreboard.current-p1 tbody .col-p1, .scoreboard.current-p1 tfoot .col-p1,
-.scoreboard.current-p2 tbody .col-p2, .scoreboard.current-p2 tfoot .col-p2 { background:rgba(210,86,47,.07); }
+/* N2: tfoot(소계·총점)은 자체 배경이 있으므로 강조 배경 미적용 — 총점(total-row) 가독성 회복. */
+.scoreboard.current-p1 tbody .col-p1,
+.scoreboard.current-p2 tbody .col-p2 { background:rgba(210,86,47,.07); }
 .scoreboard.current-p1 thead .col-p1, .scoreboard.current-p2 thead .col-p2 { color:var(--tomato-2); }
 
 .scoreboard tfoot td { padding:5px 10px; }

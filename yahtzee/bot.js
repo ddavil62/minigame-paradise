@@ -24,6 +24,8 @@
  *
  * 룰 일관성: 서버 game.js의 calcCategoryScore와 동일 룰을 이 파일에서 재구현한다.
  * (외부 의존성을 최소화하기 위해 game.js를 import하지 않음.)
+ *
+ * 행동 지연: 1200~2400ms (사람스러운 여유. N1으로 기존 600~1200ms에서 2배 상향.)
  */
 
 import { WebSocket } from 'ws';
@@ -158,8 +160,8 @@ function handleState(s) {
     pendingActTimer = null;
   }
 
-  // 사람스러운 지연 (0.6~1.2초)
-  const delay = 600 + Math.floor(Math.random() * 600);
+  // 사람스러운 지연 (1.2~2.4초) — N1: 봇 행동이 너무 빨라 따라가기 어렵다는 피드백 반영해 2배로 상향.
+  const delay = 1200 + Math.floor(Math.random() * 1200);
   pendingActTimer = setTimeout(() => {
     pendingActTimer = null;
     const cur = lastState;

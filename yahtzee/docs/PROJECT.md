@@ -109,13 +109,15 @@ yahtzee/
 - YACHT-LIVE-001: `toggleKeep` 단위 가드(phase/턴/rollCount/index)
 - YACHT-LIVE-002: WS TOGGLE_KEEP → 양쪽 STATE.keep 일치 + 상대 턴 시도 무시
 - YACHT-LIVE-003/004: dice.js `opponentTurn` 라벨 "상대 KEEP" + 본인 턴 회귀
+- YACHT-011: 2판 연속 GAME_OVER → REMATCH → START 사이클 + 3판째 START 도달 (N5 재대결 고착 회귀, 2026-06-17)
 - YACHT-BOT-001~005: 봇 시나리오 25건 (포트 3099)
 
-실행: `node tests/smoke.test.js` (155/155), `node tests/dice-render.test.js` (42/42), `node tests/bot-smoke.test.js` (25/25). 누적 **222 / 222 PASS**.
+실행: `node tests/smoke.test.js` (163/163), `node tests/dice-render.test.js` (42/42), `node tests/bot-smoke.test.js` (25/25). 누적 **230 / 230 PASS**.
 
-## 현재 상태 (2026-06-09)
+## 현재 상태 (2026-06-17)
 
 - 1차 코어 + AI 봇 + 효과음 + 실시간 keep 동기화 + 카테고리 강조 애니메이션 완료.
+- UX 개선: 점수표 가로줄 정렬·카테고리 색 3상태(F/G), 봇 지연 2배(N1), 총점 가독성(N2), 컵 굴림 중 미리보기 억제→착지 시 자동 노출(N3), 굴리기 연타 차단(N4), 재대결 버튼 고착 해소(N5).
 - 단독/launcher 통합 양쪽 동작 확인.
-- 모든 회귀 PASS (222/222).
+- 모든 회귀 PASS (230/230).
 - launcher games.json에 yahtzee 카드(#E84A5F) 등록.

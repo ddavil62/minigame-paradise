@@ -7,6 +7,8 @@
  *    올라와 촤르륵 흔들리고 → 기울여 쏟아지며 새 주사위가 통통 착지하는 시퀀스를 재생.
  *  - 자체 감지 방식이라 main.js 수정 불필요. 시그니처는 기존과 동일:
  *      renderDice(container, { dice, keep, selectable, onToggle })
+ *  - [N3] 컵 애니메이션 완료 시점에 opts.onCupDone()을 1회 호출(있을 때만).
+ *    호출부(main.js)가 이 콜백에서 scoreboard를 재렌더하면 컵 착지 즉시 점수 미리보기가 노출된다.
  */
 
 import { DICE_COUNT } from './game.js';
@@ -101,9 +103,10 @@ function drawDice(container, o) {
 }
 
 /**
- * 다이스 영역을 렌더한다. (시그니처 기존과 동일)
+ * 다이스 영역을 렌더한다. (시그니처 기존과 동일 + N3 onCupDone 선택 옵션)
  * @param {HTMLElement} container
- * @param {object} opts { dice, keep, selectable, onToggle }
+ * @param {object} opts { dice, keep, selectable, onToggle, opponentTurn, onCupDone }
+ *   - onCupDone: (선택) 컵 굴림 애니메이션이 완전히 끝난 시점에 1회 호출되는 콜백.
  */
 export function renderDice(container, opts) {
   const dice = (opts.dice || [0, 0, 0, 0, 0]).slice();
@@ -147,6 +150,11 @@ export function renderDice(container, opts) {
         // 착지 후 클래스 정리(클릭/hover 정상화).
         drawDice(container, { dice, keep, selectable, onToggle: opts.onToggle, opponentTurn });
         container._cupTimer = null;
+        // [N3] 컵 애니메이션 완료 콜백 — _cupTimer를 null로 정리한 직후 호출한다.
+        //  - 호출부가 여기서 scoreboard를 재렌더하면 컵 착지 즉시 점수 미리보기가 노출된다.
+        //  - 재호출 시 dice 값이 동일(rolledNow=false)하므로 컵 애니메이션/onCupDone 재등록은 일어나지 않아
+        //    무한 루프가 발생하지 않는다.
+        if (typeof opts.onCupDone === 'function') opts.onCupDone();
       }, DROP_MS);
     }, ROLL_MS);
   } else {
