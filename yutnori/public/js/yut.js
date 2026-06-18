@@ -3,6 +3,30 @@
  * 윷가락 실제 던지기 판정은 서버가 수행한다.
  */
 
+/**
+ * 윷가락 Canvas 드로잉 색상 상수 (W-1 정리).
+ *
+ * 윷가락 트레이/반원통 단면 렌더 전용 목재 톤. CSS 팔레트(:root)에는 없는
+ * Canvas 합성 전용 색이라 이 파일에 단일 출처로 모은다(시각 변화 없음 — 순수
+ * 가독성/유지보수 리팩토링). 수정 시 본 객체만 갱신하면 된다.
+ */
+const STICK_COLORS = {
+  trayTop: '#5a3518',          // 원목 트레이 배경 상단
+  trayBottom: '#3a2010',       // 원목 트레이 배경 하단
+  frontEdge: '#d4b47a',        // 앞면(평평면) 좌우 가장자리 음영
+  frontCenter: '#f5e4b0',      // 앞면 중앙 한지빛 목재
+  backEdge: '#2a1508',         // 뒷면(둥근면) 양 가장자리 어둠
+  backMid: '#6b3c1a',          // 뒷면 중간 톤
+  backRidge: '#a06030',        // 뒷면 중앙 능선(가장 밝음)
+  strokeFront: '#8a6020',      // 앞면 외곽선
+  strokeBack: '#1a0a04',       // 뒷면 외곽선
+  markFront: '#c8281e',        // 백도 X 표식(앞면, 진홍)
+  grain: 'rgba(140, 80, 20, 0.15)',     // 앞면 세로 나뭇결
+  ridgeHi: 'rgba(255, 200, 140, 0.30)', // 뒷면 능선 하이라이트
+  markBack: 'rgba(255, 80, 80, 0.9)',   // 백도 X 표식(뒷면, 반투명)
+  trayInset: 'rgba(0,0,0,0.5)',         // 트레이 인셋 테두리
+};
+
 /** 결과명 → 이동 칸 수 (백도는 -1). */
 export const YUT_STEPS = {
   backdo: -1,
@@ -48,13 +72,13 @@ export const MARKED_STICK_INDEX = 0;
 export function drawYutSticks(ctx, sticks, canvasW, canvasH) {
   // 원목 트레이 배경 (기존 단색 검정 → 원목 gradient)
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvasH);
-  bgGrad.addColorStop(0, '#5a3518');
-  bgGrad.addColorStop(1, '#3a2010');
+  bgGrad.addColorStop(0, STICK_COLORS.trayTop);
+  bgGrad.addColorStop(1, STICK_COLORS.trayBottom);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvasW, canvasH);
 
   // 인셋 테두리 (원목 트레이 가장자리 어둠)
-  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.strokeStyle = STICK_COLORS.trayInset;
   ctx.lineWidth = 3;
   ctx.strokeRect(1, 1, canvasW - 2, canvasH - 2);
 
@@ -100,20 +124,20 @@ function drawStick(ctx, x, y, w, h, isFront, isMarked = false) {
     // 앞면(평평면, flat-up): 절단된 목재 내부면. 좌우 그라디언트 —
     // 가장자리는 모서리 음영으로 약간 어둡고, 중앙이 밝은 한지빛 목재.
     const grad = ctx.createLinearGradient(x, y, x + w, y);
-    grad.addColorStop(0, '#d4b47a');
-    grad.addColorStop(0.35, '#f5e4b0');
-    grad.addColorStop(0.65, '#f5e4b0');
-    grad.addColorStop(1, '#d4b47a');
+    grad.addColorStop(0, STICK_COLORS.frontEdge);
+    grad.addColorStop(0.35, STICK_COLORS.frontCenter);
+    grad.addColorStop(0.65, STICK_COLORS.frontCenter);
+    grad.addColorStop(1, STICK_COLORS.frontEdge);
     ctx.fillStyle = grad;
   } else {
     // 뒷면(둥근면, round-up): 원통 외피. 좌우 4-stop 볼록 그라디언트 —
     // 양 가장자리 매우 어둡고 중앙 능선이 가장 밝아 볼록 입체감을 준다.
     const grad = ctx.createLinearGradient(x, y, x + w, y);
-    grad.addColorStop(0, '#2a1508');
-    grad.addColorStop(0.35, '#6b3c1a');
-    grad.addColorStop(0.5, '#a06030');
-    grad.addColorStop(0.65, '#6b3c1a');
-    grad.addColorStop(1, '#2a1508');
+    grad.addColorStop(0, STICK_COLORS.backEdge);
+    grad.addColorStop(0.35, STICK_COLORS.backMid);
+    grad.addColorStop(0.5, STICK_COLORS.backRidge);
+    grad.addColorStop(0.65, STICK_COLORS.backMid);
+    grad.addColorStop(1, STICK_COLORS.backEdge);
     ctx.fillStyle = grad;
   }
   ctx.fill();
@@ -126,7 +150,7 @@ function drawStick(ctx, x, y, w, h, isFront, isMarked = false) {
 
   if (isFront) {
     // ── 앞면 나뭇결: 길이 방향(세로) 결선 5개 + sin 오프셋으로 자연스러운 결 ──
-    ctx.strokeStyle = 'rgba(140, 80, 20, 0.15)';
+    ctx.strokeStyle = STICK_COLORS.grain;
     ctx.lineWidth = 0.7;
     ctx.beginPath();
     for (let k = 1; k <= 5; k++) {
@@ -137,7 +161,7 @@ function drawStick(ctx, x, y, w, h, isFront, isMarked = false) {
     ctx.stroke();
   } else {
     // ── 뒷면 중앙 능선 하이라이트: 볼록 원통의 가장 밝은 마루 ──
-    ctx.strokeStyle = 'rgba(255, 200, 140, 0.30)';
+    ctx.strokeStyle = STICK_COLORS.ridgeHi;
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -151,12 +175,12 @@ function drawStick(ctx, x, y, w, h, isFront, isMarked = false) {
   ctx.beginPath();
   roundRect(ctx, x, y, w, h, r);
   ctx.lineWidth = 1.2;
-  ctx.strokeStyle = isFront ? '#8a6020' : '#1a0a04';
+  ctx.strokeStyle = isFront ? STICK_COLORS.strokeFront : STICK_COLORS.strokeBack;
   ctx.stroke();
 
   // ── 백도 마크: 평평면 중앙 부근에 큼지막한 빨간 X (앞/뒤 모두 표시 — 어느 면이든 식별) ──
   if (isMarked) {
-    ctx.strokeStyle = isFront ? '#c8281e' : 'rgba(255, 80, 80, 0.9)';
+    ctx.strokeStyle = isFront ? STICK_COLORS.markFront : STICK_COLORS.markBack;
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     const mcx = cx; // X 중심 x

@@ -19,13 +19,19 @@
 
   /* 먹/텍스트 */
   --ink: #2e1f0e;
-  --ink-dim: #8a6e48;
+  /* W-2: 보조 텍스트 대비 개선. 기존 #8a6e48(on --hanji 3.83:1, AA 미달) →
+     #7a5e38(4.84:1)로 한 단계 어둡혀 본문 대비 WCAG AA(4.5:1) 충족. 한지/먹 톤 유지. */
+  --ink-dim: #7a5e38;
   --ink-faint: #c4a878;
 
   /* 강조 단(丹) */
   --accent: #d4812a;
   --accent-2: #e8a040;
   --accent-glow: rgba(212, 129, 42, 0.35);
+  /* W-3: 인포바 섹션 라벨(panel-label) 전용 단(丹) 톤. 기존 --accent(#d4812a,
+     on --hanji 2.42:1)는 소형 라벨 가독성 부족 → 더 진한 번트 단으로 darken한
+     #9a5012(4.78:1, AA 충족)로 라벨 대비 확보(단 정체성 유지). */
+  --accent-label: #9a5012;
 
   /* 텍스트 */
   --text: #2e1f0e;
@@ -178,9 +184,11 @@ body {
 
 .panel-label {
   font-family: 'Jua', sans-serif;
-  font-size: 11px;
+  /* W-3: 11px → 12px 격상 + 단(丹) 라벨 색(--accent-label, 4.78:1)으로
+     소형 섹션 라벨 가독성 확보(AD 권장: 폰트 크기 + 대비 충족 색 병행). */
+  font-size: 12px;
   letter-spacing: 3px;
-  color: var(--ink-dim);
+  color: var(--accent-label);
   margin-bottom: 6px;
   text-align: center;
 }

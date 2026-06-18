@@ -8,6 +8,30 @@ import {
 } from './board.js';
 import { drawYutSticks, YUT_NAMES_KO, YUT_CSS_CLASS } from './yut.js';
 
+/**
+ * Canvas 드로잉 색상 상수 (W-1 정리).
+ *
+ * Canvas API는 CSS `var()`를 직접 참조하지 못하므로, style.css `:root` 팔레트와
+ * 동일한 값을 단일 출처로 모아 둔다. 값은 CSS 변수와 1:1 일치하며 수정 시 양쪽을
+ * 함께 갱신한다(시각 변화 없음 — 순수 가독성/유지보수 목적 리팩토링).
+ */
+const COLORS = {
+  ink: '#2e1f0e',          // --ink (외곽선/칸 테두리)
+  inkDim: '#8a6e48',       // --ink-dim (HOME/GOAL 보조 라벨)
+  accent: '#d4812a',       // --accent (강조 링/하이라이트)
+  plankLight: '#c8924a',   // --plank-light (지름길 점선)
+  plankEdge: '#6b4220',    // --plank-edge (칸 라벨)
+  boardBase: '#e8d5a8',    // 보드 배경 베이스 (원목 크림)
+  // 칸 radialGradient stop (중앙 방 / 모서리 / 일반)
+  cellCenterInner: '#fff9d8',
+  cellCenterOuter: '#d4b040',
+  cellBigInner: '#fffcee',
+  cellBigOuter: '#d8c070',
+  cellInner: '#fff3d8',
+  cellOuter: '#e8c888',
+  pieceLabel: '#fff',      // 업힘 수 라벨(말 위)
+};
+
 /** 플레이어 색상 (P1=단청 빨강, P2=전통 청색). 한지/원목 팔레트와 동기화. */
 const PLAYER_COLOR = {
   p1: '#c0392b',   // --p1
@@ -99,7 +123,7 @@ export function createUI(els) {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
     // ── 1. 보드 배경 베이스 (원목 크림) ──
-    ctx.fillStyle = '#e8d5a8';
+    ctx.fillStyle = COLORS.boardBase;
     ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
     // ── 2. 나뭇결 레이어1 — 미세 결 (간격 18px) ──
@@ -163,7 +187,7 @@ export function createUI(els) {
     if (highlightCell !== null) {
       const c = cellToCoord(highlightCell);
       if (c) {
-        ctx.strokeStyle = '#d4812a';  // --accent
+        ctx.strokeStyle = COLORS.accent;
         ctx.lineWidth = 3;
         ctx.setLineDash([6, 3]);
         ctx.beginPath();
@@ -179,7 +203,7 @@ export function createUI(els) {
    */
   function drawConnections(ctx) {
     // ── 외곽 사각형 (--ink #2e1f0e, 3px solid) ──
-    ctx.strokeStyle = '#2e1f0e';   // --ink
+    ctx.strokeStyle = COLORS.ink;
     ctx.lineWidth = 3;
     ctx.setLineDash([]);
     // 외곽 사각형 (0~19 연결 + 19→0)
@@ -193,7 +217,7 @@ export function createUI(els) {
     ctx.stroke();
 
     // ── 지름길A 본선: 5 → 21 → 22 → 23 → 15 (--ink, 2.5px solid) ──
-    ctx.strokeStyle = '#2e1f0e';   // --ink
+    ctx.strokeStyle = COLORS.ink;
     ctx.lineWidth = 2.5;
     ctx.setLineDash([]);
     ctx.beginPath();
@@ -208,7 +232,7 @@ export function createUI(els) {
 
     // ── centerExitB 경로선: 중앙(23) → 24 → 25 → 좌하(0) (점선, --plank-light, 2px) ──
     // 지름길B 본선과 동일한 대각이지만 24/25 칸 노드를 명시적으로 경유한다.
-    ctx.strokeStyle = '#c8924a';   // --plank-light
+    ctx.strokeStyle = COLORS.plankLight;
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
@@ -218,7 +242,7 @@ export function createUI(els) {
     // ── centerExitA 경로선: 중앙(23) → 28 → 29 → 우하(15) (점선, --plank-light, 2px) ──
     // board.js에 이미 존재하는 CENTER_EXIT_A 좌표(28/29)를 사용.
     // centerExitB(23→24→25→0)와 동일 스타일로 대칭 렌더(2026-06-16 버그B 경로선 보완).
-    ctx.strokeStyle = '#c8924a';   // --plank-light
+    ctx.strokeStyle = COLORS.plankLight;
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
@@ -249,22 +273,22 @@ export function createUI(els) {
       if (c.cell === 23) {
         // 중앙 방: 황금빛 그라디언트
         grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
-        grad.addColorStop(0, '#fff9d8');
-        grad.addColorStop(1, '#d4b040');
+        grad.addColorStop(0, COLORS.cellCenterInner);
+        grad.addColorStop(1, COLORS.cellCenterOuter);
       } else if (c.big) {
         // 모서리(0, 5, 10, 15): 크림 그라디언트
         grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
-        grad.addColorStop(0, '#fffcee');
-        grad.addColorStop(1, '#d8c070');
+        grad.addColorStop(0, COLORS.cellBigInner);
+        grad.addColorStop(1, COLORS.cellBigOuter);
       } else {
         // 일반 칸
         grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
-        grad.addColorStop(0, '#fff3d8');
-        grad.addColorStop(1, '#e8c888');
+        grad.addColorStop(0, COLORS.cellInner);
+        grad.addColorStop(1, COLORS.cellOuter);
       }
 
       ctx.fillStyle = grad;
-      ctx.strokeStyle = '#2e1f0e';  // --ink
+      ctx.strokeStyle = COLORS.ink;
       ctx.lineWidth = c.big ? 2.5 : 1.5;
       ctx.beginPath();
       ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
@@ -273,7 +297,7 @@ export function createUI(els) {
 
       // 중앙 방(23) 점선 강조 링
       if (c.cell === 23) {
-        ctx.strokeStyle = '#d4812a';  // --accent
+        ctx.strokeStyle = COLORS.accent;
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 3]);
         ctx.beginPath();
@@ -284,15 +308,15 @@ export function createUI(els) {
 
       // 모서리/중앙 라벨 (start, 중앙 등) — --plank-edge 색
       if (c.cell === 0) {
-        drawCellLabel(ctx, c.x, c.y, '시작', '#6b4220');   // --plank-edge
+        drawCellLabel(ctx, c.x, c.y, '시작', COLORS.plankEdge);
       } else if (c.cell === 5) {
-        drawCellLabel(ctx, c.x, c.y, '좌상', '#6b4220');
+        drawCellLabel(ctx, c.x, c.y, '좌상', COLORS.plankEdge);
       } else if (c.cell === 10) {
-        drawCellLabel(ctx, c.x, c.y, '우상', '#6b4220');
+        drawCellLabel(ctx, c.x, c.y, '우상', COLORS.plankEdge);
       } else if (c.cell === 15) {
-        drawCellLabel(ctx, c.x, c.y, '우하', '#6b4220');
+        drawCellLabel(ctx, c.x, c.y, '우하', COLORS.plankEdge);
       } else if (c.cell === 23) {
-        drawCellLabel(ctx, c.x, c.y, '방', '#6b4220');
+        drawCellLabel(ctx, c.x, c.y, '방', COLORS.plankEdge);
       }
     }
   }
@@ -308,7 +332,7 @@ export function createUI(els) {
   function drawHomeGoalLabels(ctx) {
     const home = homeCoord();
     const goal = goalCoord();
-    ctx.fillStyle = '#8a6e48';   // --ink-dim
+    ctx.fillStyle = COLORS.inkDim;
     ctx.font = '10px "Gowun Dodum", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -417,7 +441,7 @@ export function createUI(els) {
 
     // 라벨 (업힘 수)
     if (label) {
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = COLORS.pieceLabel;
       ctx.font = `bold ${Math.floor(r * 0.95)}px "Gowun Dodum", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
