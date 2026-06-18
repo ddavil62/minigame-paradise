@@ -1,6 +1,6 @@
 # Yutnori — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. **2026-06-16 버그A/B 해소 (버그A: 중앙(23) 통과 시 BRANCH 미발송 + 진입 지름길 기준 자동 라우팅, 정확 착지에만 분기 / 버그B: centerExitA에 중간 칸 28/29 신설, `23→28→29→15→…→GOAL`, centerExitB 24/25와 거울 대칭).** 2026-06-15 §13-5·§13-6 해소 (첫칸 빽도 워프 cell 1↔19 + 지름길B 중앙 자동 centerExitB). 2026-06-15 §13-12 해소 (윷·모 잡기 중복 보너스 차단). 2026-06-12 AI 봇 추가. 2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 QA PASS. 회귀 게이트: 서버리스 **338** + E2E **25** + smoke 40 + bot-smoke **10**. 룰북 §13 12건(미해소 4 + 해소 8) — §13-1/§13-2/§13-5/§13-6/§13-12 해소.
+> LAN 1:1 한국 전통 윷놀이. Node.js + 바닐라 JS. **2026-06-18 시각 재디자인 (룰/로직 무변경): 3단 → 2단 레이아웃(왼쪽 큰 보드 + 오른쪽 320px 인포바 통합, 요트다이스 패턴 차용) / 한지·원목·먹·단 테마 + 웹폰트 Jua+Gowun Dodum(요트·오목 통일) / Canvas 보드 입체화(나뭇결·칸 radialGradient·말 3D) + centerExitA(23→28→29→15) 점선 신규 렌더(누락 보완) / 윷가락 실측 비율 재설계(H:W≈5:1 가늘고 긴 막대·반원통 단면) / 외부 에셋 0 유지(Canvas/CSS 합성). 부수 버그픽스: 2단 도입으로 보드 클릭 hit-test 어긋남(HIGH) → `main.js` 클릭 매핑을 `BOARD_SIZE(560)/rect.width|height`로 수정. 회귀 게이트에 `tests/redesign-hittest-qa.spec.js` 4건 + dpr 1/2/2.5 매트릭스 추가.** 2026-06-16 버그A/B 해소 (버그A: 중앙(23) 통과 시 BRANCH 미발송 + 진입 지름길 기준 자동 라우팅, 정확 착지에만 분기 / 버그B: centerExitA에 중간 칸 28/29 신설, `23→28→29→15→…→GOAL`, centerExitB 24/25와 거울 대칭).** 2026-06-15 §13-5·§13-6 해소 (첫칸 빽도 워프 cell 1↔19 + 지름길B 중앙 자동 centerExitB). 2026-06-15 §13-12 해소 (윷·모 잡기 중복 보너스 차단). 2026-06-12 AI 봇 추가. 2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정 QA PASS. 회귀 게이트: 서버리스 **338** + E2E **25** + smoke 40 + bot-smoke **10**. 룰북 §13 12건(미해소 4 + 해소 8) — §13-1/§13-2/§13-5/§13-6/§13-12 해소.
 
 ## 룰북 (필수 숙지)
 
@@ -19,7 +19,8 @@
 - **목적**: 친구가 놀러 왔을 때 LAN으로 즉시 즐기는 1:1 윷놀이
 - **레포 관리**: lazyslimestudio 하위 폴더(`yutnori/`)로 관리 (별도 git 분리 안 함)
 - **기술**: Node 18+ (ESM), Express 4, ws 8, 바닐라 JS (프레임워크 0), HTML5 Canvas
-- **외부 에셋**: 없음 — 모든 시각은 CSS/Canvas로 표현 (윷가락도 Canvas)
+- **외부 에셋**: 없음 — 모든 시각은 CSS/Canvas로 표현 (윷가락도 Canvas). 웹폰트만 예외(Google Fonts Jua+Gowun Dodum, 요트·오목과 통일). **2026-06-18 시각 재디자인 후에도 외부 이미지 에셋 0 유지(Canvas/CSS 합성)** — `visual_change: art`는 여전히 발생하지 않음.
+- **레이아웃(2026-06-18~)**: 2단 — 왼쪽 큰 보드 + 오른쪽 320px 인포바 통합(윷가락→남은결과→나의말→상대말→최근결과→룰). `.game-main grid 1fr 320px`, 반응형 브레이크 1100/900px. 테마: 한지(#f0e6c8)/원목(#6b4220)/먹·단 — 배경 #2c1f12, 강조 #d4812a, P1 #c0392b / P2 #1a6fad.
 
 ## 핵심 설계 원칙 (변경 시 주의)
 
@@ -64,9 +65,9 @@ yutnori/
 │       ├── network.js        # WebSocket
 │       ├── game.js           # 클라 상태 캐시 + 검증 헬퍼
 │       ├── board.js          # 칸 좌표 + 경로 정의 (서버 인덱스와 동기화. 24/25 centerExitB + 28/29 centerExitA)
-│       ├── yut.js            # 윷 결과명/한글/가락 렌더링
+│       ├── yut.js            # 윷 결과명/한글/가락 렌더링 (2026-06-18 윷가락 H:W≈5:1 반원통 단면 재설계)
 │       ├── piece.js          # 클릭 hit-test
-│       └── ui.js             # Canvas 보드/말 + DOM HUD
+│       └── ui.js             # Canvas 보드/말 + DOM HUD (2026-06-18 나뭇결·칸 radialGradient·말 3D·centerExitA 점선 + resizeBoard 캔버스 표시크기 동적화)
 └── tests/
     ├── smoke.test.js                       # 레거시 smoke (node 직접 실행, 시나리오 1~8 + 모서리 분기/shortcut 보조 assert)
     ├── bot-smoke.test.js                   # 봇 smoke (node 직접 실행, YBOT-001~005, 포트 3104. 인라인 봇 vs 서버 spawn bot.js. 10/10 — YBOT-004 결정적 inject 프로브 보강, 2026-06-16)
@@ -75,6 +76,7 @@ yutnori/
     ├── e2e-scenarios.spec.js               # Playwright E2E 25개 — 브라우저 2페이지 실전 검증
     ├── qa-defect2-captured-bonus-stuck.spec.js  # capturedBonus 잠금 회귀 가드 (QA-D2)
     ├── qa-rulefix-edge.spec.js             # FIX-1~4 + 중첩 분기 QA 엣지 26개 (QA-RF1/2/3/4/X, 2026-06-11)
+    ├── redesign-hittest-qa.spec.js         # 2단 레이아웃 보드 클릭 hit-test 회귀 (2026-06-18, 4건 + dpr 1/2/2.5 매트릭스. BOARD_SIZE/rect 매핑 가드)
     ├── rulebook-helpers.js                 # 룰북 시나리오 공용 헬퍼 (WsClient/startServer/inject/withRandom)
     └── rulebook-c1~c19-*.spec.js           # Playwright 룰북 (YR-C1~C19, §1~§13+부록 커버. c15 재입장 / c16 모서리 분기 / c17 centerExitB / c18 보너스 정밀화 / c19 §13-12 윷·모 잡기 중복 차단)
 ```
@@ -186,6 +188,7 @@ WS 연결 URL(`/ws?mode=...`)에 모드 쿼리를 부착한다. `network.js`가 
 | 봇 dedup 키에 `awaitingBranchType` 필수 (2026-06-12) | `bot.js`/`bot-smoke.test.js` 인라인 봇의 중복 행동 방지 키(`${currentTurn}\|${pendingResults}\|${awaitingBranchAt}\|${awaitingBranchType}\|${capturedBonus}`)에서 **`awaitingBranchType`을 빼면 안 됨**. 중첩 분기(corner shortcut→center 재무장) 시 서버가 `pieceIndex`(awaitingBranchAt)·큐·capturedBonus를 그대로 둔 채 `awaitingBranchType`만 `corner→center`로 바꿔 STATE를 재발송하므로, 이 필드가 키에 없으면 키가 동일해져 봇이 2차 center 분기를 "이미 처리한 상태"로 무시 → **영구 턴 잠금**. 봇이 corner에서 shortcut을 고르고 잔여 steps가 정확히 중앙을 통과할 때만 발생하는 간헐(확률적) 데드락이라 재현이 까다로움. (bot.js:169, bot-smoke.test.js:120, HIGH 수정 사유) |
 | HOME → 보드 진입 칸 수 | `advanceOneCell()` cell === -1 분기는 **`return 1`** (정통 룰: HOME에서 도 = 칸 1). 추가로 `cell === 0`에서 `return 1` 안전망 필요. 이전 `return 0` 단순화는 정통과 1칸 차이를 유발했음. (2026-05-31 룰북 §13-10 해소 사유) |
 | 분기 대기 (`awaitingBranchAt`) | THROW/MOVE 모두 차단. 중앙 도달 시 piece는 **아직 이동시키지 않은 상태**로 두고 awaiting만 기록 → CHOOSE_PATH 시 movePiece 재호출. |
+| 보드 클릭 hit-test 좌표계 (2026-06-18 시각 재디자인) | 보드 클릭 hit-test는 **`BOARD_SIZE(560) / rect.width \| rect.height`** 비율로 매핑해야 한다(`main.js`, dpr 무관). 2단 레이아웃 도입으로 `ui.js resizeBoard()`가 캔버스 **표시 크기**를 동적화하므로, 옛 `canvas.width ≡ 560` 가정으로 좌표를 스케일하면 보드 말 클릭/이동이 어긋난다(QA HIGH 발견·해소). canvas.width 기반 스케일 **금지**. 회귀 게이트: `tests/redesign-hittest-qa.spec.js`(4건) + dpr 1/2/2.5 매트릭스. |
 | `start.bat` 인코딩 | ASCII-only로 유지. 한글 포함 시 cmd 949 코드페이지에서 깨짐. |
 | `stop.bat` 방식 | tetris-battle와 달리 윈도우 타이틀(`Yutnori Server`) 기준으로 종료 → 포트 3000~3010을 공유하는 다른 프로젝트(tetris-battle, matgo) 서버를 실수로 죽이지 않음. |
 | 윷가락 fronts↔result 매핑 | 정통 룰: 평평면 개수 = 칸 수 (도=1, 개=2, 걸=3, 윷=4). **모만 예외 (0개 → 5칸).** 백도는 fronts=1이고 그 평평면이 마크 가락일 때 발동. 거꾸로(fronts=0→윷, 4→모) 매핑하면 사용자 직관과 정반대로 동작하여 즉시 신고됨. Phase 2.1 핫픽스 사유. (룰북 §13-4) |
@@ -211,8 +214,8 @@ WS 연결 URL(`/ws?mode=...`)에 모드 쿼리를 부착한다. `network.js`가 
 
 ## 파이프라인 적용 규칙
 
-- **`visual_change: ui`**가 기본 (Canvas/CSS 변경). UI 변경 시 AD3 검수 권장.
-- **`visual_change: art`는 발생하지 않음** (외부 이미지 에셋 사용 안 함). AD1/2 생략.
+- **`visual_change: ui`**가 기본 (Canvas/CSS 변경). UI 변경 시 AD3 검수 권장. 2026-06-18 시각 재디자인(레이아웃/테마/Canvas/윷가락)도 `ui`로 AD3 APPROVED.
+- **`visual_change: art`는 발생하지 않음** (외부 이미지 에셋 사용 안 함). AD1/2 생략. 웹폰트 도입(Google Fonts)도 이미지 에셋이 아니므로 art 미해당.
 - 순수 서버 변경은 `visual_change: none` 가능.
 
 ## 향후 작업 우선순위
@@ -236,3 +239,4 @@ WS 연결 URL(`/ws?mode=...`)에 모드 쿼리를 부착한다. `network.js`가 
 - 현재 상태: `docs/PROJECT.md`
 - 변경 이력: `docs/CHANGELOG.md`
 - Coder 리포트: `C:\LazySlimeStudio\.claude\specs\2026-05-25-yutnori-coder-report.md`
+- 시각 재디자인(2026-06-18): `.claude/specs/2026-06-18-yutnori-redesign-{concept,spec,report,ad3-review}.md`, `.claude/specs/2026-06-18-yutnori-yut-stick-redesign.md`

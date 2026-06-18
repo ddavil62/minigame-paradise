@@ -2,9 +2,16 @@
 
 > 한국 전통 윷놀이 LAN 1:1 대전. 사용자가 친구와 즉시 플레이용으로 발주된 신규 프로젝트.
 
-## 현재 상태 (2026-06-16)
+## 현재 상태 (2026-06-18)
 
-**버그A 중앙 통과 자동 라우팅 + 버그B centerExitA 28/29 신설** — 버그A: 말이 중앙(23)을 **정확히 안 멈추고 통과**하면 BRANCH_REQUEST 미발송 + 진입 지름길 기준 자동 라우팅(지름길A 통과 → centerExitA, 지름길B 통과 → centerExitB). 분기 결정은 모서리(5/10)·중앙(23) **정확 착지** 시에만. 중앙 정확 착지는 기존 유지(지름길A → BRANCH center 자유 선택 / 지름길B → 자동 centerExitB). 버그B: centerExitA에 중간 칸 28/29 신설(`23→28→29→15→…→GOAL`), centerExitB(24/25)와 거울 대칭, 백도 복귀 `29→28`/`28→23`. board.js `buildCenterExitA`/`CENTER_EXIT_A`로 28=(356.67,356.67)/29=(433.33,433.33) 렌더링. 변경 파일: `server.js`, `public/js/board.js`. 회귀 게이트 **서버리스 338 + bot-smoke 10/10 + E2E 25 PASS**. QA PASS(결함 0), AD3 APPROVED(겹침 없음).
+**시각 재디자인 (룰/로직 무변경)** — 사용자 요청 "지금 룰 기반으로 훨씬 보기 좋은 레이아웃 + 아트/UI 컨셉 변경"을 게임 로직 무변경으로 구현. (1) **2단 레이아웃**: 기존 3단(좌패널·보드·우패널) → 왼쪽 큰 보드 + 오른쪽 320px 인포바 통합(윷가락→남은결과→나의말→상대말→최근결과→룰, 요트다이스 패턴 차용). `.game-main grid 1fr 320px`, 반응형 1100/900px. (2) **테마(한지/원목/먹/단)**: 팔레트 교체(배경 #2c1f12, 한지 #f0e6c8, 원목 #6b4220, 강조 #d4812a, P1 #c0392b/P2 #1a6fad), 웹폰트 Jua+Gowun Dodum(요트·오목 통일), 헤더/패널/버튼 입체화. 외부 이미지 에셋 0 유지(Canvas/CSS 합성). (3) **Canvas 보드**: 나뭇결(bezier 2겹+비네팅), 칸 radialGradient(일반/모서리/중앙"방"), 말 3D, **centerExitA(23→28→29→15) 점선 신규 렌더(누락 보완, centerExitB와 대칭)**. (4) **윷가락 재설계**: 실측 장작윷 비율 — H:W≈5:1(가늘고 긴 막대, 기존 1.36:1 뭉툭 교정), 완전 반원 끝, 반원통 단면 그라디언트, yut-canvas 220×80→120×130 세로형. **부수 버그픽스(HIGH)**: 2단 도입으로 `ui.js resizeBoard()`가 캔버스 표시크기 동적화 → `main.js` 클릭 hit-test가 옛 `canvas.width≡560` 가정으로 좌표 어긋나 보드 말 클릭/이동 실패(QA 발견) → 클릭 매핑을 `BOARD_SIZE/rect.width|height`(560 좌표계, dpr 무관)로 수정. 변경 파일: `public/index.html`, `css/style.css`, `js/ui.js`, `js/yut.js`, `js/main.js`(board.js·server.js·game.js·DOM id 무변경). 회귀 게이트 **서버리스 338 + bot-smoke 10 + e2e 25 = 373 PASS + hit-test QA 4 + dpr 1/2/2.5 매트릭스**. QA PASS(HIGH 결함 해소·재검증), AD3 APPROVED(WARN 3 비강제).
+
+### 2026-06-18 주요 변경 (시각 재디자인)
+- **레이아웃**: `public/index.html` 2단 구조 + Google Fonts(Jua/Gowun Dodum), `css/style.css` 테마 팔레트·`.game-main` 그리드(1fr 320px)·입체 효과(gradient+inset+shadow+눌림)·반응형 1100/900px.
+- **Canvas 보드**: `js/ui.js` 나뭇결(bezier 2겹+비네팅)·칸 radialGradient(일반/모서리/중앙)·말 3D·centerExitA(23→28→29→15) 점선 신규 렌더(centerExitB와 대칭, 누락 보완) + `resizeBoard()`가 캔버스 표시 크기 동적화.
+- **윷가락**: `js/yut.js` H:W≈5:1 가늘고 긴 막대(기존 1.36:1 교정)·완전 반원 끝·반원통 단면 그라디언트(평평면 밝은 베이지+나뭇결 / 둥근면 짙은 갈색+볼록 음영)·백도 X 표식 유지, yut-canvas 120×130 세로형.
+- **버그픽스(HIGH)**: `js/main.js` 보드 클릭 hit-test를 `BOARD_SIZE(560)/rect.width|height` 비율 매핑으로 수정(canvas.width 동적화 무관, dpr 1/2/2.5 정합). 신규 회귀 `tests/redesign-hittest-qa.spec.js`(4건).
+- **로직 무변경**: board.js·server.js·game.js·DOM id·WS 프로토콜·STATE 스키마 전부 무수정. 서버리스 338 + bot-smoke 10 + e2e 25 = 373 회귀 PASS 유지.
 
 ### 2026-06-16 주요 변경 (버그A / 버그B 해소)
 - **버그A — 중앙 통과 자동 라우팅**: `server.js` — 중앙(23)을 잔여 steps로 통과하는 이동은 awaitingBranch를 켜지 않고 `piece.lastPath`(지름길 진입 경로) 기준으로 자동 출구 라우팅. 지름길A 통과 → centerExitA(28/29 경유), 지름길B 통과 → centerExitB(24/25 경유). BRANCH_REQUEST/분기 모달은 중앙·모서리 **정확 착지** 시에만 무장. 중첩 분기(모서리 정확 착지 후 shortcut→중앙 통과, piece.cell=5/10)와 비충돌.
@@ -60,8 +67,9 @@
 
 - ✅ 서버 권위 게임 로직 (윷 던지기, 말 이동, 잡기/업기, 지름길, 분기, 완주 판정)
 - ✅ WebSocket 프로토콜 (JOIN/READY/START/STATE/THROW_YUT/MOVE_PIECE/CHOOSE_PATH/GAME_OVER/REMATCH)
-- ✅ 보드 렌더링 (사각형 + 두 대각 지름길 + 중앙 "방")
-- ✅ 윷가락 시각화 (Canvas, 4개 가락의 앞/뒤 색상 차이)
+- ✅ 보드 렌더링 (사각형 + 두 대각 지름길 + 중앙 "방"). 2026-06-18 재디자인: 나뭇결·칸 radialGradient·말 3D·centerExitA 점선 신규 렌더, 한지/원목 테마.
+- ✅ 윷가락 시각화 (Canvas, 4개 가락의 앞/뒤 색상 차이). 2026-06-18 재디자인: H:W≈5:1 가늘고 긴 막대·반원통 단면, 세로형 캔버스.
+- ✅ 2단 레이아웃 (2026-06-18) — 왼쪽 큰 보드 + 오른쪽 320px 인포바 통합, 반응형 1100/900px, 웹폰트 Jua+Gowun Dodum.
 - ✅ 말 4×2색 렌더링 + 업힘 카운트 표시
 - ✅ 결과 큐 → 클릭으로 사용할 결과 선택 → 말 클릭 이동
 - ✅ 중앙 분기 모달
@@ -100,8 +108,9 @@
 | 낮음 | 던지기 애니메이션 (가락 회전 → 결과 노출) |
 | 낮음 | 사운드 효과 |
 
-## 테스트 현황 (2026-06-16)
+## 테스트 현황 (2026-06-18)
 
+- **시각 재디자인 hit-test QA (2026-06-18): `tests/redesign-hittest-qa.spec.js` 4/4 PASS + dpr 1/2/2.5 매트릭스**: 2단 레이아웃 도입으로 캔버스 표시 크기가 동적화된 환경에서 보드 클릭 hit-test가 `BOARD_SIZE(560)/rect.width|height` 비율로 정확히 매핑되는지 검증(말 클릭/이동 좌표 정합). 회귀 게이트.
 - **봇 smoke (YBOT-001~005, 포트 3104): 10/10 PASS**: 봇 vs 봇 1판 완주 + 3판 연속 REMATCH 완주 + corner/center 분기 응답 + capturedBonus 던지기. 2026-06-16 YBOT-004를 결정적 inject 프로브로 보강(중앙 통과 자동 라우팅 검증). 인라인 봇 vs 서버 spawn bot.js 대전. `node tests/bot-smoke.test.js`. 데드락 0.
 - **서버리스 회귀 338/338 PASS**: 이전 327 + 신규 11건(버그A 중앙 통과 자동 라우팅 + 버그B centerExitA 28/29 경유/잡기/업기/백도). 갱신 9파일: yut.unit, rulebook-c2/c7/c11/c12/c13/c14/c16, ws.scenarios, qa-rulefix-edge.
   - 룰북 (YR-C1~C19): 룰북 §1~§13 + 부록 커버, §13 12건 커버. c15 재입장 / c16 모서리 분기(중첩 포함) / c17 centerExitB / c18 보너스 정밀화 / c19 §13-12 윷·모 잡기 중복 차단. c5 빽도(cell1↔19 워프) / c7 분기(지름길B 자동).

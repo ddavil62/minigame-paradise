@@ -255,9 +255,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const rect = els.boardCanvas.getBoundingClientRect();
-    // 캔버스 좌표 보정 (CSS 스케일 대응)
-    const scaleX = els.boardCanvas.width / rect.width;
-    const scaleY = els.boardCanvas.height / rect.height;
+    // 클릭 좌표를 BOARD_SIZE(560) 좌표계로 변환한다.
+    // resizeBoard()가 canvas.width를 dpr 반영 내부 해상도(≈avail×dpr)로 키우므로
+    // (canvas.width/rect.width)로 스케일하면 화면 픽셀 그대로가 되어 board.js의
+    // hitTestCell/cellToCoord(560 좌표계)와 어긋난다. 렌더는 0~BOARD_SIZE 좌표를
+    // CSS 표시폭(rect)으로 스케일해 그리므로, 클릭은 CSS 표시 좌표를 560으로 역매핑한다(dpr 무관).
+    // 보드는 정사각이라 x/y 스케일은 같으나 안전하게 각 축의 표시 크기로 나눈다.
+    const scaleX = BOARD_SIZE / rect.width;
+    const scaleY = BOARD_SIZE / rect.height;
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
 

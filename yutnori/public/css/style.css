@@ -1,26 +1,54 @@
 /**
  * Yutnori — 전체 스타일.
- * 색상은 한지/먹/주황을 기반으로 한 전통 한국 보드게임 톤.
+ * 한지(韓紙) + 원목 + 먹(墨) + 단(丹) 무드의 전통-모던 보드게임 톤.
+ * 외부 이미지 에셋 0 — 모든 질감은 CSS/Canvas로 표현.
  */
 
 :root {
-  --bg: #1a1410;
-  --bg-soft: #2a1f18;
-  --panel-bg: rgba(60, 45, 30, 0.85);
-  --panel-border: #6a4a2a;
-  --text: #f3e2b2;
-  --text-dim: #c2a878;
-  --accent: #e08a3c;
-  --p1: #e74c3c;
-  --p2: #3498db;
-  --win: #2ecc71;
-  --lose: #e74c3c;
-  --yut-do: #d4a574;
-  --yut-gae: #b88c5a;
-  --yut-geol: #c97f3f;
-  --yut-yut: #e08a3c;
-  --yut-mo: #e74c3c;
-  --yut-backdo: #ff5555;
+  /* 배경/질감 */
+  --bg: #2c1f12;
+  --bg-soft: #3d2b1a;
+  --hanji: #f0e6c8;
+  --hanji-2: #e8d9b6;
+  --hanji-line: #d4c49a;
+
+  /* 원목 보드 */
+  --plank-light: #c8924a;
+  --plank-dark: #9a6228;
+  --plank-edge: #6b4220;
+
+  /* 먹/텍스트 */
+  --ink: #2e1f0e;
+  --ink-dim: #8a6e48;
+  --ink-faint: #c4a878;
+
+  /* 강조 단(丹) */
+  --accent: #d4812a;
+  --accent-2: #e8a040;
+  --accent-glow: rgba(212, 129, 42, 0.35);
+
+  /* 텍스트 */
+  --text: #2e1f0e;
+  --text-dim: #8a6e48;
+  --text-on-wood: #fdf3e3;
+
+  /* 플레이어 말 */
+  --p1: #c0392b;
+  --p1-light: rgba(192, 57, 43, 0.65);
+  --p2: #1a6fad;
+  --p2-light: rgba(26, 111, 173, 0.65);
+
+  /* 상태 */
+  --win: #3a7d44;
+  --lose: #c0392b;
+
+  /* 윷 결과 */
+  --yut-do: #b88c50;
+  --yut-gae: #9a7040;
+  --yut-geol: #c07c30;
+  --yut-yut: #d4812a;
+  --yut-mo: #c0392b;
+  --yut-backdo: #8b2020;
 }
 
 * {
@@ -32,33 +60,49 @@
 html, body {
   width: 100%;
   height: 100%;
-  background: var(--bg);
   color: var(--text);
-  font-family: 'Malgun Gothic', 'AppleGothic', 'Noto Sans KR', sans-serif;
+  font-family: 'Gowun Dodum', 'Apple SD Gothic Neo', sans-serif;
   overflow: hidden;
 }
 
 body {
   display: flex;
   flex-direction: column;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, .025) 0 28px,
+      rgba(255, 255, 255, .018) 28px 30px,
+      transparent 30px 31px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, .012) 0 60px,
+      transparent 60px 62px
+    ),
+    linear-gradient(160deg, var(--bg), #1e1308);
 }
 
 /* ── 헤더 ───────────────────────────────────────────────────────── */
 .game-header {
   padding: 10px 20px;
-  border-bottom: 1px solid var(--panel-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  background: var(--bg-soft);
+  background: linear-gradient(180deg, var(--bg-soft), var(--plank-dark));
+  border-bottom: 3px solid var(--plank-edge);
+  box-shadow:
+    inset 0 1px 0 rgba(253, 243, 227, .25),
+    0 4px 12px rgba(0, 0, 0, .4);
 }
 
 .game-header h1 {
-  font-size: 22px;
-  letter-spacing: 6px;
-  color: var(--accent);
-  text-shadow: 0 0 6px rgba(224, 138, 60, 0.4);
+  font-family: 'Jua', sans-serif;
+  font-size: 24px;
+  letter-spacing: 3px;
+  color: var(--text-on-wood);
+  text-shadow: 0 2px 0 rgba(46, 31, 14, .5);
 }
 
 .status-bar {
@@ -66,76 +110,85 @@ body {
   align-items: center;
   gap: 12px;
   font-size: 13px;
-  color: var(--text);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--text-on-wood);
 }
 
 .status-divider {
   opacity: 0.35;
 }
 
+#turn-label {
+  color: var(--accent-2);
+  font-weight: bold;
+}
+
 /* ── 상시 뒤로가기 버튼 ───────────────────────────────── */
 .btn-back-to-lobby {
-  background: transparent;
-  color: rgba(194, 168, 120, 0.6);   /* --text-dim 60% 투명 */
-  border: 1px solid rgba(106, 74, 42, 0.5);  /* --panel-border 50% 투명 */
+  background: rgba(46, 31, 14, .3);
+  color: rgba(253, 243, 227, .65);
+  border: 1px solid rgba(107, 66, 32, .5);
   padding: 5px 12px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: 'Malgun Gothic', 'AppleGothic', 'Noto Sans KR', sans-serif;
+  font-family: 'Gowun Dodum', sans-serif;
   letter-spacing: 0.5px;
+  cursor: pointer;
   flex-shrink: 0;
   transition: background 150ms ease-out, color 150ms ease-out;
 }
 .btn-back-to-lobby:hover {
-  background: rgba(106, 74, 42, 0.2);
-  color: var(--text-dim);
+  background: rgba(107, 66, 32, .3);
+  color: var(--text-on-wood);
 }
 
-#turn-label {
-  color: var(--accent);
-  font-weight: bold;
-}
-
-/* ── 메인 ──────────────────────────────────────────────────────── */
+/* ── 메인 (2단: 보드 1fr + 인포바 고정폭) ───────────────────────── */
+/* 요트다이스 .screen-game(grid 360px 1fr) 패턴을 거울로 적용:
+   윷놀이는 보드가 왼쪽 큰 영역, 인포바가 오른쪽 고정폭. */
 .game-main {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  padding: 12px 16px;
   min-height: 0;
+  align-items: stretch;
 }
 
-/* ── 사이드 패널 ───────────────────────────────────────────────── */
-.side-panel {
+/* ── 우측 통합 인포바 ─────────────────────────────────────────── */
+.info-bar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 220px;
-  flex-shrink: 0;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .panel-block {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 6px;
+  background: linear-gradient(180deg, var(--hanji), var(--hanji-2));
+  border: 1.5px solid var(--hanji-line);
+  border-radius: 10px;
   padding: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .5),
+    inset 0 -1px 0 rgba(0, 0, 0, .08),
+    0 2px 8px rgba(0, 0, 0, .35);
 }
 
 .panel-label {
+  font-family: 'Jua', sans-serif;
   font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
+  letter-spacing: 3px;
+  color: var(--ink-dim);
   margin-bottom: 6px;
   text-align: center;
 }
 
 .panel-sub {
   font-size: 12px;
-  color: var(--text-dim);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink-dim);
   text-align: center;
   margin-top: 6px;
 }
@@ -147,14 +200,15 @@ body {
 
 .panel-hint {
   font-size: 11px;
-  color: var(--text-dim);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink-dim);
   margin-top: 6px;
   text-align: center;
   opacity: 0.85;
   line-height: 1.4;
 }
 
-/* ── 보드 영역 ─────────────────────────────────────────────────── */
+/* ── 보드 영역 (좌측 주 영역 — 남는 공간을 채움) ─────────────────── */
 .board-area {
   position: relative;
   display: flex;
@@ -162,33 +216,46 @@ body {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  min-width: 0;
+  min-height: 0;
 }
 
+/* 보드는 정사각형이므로 좌측 컬럼의 가용 폭/높이 중 작은 쪽에 맞춰
+   최대한 크게 채운다. JS(ui.js)가 캔버스 내부 해상도를 표시 크기에
+   맞춰 산정하므로 여기서는 표시 크기만 지정한다. */
 #board-canvas {
   display: block;
-  background: #f4e9c8;
-  border: 4px solid var(--panel-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  background: transparent;  /* Canvas 자체가 배경(나뭇결)을 그림 */
+  border: none;             /* 기존 4px solid 제거 */
+  border-radius: 10px;
+  box-shadow:
+    0 6px 28px rgba(0, 0, 0, .55),
+    0 0 0 4px var(--plank-edge);
+  width: auto;
+  height: auto;
   max-width: 100%;
-  max-height: calc(100vh - 180px);
+  max-height: 100%;
 }
 
 /* ── 윷가락 캔버스 + 결과 ───────────────────────────────────── */
 #yut-canvas {
   display: block;
   margin: 0 auto 6px;
-  background: #0a0a0f;
+  background: transparent;  /* yut.js drawYutSticks가 원목 트레이 배경 그림 */
   border-radius: 4px;
-  width: 100%;
+  /* 세로형(120×130) 캔버스: 가로 stretch(width:100%) 대신 고유 비율 유지.
+     panel-block 폭이 좁아지면 max-width로 축소되며 비율 보존(height:auto). */
+  width: 120px;
+  max-width: 100%;
+  height: auto;
 }
 
 .yut-result {
   text-align: center;
-  font-size: 28px;
-  font-weight: bold;
+  font-family: 'Jua', sans-serif;
+  font-size: 26px;
   letter-spacing: 6px;
-  color: var(--text-dim);
+  color: var(--ink-dim);
   margin: 4px 0 8px;
   min-height: 36px;
   opacity: 0.6;
@@ -199,30 +266,17 @@ body {
 .yut-result.active {
   opacity: 1;
   transform: scale(1.1);
-  text-shadow: 0 0 12px rgba(224, 138, 60, 0.8);
+  text-shadow: 0 0 12px var(--accent-glow);
 }
 
-.yut-result.yut-do { color: var(--yut-do); }
-.yut-result.yut-gae { color: var(--yut-gae); }
-.yut-result.yut-geol { color: var(--yut-geol); }
-.yut-result.yut-yut { color: var(--yut-yut); }
-.yut-result.yut-mo { color: var(--yut-mo); }
+.yut-result.yut-do    { color: var(--yut-do); }
+.yut-result.yut-gae   { color: var(--yut-gae); }
+.yut-result.yut-geol  { color: var(--yut-geol); }
+.yut-result.yut-yut   { color: var(--yut-yut); }
+.yut-result.yut-mo    { color: var(--yut-mo); }
 .yut-result.yut-backdo {
   color: var(--yut-backdo);
-  text-shadow: 0 0 14px rgba(255, 85, 85, 0.7);
-}
-
-/* 백도 칩: 빨간 강조 + 좌측 마이너스 기호 효과 */
-.result-chip.yut-backdo {
-  background: var(--yut-backdo);
-  color: #1a1410;
-  border-color: var(--yut-backdo);
-  box-shadow: 0 0 10px rgba(255, 85, 85, 0.5);
-}
-.result-chip.yut-backdo.selected {
-  background: #fff;
-  color: var(--yut-backdo);
-  border-color: var(--yut-backdo);
+  text-shadow: 0 0 14px rgba(139, 32, 32, .7);
 }
 
 /* ── 결과 큐 (칩) ─────────────────────────────────────────────── */
@@ -236,40 +290,55 @@ body {
 
 .queue-empty {
   font-size: 12px;
-  color: var(--text-dim);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink-dim);
   opacity: 0.5;
   align-self: center;
 }
 
 .result-chip {
-  padding: 4px 10px;
-  background: var(--bg-soft);
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: bold;
+  padding: 5px 12px;
+  background: linear-gradient(180deg, var(--hanji), var(--hanji-2));
+  border: 1.5px solid var(--hanji-line);
+  border-radius: 16px;
+  color: var(--ink);
+  font-family: 'Jua', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
   cursor: pointer;
+  box-shadow: 0 2px 0 var(--plank-edge), 0 3px 6px rgba(0, 0, 0, .2);
   transition: transform 0.12s, box-shadow 0.12s;
-  font-family: inherit;
-  letter-spacing: 2px;
 }
 
 .result-chip:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(224, 138, 60, 0.4);
+  box-shadow: 0 3px 0 var(--plank-edge), 0 4px 10px rgba(0, 0, 0, .25);
 }
 
 .result-chip.selected {
-  background: var(--accent);
-  color: #1a1410;
-  border-color: var(--accent);
-  box-shadow: 0 0 12px rgba(224, 138, 60, 0.6);
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: var(--text-on-wood);
+  border-color: var(--plank-dark);
+  box-shadow: 0 2px 0 var(--plank-dark), 0 0 10px var(--accent-glow);
 }
 
 .result-chip:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* 백도 칩 */
+.result-chip.yut-backdo {
+  background: linear-gradient(180deg, #aa3030, var(--yut-backdo));
+  color: #fdf3e3;
+  border-color: var(--yut-backdo);
+  box-shadow: 0 2px 0 #5a1010, 0 3px 6px rgba(0, 0, 0, .3);
+}
+.result-chip.yut-backdo.selected {
+  background: linear-gradient(180deg, #cc4040, var(--yut-backdo));
+  color: #fdf3e3;
+  border-color: var(--yut-backdo);
+  box-shadow: 0 2px 0 var(--yut-backdo), 0 0 10px rgba(139, 32, 32, .5);
 }
 
 /* ── 말 상태 표시 ─────────────────────────────────────────────── */
@@ -284,14 +353,15 @@ body {
   height: 28px;
   border-radius: 50%;
   background: var(--p1);
-  border: 2px solid rgba(0, 0, 0, 0.4);
+  border: 1.5px solid rgba(0, 0, 0, .35);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 13px;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 12px;
   font-weight: bold;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .3);
 }
 
 .piece-dot.done {
@@ -307,14 +377,15 @@ body {
 .rules-list {
   list-style: none;
   padding-left: 0;
+  font-family: 'Gowun Dodum', sans-serif;
   font-size: 11.5px;
-  color: var(--text-dim);
+  color: var(--ink-dim);
   line-height: 1.6;
 }
 
 .rules-list li {
   padding: 2px 0;
-  border-bottom: 1px dashed rgba(106, 74, 42, 0.3);
+  border-bottom: 1px dashed var(--hanji-line);
 }
 
 .rules-list li:last-child {
@@ -324,31 +395,36 @@ body {
 .last-throw {
   text-align: center;
   font-size: 13px;
-  color: var(--text);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink);
   padding: 6px 4px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(232, 217, 182, .4);
   border-radius: 4px;
 }
 
 /* ── 버튼 ─────────────────────────────────────────────────────── */
 .primary-btn {
   padding: 10px 20px;
-  background: var(--accent);
-  color: #1a1410;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: var(--text-on-wood);
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
+  font-family: 'Jua', sans-serif;
   font-size: 14px;
-  font-weight: bold;
   letter-spacing: 2px;
   cursor: pointer;
-  font-family: inherit;
-  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 4px 0 var(--plank-dark), 0 6px 14px rgba(0, 0, 0, .35);
+  transition: transform 0.06s, box-shadow 0.06s, filter 0.1s;
   width: 100%;
 }
 
 .primary-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(224, 138, 60, 0.4);
+  filter: brightness(1.06);
+}
+
+.primary-btn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--plank-dark), 0 2px 6px rgba(0, 0, 0, .3);
 }
 
 .primary-btn:disabled {
@@ -356,6 +432,7 @@ body {
   cursor: not-allowed;
 }
 
+/* ready-btn: 중앙 절대 배치 — hover 위치 고정 필수 */
 .ready-btn {
   position: absolute;
   top: 50%;
@@ -365,20 +442,18 @@ body {
   padding: 14px 32px;
   font-size: 18px;
   z-index: 30;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 0 var(--plank-dark), 0 6px 24px rgba(0, 0, 0, .5);
 }
 
-.ready-btn.hidden {
-  display: none;
-}
+.ready-btn.hidden { display: none; }
 
 /* B 수정: .ready-btn은 translate(-50%,-50%)로 중앙 절대 배치되어 있다.
-   .primary-btn:hover의 transform: translateY(-1px)가 적용되면 중앙 기준이
-   소실되어 버튼이 우하단으로 튀는(마우스 회피) 현상이 발생한다.
-   호버 전용 규칙으로 전체 transform을 재지정해 위치 고정 + 살짝 확대만 유지. */
+   .primary-btn:active의 transform이 적용되면 중앙 기준이 소실되어
+   버튼이 튀므로, hover 전용 규칙으로 전체 transform을 재지정해
+   위치 고정 + 살짝 확대만 유지. */
 .ready-btn:hover:not(:disabled) {
   transform: translate(-50%, -50%) scale(1.04);
-  box-shadow: 0 6px 20px rgba(224, 138, 60, 0.5);
+  box-shadow: 0 4px 0 var(--plank-dark), 0 8px 20px rgba(212, 129, 42, .4);
 }
 
 /* ── AI 패널 (대기 화면 "AI랑 시작" 진입점) ─────────────────────── */
@@ -394,15 +469,15 @@ body {
   align-items: center;
   gap: 6px;
 }
-.ai-panel.hidden {
-  display: none;
-}
+.ai-panel.hidden { display: none; }
+
 .ai-divider {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 180px;
-  color: var(--text-dim);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink-dim);
   font-size: 12px;
   margin: 6px 0;
 }
@@ -411,38 +486,39 @@ body {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--panel-border);
+  background: var(--hanji-line);
 }
+
 .btn-start-ai {
-  font-family: inherit;
+  font-family: 'Jua', sans-serif;
   font-size: 16px;
-  color: var(--text);
-  background: var(--accent);
-  border: 2px solid var(--panel-border);
+  color: var(--text-on-wood);
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  border: none;
   border-radius: 12px;
   padding: 11px 26px;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 0 var(--plank-dark), 0 6px 18px rgba(0, 0, 0, .4);
   white-space: nowrap;
 }
-.btn-start-ai:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
+.btn-start-ai:hover:not(:disabled) { filter: brightness(1.06); }
 .btn-start-ai:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--plank-dark), 0 2px 8px rgba(0, 0, 0, .4);
 }
 .btn-start-ai:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
 .ai-hint {
   font-size: 11px;
-  color: var(--text-dim);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink-dim);
 }
 
 /* ── 준비 상태 표시 (P1/P2 대기/준비) ─────────────────────────── */
-/* 초대 패널을 대체. 보드 하단에 양쪽 입장/준비 상태를 표시한다.
+/* 보드 하단에 양쪽 입장/준비 상태를 표시한다.
    ready-btn이 보드 중앙에 절대 배치되므로 ready-status도 하단 절대 배치. */
 .ready-status {
   position: absolute;
@@ -454,27 +530,26 @@ body {
   justify-content: center;
   align-items: center;
   padding: 8px 14px;
-  background: rgba(20, 14, 8, 0.85);
-  border: 1px solid var(--panel-border);
-  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(240, 230, 200, .93), rgba(232, 217, 182, .93));
+  border: 1.5px solid var(--hanji-line);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(4px);
   z-index: 20;
+  font-family: 'Gowun Dodum', sans-serif;
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--ink);
 }
-.ready-status.hidden {
-  display: none;
-}
-.ready-slot {
-  white-space: nowrap;
-}
+.ready-status.hidden { display: none; }
+
+.ready-slot { white-space: nowrap; }
+
 .ready-mark {
   font-weight: bold;
-  color: var(--text-dim);
+  color: var(--ink-dim);
   margin-left: 4px;
 }
-.ready-mark.ready {
-  color: var(--win);  /* --win: #2ecc71 */
-}
+.ready-mark.ready { color: var(--win); }
 
 /* ── 카운트다운 ───────────────────────────────────────────────── */
 .countdown {
@@ -482,14 +557,13 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  font-family: 'Jua', sans-serif;
   font-size: 96px;
-  font-weight: bold;
   color: var(--accent);
-  text-shadow: 0 0 32px rgba(224, 138, 60, 0.8);
+  text-shadow: 0 0 32px var(--accent-glow);
   z-index: 25;
   pointer-events: none;
 }
-
 .countdown.hidden { display: none; }
 .countdown.go { color: var(--win); font-size: 64px; }
 
@@ -505,28 +579,28 @@ body {
 .branch-modal {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, .55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 40;
 }
-
 .branch-modal.hidden { display: none; }
 
 .branch-card {
-  background: var(--bg-soft);
+  background: linear-gradient(180deg, var(--hanji), var(--hanji-2));
   border: 2px solid var(--accent);
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 20px;
   text-align: center;
   max-width: 320px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, .65);
 }
 
 .branch-title {
+  font-family: 'Gowun Dodum', sans-serif;
   font-size: 16px;
-  color: var(--text);
+  color: var(--ink);
   margin-bottom: 16px;
   line-height: 1.5;
 }
@@ -541,34 +615,40 @@ body {
 .result-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, .75);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
 }
-
 .result-overlay.hidden { display: none; }
 
 .result-card {
-  background: var(--bg-soft);
+  background: linear-gradient(180deg, var(--hanji), var(--hanji-2));
   border: 2px solid var(--accent);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 32px 48px;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, .7),
+    0 0 0 4px rgba(212, 129, 42, .2);
 }
 
 .result-text {
-  font-size: 28px;
-  font-weight: bold;
+  font-family: 'Jua', sans-serif;
+  font-size: 30px;
+  letter-spacing: 3px;
   color: var(--accent);
   margin-bottom: 16px;
-  letter-spacing: 2px;
 }
 
-.result-overlay.win .result-text { color: var(--win); text-shadow: 0 0 16px rgba(46, 204, 113, 0.7); }
-.result-overlay.lose .result-text { color: var(--lose); }
+.result-overlay.win .result-text {
+  color: var(--win);
+  text-shadow: 0 0 20px rgba(58, 125, 68, .5);
+}
+.result-overlay.lose .result-text {
+  color: var(--lose);
+}
 
 .rematch-btn {
   margin: 8px 0;
@@ -576,7 +656,6 @@ body {
   padding: 12px 24px;
   font-size: 16px;
 }
-
 .rematch-btn.hidden { display: none; }
 
 /* ── 로비 복귀 버튼 ─────────────────────────────────────── */
@@ -584,25 +663,22 @@ body {
   margin: 8px 0;
   width: 100%;
   padding: 10px 24px;
-  border: 1px solid rgba(245, 233, 201, 0.3);
+  border: 1.5px solid var(--hanji-line);
   border-radius: 8px;
   background: transparent;
-  color: rgba(245, 233, 201, 0.8);
+  color: var(--ink-dim);
+  font-family: 'Gowun Dodum', sans-serif;
   font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
   transition: background 150ms ease-out;
-  font-family: inherit;
   display: block;
 }
-
-.return-lobby-btn:hover {
-  background: rgba(245, 233, 201, 0.1);
-}
+.return-lobby-btn:hover { background: rgba(212, 196, 154, .25); }
 
 .result-hint {
   font-size: 12px;
-  color: var(--text-dim);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink-dim);
   margin-top: 8px;
 }
 
@@ -610,10 +686,11 @@ body {
 .game-footer {
   padding: 6px 16px;
   font-size: 11px;
-  color: var(--text-dim);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--ink-faint);
   text-align: center;
-  border-top: 1px solid var(--panel-border);
-  background: var(--bg-soft);
+  border-top: 1px solid var(--plank-edge);
+  background: linear-gradient(180deg, var(--bg-soft), var(--bg));
   flex-shrink: 0;
 }
 
@@ -624,34 +701,48 @@ body {
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   padding: 10px 18px;
-  background: rgba(20, 14, 8, 0.95);
-  border: 1px solid var(--panel-border);
-  border-radius: 6px;
-  color: var(--text);
+  background: linear-gradient(180deg, var(--hanji), var(--hanji-2));
+  border: 1.5px solid var(--hanji-line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-family: 'Gowun Dodum', sans-serif;
   font-size: 13px;
   opacity: 0;
   pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
   transition: opacity 0.25s, transform 0.25s;
   z-index: 200;
 }
-
 .toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
-
 .toast.success { border-color: var(--win); color: var(--win); }
 .toast.error { border-color: var(--lose); color: var(--lose); }
 
 /* ── 반응형: 좁은 화면 ────────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .side-panel { width: 180px; }
-  #board-canvas { max-height: calc(100vh - 200px); }
+  .game-main { grid-template-columns: 1fr 280px; }
 }
 
+/* 좁아지면 세로 스택: 보드 위 + 인포바 아래(가로 정렬) */
 @media (max-width: 900px) {
-  .game-main { flex-direction: column; padding: 8px; gap: 8px; }
-  .side-panel { flex-direction: row; width: 100%; gap: 8px; flex-wrap: wrap; }
-  .panel-block { flex: 1 1 30%; min-width: 140px; }
-  #board-canvas { max-height: 60vh; }
+  .game-main {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 8px;
+  }
+  .board-area { flex: 1 1 auto; }
+  .info-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-y: visible;
+    width: 100%;
+    gap: 8px;
+  }
+  .info-bar .panel-block { flex: 1 1 30%; min-width: 140px; }
+  #board-canvas { max-height: 56vh; }
 }
+</content>
+</invoke>

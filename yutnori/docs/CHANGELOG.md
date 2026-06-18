@@ -1,5 +1,47 @@
 # Yutnori — 변경 이력
 
+## [2026-06-18] — 시각 재디자인 (2단 레이아웃 + 한지/원목 테마 + 윷가락 재설계)
+
+룰/로직 무변경. 사용자 요청 "지금 룰 기반으로 훨씬 보기 좋은 레이아웃 + 아트/UI 컨셉 변경"을 시각 레이어에 한정해 구현. `visual_change: ui`, AD3 APPROVED.
+
+### 변경 (레이아웃)
+- **3단 → 2단 레이아웃**: 기존 3단(좌패널·보드·우패널)을 **왼쪽 큰 보드 + 오른쪽 320px 인포바 통합**으로 재구성. 인포바 순서: 윷가락 → 남은결과 → 나의말 → 상대말 → 최근결과 → 룰. 요트다이스 인포바 패턴 차용.
+  - `public/index.html` 2단 구조 + Google Fonts(Jua/Gowun Dodum) link.
+  - `css/style.css` `.game-main { grid-template-columns: 1fr 320px }`, 반응형 브레이크 1100/900px.
+
+### 변경 (테마)
+- **한지/원목/먹/단 팔레트 교체**: 배경 #2c1f12, 한지 #f0e6c8, 원목 #6b4220, 강조 #d4812a, P1 #c0392b / P2 #1a6fad.
+- **웹폰트 Jua + Gowun Dodum** 도입(요트·오목과 통일). 외부 이미지 에셋은 0 유지(폰트만 예외).
+- 헤더/패널/버튼 입체화(gradient + inset + shadow + 눌림 효과).
+
+### 변경 (Canvas 보드)
+- `js/ui.js`: 나뭇결(bezier 곡선 2겹 + 비네팅), 칸 radialGradient(일반/모서리/중앙"방" 구분), 말 3D 입체.
+- **centerExitA(23→28→29→15) 점선 신규 렌더** — 기존 미렌더(누락)였던 centerExitA 경로선을 centerExitB와 대칭으로 추가.
+- `resizeBoard()`가 캔버스 **표시 크기**를 동적화(2단 레이아웃 폭 변화 대응).
+
+### 변경 (윷가락 재설계)
+- `js/yut.js`: 실측 장작윷 비율 리서치 기반 재설계. **H:W ≈ 5:1**(가늘고 긴 막대 — 기존 1.36:1 뭉툭 비율 교정), 완전 반원 끝, 반원통 단면 그라디언트(평평면=밝은 베이지+나뭇결 / 둥근면=짙은 갈색+볼록 음영). 백도 X 표식 유지.
+- yut-canvas 220×80 → **120×130 세로형**.
+
+### 수정 (Bugfix — HIGH)
+- **보드 클릭 hit-test 좌표 어긋남**: 2단 레이아웃 도입으로 `ui.js resizeBoard()`가 캔버스 표시 크기를 동적화하면서, `main.js`의 클릭 hit-test가 옛 `canvas.width ≡ 560` 가정으로 좌표를 스케일해 **보드 말 클릭/이동이 실패**(QA HIGH 발견).
+  - `js/main.js` 클릭 매핑을 **`BOARD_SIZE(560) / rect.width | rect.height`** 비율(560 좌표계, dpr 무관)로 수정.
+  - 신규 회귀 자산 `tests/redesign-hittest-qa.spec.js`(4건) + dpr 1/2/2.5 매트릭스.
+
+### 무변경 (로직)
+- `board.js`·`server.js`·`game.js`·DOM id·WS 프로토콜·STATE 스키마 전부 무수정.
+
+### 회귀 결과
+- **서버리스 338 + bot-smoke 10 + e2e 25 = 373 PASS** 유지 + **hit-test QA 4 PASS** + dpr 1/2/2.5 매트릭스. 시각 스크린샷 다수.
+- **QA PASS**(HIGH 결함 해소·재검증), **AD3 APPROVED**(WARN 3 비강제: 보조텍스트 대비·Canvas hex 상수화 — 선택적).
+
+### 변경 파일
+- `public/index.html`(2단 구조 + Google Fonts), `css/style.css`(테마/그리드/입체), `js/ui.js`(보드 나뭇결/칸/말/centerExitA/resizeBoard), `js/yut.js`(윷가락 비율·반원통), `js/main.js`(클릭 좌표 BOARD_SIZE 매핑).
+
+### 참고
+- 컨셉/스펙/리포트/AD3: `.claude/specs/2026-06-18-yutnori-redesign-{concept,spec,report,ad3-review}.md`
+- 윷가락 재설계: `.claude/specs/2026-06-18-yutnori-yut-stick-redesign.md`
+
 ## [2026-06-16] — 버그A 중앙 통과 자동 라우팅 + 버그B centerExitA 28/29
 
 ### 변경
