@@ -317,6 +317,118 @@ section('YACHT-LIVE-004: 본인 턴(opponentTurn=false) → 기존 KEEP 라벨 �
   assertEq(dice[0].classList.contains('selectable'), true, '본인 턴 selectable');
 }
 
+// ── YACHT-KEEP-006: rollCount 증가 + dice 값 100% 동일 → 컵 애니메이션 발동 ──
+// (2026-06-20 사용자 신고 핵심 회귀: keep 안 한 다이스가 우연히 직전과 전부 같은 면으로
+//  굴려져도(diceChanged=false) rollCount가 증가했으면 컵 애니메이션이 발동해야 한다.)
+section('YACHT-KEEP-006: rollCount 증가 + dice 전체 동일 재굴림 → 컵 발동 (이번 버그 직격)');
+{
+  const container = new StubElement('div');
+  // 1차 굴림 결과: dice=[2,2,3,4,5], rollCount=1.
+  renderDice(container, {
+    dice: [2, 2, 3, 4, 5],
+    keep: [false, false, false, false, false],
+    selectable: true,
+    rollCount: 1,
+    onToggle: () => {},
+  });
+  // 컵 시퀀스가 진행 중일 수 있으므로 타이머를 강제로 정리해 다음 굴림을 즉시 처리하게 한다.
+  if (container._cupTimer) { clearTimeout(container._cupTimer); container._cupTimer = null; }
+
+  // 2차 굴림: keep=[T,T,F,F,F] (인덱스 0,1 고정), 새 dice가 우연히 직전과 100% 동일.
+  //   dice=[2,2,3,4,5] vs prev=[2,2,3,4,5] → diceChanged=false.
+  //   기존 diceChanged 기반: rolledNow=false → 컵 미발동(버그).
+  //   수정(rollCount): 1→2 증가 → rolledNow=true → 컵 발동.
+  renderDice(container, {
+    dice: [2, 2, 3, 4, 5],
+    keep: [true, true, false, false, false],
+    selectable: true,
+    rollCount: 2,
+    onToggle: () => {},
+  });
+  assertTrue(hasCup(container), 'dice 전체 동일이어도 rollCount 증가 → 컵 발동 (버그 수정 검증)');
+  const snap = inspectDice(container);
+  assertEq(snap[0].inCup, false, '인덱스 0 keep=true → 컵 안 아님');
+  assertEq(snap[1].inCup, false, '인덱스 1 keep=true → 컵 안 아님');
+  assertEq(snap[2].inCup, true, '인덱스 2 keep=false → 컵 안 (동일값이어도)');
+  assertEq(snap[3].inCup, true, '인덱스 3 keep=false → 컵 안 (동일값이어도)');
+  assertEq(snap[4].inCup, true, '인덱스 4 keep=false → 컵 안 (동일값이어도)');
+  assertEq(container._lastRollCount, 2, '_lastRollCount가 즉시 2로 갱신됨 (무한 루프 방지)');
+}
+
+// ── YACHT-KEEP-007: rollCount 불변 재렌더(onCupDone/keep 토글) → 컵 미발동 ──
+// (무한 루프 방지 + keep 토글 기존 동작 유지 회귀.)
+section('YACHT-KEEP-007: rollCount 불변 재렌더 → 컵 미발동 (무한 루프 방지)');
+{
+  const container = new StubElement('div');
+  // 1차 굴림: rollCount=1.
+  renderDice(container, {
+    dice: [1, 2, 3, 4, 5],
+    keep: [false, false, false, false, false],
+    selectable: true,
+    rollCount: 1,
+    onToggle: () => {},
+  });
+  if (container._cupTimer) { clearTimeout(container._cupTimer); container._cupTimer = null; }
+  assertEq(container._lastRollCount, 1, '굴림 후 _lastRollCount=1');
+
+  // onCupDone → renderAll 재진입 시뮬: dice/keep 동일, rollCount 불변(1) → 컵 미발동.
+  renderDice(container, {
+    dice: [1, 2, 3, 4, 5],
+    keep: [false, false, false, false, false],
+    selectable: true,
+    rollCount: 1,
+    onToggle: () => {},
+  });
+  assertTrue(!hasCup(container), 'rollCount 불변 재렌더 → 컵 미발동');
+
+  // keep 토글 재렌더: dice 동일, rollCount 여전히 1 → 컵 미발동(기존 YACHT-KEEP-004 동작 유지).
+  renderDice(container, {
+    dice: [1, 2, 3, 4, 5],
+    keep: [false, true, true, false, false],
+    selectable: true,
+    rollCount: 1,
+    onToggle: () => {},
+  });
+  assertTrue(!hasCup(container), 'keep 토글 재렌더(rollCount 불변) → 컵 미발동');
+  const snap = inspectDice(container);
+  assertEq(snap[1].kept, true, '인덱스 1 keep 시각 적용');
+}
+
+// ── YACHT-KEEP-008: 새 턴 rollCount 0 리셋 후 첫 굴림(0→1) → 컵 발동 ──
+section('YACHT-KEEP-008: 턴 넘김 rollCount 0 리셋 → 첫 굴림(0→1) 정상 발동');
+{
+  const container = new StubElement('div');
+  // 이전 턴 마지막 굴림: rollCount=3.
+  renderDice(container, {
+    dice: [6, 6, 6, 1, 2],
+    keep: [false, false, false, false, false],
+    selectable: true,
+    rollCount: 3,
+    onToggle: () => {},
+  });
+  if (container._cupTimer) { clearTimeout(container._cupTimer); container._cupTimer = null; }
+
+  // 턴 넘김 후 새 턴 STATE: dice=[0,0,0,0,0], rollCount=0 (리셋). 컵 미발동(allZero).
+  renderDice(container, {
+    dice: [0, 0, 0, 0, 0],
+    keep: [false, false, false, false, false],
+    selectable: false,
+    rollCount: 0,
+    onToggle: () => {},
+  });
+  assertTrue(!hasCup(container), '새 턴 리셋 STATE(rollCount=0, allZero) → 컵 미발동');
+
+  // 새 턴 첫 굴림: rollCount 0→1. _lastRollCount는 0(리셋 시 미갱신)이므로 0<1 → 발동.
+  renderDice(container, {
+    dice: [4, 5, 6, 1, 2],
+    keep: [false, false, false, false, false],
+    selectable: true,
+    rollCount: 1,
+    onToggle: () => {},
+  });
+  assertTrue(hasCup(container), '새 턴 첫 굴림(rollCount 0→1) → 컵 정상 발동');
+}
+
 // ── 결과 ──────────────────────────────────────────────────────
 console.log('\n────────────────────────────────────────');
 console.log(`총 ${passed + failed}건, PASS=${passed}, FAIL=${failed}`);

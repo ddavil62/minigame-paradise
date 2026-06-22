@@ -48,7 +48,8 @@ yahtzee/
 │       ├── ui.js
 │       └── sounds.js        # 효과음 (Web Audio API 동적 생성, 음소거 localStorage 영속)
 └── tests/
-    ├── smoke.test.js        # YACHT-001~010 (131건)
+    ├── smoke.test.js        # YACHT-001~012 + LIVE-001/002 (169건)
+    ├── dice-render.test.js  # YACHT-LIVE-003/004 + YACHT-KEEP-001~008 (55건, DOM stub 노드 러너)
     └── bot-smoke.test.js    # YACHT-BOT-001~005 (25건, 봇 시나리오 — 포트 3099)
 ```
 
@@ -85,14 +86,14 @@ matgo/janggi와 동일 `getBotUrl` 옵션 패턴:
 
 ```powershell
 cd C:\LazySlimeStudio\minigames\yahtzee
-node tests/smoke.test.js        # 163건 (YACHT-001~011 + LIVE-001/002)
-node tests/dice-render.test.js  #  42건 (YACHT-LIVE-003/004 — 상대 KEEP 라벨)
+node tests/smoke.test.js        # 169건 (YACHT-001~012 + LIVE-001/002)
+node tests/dice-render.test.js  #  55건 (YACHT-LIVE-003/004 + YACHT-KEEP-001~008)
 node tests/bot-smoke.test.js    #  25건 (YACHT-BOT-001~005, 봇 시나리오)
 # 시각 검증 (선택): node server.js --port 3097 띄운 뒤
 node tests/screenshot-live-keep.js  # 두 페이지 시점 캡처 (tests/screenshots/live-*.png)
 ```
 
-기대: `총 N건, PASS=N, FAIL=0`. 합계 **230 / 230 PASS** (smoke 163 — YACHT-011 2판 연속 재대결 사이클 포함 + dice-render 42 + bot-smoke 25).
+기대: `총 N건, PASS=N, FAIL=0`. 합계 **249 / 249 PASS** (smoke 169 + dice-render 55 + bot-smoke 25).
 
 > ⚠️ WS 시나리오는 포트 3098/3099/3097을 일시적으로 사용한다. 사용자 launcher(3000)와 다른 게임 서버는 영향받지 않는다.
 
@@ -118,7 +119,8 @@ node tests/screenshot-live-keep.js  # 두 페이지 시점 캡처 (tests/screens
 | **클라 미리보기 vs 서버 점수 불일치** | 클라 `js/game.js`의 `calcCategoryScore`는 서버 `game.js`의 룰과 정확히 일치해야 한다. 룰 변경 시 양쪽 동시 수정. |
 | **실시간 keep 토글 권위** | `TOGGLE_KEEP` 핸들러는 본인 턴이 아니거나 1차 굴림 전이면 ERROR가 아니라 **조용히 무시**(콘솔만). 토스트 폭주 방지. 성공 시에만 STATE broadcast. 클라 `pendingKeep`는 STATE 도착 시 항상 서버 권위로 재동기화한다(`pendingKeep = state.keep.slice()`). |
 | **카테고리 강조 타이밍** | CATEGORY_SCORED 직후 STATE가 도착하며 renderAll이 점수표 DOM을 새로 그린다(셀 객체 교체). 그래서 onCategoryScored 시점에 즉시 classList.add 하면 다음 STATE에서 새 셀로 교체되어 사라진다. **반드시 큐(`pendingFlash`)에 보관 → renderAll 말미에 새 셀 찾아서 add**. reflow 강제(`void cell.offsetWidth`) 후 add 해야 동일 카테고리 연속 기록 시 애니메이션 재시작. |
-| **컵 진행 중 미리보기 게이트 (N3)** | 컵 굴림 애니메이션 중에는 카테고리 점수 미리보기를 숨긴다. `main.js renderAll`이 `canPreview = !els.diceArea._cupTimer`를 계산해 `renderScoreboard(ctx)`에 전달, `scoreboard.js`가 `ctx.canPreview !== false` 게이트로 `canSelectCategory`를 한정(undefined는 true — 구 호출부 호환). 컵 착지 시 `dice.js`가 `opts.onCupDone()` 호출 → `main.js`의 `onCupDone: () => renderAll()`이 재렌더해 미리보기 자동 노출. **무한 루프 가드**: 재렌더 시 dice 값이 동일하므로 `dice.js`의 `rolledNow=false`(diceChanged=false) → 컵 분기 미진입 → onCupDone 재등록 없음. |
+| **컵 진행 중 미리보기 게이트 (N3)** | 컵 굴림 애니메이션 중에는 카테고리 점수 미리보기를 숨긴다. `main.js renderAll`이 `canPreview = !els.diceArea._cupTimer`를 계산해 `renderScoreboard(ctx)`에 전달, `scoreboard.js`가 `ctx.canPreview !== false` 게이트로 `canSelectCategory`를 한정(undefined는 true — 구 호출부 호환). 컵 착지 시 `dice.js`가 `opts.onCupDone()` 호출 → `main.js`의 `onCupDone: () => renderAll()`이 재렌더해 미리보기 자동 노출. **무한 루프 가드**: 재렌더 시 rollCount가 불변이고 `rolledNow=true` 진입 즉시 `_lastRollCount`가 갱신됐으므로 `rolledNow=false` → 컵 분기 미진입 → onCupDone 재등록 없음. (2026-06-20 트리거 교체 전엔 diceChanged=false 가드였음.) |
+| **컵 굴림 트리거는 값 변화가 아닌 rollCount 증가 (2026-06-20)** | `dice.js`의 컵 흔들기/드롭 발동은 dice 값이 바뀌었는지가 아니라 서버 권위 `rollCount` 증가(`opts.rollCount > container._lastRollCount`)로 판정한다. keep 안 한 다이스가 우연히 직전과 **전부 같은 면**으로 굴려져도(1/6~1/36) 정상 발동해야 한다. `main.js`가 `renderDice` opts에 `rollCount: state.rollCount`를 반드시 전달해야 하며(누락 시 `diceChanged` 폴백으로 회귀), `rolledNow=true` 진입 즉시 `_lastRollCount`를 기록해야 무한 루프가 안 난다. 턴 넘김으로 rollCount가 줄면(리셋) else 분기에서 `_lastRollCount`도 낮춰야 새 턴 첫 굴림(0→1)이 발동한다. 회귀: YACHT-KEEP-006(직격)/007/008, smoke YACHT-012. |
 | **굴리기 버튼 연타 (N4)** | `btnRoll` 핸들러 첫 줄에서 `els.btnRoll.disabled = true`로 즉시 비활성화 → 동일 굴림 중복 ROLL_DICE 송신(레이스) 차단. STATE 수신 후 `renderActionBar`가 canRoll 재계산으로 자동 복구. native 더블클릭은 disabled 동기 적용으로 2번째 click이 억제되어 1회만 송신(dispatchEvent/force click은 우회하므로 검증 시 native dblclick 사용). |
 | **재대결 버튼 고착 (N5)** | 2판 연속 AI 재대결 시 버튼이 "재대결 대기 중…"에 영구 고착되던 버그 → `main.js onStart` 콜백에서 `rematchBtn.disabled=false; textContent='재대결'`로 리셋해야 한다. |
 | **턴 강조 셀렉터 범위 (N2)** | `current-p{n}` 강조는 **tbody에만** 적용한다(`tfoot .col-p{n}` 셀렉터 제외). tfoot에 강조 배경이 덮이면 하단 총점/소계(total-row 먹색+연황색)가 가려져 가독성이 깨진다. thead 강조(`color`)는 유지. |

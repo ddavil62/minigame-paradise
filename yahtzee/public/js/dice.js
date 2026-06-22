@@ -123,15 +123,25 @@ export function renderDice(container, opts) {
   prevDiceMap.set(container, dice.slice());
 
   const allZero = dice.every((d) => d < 1);
-  // 굴림 발생 신호: prev 대비 dice 값이 1개라도 변했는가.
-  // (keep 토글 같은 비-굴림 재렌더와 구분하기 위함.)
+  // 굴림 발생 신호(폴백): prev 대비 dice 값이 1개라도 변했는가.
+  // (keep 토글 같은 비-굴림 재렌더와 구분하기 위함. opts.rollCount가 없는 테스트 스텁 등에서만 사용.)
   const diceChanged = !!prev && dice.some((v, i) => v !== prev[i]);
-  const rolledNow = !allZero && diceChanged;
+
+  // [REROLL-ANIM 버그 수정] 컵 애니메이션 트리거를 "값 변화(diceChanged)"가 아닌 "굴림 이벤트(rollCount 증가)"로 판정.
+  //  - 기존 diceChanged 기반: keep 안 한 다이스가 우연히 직전과 100% 동일한 면으로 굴려지면(전체 프레임 동일,
+  //    확률 1/6~1/36) diceChanged=false → rolledNow=false → 컵 애니메이션 미발동. 사용자 시야엔 "안 굴러갔다"로 보임.
+  //  - 수정: STATE의 권위적 rollCount는 굴릴 때마다 +1, 턴 넘기면 0 리셋. rollCount가 직전보다 커졌으면 = 새 굴림.
+  //  - opts.rollCount가 없으면(구 호출부/테스트 스텁) 기존 diceChanged 폴백 유지(방어).
+  const prevRollCount = container._lastRollCount ?? 0;
+  const rolledNow = !allZero && (opts.rollCount != null ? opts.rollCount > prevRollCount : diceChanged);
 
   // 진행 중이던 컵 타이머 정리.
   if (container._cupTimer) { clearTimeout(container._cupTimer); container._cupTimer = null; }
 
   if (rolledNow) {
+    // 굴림 판정 시점에 즉시 _lastRollCount 갱신 → onCupDone → renderAll 재진입 시 rollCount 동일 +
+    // _lastRollCount 이미 갱신 → rolledNow=false로 컵 재발동/onCupDone 재등록 차단(무한 루프 방지).
+    if (opts.rollCount != null) container._lastRollCount = opts.rollCount;
     // [버그 수정] inCupMask/dropMask 판정 기준을 "값 비교"가 아닌 "서버 권위 keep"으로 변경.
     //  - 기존 changed 기반: 새로 굴린 다이스가 우연히 prev와 같은 값일 때 changed[i]=false →
     //    해당 칸이 컵 안에도 안 들어가고 drop 애니메이션도 안 됨 → 사용자 시야에는 "안 굴러간 것"으로 보임.
@@ -158,6 +168,12 @@ export function renderDice(container, opts) {
       }, DROP_MS);
     }, ROLL_MS);
   } else {
+    // 컵 미발동 경로. 턴 넘김으로 서버 rollCount가 리셋(이전보다 작아짐)되면 _lastRollCount도 따라 낮춰
+    // 다음 턴 첫 굴림(0→1)이 정상 발동하도록 동기화한다. (rollCount 불변/증가 케이스는 갱신하지 않아
+    // onCupDone·keep 토글 재렌더는 영향 없음 — 무한 루프/오발동 방지.)
+    if (opts.rollCount != null && opts.rollCount < prevRollCount) {
+      container._lastRollCount = opts.rollCount;
+    }
     drawDice(container, { dice, keep, selectable, onToggle: opts.onToggle, opponentTurn });
   }
 }

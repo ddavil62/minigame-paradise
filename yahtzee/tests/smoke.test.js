@@ -711,6 +711,52 @@ async function runRematchCycleScenario() {
 
 await runRematchCycleScenario();
 
+// ── YACHT-012: rollDice keep 동결/재굴림 통계 회귀 (서버 권위) ──
+// (2026-06-20 reroll-animation 버그 관련 서버 회귀 방어: 클라 렌더 버그였고 game.js는 무결이지만,
+//  "keep=true 인덱스는 값 동결, keep=false 인덱스는 재굴림 대상"이라는 서버 계약을 다회 통계로 박제한다.)
+section('YACHT-012: rollDice — keep=true 동결 + keep=false 재굴림 (다회 통계)');
+{
+  const TRIALS = 400;       // 통계 시행 횟수
+  const keep = [true, false, true, false, false];   // 인덱스 0,2 고정 / 1,3,4 재굴림 대상
+  let frozenViolations = 0; // keep 인덱스가 굴림 후 값이 바뀐 위반 횟수
+  const rerollChanged = [0, 0, 0, 0, 0]; // 인덱스별 "재굴림으로 값이 바뀐" 횟수 집계
+
+  for (let t = 0; t < TRIALS; t++) {
+    const g = createGame();
+    // 1차 굴림(5개 전부 새로). 값을 결정적으로 고정해 비교 기준을 만든다.
+    rollDice(g, 'p1');
+    g.dice = [1, 2, 3, 4, 5];   // 비교 기준 dice (1차 결과를 결정값으로 대체)
+    const before = g.dice.slice();
+    // 2차 굴림: keep 적용.
+    const r = rollDice(g, 'p1', keep);
+    if (!r.ok) { frozenViolations += 999; break; } // 굴림 실패 자체가 위반
+    for (let i = 0; i < 5; i++) {
+      if (keep[i]) {
+        // keep=true → 값이 동결되어야 한다.
+        if (g.dice[i] !== before[i]) frozenViolations += 1;
+      } else {
+        // keep=false → 재굴림 대상. 값이 바뀐 경우 집계(우연히 같을 수 있어 100% 변화는 비강제).
+        if (g.dice[i] !== before[i]) rerollChanged[i] += 1;
+      }
+    }
+  }
+
+  assertEq(frozenViolations, 0, `keep=true 인덱스(0,2) ${TRIALS}회 모두 값 동결 (위반 0)`);
+  // keep=false 인덱스(1,3,4)는 재굴림 대상이므로 다회 시행 중 최소 1회는 값이 바뀌어야 한다.
+  // (전 시행 동일값일 확률 = (1/6)^400 ≈ 0 — 사실상 불가능. 재굴림이 실제로 일어남을 입증.)
+  assertTrue(rerollChanged[1] > 0, `인덱스 1(keep=false) 재굴림으로 값 변화 발생 (${rerollChanged[1]}/${TRIALS})`);
+  assertTrue(rerollChanged[3] > 0, `인덱스 3(keep=false) 재굴림으로 값 변화 발생 (${rerollChanged[3]}/${TRIALS})`);
+  assertTrue(rerollChanged[4] > 0, `인덱스 4(keep=false) 재굴림으로 값 변화 발생 (${rerollChanged[4]}/${TRIALS})`);
+  // rollCount는 2차 굴림으로 정확히 2가 되어야 한다(굴림 이벤트 권위값 — 클라 애니메이션 트리거의 근거).
+  {
+    const g = createGame();
+    rollDice(g, 'p1');
+    assertEq(g.rollCount, 1, '1차 굴림 후 rollCount=1');
+    rollDice(g, 'p1', keep);
+    assertEq(g.rollCount, 2, '2차 굴림 후 rollCount=2 (애니메이션 트리거 권위값)');
+  }
+}
+
 // ── 요약 ────────────────────────────────────────────────────
 console.log('\n────────────────────────────────────────');
 console.log(`총 ${passed + failed}건, PASS=${passed}, FAIL=${failed}`);

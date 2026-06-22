@@ -275,6 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
         keep: pendingKeep,
         selectable,
         opponentTurn: !myTurn && state.phase === 'playing',
+        // [REROLL-ANIM] 컵 굴림 애니메이션 트리거를 "값 변화"가 아닌 "굴림 이벤트(rollCount 증가)"로 판정하기 위해 전달.
+        //  - keep 안 한 다이스가 우연히 직전과 동일 면으로 굴려져도(diceChanged=false) 정상적으로 컵 애니메이션이 발동된다.
+        rollCount: state.rollCount,
         // N3: 컵 애니메이션이 완전히 끝나는 시점에 호출된다(dice.js가 _cupTimer를 null로 정리한 직후).
         //  - 여기서 renderAll을 재실행하면 canPreview=!_cupTimer 가 true로 복원되어
         //    사용자 상호작용(keep 토글/다음 STATE) 없이도 컵 착지 즉시 점수 미리보기가 노출된다.

@@ -1,5 +1,27 @@
 # Yahtzee CHANGELOG
 
+## 2026-06-20 — 재굴림 애니메이션 미발동 버그 수정
+
+사용자 신고: "주사위 굴리기 해도 이미 나온 주사위가 다시 안 굴려지고 그대로 있는 문제가 여전히 있다." keep 안 한 다이스가 우연히 직전과 **전부 동일한 면**으로 굴려지면(non-kept 전부 같은 면, 확률 1/6~1/36) 컵 굴림 애니메이션이 아예 미발동해 "안 굴러갔다"로 보이던 버그. 컵 애니메이션 트리거가 "이전 프레임 대비 dice 값 변화(diceChanged)" 기준이라 값이 같으면 미진입했다. 서버 `game.js` 무결(클라 렌더 버그).
+
+### 변경
+- **트리거를 rollCount 증가 기준으로 교체**: `public/js/dice.js` 컵 흔들기/드롭 트리거를 `diceChanged` 대신 서버 권위 `rollCount` 증가로 교체. `const rolledNow = !allZero && (opts.rollCount != null ? opts.rollCount > prevRollCount : diceChanged)`. `opts.rollCount`가 없으면(테스트 스텁/구 호출부) 기존 `diceChanged` 폴백 유지(방어). 우연히 같은 면 재굴림도 정상 발동.
+- **`public/js/main.js`**: `renderDice(...)` 호출부 opts에 `rollCount: state.rollCount` 전달.
+- **컨테이너별 `_lastRollCount` 보관**(`_cupTimer`와 동일 컨테이너 프로퍼티 패턴): `rolledNow=true` 진입 즉시 `container._lastRollCount = opts.rollCount` 기록 → `onCupDone → renderAll` 재진입 시 rollCount 동일 + 갱신됨 → `rolledNow=false`로 컵 재발동/onCupDone 재등록 차단(무한 루프 방지).
+- **턴 리셋 동기화**: 턴 넘김으로 rollCount가 리셋(이전보다 작아짐)되면 else 분기에서 `_lastRollCount`도 따라 낮춰 다음 턴 첫 굴림(0→1)이 정상 발동하도록 동기화. (불변/증가 케이스는 미갱신 → onCupDone·keep 토글 무영향.) — 스펙은 STATE 레벨 0 리셋만 기술했으나, `_lastRollCount`가 이전 턴 값(예: 3)으로 남으면 `1 > 3 = false`로 미발동하는 엣지를 막기 위해 추가(YACHT-KEEP-008로 검증).
+- in-cup/drop 마스크는 기존 `!keep` 기준(YACHT-KEEP-001 수정) 그대로 유지(무변경).
+
+### 추가
+- `tests/dice-render.test.js`: **YACHT-KEEP-006**(핵심·버그 직격 — rollCount 증가 + dice 값 100% 동일 재굴림 → 컵 발동 + keep 인덱스 컵 제외 + non-keep 인덱스 컵 포함 + `_lastRollCount` 즉시 갱신) / **YACHT-KEEP-007**(rollCount 불변 재렌더 → 컵 미발동, 무한 루프 방지) / **YACHT-KEEP-008**(턴 넘김 rollCount 0 리셋 → 첫 굴림 0→1 정상 발동). 42 → **55**.
+- `tests/smoke.test.js`: **YACHT-012**(rollDice 400회 통계 — keep=true 인덱스 값 동결(위반 0) + keep=false 인덱스 재굴림 + rollCount 권위값 1차→1/2차→2). 163 → **169**.
+
+### 검증
+- 회귀 **249/249 PASS**(dice-render 55 + smoke 169 + bot-smoke 25, 이전 230 → +19). 서버 `game.js`/`server.js`/`bot.js` 무수정.
+- 테스트는 프로젝트 표준 node 러너(`node tests/dice-render.test.js`)로 수행(dice-render는 Playwright가 아닌 DOM stub 노드 러너). QA PASS(결함 0), AD3 APPROVED(레이아웃/스타일 무변경, 발동 빈도/타이밍만 정상화).
+
+### 참고
+- 스펙: `.claude/specs/2026-06-20-yahtzee-reroll-animation-spec.md`, 리포트: `.claude/specs/2026-06-20-yahtzee-reroll-animation-report.md`
+
 ## 2026-06-17 — UX 버그/개선 5건 (N1~N5)
 
 사용자 신고: AI가 너무 빨리 굴려 선택을 못 본다(N1), 하단 총점이 턴 강조색에 덮여 안 보인다(N2), 미리보기가 컵 굴림 중에도 떠서 긴장감이 없다(N3), 굴리기 연타 시 효과음만 나고 기회가 날아간다(N4), 2판 연속 AI 재대결 시 버튼이 영구 고착된다(N5). 서버 `game.js`/`server.js` 무수정.

@@ -110,14 +110,17 @@ yahtzee/
 - YACHT-LIVE-002: WS TOGGLE_KEEP → 양쪽 STATE.keep 일치 + 상대 턴 시도 무시
 - YACHT-LIVE-003/004: dice.js `opponentTurn` 라벨 "상대 KEEP" + 본인 턴 회귀
 - YACHT-011: 2판 연속 GAME_OVER → REMATCH → START 사이클 + 3판째 START 도달 (N5 재대결 고착 회귀, 2026-06-17)
+- YACHT-012: rollDice 400회 통계 — keep=true 동결 + keep=false 재굴림 + rollCount 권위(2026-06-20)
+- YACHT-KEEP-006/007/008: 컵 굴림 애니메이션 트리거 rollCount 기준 — 값 동일 재굴림 발동(006, 버그 직격) / rollCount 불변 미발동(007, 무한 루프 방지) / 턴 리셋 후 첫 굴림 발동(008) (2026-06-20)
 - YACHT-BOT-001~005: 봇 시나리오 25건 (포트 3099)
 
-실행: `node tests/smoke.test.js` (163/163), `node tests/dice-render.test.js` (42/42), `node tests/bot-smoke.test.js` (25/25). 누적 **230 / 230 PASS**.
+실행: `node tests/smoke.test.js` (169/169), `node tests/dice-render.test.js` (55/55), `node tests/bot-smoke.test.js` (25/25). 누적 **249 / 249 PASS**.
 
-## 현재 상태 (2026-06-17)
+## 현재 상태 (2026-06-20)
 
 - 1차 코어 + AI 봇 + 효과음 + 실시간 keep 동기화 + 카테고리 강조 애니메이션 완료.
 - UX 개선: 점수표 가로줄 정렬·카테고리 색 3상태(F/G), 봇 지연 2배(N1), 총점 가독성(N2), 컵 굴림 중 미리보기 억제→착지 시 자동 노출(N3), 굴리기 연타 차단(N4), 재대결 버튼 고착 해소(N5).
+- 버그 수정: 재굴림 애니메이션 미발동(2026-06-20) — 컵 굴림 트리거를 dice 값 변화에서 서버 권위 rollCount 증가로 교체. 우연히 직전과 같은 면으로 굴려져도 정상 발동.
 - 단독/launcher 통합 양쪽 동작 확인.
-- 모든 회귀 PASS (230/230).
+- 모든 회귀 PASS (249/249).
 - launcher games.json에 yahtzee 카드(#E84A5F) 등록.
