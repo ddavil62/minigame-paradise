@@ -275,12 +275,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     if (pieceIdx < 0) {
-      // 3) 폴백: HOME 말이 있으면 첫 번째 자동 선택 (사용자가 빈 칸 클릭 시 친절 처리)
-      pieceIdx = pickFirstHomePiece(state, myId);
-      if (pieceIdx < 0) {
-        ui.showToast('이동할 말을 클릭하세요.', 'error');
-        return;
-      }
+      // 버그 B 수정(2026-06-20): 순수 빈 칸 클릭에서 첫 HOME 말을 자동 출발시키던
+      // 폴백을 제거한다. 내 말(1단계 pickMyPieceAt) 또는 HOME 박스 영역(2단계
+      // isClickOnHomeArea)을 직접 클릭했을 때만 이동한다. 빈 칸 클릭은 안내 후 무시.
+      ui.showToast('이동할 말을 클릭하세요.', 'error');
+      return;
     }
     // 서버에 이동 요청
     net.movePiece(pieceIdx, picked);

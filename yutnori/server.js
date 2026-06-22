@@ -413,7 +413,7 @@ export function createApp(opts = {}) {
   // POST /test/inject: 게임 상태를 직접 주입한다 (Playwright E2E/WS 테스트용).
   // 요청 바디(JSON)에서 다음 필드를 선택적으로 주입한다:
   //   started, currentTurn, pendingResults, awaitingBranchAt,
-  //   awaitingBranchResult, capturedBonus, winner,
+  //   awaitingBranchResult, capturedBonus, pendingThrows, winner,
   //   pieces: { p1: [{cell,stack,done}, ...], p2: [...] }
   expressApp.post('/test/inject', express.json(), (req, res) => {
     const cfg = req.body || {};
@@ -426,6 +426,7 @@ export function createApp(opts = {}) {
     if (cfg.awaitingBranchResult !== undefined) game.awaitingBranchResult = cfg.awaitingBranchResult;
     if (cfg.awaitingBranchType !== undefined) game.awaitingBranchType = cfg.awaitingBranchType; // FIX-2
     if (cfg.capturedBonus !== undefined) game.capturedBonus = Boolean(cfg.capturedBonus);
+    if (cfg.pendingThrows !== undefined) game.pendingThrows = Number(cfg.pendingThrows) || 0;
     if (cfg.winner !== undefined) {
       game.winner = cfg.winner;
       if (cfg.winner) game.started = false;
@@ -550,6 +551,11 @@ let game = {
   // 잡기 보너스 권리 플래그 (룰북 §6-2, §13-11).
   // true면 큐가 비어도 추가 THROW_YUT 1회 허용. THROW 후 즉시 false로 소진.
   capturedBonus: false,
+  // 윷·모 "한 번 더 던지기" 적립 카운트 (버그 C 수정, 2026-06-20, Option A).
+  // 윷·모를 '던졌을 때' +1 적립, 보너스 THROW로 던질 때 -1 소비.
+  // 이동(MOVE/CHOOSE) 시점이 아니라 '던지기' 시점에만 적립/소비하므로 결과 소진 순서와 무관.
+  // hasBonus 판정은 capturedBonus(잡기 보너스)와 이 카운트(>0)로만 한다.
+  pendingThrows: 0,
 };
 
 /**
@@ -569,6 +575,8 @@ function resetGame() {
   game.winner = null;
   // §13-11: 이전 게임의 capturedBonus 잔류 방지 (REMATCH 경계 케이스).
   game.capturedBonus = false;
+  // 버그 C: 윷·모 보너스 던지기 적립 카운트도 초기화.
+  game.pendingThrows = 0;
 }
 
 function createPiece() {
@@ -594,6 +602,8 @@ function softResetRoom() {
     winner: null,
     // §13-11: 룸 전체 리셋 시 capturedBonus도 초기화 (잔류 방지).
     capturedBonus: false,
+    // 버그 C: 윷·모 보너스 던지기 적립 카운트도 초기화.
+    pendingThrows: 0,
   };
 }
 
@@ -612,6 +622,9 @@ function broadcastState() {
     // 잡기 보너스 권리. true면 큐가 비어도 추가 THROW_YUT가 가능하다.
     // 봇이 자체 추적 없이 STATE에서만 읽어 던지기 가능 여부를 판단하도록 노출(후방 호환 필드 추가).
     capturedBonus: game.capturedBonus === true,
+    // 버그 C: 윷·모 보너스 던지기 적립 카운트(>0이면 큐 비어도 추가 THROW 가능).
+    // 테스트/봇 관찰용으로 노출(후방 호환 추가 필드, 클라이언트 기존 동작 무영향).
+    pendingThrows: game.pendingThrows || 0,
     winner: game.winner,
     players: players.map((p) => ({
       id: p.id,
@@ -656,6 +669,8 @@ function passTurn() {
   game.awaitingBranchAt = null;
   game.awaitingBranchResult = null;
   game.awaitingBranchType = null; // FIX-2: 턴 종료 시 분기 유형 초기화
+  // 버그 C: 윷·모 보너스 던지기 적립도 턴 종료 시 0으로 (다음 턴 누수 방지).
+  game.pendingThrows = 0;
 }
 
 /**
@@ -927,6 +942,17 @@ wss.on('connection', (ws, req) => {
         if (enteredViaCapturedBonus) {
           game.capturedBonus = false;
         }
+        // 버그 C (2026-06-20): 윷·모 "한 번 더 던지기" 적립/소비 — 던지기 시점 기준.
+        // 이 던지기가 적립된 보너스 던지기 권리를 행사한 것이면(pendingThrows>0) 1회 소비한다.
+        // 턴 첫 던지기는 pendingThrows=0이라 아무 일도 없다. 결과 소진 순서와 무관하게
+        // "윷·모를 던진 횟수"만큼만 추가 던지기가 보장된다(이동 시점 보너스 부여 제거).
+        if (game.pendingThrows > 0) {
+          game.pendingThrows -= 1;
+        }
+        // 던진 결과가 윷·모면 "한 번 더 던지기" 권리를 1회 적립한다.
+        if (thrown.result === 'yut' || thrown.result === 'mo') {
+          game.pendingThrows += 1;
+        }
         // 백도인데 출발한 말이 하나도 없으면 자동 폐기 (큐에 넣지 않음).
         // 사용자에게 결과는 알려주되, 사용 불가하므로 다음 던지기/턴 종료로 진행한다.
         const canUseBackdo = thrown.result !== 'backdo'
@@ -946,12 +972,9 @@ wss.on('connection', (ws, req) => {
           discarded: !canUseBackdo,
         });
         // 백도가 자동 폐기됐고, 보너스도 없고, 큐도 비었으면 턴 종료
+        // 버그 C: hasBonus 판정을 capturedBonus + pendingThrows(>0)로 통일(소진 순서 무관).
         if (!canUseBackdo) {
-          const lastResultDiscard = game.pendingResults.length > 0
-            ? game.pendingResults[game.pendingResults.length - 1]
-            : null;
-          const hasBonusDiscard = game.capturedBonus === true
-            || lastResultDiscard === 'yut' || lastResultDiscard === 'mo';
+          const hasBonusDiscard = game.capturedBonus === true || game.pendingThrows > 0;
           if (game.pendingResults.length === 0 && !hasBonusDiscard) {
             passTurn();
             game.capturedBonus = false;
@@ -1019,10 +1042,10 @@ wss.on('connection', (ws, req) => {
           broadcastState();
           break;
         }
-        // D 수정: splice 이전에 "방금 소비한 결과가 보너스 대상(윷/모)인지" 확정.
-        // splice 후 큐가 비면 lastResult가 null이 되어 윷/모 보너스 권리가 사라지던 버그.
-        // 소비한 결과(useResult)가 윷/모면 큐가 비어도 보너스 던지기를 보존한다.
-        const bonusFromConsumed = useResult === 'yut' || useResult === 'mo';
+        // 버그 C 수정(2026-06-20): 이동(MOVE) 시점의 윷·모 보너스 부여를 완전히 제거한다.
+        // 윷·모 "한 번 더 던지기" 권리는 THROW_YUT 시점에 game.pendingThrows로 적립/소비되므로,
+        // 결과를 어떤 순서로 소진하든(예: [모,개]에서 개 먼저든 모 먼저든) 추가 보너스가 중복되지 않는다.
+        // (이전 D 수정의 bonusFromConsumed는 소진 순서에 보너스를 연동시켜 이중 리필을 유발했음.)
         // 결과 큐에서 차감
         game.pendingResults.splice(queueIdx, 1);
 
@@ -1052,12 +1075,10 @@ wss.on('connection', (ws, req) => {
         // - pendingResults에 남은 결과가 있으면 같은 턴 진행 (말 더 옮길 수 있음)
         // - 큐가 비었고, 마지막 결과가 yut/mo였거나 잡기 보너스가 있다면 보너스 던지기 가능
         // - 둘 다 아니면 턴 종료
-        const lastIdx = game.pendingResults.length - 1;
-        const lastResult = lastIdx >= 0 ? game.pendingResults[lastIdx] : null;
-        // D 수정: bonusFromConsumed(방금 소비한 윷/모)를 hasBonus 수식에 포함.
-        // capturedBonus(잡기 보너스)는 §13-12 가드대로 별도 계산·리셋되며 무관하게 병존.
-        const hasBonus = game.capturedBonus === true || bonusFromConsumed
-          || lastResult === 'yut' || lastResult === 'mo';
+        // 버그 C 수정: hasBonus 판정은 잡기 보너스(capturedBonus)와 윷·모 적립 던지기
+        // 권리(pendingThrows>0)로만 한다. 큐에 남은 결과의 종류(lastResult)는 보너스와 무관
+        // (큐가 비어야만 passTurn 후보가 되며, 윷·모 보너스는 던지기 시점에 이미 적립됨).
+        const hasBonus = game.capturedBonus === true || game.pendingThrows > 0;
         if (game.pendingResults.length === 0 && !hasBonus) {
           passTurn();
           // capturedBonus 리셋 — 다음 턴에 잔류하면 상대 차례에 추가 던지기 권리가
@@ -1131,9 +1152,8 @@ wss.on('connection', (ws, req) => {
           broadcastState();
           break;
         }
-        // D 수정: splice 이전에 소비한 결과(useResult=game.awaitingBranchResult)가
-        // 윷/모인지 확정. MOVE_PIECE와 동일 패턴 — splice 후 빈 큐에서 보너스 소실 방지.
-        const bonusFromConsumed2 = useResult === 'yut' || useResult === 'mo';
+        // 버그 C 수정(2026-06-20): 이동 시점 윷·모 보너스 부여 제거(MOVE_PIECE와 동일).
+        // 윷·모 추가 던지기 권리는 THROW_YUT 시점 pendingThrows로만 적립/소비된다.
         // 결과 큐 차감
         const queueIdx = game.pendingResults.indexOf(useResult);
         if (queueIdx >= 0) game.pendingResults.splice(queueIdx, 1);
@@ -1152,11 +1172,8 @@ wss.on('connection', (ws, req) => {
           broadcastState();
           break;
         }
-        const lastIdx2 = game.pendingResults.length - 1;
-        const lastResult2 = lastIdx2 >= 0 ? game.pendingResults[lastIdx2] : null;
-        // D 수정: bonusFromConsumed2(방금 소비한 윷/모)를 hasBonus2 수식에 포함.
-        const hasBonus2 = game.capturedBonus === true || bonusFromConsumed2
-          || lastResult2 === 'yut' || lastResult2 === 'mo';
+        // 버그 C 수정: hasBonus 판정은 capturedBonus + pendingThrows(>0)로만 (MOVE_PIECE와 동일).
+        const hasBonus2 = game.capturedBonus === true || game.pendingThrows > 0;
         if (game.pendingResults.length === 0 && !hasBonus2) {
           passTurn();
           game.capturedBonus = false;

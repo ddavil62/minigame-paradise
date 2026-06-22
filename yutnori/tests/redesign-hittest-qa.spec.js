@@ -150,3 +150,81 @@ test('HT-E2E: 보드 위 말을 실제 클릭하면 이동한다 (cell 7에 말 
   await context.close();
   expect(moved.queueText, "cell 7 말 클릭 후 '도'가 소비되어 큐가 비어야 함(이동 성공)").toContain('없음');
 });
+
+// ── 버그 B 회귀 (2026-06-20): 빈 칸 클릭으로 HOME 말이 출발하면 안 됨 ──
+// main.js 보드 클릭 핸들러의 3번 폴백(pickFirstHomePiece 자동 선택)을 제거했다.
+// 내 말(1단계) 또는 HOME 박스 영역(2단계)을 직접 클릭했을 때만 이동해야 하며,
+// 순수 빈 칸 클릭은 "이동할 말을 클릭하세요" 안내 후 아무 이동도 일어나지 않아야 한다.
+test('HT-BUGB: 빈 칸 클릭은 HOME 말을 출발시키지 않는다 (버그 B, 2026-06-20)', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const p1 = await context.newPage();
+  const p2 = await context.newPage();
+  await p1.goto('/');
+  await p2.goto('/');
+  for (const pg of [p1, p2]) {
+    await pg.waitForFunction(() => {
+      const el = document.getElementById('player-label');
+      return el && el.textContent && !el.textContent.includes('접속 중');
+    }, { timeout: 5000 });
+  }
+  await p1.click('#ready-btn');
+  await p2.click('#ready-btn');
+  await p1.waitForFunction(() => {
+    const b = document.getElementById('throw-btn');
+    return b && document.getElementById('ready-status')?.classList.contains('hidden');
+  }, { timeout: 8000 });
+  await p1.waitForTimeout(300);
+
+  // P1 차례 + 결과 큐에 '도' + P1 말 전원 HOME(cell -1). 보드 위에는 내 말이 하나도 없다.
+  // 이 상태에서 보드의 빈 칸(예: cell 7 좌표 = 어떤 말도 없는 위치)을 클릭한다.
+  await p1.request.post('/test/inject', {
+    data: {
+      started: true,
+      currentTurn: 'p1',
+      pendingResults: ['do'],
+      awaitingBranchAt: null,
+      pieces: {
+        p1: [{ cell: -1 }, { cell: -1 }, { cell: -1 }, { cell: -1 }],
+        p2: [{ cell: -1 }, { cell: -1 }, { cell: -1 }, { cell: -1 }],
+      },
+    },
+  });
+  await p1.waitForTimeout(400);
+
+  // '도' 칩 선택
+  await p1.click('.result-chip');
+  await p1.waitForTimeout(150);
+
+  // 토스트 캡처
+  await p1.evaluate(() => {
+    window.__qaToasts = [];
+    const t = document.getElementById('toast');
+    const obs = new MutationObserver(() => {
+      if (t.classList.contains('show')) window.__qaToasts.push(t.textContent);
+    });
+    obs.observe(t, { attributes: true, childList: true, subtree: true });
+  });
+
+  // cell 7(상단 외곽, HOME 박스 영역이 아닌 보드 중앙부의 빈 칸)의 화면 위치를 클릭.
+  const click = await p1.evaluate(async () => {
+    const board = await import('./js/board.js');
+    const cv = document.getElementById('board-canvas');
+    const rect = cv.getBoundingClientRect();
+    const coord = board.cellToCoord(7);
+    const screenX = rect.left + coord.x * (rect.width / 560);
+    const screenY = rect.top + coord.y * (rect.height / 560);
+    return { x: screenX, y: screenY };
+  });
+  await p1.mouse.click(click.x, click.y);
+  await p1.waitForTimeout(600);
+
+  const toastText = (await p1.evaluate(() => (window.__qaToasts || []).join(' | '))) || '';
+  const queueText = (await p1.evaluate(() => (document.getElementById('result-queue')?.textContent || '').trim())) || '';
+  console.log('버그B 토스트:', JSON.stringify(toastText), '| 큐:', JSON.stringify(queueText));
+
+  await context.close();
+  // 빈 칸 클릭이므로 이동 없음 → '도'가 큐에 그대로 남아 있어야 한다(자동 출발 방지).
+  expect(queueText, "빈 칸 클릭 시 '도'가 소비되지 않고 큐에 남아야 함(HOME 말 자동 출발 방지)").not.toContain('없음');
+  // 안내 토스트가 떠야 한다.
+  expect(toastText, '빈 칸 클릭 시 "이동할 말을 클릭하세요" 안내가 표시되어야 함').toContain('이동할 말');
+});

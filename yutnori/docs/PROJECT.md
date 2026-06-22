@@ -2,8 +2,18 @@
 
 > 한국 전통 윷놀이 LAN 1:1 대전. 사용자가 친구와 즉시 플레이용으로 발주된 신규 프로젝트.
 
-## 현재 상태 (2026-06-18)
+## 현재 상태 (2026-06-20)
 
+**버그 B/C 수정** — 버그 신고 기반 2건. B: 보드 빈 칸 클릭이 첫 HOME 말을 자동 출발시키던 폴백 제거(`main.js`, 내 말/HOME 박스 정확 클릭에만 이동). C: 윷·모 보너스 던지기 이중 부여로 소진 순서에 따라 던지기가 리필되던 비대칭 버그 수정 — 2026-06-17 버그 D가 도입한 `bonusFromConsumed`(이동 시점 부여) 모델을 `server.js`의 `game.pendingThrows`(던지기 시점 적립/소비) 모델로 교체, `hasBonus = capturedBonus || pendingThrows>0`. 소진 순서 무관 + 버그 D(보너스 소실) 재발 방지 양립. MOVE_PIECE·CHOOSE_PATH 양쪽 적용, STATE에 `pendingThrows` 노출(후방 호환). 회귀 게이트 **서버리스 342**(직전 338 + YR-C8-011~014 신규 4) + bot-smoke 10 + 관련 27 PASS + HT-BUGB(버그 B). YR-C8-009 기댓값 갱신(던지지 않은 yut 소비 → 리필 없음). `visual_change: none`(AD 생략), QA PASS(결함 0). 상세는 `CHANGELOG.md`.
+
+### 2026-06-20 주요 변경 (버그 B / 버그 C)
+- **버그 B — 빈 칸 클릭 오출발**: `public/js/main.js` 보드 클릭 3단계 폴백(`pickFirstHomePiece` 자동 선택) 제거. 1단계 `pickMyPieceAt`(보드 위 내 말)·2단계 `isClickOnHomeArea`+`pickFirstHomePiece`(HOME 박스 영역)에서 말 특정 시에만 `net.movePiece`. 둘 다 실패(`pieceIdx<0`) 시 "이동할 말을 클릭하세요." 토스트 후 return. 좌표 매핑(`BOARD_SIZE/rect.width|height`)은 2026-06-18 회귀 가드 유지.
+- **버그 C — 윷·모 보너스 던지기 이중 리필**: `server.js`에서 `bonusFromConsumed`(이동 시점) 제거 + `game.pendingThrows` 도입(THROW_YUT 적립/소비, MOVE_PIECE/CHOOSE_PATH `hasBonus = capturedBonus===true || pendingThrows>0`로 통일, passTurn/createGame/softResetRoom/resetGame 초기화). 던지기 권리를 **소진 순서가 아닌 적립/소비**로 판정(capturedBonus 잡기 보너스 로직과 독립). STATE 노출 + `/test/inject` 주입 지원. capturedBonus 라이프사이클·§13-12 가드 무손상.
+- **테스트**: 신규 HT-BUGB(`redesign-hittest-qa.spec.js`) + YR-C8-011(개먼저)/012(모먼저)/013(이중 적립 0)/014(버그 D 양립). YR-C8-009 기댓값 갱신.
+- 회귀: 서버리스 **342 passed**(이전 338 + 4), bot-smoke **10/10**, 버그 C 관련 27(c8/c18/c19/qa-defect2) + e2e 30(서버 가동) + 레거시 smoke 36 PASS.
+- **로직 외 무변경**: 룰북 §13 항목 변화 없음(미해소 4 + 해소 8 유지). board.js·game.js·DOM id·WS 프로토콜은 STATE에 `pendingThrows` 추가 외 무변경.
+
+### 2026-06-18 주요 변경 (시각 재디자인)
 **시각 재디자인 (룰/로직 무변경)** — 사용자 요청 "지금 룰 기반으로 훨씬 보기 좋은 레이아웃 + 아트/UI 컨셉 변경"을 게임 로직 무변경으로 구현. (1) **2단 레이아웃**: 기존 3단(좌패널·보드·우패널) → 왼쪽 큰 보드 + 오른쪽 320px 인포바 통합(윷가락→남은결과→나의말→상대말→최근결과→룰, 요트다이스 패턴 차용). `.game-main grid 1fr 320px`, 반응형 1100/900px. (2) **테마(한지/원목/먹/단)**: 팔레트 교체(배경 #2c1f12, 한지 #f0e6c8, 원목 #6b4220, 강조 #d4812a, P1 #c0392b/P2 #1a6fad), 웹폰트 Jua+Gowun Dodum(요트·오목 통일), 헤더/패널/버튼 입체화. 외부 이미지 에셋 0 유지(Canvas/CSS 합성). (3) **Canvas 보드**: 나뭇결(bezier 2겹+비네팅), 칸 radialGradient(일반/모서리/중앙"방"), 말 3D, **centerExitA(23→28→29→15) 점선 신규 렌더(누락 보완, centerExitB와 대칭)**. (4) **윷가락 재설계**: 실측 장작윷 비율 — H:W≈5:1(가늘고 긴 막대, 기존 1.36:1 뭉툭 교정), 완전 반원 끝, 반원통 단면 그라디언트, yut-canvas 220×80→120×130 세로형. **부수 버그픽스(HIGH)**: 2단 도입으로 `ui.js resizeBoard()`가 캔버스 표시크기 동적화 → `main.js` 클릭 hit-test가 옛 `canvas.width≡560` 가정으로 좌표 어긋나 보드 말 클릭/이동 실패(QA 발견) → 클릭 매핑을 `BOARD_SIZE/rect.width|height`(560 좌표계, dpr 무관)로 수정. 변경 파일: `public/index.html`, `css/style.css`, `js/ui.js`, `js/yut.js`, `js/main.js`(board.js·server.js·game.js·DOM id 무변경). 회귀 게이트 **서버리스 338 + bot-smoke 10 + e2e 25 = 373 PASS + hit-test QA 4 + dpr 1/2/2.5 매트릭스**. QA PASS(HIGH 결함 해소·재검증), AD3 APPROVED(WARN 3 비강제).
 
 ### 2026-06-18 주요 변경 (시각 재디자인)
