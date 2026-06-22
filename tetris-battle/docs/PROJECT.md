@@ -1,10 +1,10 @@
 # Tetris Battle 기획서
 
-> 최종 업데이트: 2026-05-25 — Phase 1~5 완료 (337/337 테스트 PASS, Doc Writer 통과)
+> 최종 업데이트: 2026-06-21 — AI 봇 추가 (회귀 344 PASS + bot-smoke 8/8, Q7b 기존 결함 1건 제외). 이전: 2026-05-25 Phase 1~5 완료
 
 ## 프로젝트 개요
 
-LAN 환경에서 두 PC가 IP 접속으로 1:1 대결을 펼치는 한게임 테트리스 아이템전 스타일의 웹 게임. 친구가 놀러 왔을 때 즉시 플레이 가능한 로컬 멀티플레이어 프로토타입.
+LAN 환경에서 두 PC가 IP 접속으로 1:1 대결을 펼치는 한게임 테트리스 아이템전 스타일의 웹 게임. 친구가 놀러 왔을 때 즉시 플레이 가능한 로컬 멀티플레이어 프로토타입. 혼자일 땐 AI 봇과 1인 대전도 가능(2026-06-21).
 
 ## 기술 스택
 
@@ -35,7 +35,8 @@ LAN 환경에서 두 PC가 IP 접속으로 1:1 대결을 펼치는 한게임 테
 
 ```
 tetris-battle/
-├── server.js                  # WebSocket + HTTP 정적 서빙 (단일 포트)
+├── server.js                  # WebSocket + HTTP 정적 서빙 (단일 포트) + 봇 spawn/kill
+├── bot.js                     # AI 봇: 독자 테트리스 엔진 + WS 클라이언트 (2026-06-21)
 ├── start.bat / stop.bat       # Windows 더블클릭 런처/종료
 ├── package.json
 ├── README.md
@@ -59,7 +60,8 @@ tetris-battle/
 
 | 모듈 | 파일 | 역할 |
 |---|---|---|
-| 서버 | `server.js` | 2인 1룸 중계, ITEM_USE 권위 처리(방어막/슬롯 차감), LAN IP 자동 감지, 포트 충돌 폴백 |
+| 서버 | `server.js` | 2인 1룸 중계, ITEM_USE 권위 처리(방어막/슬롯 차감), LAN IP 자동 감지, 포트 충돌 폴백, `mode=ai` 시 봇 spawn/kill |
+| AI 봇 | `bot.js` | 독자 테트리스 엔진(board/tetromino 인라인 재구현) + WS 클라이언트. 1-look 전수 탐색 휴리스틱, 800~1200ms/피스, 라인 클리어 시 GARBAGE_SEND만 중계 |
 | 게임 루프 | `public/js/game.js` | rAF 기반 중력/Lock Delay/콤보, 상태 머신 (WAITING→COUNTDOWN→PLAYING→GAME_OVER) |
 | 보드 | `public/js/board.js` | 10×22 그리드 (visible 20 + hidden 2 vanish zone), 충돌·라인 제거·가비지(동일 hole)·고스트 |
 | 피스 | `public/js/tetromino.js` | I/O/T/S/Z/J/L 7종 + 4회전 행렬 + 7-bag (Fisher-Yates) |
@@ -90,6 +92,7 @@ tetris-battle/
 | 초대 패널 | 대기 화면에 친구용 URL + [주소 복사] 버튼 + 토스트 (clipboard API + execCommand 폴백) | 완료 (Phase 4) |
 | 포트 폴백 | 3000 사용 중이면 3001~3010 자동 재시도 (wss 채널 error 핸들러 포함) | 완료 (Phase 4 revise1) |
 | Vanish Zone | 상단 hidden zone 2줄(BOARD_HEIGHT=22, VISIBLE_HEIGHT=20). 표준 SRS/한게임 스타일 스폰 → visible top 가득 시 즉시 게임오버 방지 | 완료 (Phase 5) |
+| AI 봇 대전 | 대기 화면 "🤖 AI랑 시작"(`?mode=ai`) → 독자 엔진 봇 1인 대전. 1-look 휴리스틱·800~1200ms/피스 캐주얼 난이도, garbage_bomb만 반영(dark/freeze 무시) | 완료 (2026-06-21) |
 | .exe 단일 빌드 | Plan B항 (pkg/SEA) | 미착수 (선택) |
 
 ## 게임플레이 규칙 요약

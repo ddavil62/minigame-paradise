@@ -19,6 +19,7 @@
   --hud-text: #e0e0ff;
   --slot-bg: #1e1e3a;
   --accent: #00f0f0;
+  --accent-ai: #2ecc71;
   --win: #00f000;
   --lose: #f00000;
   /* Phase 3 AD3 MED-2: 5종 아이템 색상을 CSS 변수로 통합 (인라인 HEX 제거).
@@ -425,6 +426,67 @@ body {
 
 .primary-btn.hidden {
   display: none;
+}
+
+/* ── AI 진입 패널 (대기 화면 전용) ───────────────────────────── */
+/* 타 게임(omok/yahtzee/yutnori)과 동일한 ai-panel/ai-divider/ai-hint 구조를 차용하되,
+   색·radius·폰트는 테트리스 배틀 자체 네온 테마를 유지한다(AD3 테마 우선). */
+.ai-panel {
+  margin: 18px 0 0;
+}
+
+.ai-panel.hidden {
+  display: none;
+}
+
+/* "또는" 구분선 — 좌우 가는 선 + 중앙 라벨 */
+.ai-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: rgba(224, 224, 255, 0.5);   /* --hud-text 50% 톤 */
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin: 12px 0;
+}
+
+.ai-divider::before, .ai-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--board-border);
+}
+
+.ai-divider span { padding: 0 12px; }
+
+/* "준비" 버튼(.primary-btn)과 동일 톤·크기를 유지하되, AI 진입임을 색으로 차별화. */
+.btn-start-ai {
+  padding: 12px 28px;
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--accent-ai);
+  color: var(--bg);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  letter-spacing: 2px;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.btn-start-ai:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);   /* --accent-ai 기반 */
+}
+
+.btn-start-ai:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-hint {
+  font-size: 13px;
+  color: rgba(224, 224, 255, 0.6);   /* --hud-text 60% 톤 */
+  margin-top: 10px;
 }
 
 /* ── 결과 오버레이 ──────────────────────────────────────────────── */

@@ -26,6 +26,9 @@ export function createNetwork(handlers) {
   let ws = null;
   let myPlayerId = null;
   let reconnectAttempted = false;
+  // 입장 이름을 보관한다. WS open 이전에 join()이 호출돼도(레이스) open 직후 이 값으로 JOIN을 전송한다.
+  // 재연결(close→connect) 시에도 동일 값으로 자동 재JOIN.
+  let pendingJoinName = null;
 
   /**
    * 서버에 연결한다. 자동으로 현재 호스트 기반 ws:// URL을 사용.
@@ -36,13 +39,26 @@ export function createNetwork(handlers) {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const seg = location.pathname.split('/').filter(Boolean)[0] || '';
     const wsPath = seg ? `/${seg}/ws` : '/ws';
-    const url = `${proto}://${location.host}${wsPath}`;
+
+    // mode 쿼리 파라미터 파싱 + sessionStorage 보존 (새로고침 후에도 AI 모드 유지).
+    // server.js는 mode=ai 진입 시 봇 자식 프로세스를 자동 spawn 한다.
+    const urlParams = new URLSearchParams(location.search);
+    let mode = urlParams.get('mode') || sessionStorage.getItem('tetris:mode') || '';
+    if (mode) sessionStorage.setItem('tetris:mode', mode);
+
+    const modeQuery = mode ? `?mode=${encodeURIComponent(mode)}` : '';
+    const url = `${proto}://${location.host}${wsPath}${modeQuery}`;
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
 
     ws.addEventListener('open', () => {
       console.log('[net] 연결됨');
       reconnectAttempted = false;
+      // 레이스 컨디션 수정: 연결 open 전에 보낸 JOIN은 드롭되어 서버가 플레이어를 등록하지 못하고
+      // (mode=ai 시) 봇도 spawn되지 않는다. open 직후 보관된 입장 이름으로 JOIN을 확실히 전송한다.
+      if (pendingJoinName !== null) {
+        ws.send(JSON.stringify({ type: 'JOIN', playerName: pendingJoinName }));
+      }
     });
 
     ws.addEventListener('message', (event) => {
@@ -153,8 +169,13 @@ export function createNetwork(handlers) {
     connect,
     /** 내 플레이어 ID 반환 (JOINED 이후 유효). */
     getMyId() { return myPlayerId; },
-    /** 방 입장 메시지 전송. */
-    join(playerName) { send({ type: 'JOIN', playerName: playerName || 'Player' }); },
+    /** 방 입장 메시지 전송. 연결 전 호출 시 open에서 자동 전송(레이스 방지). */
+    join(playerName) {
+      pendingJoinName = playerName || 'Player';
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'JOIN', playerName: pendingJoinName }));
+      }
+    },
     /** 게임 준비 완료 메시지 전송. */
     ready() { send({ type: 'READY' }); },
     /** 가비지 전송. */
@@ -165,6 +186,15 @@ export function createNetwork(handlers) {
     sendGameOver() { send({ type: 'GAME_OVER' }); },
     /** 재대결 요청. */
     sendRematch() { send({ type: 'REMATCH' }); },
+    /**
+     * AI 대전 진입: 현재 URL에 ?mode=ai를 붙여 재접속한다.
+     * sessionStorage에도 저장해 새로고침/재연결 시 AI 모드를 유지한다.
+     */
+    aiStart() {
+      sessionStorage.setItem('tetris:mode', 'ai');
+      const base = location.origin + location.pathname;
+      location.href = `${base}?mode=ai`;
+    },
     // Phase 2 placeholder
     sendItemUse(itemId, slotIndex) { send({ type: 'ITEM_USE', itemId, slotIndex }); },
   };

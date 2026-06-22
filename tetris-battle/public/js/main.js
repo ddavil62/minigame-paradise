@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     resultOverlay: document.getElementById('result-overlay'),
     resultText: document.getElementById('result-text'),
     readyBtn: document.getElementById('ready-btn'),
+    aiPanel: document.getElementById('ai-panel'),
+    aiStartBtn: document.getElementById('btn-start-ai'),
     rematchBtn: document.getElementById('rematch-btn'),
     playerLabel: document.getElementById('player-label'),
     opponentStatus: document.getElementById('opponent-status'),
@@ -76,11 +78,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.setStatus('상대 입장. 준비 버튼을 눌러주세요.');
         els.opponentStatus.textContent = '입장 완료';
       }
+      // "🤖 AI랑 시작" 패널: 호스트(p1) + 단독 대기 + 현재 mode≠ai 일 때만 노출.
+      // (이미 AI 모드로 들어왔거나 상대가 입장한 경우엔 숨긴다.)
+      if (els.aiPanel) {
+        const currentMode = new URLSearchParams(location.search).get('mode')
+          || sessionStorage.getItem('tetris:mode')
+          || '';
+        if (playerId === 'p1' && waiting && currentMode !== 'ai') {
+          els.aiPanel.classList.remove('hidden');
+        } else {
+          els.aiPanel.classList.add('hidden');
+        }
+      }
     },
     onStart: (countdown) => {
       // 카운트다운 표시 후 게임 시작
       ui.hideResult();
       els.readyBtn.classList.add('hidden');
+      if (els.aiPanel) els.aiPanel.classList.add('hidden');
       els.rematchBtn.classList.add('hidden');
       ui.setStatus('');
       els.opponentStatus.textContent = '대전 중';
@@ -179,6 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
     els.readyBtn.disabled = true;
     els.readyBtn.textContent = '준비 완료 (상대 대기)';
   });
+
+  // ── AI랑 시작 버튼 ──
+  // ?mode=ai 쿼리로 재접속 → network.js가 sessionStorage 저장 + WS URL에 mode=ai 부착
+  // → server.js가 봇 자식 프로세스를 자동 spawn.
+  if (els.aiStartBtn) {
+    els.aiStartBtn.addEventListener('click', () => {
+      els.aiStartBtn.disabled = true;
+      els.aiStartBtn.textContent = '🤖 AI 호출 중...';
+      net.aiStart();
+    });
+  }
 
   els.rematchBtn.addEventListener('click', () => {
     net.sendRematch();

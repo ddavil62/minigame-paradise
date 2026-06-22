@@ -52,7 +52,7 @@
     "wsPath": "/tetris-battle/ws",
     "color": "#5DADE2",
     "emoji": "🟦",
-    "botAvailable": false
+    "botAvailable": true
   },
   {
     "id": "janggi",

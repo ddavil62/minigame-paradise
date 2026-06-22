@@ -78,6 +78,12 @@
       <div id="countdown" class="countdown hidden">3</div>
       <!-- 대기 화면 P1/P2 입장 상태는 헤더의 #opponent-status가 표시한다(초대 패널 제거). -->
       <button id="ready-btn" class="primary-btn">준비</button>
+      <!-- AI 모드 진입 패널 — 클릭 시 ?mode=ai로 재접속(대기 중에만 노출, 게임 시작 후 숨김) -->
+      <div id="ai-panel" class="ai-panel hidden">
+        <div class="ai-divider"><span>또는</span></div>
+        <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
+        <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+      </div>
     </section>
 
     <!-- 우측: 상대방 미니맵 -->

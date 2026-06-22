@@ -12,6 +12,8 @@ import { WebSocketServer } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import fs from 'fs';
+import { spawn } from 'child_process';
 
 // ── 경로 ──────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -27,12 +29,14 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 // ──────────────────────────────────────────────────────────────
 /**
  * 테트리스 배틀 게임 앱 인스턴스를 생성한다.
- * @param {{ hostUrl?: string }} [opts]
+ * @param {{ hostUrl?: string, getBotUrl?: () => (string|null) }} [opts]
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
   // closure 변수: standalone listen 이후 setHostUrl로 갱신 가능.
   let HOST_URL = typeof opts.hostUrl === 'string' ? opts.hostUrl : '';
+  // mode=ai 사용자 진입 시 봇이 접속할 WS URL을 공급하는 함수(통합 라우터가 주입).
+  const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
 
   // ── Express 정적 파일 서빙 ────────────────────────────────────
   const expressApp = express();
@@ -51,11 +55,58 @@ export function createApp(opts = {}) {
  * @property {number} slotCount - 현재 보유 중인 아이템 슬롯 개수 (서버 추적)
  * @property {boolean} rematchReady - 재대결 준비 여부
  * @property {boolean} gameOver  - 자기 토프아웃 발생 후 true (Phase 3 LOW-2: 사후 ITEM_USE 차단용)
+ * @property {string} mode      - WS 접속 모드 ('human' | 'ai' | 'bot')
  * @property {import('ws').WebSocket} ws - WebSocket 인스턴스
  */
 
 /** @type {Player[]} */
 let players = [];
+
+// ── 봇 자식 프로세스 관리 (mode=ai 사용자 진입 시 자동 spawn) ────
+/** @type {import('child_process').ChildProcess|null} */
+let botChild = null;
+
+/**
+ * 봇 자식 프로세스를 spawn한다. 이미 실행 중이거나 bot.js가 없으면 무시.
+ * @returns {void}
+ */
+function spawnBotChild() {
+  const botPath = path.join(__dirname, 'bot.js');
+  if (!fs.existsSync(botPath)) {
+    console.warn('[tetris] bot.js 없음 — 봇 spawn 스킵');
+    return;
+  }
+  if (botChild && botChild.exitCode === null) {
+    console.log('[tetris] 봇 이미 실행 중');
+    return;
+  }
+  const url = getBotUrl();
+  if (!url) {
+    console.warn('[tetris] getBotUrl이 null 반환 — 봇 spawn 스킵');
+    return;
+  }
+  console.log(`[tetris] 봇 spawn: ${url}`);
+  botChild = spawn(process.execPath, [botPath, '--url', url], {
+    detached: false,
+    stdio: 'ignore',
+  });
+  botChild.on('exit', (code) => {
+    console.log(`[tetris] 봇 종료 (code=${code})`);
+    botChild = null;
+  });
+}
+
+/**
+ * 봇 자식 프로세스를 종료한다. mode=ai 사용자가 끊어졌을 때 호출.
+ * @returns {void}
+ */
+function killBotChild() {
+  if (botChild && botChild.exitCode === null) {
+    console.log('[tetris] 봇 종료 요청');
+    botChild.kill();
+    botChild = null;
+  }
+}
 
 /**
  * 룸이 게임 중(playing) 상태인지 판정한다 (Phase 3 LOW-2).
@@ -166,7 +217,12 @@ function tryGrantItem(player) {
 }
 
 // ── WebSocket 핸들러 ─────────────────────────────────────────────
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  // URL 쿼리에서 mode 파싱 (launcher/network가 mode=ai|bot|human 전달).
+  const reqUrlObj = new URL(req.url || '/', 'http://localhost');
+  const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
+  const isBot = wsMode === 'bot';
+
   // 룸 정원 초과 시 즉시 거절
   if (players.length >= 2) {
     ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
@@ -186,6 +242,7 @@ wss.on('connection', (ws) => {
     slotCount: 0,
     rematchReady: false,
     gameOver: false,
+    mode: wsMode,
     ws,
   };
   players.push(player);
@@ -212,6 +269,12 @@ wss.on('connection', (ws) => {
           // 빈 문자열일 수도 있음(LAN IP 미감지 시) → 클라이언트가 폴백 처리.
           hostUrl: HOST_URL,
         });
+        // mode=ai 단독 진입(사람 p1) 시 봇 자식 프로세스를 자동 spawn.
+        // 봇 자신(mode=bot)이 들어올 때는 재spawn 하지 않는다. players.length===1로
+        // 사람 단독 대기 시점을 보장(타이밍 경쟁 회피 — connection 직후가 아닌 JOIN 후).
+        if (wsMode === 'ai' && !isBot && players.length === 1) {
+          setTimeout(() => spawnBotChild(), 200);
+        }
         // 두 명 모두 입장 시 양쪽에 상대 입장 알림 가능 (현재는 JOINED만 사용)
         break;
 
@@ -355,6 +418,10 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log(`[server] ${player.id} 연결 해제`);
     players = players.filter((p) => p.id !== player.id);
+    // 사람(비봇)이 끊긴 경우 봇 자식 프로세스도 종료 (자원 누수 방지).
+    if (!isBot) {
+      killBotChild();
+    }
     // 상대가 있으면 disconnect 결과 알림
     if (players.length > 0) {
       const remainingId = players[0].id;

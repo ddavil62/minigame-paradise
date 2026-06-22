@@ -4,6 +4,57 @@
 
 ---
 
+## [2026-06-21] AI 봇 추가 — 독자 엔진 1인 대전
+
+### 배경
+- 10종 게임 중 테트리스 배틀만 AI 봇이 없어 1인 플레이가 불가능했다. 캐주얼 LAN 환경에서 친구가 없을 때도 즉시 즐길 수 있도록 "적당히 이길 수 있는" 난이도의 봇을 추가.
+- 아키텍처 특수성: 테트리스 배틀은 **클라이언트 권위** 구조라 서버가 보드 STATE를 브로드캐스트하지 않는다. 다른 봇(오목/요트 등)처럼 서버 STATE를 받아 한 수를 두는 방식이 불가능하므로, 봇이 **자체 보드·피스 시뮬레이터를 내장**하고 라인 클리어 시에만 `GARBAGE_SEND`를 서버에 전송하도록 설계.
+
+### 추가
+- **`bot.js`** (신규, ~550줄) — AI 봇 프로세스 (독자 테트리스 엔진 + WS 클라이언트)
+  - **독자 엔진**: `board.js`/`tetromino.js`를 import하지 않고 상수·로직을 인라인 재구현(`BOARD_WIDTH=10`, `VISIBLE_HEIGHT=20`, `VANISH_ZONE=2`, `BOARD_HEIGHT=22`, `GARBAGE_BOMB_LINES=2`, `PIECES` 7종 회전 행렬, `PIECE_COLORS`). 시뮬레이터: `createEmptyGrid`/`isColliding`/`lockPiece`/`clearLines`/`addGarbage`/`createBag`(7-bag)/`garbageFromLines`/`comboBonus`/`getStackHeight`. JSDoc에 "board.js 동기 유지 필요" 주석 명시.
+  - **평가 함수 가중치**(최상단 상수 분리): `W_CLEAR=1.0`, `W_HOLES=-3.5`, `W_BUMP=-0.5`, `W_HEIGHT=-0.5`. `score = clearLines·W_CLEAR + holes·W_HOLES + bumpiness·W_BUMP + maxHeight·W_HEIGHT`.
+  - **탐색**: 매 피스 `(x위치 × rotation 0~3)` 전수 탐색(`chooseBestPlacement`) → 하드드롭 → 시뮬 클리어 → 최고점 선택. **1-look**(넥스트 미고려, 2-look 미구현 — 캐주얼 의도).
+  - **배치 간격**: `BOT_PLACE_INTERVAL_MIN=800` + `Math.random()*BOT_PLACE_INTERVAL_RANGE(400)` = 800~1200ms/피스. 중력 시뮬레이션 생략(계산 직후 즉시 하드드롭).
+  - **메인 루프**: `scheduleNextPiece`/`doPlace`(가비지 먼저 적용 → 탐색 → 락 → 콤보 → GARBAGE_SEND/BOARD_STATE)/`resetBot`/`scheduleRematch`.
+  - **봇 송신**: `JOIN{playerName:'AI Bot'}`/`READY`/`GARBAGE_SEND{lines,combo}`/`BOARD_STATE{height,stack:[]}`/`GAME_OVER`/`REMATCH`. **봇 수신**: `JOINED`(→READY)/`START`(→resetBot+루프)/`GARBAGE_RECV`(→pendingGarbage 누적)/`ITEM_EFFECT`(garbage_bomb만 +2)/`GAME_RESULT`(→500ms 후 REMATCH 자동 동의), 나머지(`REMATCH_STATUS`/`ITEM_GRANT`/`SHIELD_BLOCK`/`OPPONENT_BOARD`) 무시.
+  - **아이템 의도적 비대칭**: `garbage_bomb`만 봇 보드에 반영, `dark`/`freeze`는 무시(봇은 시뮬레이터만 보고 중력 타이머 없음 → 사람이 아이템으로 봇을 교란하는 재미 보존). 미정의 메시지에도 프로세스 안 죽음.
+- **`tests/bot-smoke.test.js`** (신규, ad-hoc 노드 러너, 포트 3110) — TBOT-001~005, **8/8 PASS**
+  - TBOT-001 mode=ai 진입→봇 자동 spawn→JOINED(p1)→START countdown=3 / TBOT-002 봇 배치→BOARD_STATE→OPPONENT_BOARD 중계 / TBOT-003 사람 GAME_OVER→봇(p2) 승리 GAME_RESULT(topout) / TBOT-004 사람 disconnect→방 초기화(봇 연결 해제) / TBOT-005 사람 REMATCH→봇 0.5초 자동 동의→START 재수신.
+
+### 변경
+- **`server.js`**
+  - `import fs from 'fs'` + `import { spawn } from 'child_process'` 추가(`spawnBotChild`의 `fs.existsSync` 사용).
+  - `createApp(opts)`에 `getBotUrl` 옵션 추가(`typeof opts.getBotUrl === 'function' ? … : (() => null)`).
+  - `botChild` 상태 변수 + `spawnBotChild()`(`path.join(__dirname,'bot.js')` spawn, `detached:false`/`stdio:'ignore'`) / `killBotChild()` 함수 추가.
+  - `wss.on('connection', (ws, req) => …)`에서 `mode` 쿼리 파싱(`wsMode`/`isBot`). `handleUpgrade`는 이미 `req` 전달 중이라 무수정.
+  - Player typedef에 `mode: string` 필드 추가.
+  - JOIN case에서 `wsMode==='ai' && !isBot && players.length===1` 시 200ms 후 `spawnBotChild()`(사람 단독 대기 보장).
+  - close 핸들러에서 `!isBot`이면 `killBotChild()`(사람 disconnect 시 봇 프로세스 종료).
+- **`public/index.html`**: `.center-area`에 `<button id="ai-start-btn" class="ai-start-btn">🤖 AI랑 시작</button>` 추가.
+- **`public/js/network.js`**: `connect()`에서 `mode` 쿼리 파싱 + `sessionStorage['tetris:mode']` 보존 → WS URL에 `?mode=ai` 부착. `aiStart()` 헬퍼 추가(sessionStorage 저장 후 `location.href` 재접속).
+- **`public/js/main.js`**: `aiStartBtn` 참조. `onJoined`에서 `p1 && waiting && mode≠ai`일 때만 버튼 노출, `onStart`에서 숨김. 클릭 시 `disabled`+"🤖 AI 호출 중..." 후 `net.aiStart()`.
+- **`public/css/style.css`**: `.ai-start-btn` 클래스(녹색 `#2ecc71`, `.primary-btn`과 동일 톤/크기, `:hover`/`:disabled`/`.hidden`).
+- **`launcher/server.js`**: `createTetrisApp({ getBotUrl: () => 'ws://localhost:${PORT}/tetris-battle/ws?mode=bot' })` 주입(통합 모드에서도 봇 spawn).
+
+### 함정 회피 (Planner 식별 6건, QA 확인)
+- `server.js` `fs` 미import → 추가 / `BOARD_HEIGHT(22)` vs `VISIBLE_HEIGHT(20)` 혼동 → `getStackHeight` VANISH_ZONE부터 스캔·`evaluateBoard` `BOARD_HEIGHT-r` 보정 / `botCombo` 초기값 **-1**(첫 클리어 `comboBonus(0)=0`, resetBot도 -1) / `connection (ws, req)` 시그니처로 mode 파싱 / spawn 타이밍은 JOIN 직후 200ms 지연 / `network.aiStart` 반환 객체 노출.
+
+### 검증
+- **회귀 9 슈트 (포트 3055 격리)**: phase1-unit 57 / phase1-ws 37 / phase2-items 51 / phase2-edge 14 / phase3-polish 14 / phase4-launcher 20 / phase5-vanish-zone 52 / phase5-qa-edge 71 = 전부 PASS. phase3-4-qa-edge는 20 PASS / 1 FAIL(Q7b).
+- **신규 봇 smoke (포트 3110)**: bot-smoke 8/8 PASS.
+- **합계: 344 PASS / 1 FAIL(Q7b)**. blocker 0건, 봇 작업으로 새로 유발된 결함 0건.
+
+### 알려진 이슈 (봇 무관 기존 결함)
+- **phase3-4-qa-edge Q7b** — `printBanner` 검증 정규식 `/function printBanner[\s\S]+?\n\}/`이 **비탐욕**이라 함수 경계를 넘어 뒤따르는 기존 주석 `// ── 서버 시작 ──`(유니코드 `─`)까지 매칭 → 박스 문자 오검출. **baseline(봇 작업 이전 git HEAD)에서도 동일 실패**하며 실제 배너 출력은 ASCII라 기능 무해. 코더 봇 섹션(server.js 상단 import/spawnBotChild)은 정규식 매칭 범위(printBanner 본문) 밖. 회귀 게이트 슈트 임의 수정 금지 원칙상 미수정 — 정규식을 printBanner 함수 경계로 한정하는 별도 보정 이슈로 분리 권장.
+
+### 참고
+- 스펙: `.claude/specs/2026-06-21-tetris-bot-spec.md`
+- 구현 리포트: `.claude/specs/2026-06-21-tetris-bot-report.md`
+- QA: `.claude/specs/2026-06-21-tetris-bot-qa-report.md` (QA PASS — blocker 0)
+
+---
+
 ## [2026-06-17] C — 초대 패널 제거 후속(회귀 테스트 단언 전환)
 
 ### 배경
