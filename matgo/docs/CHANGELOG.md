@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-06-20] — 조커 손패 fly 2~3회 중복 재생 수정 (케이스 A)
+
+손에서 조커를 냈을 때(케이스 A, `joker_play`) captured로 날아가는 fly가 2~3회 재생되던 버그를 `public/client.js` 조커 fly 등록부에 이중 가드를 추가해 라운드당 정확히 1회만 등록되도록 수정. 서버(`game.js`/`server.js`) 무수정. 수정 2파일: `public/client.js`, `tests/e2e-scenarios.spec.js`.
+
+### 수정 (`public/client.js`)
+- 증상: 손 조커를 내면 captured로 카드가 2~3회 날아감.
+- 근본 원인: 서버가 같은 `joker_play` STATE를 2~3회 송신하는데, 클릭 핸들러 `sendPlay`(client.js:1815)가 모든 카드 클릭 시 `startFlyFromHand`로 **fly #1을 선등록**한다. 따라서 첫 STATE 렌더에서 이미 `alreadyFlying=true`인데, 기존 코드는 skip만 하고 **액션 키를 안 남겨** 후속 렌더(pendingFlies가 빈 시점)에서 두 번째 fly가 재등록됐다. 단순 중복 가드만으론 부족했고 **키 가드가 실질 해결책**.
+- 수정: 조커 fly 등록부(client.js 644~671)에 **이중 가드** — ① `alreadyFlying = pendingFlies.some(f => f.cardId === la.card.id)`(choice srcCard 패턴), ② `jokerActionKey = la.kind + '|' + la.card.id + '|' + la.player`(기존 토스트 `prevActionKey` 패턴). 액션 키가 미처리일 때만 진입하되, `alreadyFlying`이 false일 때만 `_jokerFlyId` 설정(STATE가 fly 등록)하고 **항상 `lastJokerFlyActionKey`에 키 기록**(처리됨 표시). `newCardIds.delete(la.card.id)`는 fly 등록 여부와 무관하게 항상 수행(조커가 drewIds→더미 fly로 오분류 방지).
+- 모듈 변수 `lastJokerFlyActionKey` 신설(약 137) + `GAME_START`(약 343)·`ROUND_START`(약 354)에서 리셋(`floorSlotMap.clear` 등과 동일 위치).
+- 케이스 B(`joker_flip`)는 가드 조건(`la.kind==='joker_play'`) 밖이라 무영향.
+
+### 추가 (테스트)
+- `tests/e2e-scenarios.spec.js`: **E-32**에 origin='hand' 조커 fly가 **정확히 1개**(중복 재생 금지) 회귀 단언 추가. 기존 "조커 captured 안착(fade 없음)" 단언 유지.
+
+### 검증
+- 단위 `score.unit`+`game.unit` **100/100** + e2e `E-01~E-32` **32/32**(fly 게이트 E-26~E-32 7/7, E-32 강화) + adhoc joker **24/24**/sseul **11/11**/bombdup **7/7**/floor-joker **5/5**(포트 3098) = **179건 전부 PASS**, 회귀 0.
+- QA PASS(결함 0). visual_change: ui(연출 횟수 교정 — 신규 시각 요소·레이아웃 변경 없음, 정적 captured 표시 E-32 안착 동일 유지).
+
+### 비고
+- 서버는 여전히 동일 `joker_play` STATE를 2~3회 송신하나(설계상 보류 대상 아님) 클라 가드가 멱등 처리하므로 증상 완전 해소. 서버 broadcast 횟수 자체 축소는 별도 발주(본 작업 범위 외 — 스펙이 클라 전용 수정 지시).
+- 참고: 스펙 `.claude/specs/2026-06-20-matgo-joker-double-fly-spec.md`, 리포트 `.claude/specs/2026-06-20-matgo-joker-double-fly-report.md`.
+
+---
+
 ## [2026-06-17] — 버그 A: 바닥 우측/스택 슬롯 fly 착지 좌표 어긋남 수정
 
 직전 B2(2026-06-16) fly 직선화가 못 잡은 **바닥 우측·스택 슬롯**에서 fly 클론 도착 좌표가 좌상단으로 밀리던 버그. `cloneNode(true)`가 바닥 슬롯 카드의 인라인 `transform: translate(-50%,-50%) [rotate(Ndeg)]`까지 복사해 도착 좌표를 어긋나게 한 것이 근본 원인. 서버·룰·점수 무수정(연출만).

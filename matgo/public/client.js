@@ -133,6 +133,14 @@
   let newCapIds    = { p1: new Set(), p2: new Set() };
   /** lastAction 동일성 체크용 키 */
   let prevActionKey = '';
+  /**
+   * 이미 손→captured fly를 등록한 조커(joker_play, 케이스 A) 액션 키.
+   * 서버가 동일 joker_play STATE를 2~3회 송신(hand_played/turn_finished/안전망)해도
+   * 조커 fly는 라운드당 1회만 등록되도록 막는다. fly #1 완료로 pendingFlies가
+   * 비워진 뒤 큐에서 같은 STATE가 재렌더돼도 이 키로 재등록을 차단한다.
+   * 라운드 시작(GAME_START/ROUND_START) 시 리셋해 다음 라운드 조커 fly를 허용한다.
+   */
+  let lastJokerFlyActionKey = '';
   /** ppeok 토스트 지연 보관. 덱 뒤집기 fly의 DECK_LAND 전환 이후 flush. */
   let pendingPpeokToast = null;
   /** 액션 토스트 DOM (지연 생성, 한 개만 유지) */
@@ -338,6 +346,8 @@
         bombCheckSkipOnce = false;
         // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
         pendingPpeokToast = null;
+        // 조커 fly 중복 가드 키 리셋 — 다음 라운드 조커 fly 정상 동작.
+        lastJokerFlyActionKey = '';
         break;
       case 'ROUND_START':
         hideRoundModal();
@@ -347,6 +357,8 @@
         bombCheckSkipOnce = false;
         // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
         pendingPpeokToast = null;
+        // 조커 fly 중복 가드 키 리셋 — 다음 라운드 조커 fly 정상 동작.
+        lastJokerFlyActionKey = '';
         break;
       case 'STATE':
         lastState = msg;
@@ -630,8 +642,32 @@
     // → 렌더 후 손 카드 appear로 자연 처리(별도 fly 없음, 허용).
     let _jokerFlyId = null; // R8: joker HAND_THROW 등록용 임시 변수 (renderState 로컬)
     if (la && la.kind === 'joker_play' && la.player === me && la.card) {
-      _jokerFlyId = la.card.id;
-      newCardIds.delete(_jokerFlyId);
+      // ── 2026-06-20 조커 fly 중복 재생 수정 ──
+      // 서버가 동일 joker_play STATE를 2~3회 송신(hand_played/turn_finished/안전망)하면
+      // STATE가 큐잉→flush 재렌더될 때마다 조커 fly가 재등록돼 2~3회 재생되던 버그.
+      // 이중 가드로 라운드당 1회만 등록한다.
+      //  (1) 중복 가드: pendingFlies에 같은 카드 fly가 이미 있으면 재등록 안 함
+      //      (choice srcCard 경로와 동일 패턴).
+      //  (2) 액션 키 가드: fly #1 완료로 pendingFlies가 비워진 뒤 같은 STATE가
+      //      재렌더돼도 lastJokerFlyActionKey로 차단(prevActionKey 토스트 가드 참고).
+      // 가드는 케이스 A(joker_play)에만 적용 — 케이스 B(joker_flip)는 무영향.
+      // _jokerFlyId 미설정 시 flyTargetIds.add/startFlyFromHand가 자연 skip되어
+      // captured 정적 표시(R8 pi 그룹 합류)는 유지된다(fly만 안 일어남).
+      const jokerActionKey = la.kind + '|' + la.card.id + '|' + la.player;
+      const alreadyFlying = pendingFlies.some((f) => f.cardId === la.card.id);
+      if (jokerActionKey !== lastJokerFlyActionKey) {
+        // 이 joker_play 액션을 아직 처리하지 않았다.
+        // alreadyFlying이 true면 클릭 핸들러(sendPlay)가 이미 손 fly를 등록했으므로
+        // STATE에서 재등록하지 않는다(중복 fly 방지). 단 이 액션은 "처리됨"으로
+        // 표시해(키 기록) 이후 동일 STATE 재렌더가 새 fly를 등록하지 못하게 한다.
+        // alreadyFlying이 false면(클릭 핸들러를 거치지 않은 폴백 경로) STATE가
+        // 손→captured fly를 1회 등록한다.
+        if (!alreadyFlying) _jokerFlyId = la.card.id;
+        lastJokerFlyActionKey = jokerActionKey;
+      }
+      // newCardIds 제외는 fly 등록 여부와 무관하게 항상 수행 — 조커가 drewIds로
+      // 잘못 분류돼 더미 fly로 날아가는 것을 막아야 한다(중복 STATE 재렌더 포함).
+      newCardIds.delete(la.card.id);
     }
 
     // ── R5 수정 (2026-06-16): choice 흐름 손패 HAND_THROW 등록 ──

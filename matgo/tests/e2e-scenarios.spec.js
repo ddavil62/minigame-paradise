@@ -1429,6 +1429,16 @@ test('E-32: 조커를 내면 조커 fly가 myCards에서 출발 — startFlyFrom
       () => !!document.querySelector('#my-captured-zone [data-card-id="m00_joker_a"]'),
       { timeout: 5000 },
     );
+
+    // ── 2026-06-20 회귀: 조커 손 fly는 정확히 1회만 등록돼야 한다 (이중 가드) ──
+    // 서버가 동일 joker_play STATE를 2~3회 송신해도 origin='hand' 조커 fly는 1개만.
+    // 모든 STATE 큐 flush·재렌더가 끝날 시간을 충분히 준 뒤 카운트한다.
+    await waitForFlyIdle(pageP1).catch(() => {});
+    const finalFlies = await pageP1.evaluate(() => window.__matgoFlies.slice());
+    const jokerHandFlies = finalFlies.filter(
+      (f) => f.cardId === 'm00_joker_a' && f.origin === 'hand',
+    );
+    expect(jokerHandFlies.length, '조커 손 fly는 정확히 1회만 등록(중복 재생 금지)').toBe(1);
   } finally {
     await browser.close();
   }

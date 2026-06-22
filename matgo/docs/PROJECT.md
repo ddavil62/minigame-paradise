@@ -1,6 +1,6 @@
 # 맞고 (Matgo) — LAN 1:1 대전 기획서
 
-> 최종 업데이트: 2026-06-17
+> 최종 업데이트: 2026-06-20
 
 ## 프로젝트 개요
 
@@ -170,6 +170,7 @@ matgo/
 
 | 날짜 | 변경 |
 |---|---|
+| 2026-06-20 | 조커 손패 fly 중복 재생 가드 — 손에서 조커를 낸 케이스 A(`joker_play`)에서 captured fly가 2~3회 재생되던 버그(서버 STATE 2~3회 송신 + 클릭 핸들러 선등록 fly에 키 미기록)를 `client.js` 이중 가드(`lastJokerFlyActionKey` 액션 키 + `pendingFlies` 중복 검사)로 라운드당 1회만 등록. 서버(`game.js`/`server.js`) 무수정. 회귀 게이트 e2e E-32에 "origin='hand' 조커 fly 정확히 1개" 단언 추가. 단위 100 + e2e 32 + adhoc(joker 24/sseul 11/bombdup 7/floor-joker 5) = 179건 PASS |
 | 2026-06-17 | 신규 버그 4건 수정 — R5(바닥 2장 먹기 손패 fly 누락: B1이 남긴 손 fly 미등록을 `client.js` `_choiceSrcFlyId` 수집 + `renderMyHand` 후 `startFlyFromHand` + `flyTargetIds`로 해소) / R6(선택 시 fly 순서: 손 fly를 덱 fly보다 먼저 등록, HAND_THROW→DECK 정합) / R7(자뻑 풀이 2피 **룰 변경**: 자뻑만 상대 피 2장·타인 뻑 1장, `game.js` `isPpeokOwner` 헬퍼 + stealPi 3지점 `delete ppeokFlags` 이전 판정, `score.js` 무수정) / R8(조커 사용 후 사라짐: `joker_play` 손 fly 등록 + **`renderCaptured`가 조커를 pi 그룹에 합류**(joker 키 부재로 드롭→fade되던 선존 결함) + 피 카운트 조커 +2). 단위 100·e2e 32(E-31/E-32 신규) 포함 검증 183건 전부 PASS |
 | 2026-06-03 | 조커 2장 룰 추가 — 덱 50장(화투 48 + `m00_joker_a/b`), 케이스 A(손 조커 → 매치 스킵 + 상대 피 1 + 더미 1장 손 보충 + **턴 유지** ※2026-06-16 룰 변경) / 케이스 B(더미 뒤집은 게 조커 → 상대 피 1 + 손에 추가 + 재귀 뒤집기). `piCount += joker × 2`. JOKER-001~009 회귀 9건 |
 | 2026-06-03 | 쓸 룰 추가 — 바닥 같은 월 2장 + 손 1 + 더미 1 = 4장 + 상대 피 1장. `lastAction.kind=sseul` 신규, `sweep_from_flip` 토스트 "쓸!" → "뻑 풀이!"로 정정 |
