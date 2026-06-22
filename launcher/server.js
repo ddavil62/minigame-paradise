@@ -80,7 +80,10 @@ const GAME_APPS = {
     // mode=ai 사용자 진입 시 yutnori 서버가 자체적으로 봇을 spawn할 URL.
     getBotUrl: () => `ws://localhost:${PORT}/yutnori/ws?mode=bot`,
   }),
-  'tetris-battle':  createTetrisApp(),
+  // 테트리스 배틀 — 봇 지원 (2026-06-21 추가).
+  'tetris-battle':  createTetrisApp({
+    getBotUrl: () => `ws://localhost:${PORT}/tetris-battle/ws?mode=bot`,
+  }),
   'janggi':         createJanggiApp({
     // mode=ai 사용자 진입 시 janggi 서버가 자체적으로 봇을 spawn할 URL.
     getBotUrl: () => `ws://localhost:${PORT}/janggi/ws?mode=bot`,
@@ -177,7 +180,25 @@ function attachWidgetInjector(res) {
   const chunks = [];    // 버퍼링된 응답 청크
 
   /**
+   * 캐시 버스팅 대상 content-type 판정.
+   * JS/CSS/JSON은 배포 후 stale 캐시(옛 파일 재사용)를 막기 위해 `no-cache`(재사용 전 재검증)를
+   * 강제한다. `no-store`가 아니므로 ETag/Last-Modified가 있는 Express 게임은 304 효율을 유지한다.
+   * 바이너리(PNG/WOFF2 등)·HTML은 대상이 아니다(HTML은 기존 조건부헤더 제거+위젯 주입 로직 보존).
+   * @param {string} ct content-type 문자열
+   * @returns {boolean} 캐시 버스팅 대상 여부
+   */
+  const isCacheBustTarget = (ct) => {
+    if (typeof ct !== 'string') return false;
+    const lc = ct.toLowerCase();
+    return lc.startsWith('application/javascript')
+      || lc.startsWith('text/javascript')
+      || lc.startsWith('text/css')
+      || lc.startsWith('application/json');
+  };
+
+  /**
    * 응답이 text/html이면 isHtml=ON + Content-Length 제거.
+   * JS/CSS/JSON이면 Cache-Control: no-cache 주입(헤더 전송 전, 미전송 상태에서만).
    * @param {string} ct content-type 문자열
    */
   const decideHtml = (ct) => {
@@ -185,6 +206,9 @@ function attachWidgetInjector(res) {
     if (typeof ct === 'string' && ct.toLowerCase().startsWith('text/html')) {
       isHtml = true;
       res.removeHeader('content-length');
+    } else if (isCacheBustTarget(ct) && !res.headersSent) {
+      // 응답 헤더가 아직 전송되지 않았을 때만 setHeader 가능.
+      res.setHeader('Cache-Control', 'no-cache');
     }
   };
 
