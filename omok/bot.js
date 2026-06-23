@@ -56,6 +56,8 @@ let lastState = null;
 let pendingActTimer = null;
 /** 리매치 타임아웃 핸들 (재송신용). */
 let rematchTimer = null;
+/** 자동 READY 예약 타이머 (리매치 JOINED 재전송 대비 재예약 방어). */
+let readyTimer = null;
 
 const ws = new WebSocket(URL);
 
@@ -81,6 +83,11 @@ ws.on('message', (data) => {
       // 리매치 후 재전송 JOINED에서도 갱신됨(색 swap 반영).
       myColor = msg.color;
       console.log(`[omok-bot] ${myId}(${myColor}) 자리 점유(갱신)`);
+      // 입장(또는 리매치 재진입) 즉시 자동 READY 예약(0.2~0.5초 지연).
+      scheduleReady();
+      break;
+    case 'READY_STATE':
+      // 봇은 READY 상태를 화면에 표시하지 않으므로 무시(수신만).
       break;
     case 'GAME_START':
       console.log('[omok-bot] 게임 시작');
@@ -107,6 +114,7 @@ ws.on('message', (data) => {
     case 'OPPONENT_LEFT':
       console.log('[omok-bot] 상대 이탈 → 연결 종료');
       if (rematchTimer) { clearTimeout(rematchTimer); rematchTimer = null; }
+      if (readyTimer) { clearTimeout(readyTimer); readyTimer = null; }
       ws.close();
       break;
     case 'ERROR':
@@ -127,6 +135,19 @@ ws.on('message', (data) => {
       break;
   }
 });
+
+/**
+ * JOINED 수신 후 자동 READY를 예약한다(0.2~0.5초 지연).
+ * 리매치 시 JOINED가 재전송되므로 기존 예약을 clear 후 재예약한다(중복 방어).
+ */
+function scheduleReady() {
+  if (readyTimer) clearTimeout(readyTimer);
+  readyTimer = setTimeout(() => {
+    readyTimer = null;
+    send({ type: 'READY' });
+    console.log('[omok-bot] READY 송신');
+  }, 200 + Math.floor(Math.random() * 300));
+}
 
 /**
  * GAME_OVER 또는 REMATCH_WAITING 수신 시 자동 리매치 동의를 예약한다.

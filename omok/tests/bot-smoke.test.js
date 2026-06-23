@@ -116,7 +116,9 @@ async function runBotScenario() {
   assertEq(joined.playerId, 'p1', '사람이 p1 자리 점유');
   assertEq(joined.color, 'black', '사람 color = black (선공)');
 
-  // 봇 spawn(200ms) + 연결 + JOINED 후 GAME_START.
+  // READY 게이트(2026-06-22): 사람이 READY 송신(봇은 자동 READY). 양쪽 READY 시 GAME_START.
+  me.send({ type: 'READY' });
+  // 봇 spawn(200ms) + 연결 + JOINED + 봇 자동 READY 후 GAME_START.
   await me.waitFor('GAME_START', 15000);
   assertTrue(true, 'OMOK-BOT-001: GAME_START 수신 (봇 자동 spawn)');
 
@@ -200,6 +202,7 @@ async function runBlockScenario() {
   const me = makeClient(`ws://127.0.0.1:${PORT}/ws?mode=ai`);
   await me.open();
   await me.waitFor('JOINED');
+  me.send({ type: 'READY' }); // READY 게이트(2026-06-22).
   await me.waitFor('GAME_START', 15000);
   let st = await me.waitFor('STATE', 5000);
 
@@ -314,6 +317,7 @@ async function runBotRematchScenario() {
   const me = makeClient(`ws://127.0.0.1:${PORT}/ws?mode=ai`);
   await me.open();
   await me.waitFor('JOINED');
+  me.send({ type: 'READY' }); // READY 게이트(2026-06-22).
   await me.waitFor('GAME_START', 15000);
   let st = await me.waitFor('STATE', 5000);
 
@@ -356,6 +360,8 @@ async function runBotRematchScenario() {
   const j = await me.waitFor('JOINED', 5000);
   assertTrue(j.color === 'black' || j.color === 'white', 'OMOK-BOT-004: 사람 color 갱신');
 
+  // READY 게이트(2026-06-22): 리매치도 사람 READY 필요(봇은 JOINED 후 자동 READY).
+  me.send({ type: 'READY' });
   // 새 판 STATE 도착(빈 보드).
   await me.waitFor('GAME_START', 5000);
   const st2 = await me.waitFor('STATE', 5000);

@@ -350,6 +350,10 @@ async function runWsScenario() {
   assertEq(j2.playerId, 'p2', 'c2 = p2');
   assertEq(j2.color, 'white', 'c2 color = white');
 
+  // READY 게이트(2026-06-22): 양쪽 READY 후에만 GAME_START.
+  c1.send({ type: 'READY' });
+  c2.send({ type: 'READY' });
+
   // 양쪽 GAME_START 수신.
   await c1.waitFor('GAME_START');
   await c2.waitFor('GAME_START');
@@ -414,6 +418,9 @@ async function runErrorScenario() {
   const c2 = makeClient(`ws://127.0.0.1:${PORT}/ws`);
   await c2.open();
   await c2.waitFor('JOINED');
+  // READY 게이트(2026-06-22): 양쪽 READY 후 게임 시작.
+  c1.send({ type: 'READY' });
+  c2.send({ type: 'READY' });
   await c1.waitFor('GAME_START');
   await c1.waitFor('STATE');
   await c2.waitFor('STATE');
@@ -464,6 +471,9 @@ async function runRematchScenario() {
   const c2 = makeClient(`ws://127.0.0.1:${PORT}/ws`); // p2=white
   await c2.open();
   await c2.waitFor('JOINED');
+  // READY 게이트(2026-06-22): 양쪽 READY 후 게임 시작.
+  c1.send({ type: 'READY' });
+  c2.send({ type: 'READY' });
   await c1.waitFor('GAME_START');
   await c1.waitFor('STATE');
   await c2.waitFor('STATE');
@@ -503,6 +513,10 @@ async function runRematchScenario() {
   const j2 = await c2.waitFor('JOINED');
   assertEq(j1.color, 'white', 'OMOK-012: p1(직전 흑) → 백');
   assertEq(j2.color, 'black', 'OMOK-012: p2(직전 백) → 흑(선공)');
+
+  // READY 게이트(2026-06-22): 리매치도 양쪽 다시 READY 후 새 판 시작.
+  c1.send({ type: 'READY' });
+  c2.send({ type: 'READY' });
 
   // 새 판 시작: GAME_START + 빈 보드 STATE.
   await c1.waitFor('GAME_START');

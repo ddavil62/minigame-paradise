@@ -121,6 +121,9 @@ async function main() {
     const p2 = makeClient(base);
     await p2.open();
     await p2.waitFor('JOINED');
+    // READY 게이트(2026-06-22): 양쪽 READY 후 게임 시작.
+    p1.send({ type: 'READY' });
+    p2.send({ type: 'READY' });
     await p1.waitFor('GAME_START');
     await p2.waitFor('GAME_START');
     await p1.waitFor('STATE');
@@ -205,6 +208,9 @@ async function main() {
     p2.send({ type: 'REMATCH' });
     await p1.waitFor('REMATCH_START');
     await p2.waitFor('REMATCH_START');
+    // READY 게이트(2026-06-22): 리매치도 양쪽 다시 READY 후 새 판.
+    p1.send({ type: 'READY' });
+    p2.send({ type: 'READY' });
     await p1.waitState(0);
     await p2.waitState(0);
     // 새 판 시작 후 OPPONENT_LEFT 가 한 번도 안 왔는지
@@ -242,6 +248,8 @@ async function main() {
     const rsA = await p1.waitFor('REMATCH_START');
     ok(rsA.nextBlack === 'p2', 'T6: 1판 흑(p1) 승 → 2판 흑=p2');
     await p1.waitFor('JOINED'); await p2.waitFor('JOINED');
+    // READY 게이트(2026-06-22): 리매치 후 양쪽 다시 READY 해야 새 판 시작.
+    p1.send({ type: 'READY' }); p2.send({ type: 'READY' });
     await p1.waitState(0); await p2.waitState(0);
     // 2판: 이제 p2가 흑(선공). p2 흑 5목 만들기(blackClient=p2, whiteClient=p1).
     await playLineWin(p2, p1, [[9, 0], [9, 1], [9, 2], [9, 3], [9, 4]], [[0, 0], [0, 2], [0, 4], [0, 6]]);

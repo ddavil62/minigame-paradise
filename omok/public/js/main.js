@@ -25,10 +25,24 @@ document.addEventListener('DOMContentLoaded', () => {
     turnIndicator: document.getElementById('turn-indicator'),
     moveCount: document.getElementById('move-count'),
 
-    p1StatusMark: document.getElementById('p1-status-mark'),
-    p2StatusMark: document.getElementById('p2-status-mark'),
-    aiPanel: document.getElementById('ai-panel'),
+    // 대기 화면 — 신규 READY 게이트 UI
+    waitingTitle: document.querySelector('#screen-waiting .waiting-title'),
+    waitingSolo: document.getElementById('waiting-solo'),
     btnStartAi: document.getElementById('btn-start-ai'),
+    opponentInfo: document.getElementById('opponent-info'),
+    opponentNameLabel: document.getElementById('opponent-name-label'),
+    readyPanel: document.getElementById('ready-panel'),
+    myReadyMark: document.getElementById('my-ready-mark'),
+    oppReadyMark: document.getElementById('opp-ready-mark'),
+    btnReady: document.getElementById('btn-ready'),
+    // 직접 진입 인라인 닉네임 게이트
+    nameGateInline: document.getElementById('name-gate-inline'),
+    inlineNameInput: document.getElementById('inline-name-input'),
+    btnInlineEnter: document.getElementById('btn-inline-enter'),
+    // 상대 이탈 배너
+    opponentLeftBanner: document.getElementById('opponent-left-banner'),
+    opponentLeftMsg: document.getElementById('opponent-left-msg'),
+    btnBannerReturnLobby: document.getElementById('btn-banner-return-lobby'),
 
     canvas: document.getElementById('board-canvas'),
     btnResign: document.getElementById('btn-resign'),
@@ -51,21 +65,97 @@ document.addEventListener('DOMContentLoaded', () => {
   let prevBoard = null;
   /** 내가 리매치("한 판 더") 버튼을 눌렀는가(중복 클릭 방지). */
   let rematchRequested = false;
+  /** 상대 닉네임(JOINED.opponentName 수신 시 갱신). */
+  let opponentName = null;
+  /** 내 READY 상태. */
+  let myReady = false;
+  /** 상대 READY 상태. */
+  let opponentReady = false;
 
   /**
-   * 대기 화면의 P1/P2 입장 상태 마크를 갱신한다.
-   * @param {boolean} bothPending true면 p1만 입장(p2 대기), false면 양쪽 입장 완료
+   * 현재 모드(ai|human)를 URL/sessionStorage에서 읽는다.
+   * @returns {string}
    */
-  function updateStatusMarks(bothPending) {
-    // p1은 항상 입장한 상태(대기 화면을 보고 있는 호스트 기준).
-    if (els.p1StatusMark) {
-      els.p1StatusMark.textContent = '입장';
-      els.p1StatusMark.classList.add('joined');
+  function getCurrentMode() {
+    return new URLSearchParams(location.search).get('mode')
+      || sessionStorage.getItem('omok:mode')
+      || 'human';
+  }
+
+  /**
+   * "🤖 AI랑 시작" 버튼(혼자 대기 패널)을 숨긴다.
+   * 친구가 합류해 2인이 되면 호출(사람 대전 흐름 전환).
+   */
+  function hideAiButton() {
+    if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
+    if (els.btnStartAi) els.btnStartAi.classList.add('hidden');
+  }
+
+  /**
+   * 혼자 대기 패널을 다시 표시한다(상대 이탈 시 — AI 모드가 아니고 사람일 때만).
+   */
+  function showAiButton() {
+    if (getCurrentMode() === 'ai') return;
+    // 다시 1인 대기로 돌아가므로 제목도 "상대방을 기다리는 중..."으로 복귀(WARN-3).
+    updateWaitingTitle(false);
+    if (els.waitingSolo) els.waitingSolo.classList.remove('hidden');
+    if (els.btnStartAi) {
+      els.btnStartAi.classList.remove('hidden');
+      els.btnStartAi.disabled = false;
+      els.btnStartAi.textContent = '🤖 AI랑 시작';
     }
-    if (els.p2StatusMark) {
-      els.p2StatusMark.textContent = bothPending ? '대기' : '입장';
-      els.p2StatusMark.classList.toggle('joined', !bothPending);
+  }
+
+  /**
+   * 대기 카드 제목(.waiting-title)을 현재 인원 상태에 맞게 갱신한다.
+   * 상대 합류 시 "상대방을 기다리는 중..."이 남아 .opponent-info와 충돌하던
+   * 혼란(WARN-3)을 제거한다.
+   * @param {boolean} hasOpponent 상대가 합류했는가
+   */
+  function updateWaitingTitle(hasOpponent) {
+    if (!els.waitingTitle) return;
+    els.waitingTitle.textContent = hasOpponent
+      ? '대전 준비 중'
+      : '상대방을 기다리는 중...';
+  }
+
+  /**
+   * 상대 이름 표시("○○님과 대전")를 갱신한다.
+   */
+  function updateOpponentInfo() {
+    if (opponentName && els.opponentInfo) {
+      els.opponentInfo.classList.remove('hidden');
+      if (els.opponentNameLabel) els.opponentNameLabel.textContent = opponentName;
     }
+  }
+
+  /**
+   * 양방향 READY 상태 마크 + 준비 버튼 표시를 갱신한다.
+   */
+  function updateReadyUI() {
+    if (els.myReadyMark) {
+      els.myReadyMark.textContent = myReady ? '✅' : '⌛';
+      els.myReadyMark.classList.toggle('ready', myReady);
+      els.myReadyMark.classList.toggle('not-ready', !myReady);
+    }
+    if (els.oppReadyMark) {
+      els.oppReadyMark.textContent = opponentReady ? '✅' : '⌛';
+      els.oppReadyMark.classList.toggle('ready', opponentReady);
+      els.oppReadyMark.classList.toggle('not-ready', !opponentReady);
+    }
+    // 내가 아직 준비 안 했으면 버튼 노출.
+    if (els.btnReady) els.btnReady.hidden = myReady;
+  }
+
+  /**
+   * 상대 이탈 배너를 표시한다(자동 사라지지 않음 — 사용자가 버튼 클릭 시 이동).
+   * @param {string} name 이탈한 상대 이름
+   */
+  function showOpponentLeftBanner(name) {
+    if (els.opponentLeftMsg) {
+      els.opponentLeftMsg.textContent = `${name || '상대방'}님이 나갔어요.`;
+    }
+    if (els.opponentLeftBanner) els.opponentLeftBanner.classList.remove('hidden');
   }
 
   // ── 화면 전환 ────────────────────────────────────────────────
@@ -142,38 +232,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 네트워크 핸들러 ──────────────────────────────────────────
   const net = createNetwork({
-    onJoined: ({ playerId, color, waiting }) => {
-      // 리매치 후 서버가 재전송하는 JOINED는 waiting=false → 화면 전환 없이 color만 갱신.
-      const isRematch = !waiting;
+    onOpen: ({ hasName }) => {
+      // 닉네임이 없으면(직접 진입) 인라인 게이트를 노출하고 JOIN을 보류한다.
+      if (!hasName) {
+        if (els.nameGateInline) els.nameGateInline.classList.remove('hidden');
+        // 닉네임 확정 전까지 혼자 대기/AI/READY 패널은 숨긴다.
+        if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
+        if (els.readyPanel) els.readyPanel.classList.add('hidden');
+      }
+    },
+    onJoined: ({ playerId, color, waiting, opponentName: oppName }) => {
       myId = playerId;
       myColor = color;
       const colorKo = color === 'black' ? '흑' : '백';
       els.playerLabel.textContent = `${playerId === 'p1' ? 'P1' : 'P2'} (${colorKo})`;
-      if (isRematch) {
-        // 리매치 JOINED: 대기 화면으로 되돌리지 않고 color/라벨 갱신만 한다.
-        return;
+
+      // 상대 이름 수신 시 갱신 + AI 버튼 소멸(사람 대전 흐름 전환).
+      if (oppName) {
+        opponentName = oppName;
+        updateOpponentInfo();
+        hideAiButton();
       }
-      els.statusMsg.textContent = waiting ? '상대방 대기 중' : '게임 시작 준비';
 
-      // P1/P2 입장 상태 라벨 갱신 (invite-panel 대체).
-      // waiting=true: p1만 입장(p2 대기). waiting=false: 양쪽 입장 완료.
-      updateStatusMarks(waiting);
+      els.statusMsg.textContent = (waiting && !oppName) ? '상대방 대기 중' : '게임 시작 준비';
 
-      // "AI랑 시작" 버튼: 호스트(p1) + 단독 대기 + 현재 mode≠ai 일 때만.
-      const currentMode = new URLSearchParams(location.search).get('mode')
-        || sessionStorage.getItem('omok:mode')
-        || 'human';
-      if (playerId === 'p1' && waiting && currentMode !== 'ai') {
-        els.aiPanel.classList.remove('hidden');
+      // 대기 카드 제목: 상대 합류(상대 이름 존재 또는 waiting=false) 시 "대전 준비 중".
+      updateWaitingTitle(!!oppName || !waiting);
+
+      // 양쪽 입장(waiting=false 또는 상대 이름 존재)이면 혼자 대기 패널 숨김.
+      if (!waiting || oppName) {
+        hideAiButton();
       } else {
-        els.aiPanel.classList.add('hidden');
+        // 단독 대기: AI 버튼은 mode≠ai일 때만.
+        if (getCurrentMode() !== 'ai') {
+          if (els.waitingSolo) els.waitingSolo.classList.remove('hidden');
+        } else {
+          hideAiButton();
+        }
       }
+
+      // READY 패널은 닉네임 확정(JOIN 송신) 이후 항상 노출.
+      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+
       showScreen('waiting');
+    },
+    onReadyState: ({ myReady: mr, opponentReady: or }) => {
+      myReady = mr;
+      opponentReady = or;
+      updateReadyUI();
     },
     onGameStart: () => {
       rematchRequested = false;
       lastMove = null;
       prevBoard = null;
+      // READY 상태 초기화(다음 리매치 대비).
+      myReady = false;
+      opponentReady = false;
       showScreen('game');
       els.screenGameOver.classList.add('hidden');
       els.rematchBtn.disabled = false;
@@ -220,22 +334,11 @@ document.addEventListener('DOMContentLoaded', () => {
       els.btnResign.disabled = true;
       els.screenGameOver.classList.remove('hidden');
     },
-    onOpponentLeft: (message) => {
-      showToast(message, 'error');
-      showScreen('waiting');
+    onOpponentLeft: ({ name }) => {
+      // 자동 redirect 제거 — showScreen('waiting')로 배너를 가리지 않는다.
+      // 사라지지 않는 배너 + "로비로 돌아가기" 버튼만 표시(사용자가 직접 이동).
       els.screenGameOver.classList.add('hidden');
-      els.statusMsg.textContent = '상대방 대기 중';
-      // 상대 이탈 → 다시 단독 대기 상태이므로 P2 마크를 "대기"로 리셋.
-      updateStatusMarks(true);
-      // 다시 단독 대기 → AI 옵션 재노출.
-      const currentMode = new URLSearchParams(location.search).get('mode')
-        || sessionStorage.getItem('omok:mode')
-        || 'human';
-      if (myId === 'p1' && currentMode !== 'ai') {
-        els.aiPanel.classList.remove('hidden');
-        els.btnStartAi.disabled = false;
-        els.btnStartAi.textContent = '🤖 AI랑 시작';
-      }
+      showOpponentLeftBanner(name);
     },
     onRematchWaiting: () => {
       // 상대가 먼저 "한 판 더"를 눌렀다 → 토스트 + 버튼 강조로 동의 유도.
@@ -243,17 +346,21 @@ document.addEventListener('DOMContentLoaded', () => {
       els.rematchBtn.classList.add('rematch-requested');
     },
     onRematchStart: () => {
-      // 양쪽 동의 완료. 뒤따라 오는 JOINED(갱신 color)/GAME_START/STATE가
-      // color·화면 전환·보드 렌더를 처리한다. 여기서는 상태/오버레이만 정리.
+      // 양쪽 동의 완료. 뒤따라 오는 JOINED(갱신 color)/READY_STATE가 대기·READY UI를
+      // 재구성한다. 여기서는 상태/오버레이만 정리하고 READY 게이트로 되돌아간다.
       rematchRequested = false;
       lastMove = null;
       prevBoard = null;
       lastState = null;
+      // READY 상태 초기화 → 양쪽 다시 READY 필요.
+      myReady = false;
+      opponentReady = false;
+      updateReadyUI();
       els.screenGameOver.classList.add('hidden');
       els.rematchBtn.disabled = false;
       els.rematchBtn.textContent = '한 판 더';
       els.rematchBtn.classList.remove('rematch-requested');
-      showToast('재대결 시작!');
+      showToast('재대결 — 준비 완료를 눌러주세요!');
     },
     onError: (message) => {
       showToast(message, 'error');
@@ -278,15 +385,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ── AI랑 시작 ────────────────────────────────────────────────
-  // ?mode=ai 쿼리로 새로고침 → network.js가 sessionStorage 저장 + WS URL에 mode=ai 부착
-  // → server.js가 봇 자식 프로세스 자동 spawn.
+  // ── AI랑 시작 (유일한 mode=ai 진입 경로) ──────────────────────
+  // ?mode=ai&name=... 로 재접속 → network.js가 sessionStorage 저장 + WS URL에 mode=ai 부착
+  // → server.js가 봇 자식 프로세스 자동 spawn. 이 버튼 클릭 외에는 mode=ai가 되지 않는다.
   els.btnStartAi.addEventListener('click', () => {
     els.btnStartAi.disabled = true;
     els.btnStartAi.textContent = '🤖 AI 호출 중...';
-    const url = new URL(location.href);
-    url.searchParams.set('mode', 'ai');
-    location.href = url.toString();
+    const name = sessionStorage.getItem('omok:name') || '';
+    const base = location.pathname; // '/omok/' 또는 '/'
+    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+  });
+
+  // ── 준비 완료(READY) ─────────────────────────────────────────
+  els.btnReady.addEventListener('click', () => {
+    els.btnReady.hidden = true;
+    net.sendReady();
+  });
+
+  // ── 상대 이탈 배너 → 로비로 돌아가기 ─────────────────────────
+  els.btnBannerReturnLobby.addEventListener('click', () => returnToLobby());
+
+  // ── 인라인 닉네임 게이트(직접 진입 폴백 B) ────────────────────
+  function submitInlineName() {
+    const name = (els.inlineNameInput.value || '').trim().slice(0, 12);
+    if (!name) {
+      els.inlineNameInput.focus();
+      return;
+    }
+    sessionStorage.setItem('omok:name', name);
+    els.nameGateInline.classList.add('hidden');
+    // 닉네임 확정 후 혼자 대기/READY 패널 노출 + JOIN 송신.
+    if (getCurrentMode() !== 'ai' && els.waitingSolo) {
+      els.waitingSolo.classList.remove('hidden');
+    }
+    if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+    net.sendJoin(name);
+  }
+  els.btnInlineEnter.addEventListener('click', submitInlineName);
+  els.inlineNameInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitInlineName();
+    }
   });
 
   // ── 재대결("한 판 더"): WS 동의 흐름. 양쪽 동의 시 새 판(reload 없음). ──
@@ -300,16 +440,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 런처 통합 모드: 다른 종목 / 게임 선택 → 로비로 ──────────
   function returnToLobby() {
-    const seg = location.pathname.split('/').filter(Boolean)[0] || '';
+    // 사용자가 직접 버튼을 누른 경우에만 호출된다 → 자동 setTimeout redirect 제거.
+    // POST 완료/실패와 무관하게 즉시 로비로 이동(단순화).
     fetch('/lobby/return', { method: 'POST' })
       .catch(() => { /* noop */ })
       .finally(() => {
-        if (!seg) {
-          location.href = '/';
-        }
-        setTimeout(() => {
-          if (seg) location.href = '/';
-        }, 1500);
+        location.href = '/';
       });
   }
   els.returnLobbyBtn.addEventListener('click', returnToLobby);

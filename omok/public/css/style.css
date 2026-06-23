@@ -113,39 +113,88 @@ html, body {
   color: var(--wood-dark);
 }
 
-/* P1/P2 입장 상태 라벨 (invite-panel 대체, 요트다이스 ready-slot 패턴 준용) */
-.player-status-panel { margin: 12px 0 16px; }
-.player-status-slot {
-  font-family: 'Jua', sans-serif;
-  font-size: 15px;
-  color: var(--text);
-  white-space: nowrap;
+/* 인라인 닉네임 게이트 (직접 진입 폴백 B) */
+.name-gate-inline { margin: 8px 0 18px; }
+.name-gate-msg {
+  font-size: 0.9rem;
+  color: var(--wood-dark);
+  margin: 0 0 10px;
 }
-.player-status-divider { color: var(--wood-dark); opacity: .5; margin: 0 8px; }
-.player-status-mark {
-  color: #8a6a3a;
-  font-weight: 600;
+.name-gate-inline input {
+  width: 70%;
+  max-width: 240px;
+  padding: 10px 12px;
+  border: 2px solid var(--wood-dark);
+  border-radius: 8px;
   font-family: 'Gowun Dodum', sans-serif;
-  font-size: 13px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: var(--text);
 }
-.player-status-mark.joined { color: var(--accent-ai); }
+.btn-inline-enter {
+  margin-top: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-family: 'Jua', sans-serif;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #8e0a20;
+}
+.btn-inline-enter:hover { filter: brightness(1.08); }
 
-/* AI 진입 */
-.ai-panel { margin: 18px 0; }
-.ai-divider {
+/* 혼자 대기(1인) 안내 + AI 진입 */
+.waiting-solo { margin: 8px 0 18px; }
+.waiting-message {
+  font-size: 1rem;
+  color: var(--wood-dark);
+  margin: 0 0 14px;
+}
+.ai-hint { font-size: 0.8rem; color: #7a5a30; margin-top: 8px; }
+
+/* 상대 이름 표시 ("○○님과 대전") */
+.opponent-info {
+  font-family: 'Jua', sans-serif;
+  font-size: 1.05rem;
+  color: var(--accent-ai);
+  margin: 6px 0 14px;
+}
+
+/* 양방향 READY 상태 패널 */
+.ready-panel { margin: 8px 0 16px; }
+.ready-status {
   display: flex;
   align-items: center;
-  text-align: center;
-  color: #a08050;
-  font-size: 0.85rem;
-  margin: 12px 0;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Jua', sans-serif;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 12px;
 }
-.ai-divider::before, .ai-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid #d8c19a;
+.ready-label { color: #8a6a3a; }
+.ready-sep { color: var(--wood-dark); opacity: .4; }
+.ready-mark {
+  font-size: 1.2rem;
+  transition: transform 0.2s;
 }
-.ai-divider span { padding: 0 12px; }
+.ready-mark.ready { transform: scale(1.15); }
+.ready-mark.not-ready { opacity: 0.7; }
+.btn-ready {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 1.05rem;
+  font-family: 'Jua', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #8e0a20;
+}
+.btn-ready:hover { filter: brightness(1.08); }
+.btn-ready:disabled { opacity: 0.6; cursor: default; }
 
 .btn-start-ai {
   background: var(--accent-ai);
@@ -160,7 +209,6 @@ html, body {
 }
 .btn-start-ai:hover { filter: brightness(1.08); }
 .btn-start-ai:disabled { opacity: 0.6; cursor: default; }
-.ai-hint { font-size: 0.8rem; color: #7a5a30; margin-top: 8px; }
 
 /* 룰 요약 */
 .rules-summary {
@@ -306,3 +354,36 @@ html, body {
   transform: translateX(-50%) translateY(0);
 }
 .toast.error { background: rgba(200, 16, 46, 0.95); }
+
+/* ── 상대 이탈 배너 (자동 사라지지 않음) ───────────────────────── */
+.opponent-left-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: rgba(200, 16, 46, 0.96);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.opponent-left-msg {
+  font-family: 'Jua', sans-serif;
+  font-size: 1rem;
+}
+.btn-banner-return-lobby {
+  background: #fff;
+  color: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-family: 'Jua', sans-serif;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.btn-banner-return-lobby:hover { filter: brightness(0.95); }

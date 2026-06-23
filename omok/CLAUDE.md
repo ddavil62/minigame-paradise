@@ -177,6 +177,7 @@ npx playwright test tests/omok-mobile-qa.spec.js --config=playwright.config.js #
 | **snapshot 독립성** | `snapshot`은 `board.slice()`로 복사본을 반환한다. 얕은 참조 반환 시 클라가 board를 변조하면 원본 오염(QA-E12) |
 | **정원 초과 + 좀비 슬롯** | 3번째 연결 거절 전에 readyState>1 좀비 슬롯을 청소 후 재검사한다(server.js). 청소 누락 시 정상 재접속이 "가득 찼다"로 거절될 수 있음 |
 | **mode 쿼리 보존** | `network.js`는 `omok:mode`를 sessionStorage에 저장한다. 새로고침 시 mode 유실되면 AI 게임이 LAN 모드로 바뀜 |
+| **READY 게이트** | 초기/리매치 모두 양쪽 READY 시 동일 start-트리거(`maybeStartGameIfReady`)로 createGame→GAME_START. 리매치 후 `game` 상태 리셋(`game=null`)/readySet 초기화 누락 시 `!game` 조건이 거짓이 되어 GAME_START 미발생(BOT-004 회귀) |
 
 ## 파이프라인 적용 규칙
 

@@ -67,6 +67,7 @@ export function createApp(opts = {}) {
    * @property {string} id    'p1' | 'p2'
    * @property {'black'|'white'} color p1=black(선공), p2=white
    * @property {import('ws').WebSocket} ws
+   * @property {string} name  닉네임. JOIN 수신 전까지 '' (봇은 'AI' 자동).
    */
 
   /** @type {Player[]} */
@@ -75,6 +76,12 @@ export function createApp(opts = {}) {
   let game = null;
   /** 리매치 동의한 playerId Set. 2명 모두 동의 시 새 판 시작. */
   let rematchPending = new Set();
+  /**
+   * READY 선언한 playerId Set. 양쪽 모두 READY일 때만 createGame().
+   * 신규 게임/리매치 진입 시마다 초기화한다.
+   * @type {Set<string>}
+   */
+  let readySet = new Set();
   /**
    * 직전 게임 종료 결과(색 swap 결정용). null이면 아직 종료 안 됨(또는 새 판 진행 중).
    * @type {null|{winner:'black'|'white'|'draw', reason:string}}
@@ -115,14 +122,39 @@ export function createApp(opts = {}) {
   }
 
   /**
-   * 두 명 모두 입장하면 새 게임을 시작한다(GAME_START + STATE broadcast).
+   * 양쪽 모두 입장 + 양쪽 모두 READY일 때만 새 게임을 시작한다.
+   * (READY 게이트 — 기존 "양쪽 접속 즉시 시작"을 대체)
    */
-  function maybeStartGame() {
-    if (players.length === 2 && !game) {
+  function maybeStartGameIfReady() {
+    if (players.length === 2 && readySet.size === 2 && !game) {
       game = createGame();
-      console.log('[omok] 양쪽 입장 완료 → 게임 시작');
+      console.log('[omok] 양쪽 READY 완료 → 게임 시작');
       broadcastAll({ type: 'GAME_START', phase: 'playing' });
       broadcastState();
+    }
+  }
+
+  /**
+   * 상대 player를 반환한다.
+   * @param {Player} player
+   * @returns {Player|undefined}
+   */
+  function otherPlayer(player) {
+    return players.find((p) => p.id !== player.id);
+  }
+
+  /**
+   * 각 플레이어에게 자신 관점의 READY_STATE를 개별 전송한다.
+   * (myReady = 본인, opponentReady = 상대 기준)
+   */
+  function broadcastReadyState() {
+    for (const p of players) {
+      const other = otherPlayer(p);
+      sendTo(p, {
+        type: 'READY_STATE',
+        myReady: readySet.has(p.id),
+        opponentReady: other ? readySet.has(other.id) : false,
+      });
     }
   }
 
@@ -262,21 +294,39 @@ export function createApp(opts = {}) {
     const playerId = players.length === 0 ? 'p1' : 'p2';
     const color = playerId === 'p1' ? 'black' : 'white';
     /** @type {Player} */
-    const player = { id: playerId, color, ws };
+    // 봇은 JOIN 메시지를 보내지 않으므로 서버가 즉시 name='AI'를 부여한다.
+    const player = { id: playerId, color, ws, name: isBot ? 'AI' : '' };
     players.push(player);
     console.log(`[omok] ${playerId}(${color}) 연결됨 (${players.length}/2, mode=${wsMode})`);
 
-    // JOINED 즉시 전송 (janggi 패턴 — READY 단계 없음).
+    // JOINED 즉시 전송 (opponentName은 JOIN 수신 후 별도 전송).
+    // 상대가 이미 입장+JOIN 했으면 그 이름을 함께 실어 보낸다.
+    const existingOpp = otherPlayer(player);
     sendTo(player, {
       type: 'JOINED',
       playerId: player.id,
       color: player.color,
       waiting: players.length < 2,
       hostUrl: HOST_URL,
+      opponentName: (existingOpp && existingOpp.name) ? existingOpp.name : undefined,
     });
 
-    // 두 명 모두 입장했으면 바로 게임 시작.
-    maybeStartGame();
+    // 봇은 JOIN을 보내지 않으므로 서버가 connection 즉시 JOIN 처리를 대행한다.
+    if (isBot) {
+      const human = otherPlayer(player);
+      if (human) {
+        // 사람에게 상대(봇) 입장 + 이름 고지.
+        sendTo(human, {
+          type: 'JOINED',
+          playerId: human.id,
+          color: human.color,
+          waiting: false,
+          hostUrl: HOST_URL,
+          opponentName: 'AI',
+        });
+      }
+      broadcastReadyState();
+    }
 
     // mode=ai 사용자가 혼자 들어왔다 → 봇 자동 spawn (자기 자식 프로세스).
     // 봇이 connect하면 두 번째 슬롯을 차지하고 게임을 시작한다.
@@ -295,6 +345,39 @@ export function createApp(opts = {}) {
       }
 
       switch (msg.type) {
+        case 'JOIN': {
+          // 닉네임 전달. name 누락 시 '(알 수 없음)' 폴백(후방호환 — JOIN 미수신 smoke 무영향).
+          const raw = typeof msg.name === 'string' ? msg.name.trim().slice(0, 12) : '';
+          player.name = raw || '(알 수 없음)';
+          console.log(`[omok] JOIN: ${player.id} → "${player.name}"`);
+          // 상대가 이미 있으면 상대에게 opponentName 포함 JOINED 재전송(상대 이름 갱신).
+          const other = otherPlayer(player);
+          if (other) {
+            sendTo(other, {
+              type: 'JOINED',
+              playerId: other.id,
+              color: other.color,
+              waiting: false,
+              hostUrl: HOST_URL,
+              opponentName: player.name,
+            });
+          }
+          // READY_STATE 초기 전송(양쪽 아직 not ready 또는 현재 상태 반영).
+          broadcastReadyState();
+          break;
+        }
+
+        case 'READY': {
+          // 양방향 READY 게이트. 양쪽 READY 시에만 게임 시작.
+          readySet.add(player.id);
+          console.log(`[omok] READY: ${player.id} (readySet.size=${readySet.size})`);
+          broadcastReadyState();
+          if (readySet.size === 2) {
+            maybeStartGameIfReady();
+          }
+          break;
+        }
+
         case 'PLACE': {
           if (!game) {
             sendTo(player, { type: 'ERROR', message: '게임이 시작되지 않았습니다.' });
@@ -342,14 +425,20 @@ export function createApp(opts = {}) {
             break;
           }
 
-          // 양쪽 동의 → 색 swap + 새 게임 생성.
+          // 양쪽 동의 → 색 swap. 단, createGame은 양쪽 READY 후로 미룬다(포크 D).
           const nextBlack = swapColorsForRematch();
-          game = createGame(); // currentTurn='black' 기본.
           lastGameResult = null;
           rematchPending = new Set();
+          // READY 게이트 재진입: 이전 READY 상태 초기화 → 양쪽 다시 READY 필요.
+          readySet = new Set();
+          // 직전 게임(phase='ended')을 폐기한다. game이 null이어야 양쪽 READY 시
+          // maybeStartGameIfReady의 `!game` 조건이 통과해 createGame이 실행된다.
+          // (BOT-004 회귀: game 리셋 누락 시 양쪽 READY여도 GAME_START 미발생)
+          game = null;
+          // game은 아직 생성하지 않는다(READY 후 maybeStartGameIfReady가 생성).
 
           broadcastAll({ type: 'REMATCH_START', nextBlack });
-          // 각 플레이어에게 갱신된 color 정보 포함 JOINED 재전송(color 변경 고지).
+          // 각 플레이어에게 갱신된 color 정보 포함 JOINED 재전송(color 변경 고지) + READY_STATE 초기 전송.
           for (const p of players) {
             sendTo(p, {
               type: 'JOINED',
@@ -357,11 +446,12 @@ export function createApp(opts = {}) {
               color: p.color,
               waiting: false,
               hostUrl: HOST_URL,
+              opponentName: (otherPlayer(p) && otherPlayer(p).name) ? otherPlayer(p).name : undefined,
             });
           }
-          broadcastAll({ type: 'GAME_START', phase: 'playing' });
-          broadcastState();
-          console.log(`[omok] 리매치 시작 — nextBlack=${nextBlack}`);
+          broadcastReadyState();
+          // GAME_START/STATE는 양쪽 READY 후 maybeStartGameIfReady에서 전송.
+          console.log(`[omok] 리매치 색 배정 — nextBlack=${nextBlack} (READY 대기)`);
           break;
         }
 
@@ -374,8 +464,9 @@ export function createApp(opts = {}) {
     ws.on('close', () => {
       console.log(`[omok] ${player.id} 연결 해제 (mode=${ws._mode})`);
       players = players.filter((p) => p.id !== player.id);
-      // 리매치 동의 추적에서 제거(나간 사람은 동의 무효).
+      // 리매치/READY 동의 추적에서 제거(나간 사람은 동의 무효).
       rematchPending.delete(player.id);
+      readySet.delete(player.id);
       // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
       if (!ws._isBot) {
         killBotChild();
@@ -384,12 +475,17 @@ export function createApp(opts = {}) {
         game = null;
         lastGameResult = null;
         rematchPending = new Set();
+        readySet = new Set();
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
-          message: '상대방이 나갔다. 새 친구가 접속하면 게임이 재시작된다.',
+          name: player.name || '(알 수 없음)',
+          message: '상대방이 나갔어요.',
         });
         game = null; // 1명 남으면 게임 무효화 → 두 번째 접속 시 새 게임.
+        // 남은 사람은 다시 1인 대기 → 본인 READY도 무효화(상대 합류 후 다시 READY).
+        readySet = new Set();
+        broadcastReadyState();
       }
     });
 
