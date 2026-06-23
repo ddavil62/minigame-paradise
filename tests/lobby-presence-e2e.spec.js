@@ -138,7 +138,9 @@ test.describe.serial('로비 페이즈1 — 닉네임 게이트 + presence + 토
     await ctx1.close();
   });
 
-  test('CF-03: 닉네임 localStorage 재방문 자동 pre-fill', async ({ browser }) => {
+  test('CF-03: 닉네임 localStorage 재방문 자동 입장 (게이트 건너뜀)', async ({ browser }) => {
+    // Phase 1-A에서 동작 변경: pre-fill → 자동입장.
+    // localStorage에 닉네임이 있으면 게이트 없이 로비로 바로 진입한다.
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     await page.goto(BASE);
@@ -148,10 +150,10 @@ test.describe.serial('로비 페이즈1 — 닉네임 게이트 + presence + 토
     await page.locator('#btn-enter-lobby').click();
     await expect(page.locator('#lobby-view')).toBeVisible();
 
-    // 같은 컨텍스트(localStorage 유지)에서 재방문 → pre-fill
+    // 같은 컨텍스트(localStorage 유지)에서 재방문 → 게이트 건너뛰고 로비 바로 표시
     await page.goto(BASE);
-    await expect(page.locator('#nickname-gate')).toBeVisible();
-    await expect(page.locator('#nickname-input')).toHaveValue('감마');
+    await expect(page.locator('#lobby-view')).toBeVisible();
+    await expect(page.locator('#nickname-gate')).toHaveClass(/hidden/);
 
     await ctx.close();
   });
