@@ -32,14 +32,18 @@ const COLORS = {
   pieceLabel: '#fff',      // 업힘 수 라벨(말 위)
 };
 
-/** 플레이어 색상 (P1=단청 빨강, P2=전통 청색). 한지/원목 팔레트와 동기화. */
+/** 플레이어 색상 (N인 확장: P1~P4). 한지/원목 팔레트와 동기화. */
 const PLAYER_COLOR = {
-  p1: '#c0392b',   // --p1
-  p2: '#1a6fad',   // --p2
+  p1: '#c0392b',   // --p1 (단청 빨강)
+  p2: '#1a6fad',   // --p2 (전통 청색)
+  p3: '#27ae60',   // P3 (초록)
+  p4: '#8e44ad',   // P4 (보라)
 };
 const PLAYER_COLOR_DIM = {
   p1: 'rgba(192, 57, 43, 0.55)',   // --p1-light 유사
   p2: 'rgba(26, 111, 173, 0.55)',  // --p2-light 유사
+  p3: 'rgba(39, 174, 96, 0.55)',   // P3-light
+  p4: 'rgba(142, 68, 173, 0.55)',  // P4-light
 };
 
 /**
@@ -369,14 +373,15 @@ export function createUI(els) {
       if (key.startsWith('home_')) {
         // HOME 영역: 양 팀 모두 같은 출발점(좌하) 근처에 배치. 정통 윷놀이는
         // 두 팀이 같은 출발점에서 시작하며, 시각적 구분은 piece 색상으로 한다.
-        // P1은 출발선 바로 위, P2는 그 옆 가로 라인에 배치(겹침 방지).
+        // N인 확장: 각 플레이어를 수직으로 겹치지 않게 배치 (p1=-36, p2=-18, p3=0, p4=+18).
         const home = homeCoord();
         const baseX = home.x;
-        const baseY = player.id === 'p1' ? home.y - 30 : home.y - 12;
+        const HOME_Y_OFFSETS = { p1: -36, p2: -18, p3: 0, p4: 24 };
+        const baseY = home.y + (HOME_Y_OFFSETS[player.id] ?? -30);
         cx = baseX;
         cy = baseY;
         indices.forEach((idx, k) => {
-          drawPiece(ctx, baseX + k * 16, baseY, 10, color, colorDim, '');
+          drawPiece(ctx, baseX + k * 20, baseY, 10, color, colorDim, '');
         });
         continue;
       }
@@ -387,7 +392,10 @@ export function createUI(els) {
       const r = c.big ? 16 : 13;
       // 업힘 카운트 = indices.length (같은 cell의 자기 말 수)
       const totalStack = indices.length;
-      drawPiece(ctx, c.x - (player.id === 'p1' ? 6 : -6), c.y - 4, r, color, colorDim,
+      // N인 확장: 플레이어별 x/y 오프셋으로 같은 칸에서 겹침 방지
+      const PIECE_OFFSETS = { p1: { x: -6, y: -4 }, p2: { x: 6, y: -4 }, p3: { x: -6, y: 8 }, p4: { x: 6, y: 8 } };
+      const off = PIECE_OFFSETS[player.id] || { x: 0, y: 0 };
+      drawPiece(ctx, c.x + off.x, c.y + off.y, r, color, colorDim,
         totalStack > 1 ? String(totalStack) : '');
     }
 
@@ -395,8 +403,10 @@ export function createUI(els) {
     const doneCount = player.pieces.filter((p) => p.done).length;
     if (doneCount > 0) {
       const goal = goalCoord();
-      const baseX = player.id === 'p1' ? goal.x + 60 : BOARD_SIZE - goal.x - 60 - doneCount * 14;
-      const baseY = goal.y + 4;
+      // N인 확장: 각 플레이어를 수직으로 다른 줄에 배치
+      const GOAL_Y_OFFSETS = { p1: -8, p2: 8, p3: 26, p4: 42 };
+      const baseX = goal.x + 60;
+      const baseY = goal.y + (GOAL_Y_OFFSETS[player.id] ?? 4);
       for (let i = 0; i < doneCount; i++) {
         drawPiece(ctx, baseX + i * 14, baseY, 8, color, colorDim, '');
       }
@@ -598,13 +608,17 @@ export function createUI(els) {
     els.resultOverlay.classList.remove('win', 'lose');
   }
 
-  /** 내 말/상대 말 패널 갱신 (완주 카운트만 표시). */
+  /** 내 말/상대 말 패널 갱신 (완주 카운트 표시).
+   *  N인 확장: 상대 완주 수는 전체 상대의 합계. piece-dot은 기존 4개 DOM 유지. */
   function renderPieceStatus(state, myId) {
     if (!state || !Array.isArray(state.players)) return;
     const me = state.players.find((p) => p.id === myId);
-    const opp = state.players.find((p) => p.id !== myId);
+    const opponents = state.players.filter((p) => p.id !== myId);
     const myDone = me ? me.pieces.filter((p) => p.done).length : 0;
-    const oppDone = opp ? opp.pieces.filter((p) => p.done).length : 0;
+    // N인: 가장 진행도가 높은(=가장 위험한) 상대의 완주 수를 표시
+    const oppDone = opponents.length > 0
+      ? Math.max(...opponents.map((o) => o.pieces.filter((p) => p.done).length))
+      : 0;
     if (els.myDoneEl) els.myDoneEl.textContent = String(myDone);
     if (els.oppDoneEl) els.oppDoneEl.textContent = String(oppDone);
 
@@ -616,6 +630,8 @@ export function createUI(els) {
         dot.style.background = PLAYER_COLOR[myId] || '#888';
       });
     }
+    // N인: 상대 패널은 현재 턴인 상대(또는 첫 번째 상대)의 말로 표시
+    const opp = opponents.find((o) => o.id === state.currentTurn) || opponents[0];
     if (opp && els.oppPiecesEl) {
       const oppColor = PLAYER_COLOR[opp.id] || '#888';
       els.oppPiecesEl.querySelectorAll('.piece-dot').forEach((dot, idx) => {
@@ -632,22 +648,35 @@ export function createUI(els) {
   }
 
   /**
-   * P1/P2 준비 상태를 대기 화면에 표시한다 (yahtzee ready-mark 패턴).
-   * @param {boolean} p1Ready
-   * @param {boolean} p2Ready
+   * P1~P4 준비 상태를 대기 화면에 표시한다 (yahtzee ready-mark 패턴, N인 확장).
+   *
+   * 배열 파라미터: `showReadyStatus([true, false, true, false])`
+   * — 인덱스 0=P1, 1=P2, 2=P3, 3=P4. 길이가 4 미만이면 나머지는 false 취급.
+   *
+   * 하위 호환: 기존 2인 호출 `showReadyStatus(p1Ready, p2Ready)`도 그대로 동작.
+   *
+   * @param {boolean[]|boolean} readyStatesOrP1 - 배열이면 N인 ready 상태, boolean이면 기존 p1Ready
+   * @param {boolean} [p2Ready] - 하위 호환: 기존 p2Ready (배열이 아닐 때만 사용)
    */
-  function showReadyStatus(p1Ready, p2Ready) {
+  function showReadyStatus(readyStatesOrP1, p2Ready) {
     const status = document.getElementById('ready-status');
     if (status) status.classList.remove('hidden');
-    const markP1 = document.getElementById('ready-mark-p1');
-    const markP2 = document.getElementById('ready-mark-p2');
-    if (markP1) {
-      markP1.textContent = p1Ready ? '✓ 준비' : '대기';
-      markP1.classList.toggle('ready', p1Ready);
+
+    // 하위 호환: 기존 2인 호출 (boolean, boolean) → 배열로 변환
+    let states;
+    if (Array.isArray(readyStatesOrP1)) {
+      states = readyStatesOrP1;
+    } else {
+      states = [!!readyStatesOrP1, !!p2Ready];
     }
-    if (markP2) {
-      markP2.textContent = p2Ready ? '✓ 준비' : '대기';
-      markP2.classList.toggle('ready', p2Ready);
+
+    const SLOT_IDS = ['ready-mark-p1', 'ready-mark-p2', 'ready-mark-p3', 'ready-mark-p4'];
+    for (let i = 0; i < SLOT_IDS.length; i++) {
+      const mark = document.getElementById(SLOT_IDS[i]);
+      if (!mark) continue;
+      const ready = !!states[i];
+      mark.textContent = ready ? '\u2713 준비' : '대기';
+      mark.classList.toggle('ready', ready);
     }
   }
 

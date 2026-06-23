@@ -25,10 +25,12 @@
     <!-- 좌측(주 영역): 보드 -->
     <section class="board-area">
       <canvas id="board-canvas"></canvas>
-      <!-- P1/P2 준비 상태 표시 -->
+      <!-- P1~P4 준비 상태 표시 (N인 확장) -->
       <div id="ready-status" class="ready-status">
         <span class="ready-slot">P1 <span id="ready-mark-p1" class="ready-mark">대기</span></span>
         <span class="ready-slot">P2 <span id="ready-mark-p2" class="ready-mark">대기</span></span>
+        <span class="ready-slot">P3 <span id="ready-mark-p3" class="ready-mark">대기</span></span>
+        <span class="ready-slot">P4 <span id="ready-mark-p4" class="ready-mark">대기</span></span>
       </div>
       <button id="ready-btn" class="primary-btn ready-btn">준비</button>
       <div id="ai-panel" class="ai-panel hidden">

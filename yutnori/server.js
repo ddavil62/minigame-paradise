@@ -432,7 +432,8 @@ export function createApp(opts = {}) {
       if (cfg.winner) game.started = false;
     }
     if (cfg.pieces) {
-      for (const pid of ['p1', 'p2']) {
+      // N인 확장: p1~p4까지 지원
+      for (const pid of ['p1', 'p2', 'p3', 'p4']) {
         if (!Array.isArray(cfg.pieces[pid])) continue;
         const p = players.find((pl) => pl.id === pid);
         if (!p) continue;
@@ -442,6 +443,10 @@ export function createApp(opts = {}) {
           done: typeof pc.done === 'boolean' ? pc.done : false,
         }));
       }
+    }
+    // N인 확장: roomMaxPlayers 주입 지원 (테스트용)
+    if (typeof cfg.roomMaxPlayers === 'number') {
+      roomMaxPlayers = cfg.roomMaxPlayers;
     }
     broadcastState();
     if (cfg.winner) {
@@ -501,6 +506,11 @@ export function createApp(opts = {}) {
     }
   }
 
+// ── N인 정원 (Phase 1-B 다인용 확장) ──────────────────────────────
+// 첫 번째 접속자의 URL 쿼리(?players=N)에서 룸 정원을 결정한다.
+// 기본값 2(기존 2인 모드 하위 호환). 런처 REDIRECT가 playerCount를 전달.
+let roomMaxPlayers = 2;
+
 // ── 게임 상태 ────────────────────────────────────────────────────
 /**
  * @typedef {Object} Piece
@@ -516,7 +526,7 @@ export function createApp(opts = {}) {
 
 /**
  * @typedef {Object} PlayerState
- * @property {string} id          'p1' | 'p2'
+ * @property {string} id          'p1' | 'p2' | 'p3' | 'p4'
  * @property {string} name
  * @property {Piece[]} pieces     4개의 말
  * @property {boolean} ready
@@ -661,10 +671,26 @@ function currentPlayer() {
 }
 
 /**
+ * N인 턴 순환 헬퍼. currentId의 다음 플레이어 ID를 반환한다.
+ * playerIds 배열 순서대로 순환: p1→p2→p3→…→p1.
+ * N=2이면 기존 p1↔p2 동작과 동일하다.
+ *
+ * @param {string} currentId  현재 턴 플레이어 ID
+ * @param {string[]} playerIds  전체 플레이어 ID 배열
+ * @returns {string} 다음 턴 플레이어 ID
+ */
+function nextPlayer(currentId, playerIds) {
+  const idx = playerIds.indexOf(currentId);
+  return playerIds[(idx + 1) % playerIds.length];
+}
+
+/**
  * 다음 플레이어로 턴 넘김.
  */
 function passTurn() {
-  game.currentTurn = game.currentTurn === 'p1' ? 'p2' : 'p1';
+  // N인 순환: players 배열 순서 기반으로 다음 턴 결정 (N=2이면 기존 p1↔p2와 동일).
+  const playerIds = players.map((p) => p.id);
+  game.currentTurn = nextPlayer(game.currentTurn, playerIds);
   game.pendingResults = [];
   game.awaitingBranchAt = null;
   game.awaitingBranchResult = null;
@@ -691,8 +717,9 @@ function resolveLanding(mover, pieceIdx) {
     // 같은 칸에 다른 말이 있는가?
     // 1) 자기 말 → 업기 (해당 칸의 모든 자기 말 묶음을 piece로 합침)
     // 2) 상대 말 → 잡기 (상대 말 전부 HOME으로 + 보너스)
-    const opp = players.find((p) => p.id !== mover.id);
-    if (opp) {
+    // N인 확장: mover가 아닌 모든 플레이어의 말을 검사한다.
+    for (const opp of players) {
+      if (opp.id === mover.id) continue; // 자기 말은 업기 대상 (아래에서 처리)
       let oppCaught = 0;
       for (let i = 0; i < opp.pieces.length; i++) {
         const op = opp.pieces[i];
@@ -837,19 +864,29 @@ wss.on('connection', (ws, req) => {
   const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
   const isBot = wsMode === 'bot';
 
-  if (players.length >= 2) {
+  // N인 정원: 첫 번째 접속자의 쿼리(?players=N)로 룸 정원을 설정한다.
+  // 이후 접속자의 쿼리는 무시(첫 접속자가 정원 결정). N=2가 기본(하위 호환).
+  if (players.length === 0) {
+    const parsedPlayers = parseInt(reqUrlObj.searchParams.get('players'), 10);
+    if (parsedPlayers >= 2 && parsedPlayers <= 4) {
+      roomMaxPlayers = parsedPlayers;
+    } else {
+      roomMaxPlayers = 2;
+    }
+  }
+
+  if (players.length >= roomMaxPlayers) {
     ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
     ws.close();
-    console.log('[server] 연결 거절: 룸 정원 초과');
+    console.log(`[server] 연결 거절: 룸 정원 초과 (${players.length}/${roomMaxPlayers})`);
     return;
   }
 
-  // FIX-1: 미사용 ID를 배정 (재입장 데드락 방지).
-  // p1이 disconnect 후 재접속 시 players에는 p2만 남아 있으므로
-  // players.length === 0 ? 'p1' : 'p2' 방식은 'p2'를 중복 배정해 게임이 잠긴다.
-  // 현재 players 배열에 'p1'이 없으면 'p1', 있으면 'p2'를 배정한다.
+  // FIX-1 확장: 미사용 ID를 배정 (재입장 데드락 방지).
+  // N인 확장: p1~p4 중 첫 빈 슬롯을 배정한다.
   const usedIds = new Set(players.map((p) => p.id));
-  const playerId = !usedIds.has('p1') ? 'p1' : 'p2';
+  const ALL_IDS = ['p1', 'p2', 'p3', 'p4'];
+  const playerId = ALL_IDS.find((id) => !usedIds.has(id)) || 'p1';
   /** @type {PlayerState} */
   const player = {
     id: playerId,
@@ -860,13 +897,18 @@ wss.on('connection', (ws, req) => {
     ws,
   };
   players.push(player);
-  console.log(`[server] ${playerId} 연결됨 (현재 인원: ${players.length}/2, mode=${wsMode})`);
+  console.log(`[server] ${playerId} 연결됨 (현재 인원: ${players.length}/${roomMaxPlayers}, mode=${wsMode})`);
 
   // mode=ai 사용자가 혼자 들어왔다 → 봇 자동 spawn (자기 자식 프로세스).
   // 봇이 connect하면 두 번째 슬롯을 차지하고 JOIN/READY로 게임을 시작한다.
   // 약간의 지연: 사용자 클라이언트가 JOIN/READY를 먼저 보낼 여유 확보.
+  // N인 확장: 다인 방(roomMaxPlayers > 2)에서 AI 봇은 미지원 → spawn 스킵 + 에러 로그.
   if (wsMode === 'ai' && !isBot && players.length === 1) {
-    setTimeout(() => spawnBotChild(), 200);
+    if (roomMaxPlayers > 2) {
+      console.error('[yutnori] 다인 방(N>2)에서 AI 봇은 미지원 — 봇 spawn 스킵');
+    } else {
+      setTimeout(() => spawnBotChild(), 200);
+    }
   }
 
   ws.on('message', (data) => {
@@ -884,11 +926,11 @@ wss.on('connection', (ws, req) => {
         sendTo(player, {
           type: 'JOINED',
           playerId: player.id,
-          waiting: players.length < 2,
+          waiting: players.length < roomMaxPlayers,
           hostUrl: HOST_URL,
         });
-        // 두 명 다 들어오면 알림용 STATE도 broadcast (대기 화면에서 상대 입장 즉시 반영)
-        if (players.length === 2) {
+        // 정원이 다 들어오면 알림용 STATE도 broadcast (대기 화면에서 상대 입장 즉시 반영)
+        if (players.length >= roomMaxPlayers) {
           broadcastState();
         }
         break;
@@ -897,8 +939,8 @@ wss.on('connection', (ws, req) => {
       case 'READY': {
         player.ready = true;
         console.log(`[server] ${player.id} READY`);
-        if (players.length === 2 && players.every((p) => p.ready)) {
-          console.log('[server] 양쪽 READY → 게임 시작');
+        if (players.length >= roomMaxPlayers && players.every((p) => p.ready)) {
+          console.log(`[server] 전원 READY → 게임 시작 (${players.length}인)`);
           resetGame();
           broadcastAll({ type: 'START', countdown: 3 });
           broadcastState();
@@ -1184,13 +1226,21 @@ wss.on('connection', (ws, req) => {
 
       case 'REMATCH': {
         player.rematchReady = true;
-        broadcastAll({
+        // N인 확장: 각 플레이어의 rematchReady 상태를 동적으로 전달.
+        // 후방 호환: 2인 시 p1Ready/p2Ready 필드도 유지.
+        const rematchPayload = {
           type: 'REMATCH_STATUS',
           p1Ready: players.find((p) => p.id === 'p1')?.rematchReady || false,
           p2Ready: players.find((p) => p.id === 'p2')?.rematchReady || false,
-        });
-        if (players.length === 2 && players.every((p) => p.rematchReady)) {
-          console.log('[server] 양쪽 REMATCH → 새 게임');
+        };
+        // N인 추가: 각 플레이어별 ready 상태 배열
+        rematchPayload.playersReady = players.map((p) => ({
+          id: p.id,
+          ready: p.rematchReady,
+        }));
+        broadcastAll(rematchPayload);
+        if (players.length >= roomMaxPlayers && players.every((p) => p.rematchReady)) {
+          console.log(`[server] 전원 REMATCH → 새 게임 (${players.length}인)`);
           resetGame();
           broadcastAll({ type: 'START', countdown: 3 });
           broadcastState();
@@ -1221,8 +1271,9 @@ wss.on('connection', (ws, req) => {
       softResetRoom();
       broadcastState();
     } else {
-      // 두 명 다 나간 경우 클린업
+      // 모두 나간 경우 클린업 + 정원 기본값 복원
       softResetRoom();
+      roomMaxPlayers = 2;
     }
   });
 

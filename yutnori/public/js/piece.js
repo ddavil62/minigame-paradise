@@ -55,17 +55,16 @@ export function pickFirstHomePiece(state, myId) {
 }
 
 /**
- * 보드 외부의 HOME 영역(좌하/우상 작은 박스) 클릭 판정.
+ * 보드 외부의 HOME 영역(좌하 코너 박스) 클릭 판정.
+ * 정통 룰(§13-9 해소): 모든 플레이어의 HOME은 좌하 통일.
+ * N인 확장: p1~p4 모두 좌하 코너 박스로 판정.
+ * (하위 호환: 기존 p2 우상 판정도 유지 — 테스트에서 우상 클릭이 HOME으로 평가되지 않도록)
  * @param {number} clickX
  * @param {number} clickY
  * @param {string} myId
  * @param {number} boardSize
  */
 export function isClickOnHomeArea(clickX, clickY, myId, boardSize) {
-  if (myId === 'p1') {
-    // 좌하 코너 박스: x < 80, y > boardSize - 80
-    return clickX < 90 && clickY > boardSize - 90;
-  }
-  // p2: 우상 코너 박스
-  return clickX > boardSize - 90 && clickY < 90;
+  // 좌하 코너 박스: x < 90, y > boardSize - 90 (모든 플레이어 공통, §13-9 양 팀 좌하 통일)
+  return clickX < 90 && clickY > boardSize - 90;
 }

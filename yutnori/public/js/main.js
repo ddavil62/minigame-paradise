@@ -66,11 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
     onJoined: ({ playerId, waiting, hostUrl }) => {
       myId = playerId;
       ui.setMyId(playerId);
-      els.playerLabelEl.textContent = playerId === 'p1' ? '나 (P1, 빨강)' : '나 (P2, 파랑)';
+      // N인 확장: p1~p4 동적 라벨 표시
+      const PLAYER_LABELS = {
+        p1: '나 (P1, 빨강)',
+        p2: '나 (P2, 파랑)',
+        p3: '나 (P3, 초록)',
+        p4: '나 (P4, 보라)',
+      };
+      els.playerLabelEl.textContent = PLAYER_LABELS[playerId] || `나 (${playerId})`;
       if (waiting) {
         ui.setStatus('상대방을 기다리는 중...');
       } else {
-        ui.setStatus('상대 입장. 준비 버튼을 눌러주세요.');
+        ui.setStatus('모두 입장. 준비 버튼을 눌러주세요.');
       }
       // P1/P2 준비 상태 초기화 (입장 시점에는 양쪽 모두 아직 READY 전).
       ui.showReadyStatus(false, false);
@@ -100,8 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
       game.setState(state);
       ui.renderBoard(state);
       ui.renderPieceStatus(state, myId);
-      const turnText = state.currentTurn === myId ? '내 턴' : '상대 턴';
-      ui.setTurnLabel(state.currentTurn ? turnText : '-');
+      // N인 확장: 내 턴이면 '내 턴', 아니면 어느 플레이어 턴인지 표시
+      let turnText = '-';
+      if (state.currentTurn) {
+        turnText = state.currentTurn === myId
+          ? '내 턴'
+          : `${state.currentTurn.toUpperCase()} 턴`;
+      }
+      ui.setTurnLabel(turnText);
       // 결과 큐 렌더링
       ui.renderResultQueue(state.pendingResults || [], state.currentTurn === myId, (pickedResult) => {
         // 결과 선택 시 안내 메시지
@@ -119,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onYutResult: ({ by, sticks, result, steps, bonus, discarded }) => {
       ui.renderYut(sticks);
       ui.showYutResultText(result, by === myId);
-      const byLabel = by === myId ? '나' : '상대';
+      const byLabel = by === myId ? '나' : by.toUpperCase();
       // 백도는 -1칸. 자동 폐기됐다면 별도 라벨로 안내.
       const stepText = steps < 0 ? `${steps}칸` : `${steps}칸`;
       const extraTag = discarded ? ', 사용불가→폐기'
@@ -139,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (reason === 'disconnect') {
         msg = won ? '상대방 연결이 끊겼습니다. 승리!' : '연결이 끊겼습니다.';
       } else {
-        msg = won ? '승리! 4개 말 모두 완주!' : '패배... 다음엔 이길 수 있어요!';
+        msg = won ? '승리! 4개 말 모두 완주!'
+          : `패배! ${winner.toUpperCase()}이(가) 완주했습니다.`;
       }
       ui.showResult(msg, won ? 'win' : 'lose');
       els.rematchBtnEl.classList.remove('hidden');
@@ -151,10 +165,27 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { window.location.href = '/'; }, 1200);
       }
     },
-    onRematchStatus: ({ p1Ready, p2Ready }) => {
-      const myReady = (myId === 'p1' && p1Ready) || (myId === 'p2' && p2Ready);
-      const oppReady = (myId === 'p1' && p2Ready) || (myId === 'p2' && p1Ready);
-      ui.setStatus(`재대결 대기: 나 ${myReady ? '완료' : '대기'} / 상대 ${oppReady ? '완료' : '대기'}`);
+    onRematchStatus: (msg) => {
+      // N인 확장: playersReady 배열이 있으면 동적으로 처리, 없으면 기존 2인 호환
+      let myReady = false;
+      let othersReady = 0;
+      let othersTotal = 0;
+      if (Array.isArray(msg.playersReady)) {
+        for (const pr of msg.playersReady) {
+          if (pr.id === myId) {
+            myReady = pr.ready;
+          } else {
+            othersTotal++;
+            if (pr.ready) othersReady++;
+          }
+        }
+      } else {
+        // 후방 호환: 기존 p1Ready/p2Ready 사용
+        myReady = (myId === 'p1' && msg.p1Ready) || (myId === 'p2' && msg.p2Ready);
+        othersReady = (myId === 'p1' && msg.p2Ready) || (myId === 'p2' && msg.p1Ready) ? 1 : 0;
+        othersTotal = 1;
+      }
+      ui.setStatus(`재대결 대기: 나 ${myReady ? '완료' : '대기'} / 상대 ${othersReady}/${othersTotal} 준비`);
       // 재대결 진행 중에는 AI 버튼을 숨긴다 (새 매칭 진입과 구분, rummikub 동일 패턴).
       els.aiPanelEl.classList.add('hidden');
     },

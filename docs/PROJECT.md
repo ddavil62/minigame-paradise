@@ -1,6 +1,7 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-06-23 — Phase 1-A 런처 로비 다인용 지원 + Lobby Entry UX 개선. 런처 로비를 2인 고정에서 2~5인 가변 정원으로 확장(`targetPlayers` 변수, `SET_TARGET` WS 메시지, PICK_GAME 목표 인원 가드, REDIRECT에 `playerCount` 추가, `games.json` 10종에 `minPlayers`/`maxPlayers` 추가). 인원 설정 UI(호스트 전용 2~5인 버튼), `N/M` 카운트 표시, 게임 카드 인원 범위 비활성(`player-disabled` 클래스 + 배지). Lobby Entry UX: localStorage 닉네임 자동 입장, 이모지 배경 패턴(`.game-bg-hint`), 게스트 안내 문구 변경. BUG-1(게스트 인원 선택 UI 노출 — CSS `hidden` 속성 오버라이드) 수정 완료. 검증: Playwright 31/31 PASS + 기존 회귀 게이트 정상. QA PASS.
+> 최종 업데이트: 2026-06-23 — Phase 1-B 윷놀이 N인 확장 완료. 윷놀이 서버/클라이언트를 2인 고정에서 2~4인 가변 플레이로 확장. `roomMaxPlayers` 동적 정원, `nextPlayer()` N인 턴 순환, 잡기/업기 N인 판정, P3(초록)/P4(보라) 색상, HOME/GOAL N인 오프셋. 신규 22건 + 회귀 342 + bot-smoke 10 = 374건 전부 PASS. QA PASS.
+> 이전 갱신: 2026-06-23 — Phase 1-A 런처 로비 다인용 지원 + Lobby Entry UX 개선.
 > 이전 갱신: 2026-06-17 — 버그리포트 배치 6건 수정 + 1건 보류.
 > 이전 갱신: 2026-06-15 — 맞고 선공 바닥 조커 연출 수정 + 바닥 리필 룰 (사안 A: `client.js` `isRoundStart`에 `floor_joker_to_first` 추가 → 조커·리필 카드 fly 없이 appear. 사안 B: `game.js applyFloorJokerToFirst`가 조커 제거 후 `deck.pop()`으로 floor를 항상 8로 리필(연쇄 최대 2, deck 소진 방어) → `floor === 8`, `deck === 22 - N` 가변(22 불변 폐기), 총합 50 불변. joker 23/0, 단위 98/0, smoke 5/5(floor8/total50), e2e 3회 30/0/0. score.js 무수정)
 > 이전 갱신: 2026-06-13 — 맞고 레거시 shake_decision/pendingShake 데드코드 정리 (죽은 `shake_decision` 분기 + `pendingShake` 필드 제거, 동작 무변경 프로덕션 no-op. 레거시 테스트 G-22/G-23 제거로 game.unit 42, 단위 98 passed / adhoc 42 / e2e 30 passed. 커밋 513a603)
@@ -64,7 +65,7 @@ minigame-paradise/
 | 게임 중 뒤로가기 | 6개 게임 헤더에 상시 "게임 선택" 버튼(`#btn-back-to-lobby`). confirm 다이얼로그 + disconnect 감지로 양쪽 로비 복귀 | 완료 |
 | 봇 미지원 게임 차단 | AI 모드에서 봇 없는 게임 카드 비활성 (CSS+JS+서버 3중 가드) | 완료 |
 | 맞고 (matgo) | 2인 화투 고스톱, AI 봇 지원 | 완료 |
-| 윷놀이 (yutnori) | 2인 윷놀이 | 완료 |
+| 윷놀이 N인 (Phase 1-B) | 윷놀이 2~4인 가변 플레이. N인 턴 순환, 잡기/업기 N인 판정, P3/P4 색상, rematch N인 확장 | 완료 |
 | 테트리스 배틀 | 한게임 스타일 1:1 테트리스 대전 | 완료 |
 | 다빈치 코드 플러스 | 2인 추리 게임. 빨강/노랑/파랑 3색 39장 타일, 조커 배치 페이즈, 2-column 레이아웃(좌 게임보드 + 우 정보 패널), 숫자 메모판(39칸), 추측 기록 누적 | 완료 |
 | 코드네임 듀엣 | 2인 협동 워드 게임 | 완료 |
@@ -73,7 +74,9 @@ minigame-paradise/
 ## 알려진 제약사항
 
 - 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle 지원. hanabi, codenames-duet, davinci-code는 AI 대전 불가.
-- 로비 최대 5인 접속. 단, 게임별 다인용 로직은 Phase 1-A(로비)만 완료. 개별 게임 3~4인 플레이(Phase 1-B~E)는 미구현.
+- 로비 최대 5인 접속. 게임별 다인용 로직은 Phase 1-A(로비) + Phase 1-B(윷놀이) 완료. 요트/루미큐브/하나비(Phase 1-C~E)는 미구현.
+- 윷놀이 3~4인 게임 중 1명 disconnect 시 게임 즉시 종료(남은 플레이어 중 첫 번째가 승리 선언). 탈락 처리 후 계속 진행 미지원.
+- 윷놀이 P3/P4 ready 마크가 DOM에 없어 시각적 미표시(기능적으로 전원 READY 대기 정상 동작).
 - 서버 PICK_GAME에 `maxPlayers < clients.size` 서버 측 가드 미구현 (클라이언트 CSS/JS 가드만 존재).
 - 단일 룸 구조. 동시 여러 방 운영 불가.
 - 모바일 반응형 미지원.
@@ -81,7 +84,7 @@ minigame-paradise/
 
 ## 향후 계획
 
-- 다인용 Phase 1-B~E: 윷놀이/요트/루미큐브/하나비 게임 로직 3~4인 확장
+- 다인용 Phase 1-C~E: 요트/루미큐브/하나비 게임 로직 3~4인 확장
 - 다인용 Phase 2: 다빈치 코드/맞고/테트리스/코드네임/장기/오목 다인용 검토
 - 모바일 반응형 레이아웃
 - 장기: 무승부 거절 피드백(DRAW_REJECT), showCheckToast/showToast stale DOM 수정
