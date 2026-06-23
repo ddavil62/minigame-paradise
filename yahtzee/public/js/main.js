@@ -88,6 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 상태 ────────────────────────────────────────────────────
   let myId = null;
+  // N인 플레이어 ID 배열. STATE 수신 시 갱신. 기본 2인.
+  let playerIds = ['p1', 'p2'];
   // keep 입력 누적 (다음 ROLL_DICE에 보낼 값). STATE 수신 시 서버 권위로 동기화.
   let pendingKeep = [false, false, false, false, false];
   // 효과음 트리거용: 본인 상단 보너스가 0→35 순간을 감지하기 위한 직전값 캐시.
@@ -98,7 +100,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 각 플레이어가 "마지막에 선택한 카테고리"를 추적. 다음 본인 행동 전까지
   // 해당 셀에 .scored-persistent를 부여하여 직전 선택을 지속 강조한다.
   // CATEGORY_SCORED 수신 시 by별로 갱신, START/onStart 시 초기화.
-  let lastScoredCategoryByPlayer = { p1: null, p2: null };
+  let lastScoredCategoryByPlayer = {};
+  // N4: 굴리기 연타 차단 플래그. click 핸들러에서 true로 세팅,
+  // onState(STATE 수신) 시 false로 리셋하여 버튼을 자동 복구한다.
+  // disabled=true 는 DOM 업데이트라 동기 억제가 불가 — 앱 레벨 플래그로 보완.
+  let _rollPending = false;
 
   // ── 화면 전환 ────────────────────────────────────────────────
   function showScreen(name) {
@@ -151,8 +157,9 @@ document.addEventListener('DOMContentLoaded', () => {
       pendingKeep = [false, false, false, false, false];
       // 새 게임 시작 — 보너스 감지 캐시 초기화.
       lastMyUpperBonus = 0;
-      // 새 게임 — 양쪽 직전 선택 강조 초기화. renderAll에서 모든 셀의 .scored-persistent가 제거된다.
-      lastScoredCategoryByPlayer = { p1: null, p2: null };
+      // 새 게임 — N인 직전 선택 강조 초기화. renderAll에서 모든 셀의 .scored-persistent가 제거된다.
+      lastScoredCategoryByPlayer = {};
+      for (const pid of playerIds) lastScoredCategoryByPlayer[pid] = null;
       // N5: 직전 게임에서 재대결 버튼을 눌렀으면 disabled + '재대결 대기 중...' 상태가 남아 있다.
       // 새 게임 시작 시 초기화하지 않으면 다음 GAME_OVER에서 재대결 버튼이 고착되어 연속 대전이 막힌다.
       els.rematchBtn.disabled = false;
@@ -163,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onDiceRolled: ({ by, dice, rollCount }) => {
       // 다이스가 굴려진 직후: 토스트로 피드백.
       // 본인 굴림: STATE도 곧 따라오므로 별도 처리 불필요. UX 가독성을 위해 토스트는 1회만.
-      const who = by === myId ? '내' : (by === 'p1' ? 'P1' : 'P2');
+      const who = by === myId ? '내' : by.toUpperCase();
       // STATE의 keep와 동기화하기 위해 본인 keep 입력을 초기화한다(서버 권위).
       // (다음 STATE 수신 시 pendingKeep = state.keep로 다시 맞춘다.)
       console.log(`[dice] ${who} 굴림 ${rollCount}/3: [${dice.join(',')}]`);
@@ -172,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => { playDiceLand(); }, 420);
     },
     onCategoryScored: ({ by, category, scored, yahtzeeBonusAwarded }) => {
-      const who = by === myId ? '나' : (by === 'p1' ? 'P1' : 'P2');
+      const who = by === myId ? '나' : by.toUpperCase();
       let msg = `${who} → ${category}: ${scored}점`;
       if (yahtzeeBonusAwarded > 0) {
         msg += ` (+야츠 보너스 ${yahtzeeBonusAwarded})`;
@@ -183,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
       pendingFlash = { by, category };
       // 지속 강조 갱신: by별 마지막 선택 카테고리 기록. renderAll에서 셀에 .scored-persistent 부착.
       // 본인이 다시 선택하면 자동으로 새 카테고리로 갱신되어 이전 셀의 강조는 제거된다.
-      if (by === 'p1' || by === 'p2') {
+      if (playerIds.includes(by)) {
         lastScoredCategoryByPlayer[by] = category;
       }
       // 점수 효과음: 야츠(첫 50점) 또는 추가 야츠 보너스(+100) → 화려한 아르페지오, 그 외 → 짧은 chime.
@@ -198,6 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     onState: (state) => {
       setState(state);
+      // N인 playerIds 갱신 (STATE가 첫 도착할 때 playerIds가 결정된다).
+      if (Array.isArray(state.playerIds) && state.playerIds.length >= 2) {
+        playerIds = state.playerIds;
+      }
       // 서버의 keep를 본 클라이언트의 pendingKeep로 동기화.
       pendingKeep = (state.keep || []).slice();
       // 본인 상단 보너스가 막 달성된 순간(0 → 35) 감지 → 보너스 효과음.
@@ -214,13 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAll();
     },
     onGameOver: (result) => {
-      renderGameOver(els, result, myId);
+      renderGameOver(els, result, myId, playerIds);
       els.screenGameOver.classList.remove('hidden');
       // 본인 승/패/무 효과음. 무승부는 별도 효과음 없음(과한 소리 방지).
       if (result && result.winner) {
         if (result.winner === myId) {
           playWin();
-        } else if (result.winner === 'p1' || result.winner === 'p2') {
+        } else if (result.winner !== 'draw') {
           playLose();
         }
       }
@@ -301,6 +312,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderActionBar(els, state, myId);
 
+    // N4: 굴리기 요청 처리 중(컵 애니메이션 진행)이면 버튼을 강제 비활성 유지.
+    // STATE가 1ms 이내에 도착해 renderActionBar가 버튼을 복구해도 컵 완료 전까지는 재차 잠근다.
+    // onCupDone → renderAll 재진입 시 _cupTimer=null → 플래그 해제, 버튼은 renderActionBar 결과를 따른다.
+    if (_rollPending) {
+      if (els.diceArea._cupTimer) {
+        // 컵 애니메이션 진행 중 — 버튼 강제 비활성.
+        els.btnRoll.disabled = true;
+      } else {
+        // 컵 완료 — 연타 차단 해제 (버튼 상태는 renderActionBar의 canRoll 판정을 유지).
+        _rollPending = false;
+      }
+    }
+
     // N3: 컵 애니메이션이 진행 중이면 점수 미리보기를 억제한다.
     // dice.js가 컵 흔들기·착지 애니메이션 동안 컨테이너 DOM(els.diceArea)에 _cupTimer를 부착하므로,
     // 그 값이 존재하면 아직 애니메이션 중 → canPreview=false. 완료 후(다음 STATE/keep 토글 시) 자연 복구.
@@ -308,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderScoreboard(els.scoreboardBody, {
       myId,
+      playerIds,
       currentTurn: state.currentTurn,
       rollCount: state.rollCount,
       dice: state.dice,
@@ -340,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // renderScoreboard가 매 렌더마다 셀을 새로 그리므로(셀 객체 교체) 매번 다시 부착해야 한다.
     // 정책: 각 플레이어의 lastScoredCategoryByPlayer[pid] 셀 하나에만 .scored-persistent 부여,
     // 나머지 같은 pid 셀에서는 제거. 새 게임/이탈 시 lastScoredCategoryByPlayer가 null이면 전부 제거.
-    ['p1', 'p2'].forEach((pid) => {
+    for (const pid of playerIds) {
       const targetCat = lastScoredCategoryByPlayer[pid];
       const cells = els.scoreboardBody.querySelectorAll(`.score-cell[data-pid="${pid}"]`);
       cells.forEach((cell) => {
@@ -351,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
           cell.classList.remove('scored-persistent');
         }
       });
-    });
+    }
   }
 
   // ── 버튼 이벤트 ──────────────────────────────────────────────
@@ -376,10 +401,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   els.btnRoll.addEventListener('click', () => {
+    // N4: 앱 레벨 연타 차단 — disabled=true는 DOM 업데이트라
+    // native dblclick의 두 번째 click이 실행되기 전에 반영되지 않는다.
+    // _rollPending 플래그는 동기적으로 검사되므로 두 번째 ROLL_DICE 전송을 확실히 억제한다.
+    if (_rollPending) return;
     const state = getState();
     if (!state) return;
-    // N4: 연타 차단 — 클릭 즉시 비활성화하여 동일 (turn, rollCount)로 ROLL_DICE가 2회 전송되는 것을 막는다.
-    // STATE 수신 후 renderActionBar가 canRoll(myTurn && rollCount<3)을 재계산해 자동 복구한다.
+    _rollPending = true;
     els.btnRoll.disabled = true;
     // 1차 굴림은 keep 무시(서버에서 강제). 2/3차는 pendingKeep 전송.
     net.rollDice(pendingKeep.slice());

@@ -72,6 +72,20 @@ function opponentOf(playerId) {
 }
 
 /**
+ * N인 턴 순환 헬퍼. currentId의 다음 플레이어 ID를 반환한다.
+ * playerIds 배열 순서대로 순환: p1→p2→p3→…→p1.
+ * N=2이면 기존 opponentOf와 동일 결과를 반환한다.
+ *
+ * @param {string} currentId  현재 턴 플레이어 ID
+ * @param {string[]} playerIds  전체 플레이어 ID 배열
+ * @returns {string} 다음 턴 플레이어 ID
+ */
+export function nextPlayer(currentId, playerIds) {
+  const idx = playerIds.indexOf(currentId);
+  return playerIds[(idx + 1) % playerIds.length];
+}
+
+/**
  * 1~6 균등 분포의 정수 1개를 반환한다.
  * @returns {number} 1~6
  */
@@ -244,23 +258,29 @@ export function totalScore(sheet, yahtzeeBonus) {
 
 /**
  * 새 게임 상태를 생성한다.
- * 선공 = p1 고정. 초기 dice는 빈 배열(아직 굴리지 않음), rollCount=0.
+ * 선공 = playerIds[0] (기본 p1). 초기 dice는 빈 배열(아직 굴리지 않음), rollCount=0.
  *
+ * N인 확장: playerIds를 받아 동적으로 점수표와 보너스를 초기화한다.
+ * 인자 없이 호출하면 기존 2인(['p1', 'p2']) 동작과 동일하다 (하위 호환).
+ *
+ * @param {string[]} [playerIds] 플레이어 ID 배열 (기본: ['p1', 'p2'])
  * @returns {GameState}
  */
-export function createGame() {
+export function createGame(playerIds) {
+  const pids = Array.isArray(playerIds) && playerIds.length >= 2
+    ? playerIds
+    : ['p1', 'p2'];
+
   /** @type {GameState} */
   const state = {
-    sheets: {
-      p1: emptyScoreSheet(),
-      p2: emptyScoreSheet(),
-    },
-    yahtzeeBonus: { p1: 0, p2: 0 },
-    currentTurn: 'p1',
+    playerIds: pids,
+    sheets: Object.fromEntries(pids.map((id) => [id, emptyScoreSheet()])),
+    yahtzeeBonus: Object.fromEntries(pids.map((id) => [id, 0])),
+    currentTurn: pids[0],
     dice: [0, 0, 0, 0, 0], // 아직 한 번도 굴리지 않은 상태(rollCount=0)
     keep: [false, false, false, false, false],
     rollCount: 0,
-    turnNumber: 1, // 1~26 (양쪽 각 13턴)
+    turnNumber: 1, // 1~(13*N) (N명 각 13턴)
     phase: 'playing',
     result: null,
   };
@@ -403,7 +423,8 @@ export function scoreCategory(state, by, category) {
   state.keep = [false, false, false, false, false];
   state.rollCount = 0;
   state.turnNumber += 1;
-  state.currentTurn = opponentOf(by);
+  // N인 순환: playerIds 배열 순서대로 다음 턴 결정. N=2이면 기존 p1↔p2와 동일.
+  state.currentTurn = nextPlayer(by, state.playerIds);
 
   // ── 종료 판정 ──
   // 두 플레이어 모두 13 카테고리를 전부 채우면 종료.
@@ -416,12 +437,12 @@ export function scoreCategory(state, by, category) {
 }
 
 /**
- * 양 플레이어의 모든 카테고리가 채워졌는지 확인.
+ * N명 플레이어의 모든 카테고리가 채워졌는지 확인.
  * @param {GameState} state
  * @returns {boolean}
  */
 function isAllFilled(state) {
-  for (const pid of ['p1', 'p2']) {
+  for (const pid of state.playerIds) {
     for (const cat of ALL_CATEGORIES) {
       if (state.sheets[pid][cat] === null) return false;
     }
@@ -431,82 +452,103 @@ function isAllFilled(state) {
 
 /**
  * 최종 결과(state.result + phase)를 채운다.
+ * N인 확장: 전원의 합계를 계산하고 최고점자를 winner로 선정한다.
  * @param {GameState} state
  */
 function finalizeResult(state) {
-  const p1Total = totalScore(state.sheets.p1, state.yahtzeeBonus.p1);
-  const p2Total = totalScore(state.sheets.p2, state.yahtzeeBonus.p2);
-  let winner;
-  if (p1Total > p2Total) winner = 'p1';
-  else if (p2Total > p1Total) winner = 'p2';
-  else winner = 'draw';
+  // N인 전원 합계 계산
+  const totals = {};
+  const breakdown = {};
+  for (const pid of state.playerIds) {
+    const t = totalScore(state.sheets[pid], state.yahtzeeBonus[pid]);
+    totals[pid] = t;
+    breakdown[pid] = {
+      sheet: { ...state.sheets[pid] },
+      upperSum: upperSum(state.sheets[pid]),
+      upperBonus: upperBonus(state.sheets[pid]),
+      yahtzeeBonus: state.yahtzeeBonus[pid],
+      total: t,
+    };
+  }
+
+  // 최고점자 결정 (동점이면 draw)
+  let maxScore = -1;
+  let winner = 'draw';
+  let tieCount = 0;
+  for (const pid of state.playerIds) {
+    if (totals[pid] > maxScore) {
+      maxScore = totals[pid];
+      winner = pid;
+      tieCount = 1;
+    } else if (totals[pid] === maxScore) {
+      tieCount += 1;
+    }
+  }
+  if (tieCount > 1) winner = 'draw';
 
   state.phase = 'ended';
   state.result = {
     winner,
-    p1Total,
-    p2Total,
-    breakdown: {
-      p1: {
-        sheet: { ...state.sheets.p1 },
-        upperSum: upperSum(state.sheets.p1),
-        upperBonus: upperBonus(state.sheets.p1),
-        yahtzeeBonus: state.yahtzeeBonus.p1,
-        total: p1Total,
-      },
-      p2: {
-        sheet: { ...state.sheets.p2 },
-        upperSum: upperSum(state.sheets.p2),
-        upperBonus: upperBonus(state.sheets.p2),
-        yahtzeeBonus: state.yahtzeeBonus.p2,
-        total: p2Total,
-      },
-    },
+    totals,
+    breakdown,
+    // 후방 호환: 2인 시 기존 p1Total/p2Total 필드 유지
+    p1Total: totals.p1 !== undefined ? totals.p1 : 0,
+    p2Total: totals.p2 !== undefined ? totals.p2 : 0,
   };
 }
 
 /**
- * 양쪽 플레이어가 공유하는 STATE 스냅샷을 만든다.
+ * N명 플레이어가 공유하는 STATE 스냅샷을 만든다.
  * 모든 정보가 공개되므로 마스킹은 필요 없다(하나비와 달리 정보 비대칭 없음).
  *
  * @param {GameState} state
  * @returns {object} S→C STATE 메시지 페이로드
  */
 export function snapshot(state) {
+  const pids = state.playerIds;
+
+  // N인 동적 sheets/upper/totals/yahtzeeBonus 생성
+  const sheets = {};
+  const upper = {};
+  const totals = {};
+  const yahtzeeBonus = {};
+  for (const pid of pids) {
+    sheets[pid] = { ...state.sheets[pid] };
+    upper[pid] = {
+      sum: upperSum(state.sheets[pid]),
+      bonus: upperBonus(state.sheets[pid]),
+    };
+    totals[pid] = totalScore(state.sheets[pid], state.yahtzeeBonus[pid]);
+    yahtzeeBonus[pid] = state.yahtzeeBonus[pid];
+  }
+
   return {
     type: 'STATE',
+    playerIds: pids,
     currentTurn: state.currentTurn,
     phase: state.phase,
     dice: state.dice.slice(),
     keep: state.keep.slice(),
     rollCount: state.rollCount,
     turnNumber: state.turnNumber,
-    sheets: {
-      p1: { ...state.sheets.p1 },
-      p2: { ...state.sheets.p2 },
-    },
-    yahtzeeBonus: { ...state.yahtzeeBonus },
-    upper: {
-      p1: { sum: upperSum(state.sheets.p1), bonus: upperBonus(state.sheets.p1) },
-      p2: { sum: upperSum(state.sheets.p2), bonus: upperBonus(state.sheets.p2) },
-    },
-    totals: {
-      p1: totalScore(state.sheets.p1, state.yahtzeeBonus.p1),
-      p2: totalScore(state.sheets.p2, state.yahtzeeBonus.p2),
-    },
+    sheets,
+    yahtzeeBonus,
+    upper,
+    totals,
     result: state.result,
   };
 }
 
 /**
  * @typedef {Object} GameState
- * @property {{p1: Record<string, number|null>, p2: Record<string, number|null>}} sheets
- * @property {{p1: number, p2: number}} yahtzeeBonus 추가 야츠 보너스 누적
- * @property {string} currentTurn 'p1'|'p2'
+ * @property {string[]} playerIds 플레이어 ID 배열 (예: ['p1', 'p2'] 또는 ['p1', 'p2', 'p3'])
+ * @property {Record<string, Record<string, number|null>>} sheets N인 점수표
+ * @property {Record<string, number>} yahtzeeBonus N인 추가 야츠 보너스 누적
+ * @property {string} currentTurn 현재 턴 플레이어 ID
  * @property {number[]} dice 길이 5
  * @property {boolean[]} keep 길이 5
  * @property {number} rollCount 0~3 (0=아직 안 굴림)
- * @property {number} turnNumber 1~26
+ * @property {number} turnNumber 1~(13*N)
  * @property {string} phase 'playing'|'ended'
- * @property {object|null} result { winner, p1Total, p2Total, breakdown }
+ * @property {object|null} result { winner, totals, breakdown, p1Total, p2Total (후방 호환) }
  */

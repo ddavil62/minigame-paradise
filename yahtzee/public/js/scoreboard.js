@@ -48,7 +48,8 @@ function makeScoreCell(opts) {
 }
 
 /**
- * 카테고리 행(tr) 생성. [우드] 순서: 카테고리 → P1 → P2.
+ * 카테고리 행(tr) 생성. 순서: 카테고리 → P1 → P2 → ... → PN.
+ * N인 확장: ctx.playerIds 배열로 동적 열 생성.
  */
 function makeCategoryRow(category, ctx) {
   const tr = document.createElement('tr');
@@ -65,49 +66,45 @@ function makeCategoryRow(category, ctx) {
   ruleDiv.className = 'cat-rule';
   ruleDiv.textContent = CATEGORY_RULE[category] || '';
   catCell.appendChild(ruleDiv);
-
-  const p1Cell = makeScoreCell({
-    pid: 'p1',
-    category,
-    recorded: ctx.sheets.p1[category],
-    canPreview: ctx.myId === 'p1' && ctx.canSelectCategory && ctx.sheets.p1[category] === null,
-    previewScore: calcCategoryScore(ctx.dice, category),
-    canClick: ctx.myId === 'p1' && ctx.canSelectCategory && ctx.sheets.p1[category] === null,
-    onClick: ctx.onCategoryClick,
-  });
-
-  const p2Cell = makeScoreCell({
-    pid: 'p2',
-    category,
-    recorded: ctx.sheets.p2[category],
-    canPreview: ctx.myId === 'p2' && ctx.canSelectCategory && ctx.sheets.p2[category] === null,
-    previewScore: calcCategoryScore(ctx.dice, category),
-    canClick: ctx.myId === 'p2' && ctx.canSelectCategory && ctx.sheets.p2[category] === null,
-    onClick: ctx.onCategoryClick,
-  });
-
-  // [우드] 카테고리 → P1 → P2 순으로 추가
   tr.appendChild(catCell);
-  tr.appendChild(p1Cell);
-  tr.appendChild(p2Cell);
+
+  // N인 동적 점수 셀 생성
+  const pids = ctx.playerIds || ['p1', 'p2'];
+  for (const pid of pids) {
+    const sheet = ctx.sheets[pid] || {};
+    const cell = makeScoreCell({
+      pid,
+      category,
+      recorded: sheet[category],
+      canPreview: ctx.myId === pid && ctx.canSelectCategory && sheet[category] === null,
+      previewScore: calcCategoryScore(ctx.dice, category),
+      canClick: ctx.myId === pid && ctx.canSelectCategory && sheet[category] === null,
+      onClick: ctx.onCategoryClick,
+    });
+    tr.appendChild(cell);
+  }
+
   return tr;
 }
 
 /**
- * 섹션 헤더 행(상단/하단 구분).
+ * 섹션 헤더 행(상단/하단 구분). N인 확장으로 colSpan 동적 결정.
+ * @param {string} label
+ * @param {number} [colCount] 전체 열 수 (기본 3 = 카테고리 + P1 + P2)
  */
-function makeSectionRow(label) {
+function makeSectionRow(label, colCount) {
   const tr = document.createElement('tr');
   tr.className = 'section-divider';
   const td = document.createElement('td');
-  td.colSpan = 3;
+  td.colSpan = colCount || 3;
   td.textContent = label;
   tr.appendChild(td);
   return tr;
 }
 
 /**
- * 점수표 본문을 렌더한다. (시그니처/컨텍스트 기존과 동일)
+ * 점수표 본문을 렌더한다.
+ * N인 확장: ctx.playerIds가 있으면 동적 열 생성.
  */
 export function renderScoreboard(tbody, ctx) {
   tbody.innerHTML = '';
@@ -123,11 +120,15 @@ export function renderScoreboard(tbody, ctx) {
   const allowPreview = ctx.canPreview !== false;
   ctx.canSelectCategory = ctx.canSelectCategory && allowPreview;
 
-  tbody.appendChild(makeSectionRow('Upper Section · 1~6'));
+  // 전체 열 수: 카테고리 1 + 플레이어 N
+  const pids = ctx.playerIds || ['p1', 'p2'];
+  const colCount = 1 + pids.length;
+
+  tbody.appendChild(makeSectionRow('Upper Section · 1~6', colCount));
   for (const cat of UPPER_CATEGORIES) {
     tbody.appendChild(makeCategoryRow(cat, ctx));
   }
-  tbody.appendChild(makeSectionRow('Lower Section'));
+  tbody.appendChild(makeSectionRow('Lower Section', colCount));
   for (const cat of LOWER_CATEGORIES) {
     tbody.appendChild(makeCategoryRow(cat, ctx));
   }

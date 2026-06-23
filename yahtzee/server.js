@@ -63,13 +63,13 @@ export function createApp(opts = {}) {
   let HOST_URL = typeof opts.hostUrl === 'string' ? opts.hostUrl : '';
   const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
 
-  // ── 룸 상태 (closure 격리, 2인 1룸 고정) ─────────────────
+  // ── 룸 상태 (closure 격리) ──────────────────────────────
   /**
    * @typedef {Object} Player
-   * @property {string} id   'p1' | 'p2'
+   * @property {string} id   'p1' ~ 'p4'
    * @property {string} name
    * @property {boolean} joined JOIN 메시지 수신 여부
-   * @property {boolean} ready READY 수신 여부(양쪽 READY 시 게임 시작)
+   * @property {boolean} ready READY 수신 여부(전원 READY 시 게임 시작)
    * @property {boolean} rematchReady
    * @property {import('ws').WebSocket} ws
    */
@@ -78,6 +78,10 @@ export function createApp(opts = {}) {
   let players = [];
   /** @type {import('./game.js').GameState|null} */
   let game = null;
+  /** N인 룸 정원. 첫 접속자의 ?players=N 쿼리로 결정. 기본 2(하위 호환). */
+  let roomMaxPlayers = 2;
+  /** 플레이어 ID 탐색용 상수. */
+  const ALL_IDS = ['p1', 'p2', 'p3', 'p4'];
 
   /**
    * 모든 플레이어에게 동일한 STATE 스냅샷을 broadcast 한다.
@@ -115,6 +119,7 @@ export function createApp(opts = {}) {
 
   /**
    * 게임이 종료됐으면 GAME_OVER를 broadcast 한다.
+   * N인 확장: totals 객체에 전원 합계 포함. 후방 호환으로 p1Total/p2Total도 유지.
    * @returns {boolean} 종료됐으면 true
    */
   function maybeBroadcastGameOver() {
@@ -122,6 +127,8 @@ export function createApp(opts = {}) {
       broadcastAll({
         type: 'GAME_OVER',
         winner: game.result.winner,
+        totals: game.result.totals,
+        // 후방 호환: 2인 시 기존 p1Total/p2Total 필드 유지
         p1Total: game.result.p1Total,
         p2Total: game.result.p2Total,
         breakdown: game.result.breakdown,
@@ -133,9 +140,10 @@ export function createApp(opts = {}) {
 
   /**
    * 새 게임을 시작하고 START + STATE를 전송한다.
+   * N인 확장: players 배열의 ID를 createGame에 전달한다.
    */
   function startNewGame() {
-    game = createGame();
+    game = createGame(players.map((p) => p.id));
     for (const p of players) {
       p.ready = false;
       p.rematchReady = false;
@@ -200,21 +208,35 @@ export function createApp(opts = {}) {
     ws._mode = wsMode;
     ws._isBot = isBot;
 
+    // N인 정원: 첫 번째 접속자의 쿼리(?players=N)로 룸 정원을 설정한다.
+    // 이후 접속자의 쿼리는 무시(첫 접속자가 정원 결정). N=2가 기본(하위 호환).
+    if (players.length === 0) {
+      const parsedPlayers = parseInt(reqUrlObj.searchParams.get('players'), 10);
+      if (parsedPlayers >= 2 && parsedPlayers <= 4) {
+        roomMaxPlayers = parsedPlayers;
+      } else {
+        roomMaxPlayers = 2;
+      }
+    }
+
     // 정원 초과 직전, 좀비 슬롯(끊겼지만 close 미발화) 청소 시도.
-    if (players.length >= 2) {
+    if (players.length >= roomMaxPlayers) {
       const before = players.length;
       players = players.filter((p) => p.ws.readyState <= 1);
       if (players.length < before) {
         console.log(`[yahtzee] 좀비 슬롯 ${before - players.length}개 청소`);
-        if (players.length === 0) game = null;
+        if (players.length === 0) {
+          game = null;
+          roomMaxPlayers = 2;
+        }
       }
     }
 
     // 룸 정원 초과 시 즉시 거절.
-    if (players.length >= 2) {
-      ws.send(JSON.stringify({ type: 'ERROR', message: '방이 가득 찼다 (2/2)' }));
+    if (players.length >= roomMaxPlayers) {
+      ws.send(JSON.stringify({ type: 'ERROR', message: `방이 가득 찼다 (${roomMaxPlayers}/${roomMaxPlayers})` }));
       ws.close();
-      console.log('[yahtzee] 연결 거절: 룸 정원 초과');
+      console.log(`[yahtzee] 연결 거절: 룸 정원 초과 (${players.length}/${roomMaxPlayers})`);
       return;
     }
 
@@ -222,7 +244,9 @@ export function createApp(opts = {}) {
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
 
-    const playerId = players.length === 0 ? 'p1' : 'p2';
+    // N인 확장: 미사용 ID를 배정 (재입장 데드락 방지, yutnori FIX-1 패턴).
+    const usedIds = new Set(players.map((p) => p.id));
+    const playerId = ALL_IDS.find((id) => !usedIds.has(id)) || 'p1';
     /** @type {Player} */
     const player = {
       id: playerId,
@@ -233,13 +257,18 @@ export function createApp(opts = {}) {
       ws,
     };
     players.push(player);
-    console.log(`[yahtzee] ${playerId} 연결됨 (${players.length}/2, mode=${wsMode})`);
+    console.log(`[yahtzee] ${playerId} 연결됨 (${players.length}/${roomMaxPlayers}, mode=${wsMode})`);
 
     // mode=ai 사용자가 혼자 들어왔다 → 봇 자동 spawn (자기 자식 프로세스).
     // 봇이 connect하면 두 번째 슬롯을 차지하고 JOIN/READY로 게임을 시작한다.
     // 약간의 지연: 사용자 클라이언트가 JOIN/READY를 먼저 보낼 여유 확보.
+    // N인 확장: 다인 방(roomMaxPlayers > 2)에서 AI 봇은 미지원 → spawn 스킵 + 에러 로그.
     if (wsMode === 'ai' && !isBot && players.length === 1) {
-      setTimeout(() => spawnBotChild(), 200);
+      if (roomMaxPlayers > 2) {
+        console.error('[yahtzee] 다인 방(N>2)에서 AI 봇은 미지원 — 봇 spawn 스킵');
+      } else {
+        setTimeout(() => spawnBotChild(), 200);
+      }
     }
 
     // ── 메시지 라우터 ──
@@ -259,26 +288,28 @@ export function createApp(opts = {}) {
           sendTo(player, {
             type: 'JOINED',
             playerId: player.id,
-            waiting: players.length < 2,
+            waiting: players.length < roomMaxPlayers,
             hostUrl: HOST_URL,
+            roomMaxPlayers,
           });
           break;
         }
 
         case 'READY': {
           player.ready = true;
-          broadcastAll({
-            type: 'READY_STATUS',
-            p1Ready: players.find((p) => p.id === 'p1')?.ready || false,
-            p2Ready: players.find((p) => p.id === 'p2')?.ready || false,
-          });
-          // 두 명 모두 접속 + JOIN + READY 완료 시 새 게임 시작.
+          // N인 확장: 전원의 READY 상태를 동적으로 생성
+          const readyStatus = { type: 'READY_STATUS' };
+          for (const p of players) {
+            readyStatus[p.id + 'Ready'] = p.ready;
+          }
+          broadcastAll(readyStatus);
+          // N명 모두 접속 + JOIN + READY 완료 시 새 게임 시작.
           if (
-            players.length === 2 &&
+            players.length === roomMaxPlayers &&
             players.every((p) => p.joined && p.ready) &&
             !game
           ) {
-            console.log('[yahtzee] 양쪽 READY → 새 게임 시작');
+            console.log(`[yahtzee] ${roomMaxPlayers}명 READY → 새 게임 시작`);
             startNewGame();
           }
           break;
@@ -350,18 +381,19 @@ export function createApp(opts = {}) {
         }
 
         case 'REMATCH': {
-          if (players.length < 2) {
-            sendTo(player, { type: 'ERROR', message: '상대방이 없어 새 게임을 시작할 수 없습니다.' });
+          if (players.length < roomMaxPlayers) {
+            sendTo(player, { type: 'ERROR', message: '인원이 부족하여 새 게임을 시작할 수 없습니다.' });
             break;
           }
           player.rematchReady = true;
-          broadcastAll({
-            type: 'REMATCH_STATUS',
-            p1Ready: players.find((p) => p.id === 'p1')?.rematchReady || false,
-            p2Ready: players.find((p) => p.id === 'p2')?.rematchReady || false,
-          });
+          // N인 확장: 전원의 rematchReady 상태를 동적으로 생성
+          const rematchStatus = { type: 'REMATCH_STATUS' };
+          for (const p of players) {
+            rematchStatus[p.id + 'Ready'] = p.rematchReady;
+          }
+          broadcastAll(rematchStatus);
           if (players.every((p) => p.rematchReady)) {
-            console.log('[yahtzee] 양쪽 REMATCH → 새 게임');
+            console.log(`[yahtzee] ${players.length}명 REMATCH → 새 게임`);
             startNewGame();
           }
           break;
@@ -383,12 +415,13 @@ export function createApp(opts = {}) {
       }
       if (players.length === 0) {
         game = null;
+        roomMaxPlayers = 2; // 모두 퇴장 시 기본값으로 리셋
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
           message: '상대방이 나갔다. 새 친구가 접속하면 게임이 재시작된다.',
         });
-        game = null; // 1명 남으면 게임 무효화 → 두 번째 접속 + READY 시 새 게임.
+        game = null; // 정원 미달 시 게임 무효화 → 전원 재접속 + READY 시 새 게임.
       }
     });
 

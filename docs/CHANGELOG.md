@@ -1,5 +1,38 @@
 # Changelog
 
+## [2026-06-23] - Phase 1-B: 윷놀이 N인 확장 (2~4인 가변 플레이)
+
+### 추가
+- **`yutnori/server.js`**: N인 가변 정원 (`roomMaxPlayers`). 첫 접속자의 `?players=N` 쿼리로 2~4인 설정(범위 외 기본 2). `ALL_IDS = ['p1','p2','p3','p4']` 배열에서 미사용 ID 탐색 배정(FIX-1 패턴 유지). `nextPlayer()` 헬퍼 도입(`(idx+1) % playerIds.length` 순환). 잡기 탐색 `opp.id !== mover.id` 가드로 N-1명 검사. 봇 spawn `roomMaxPlayers > 2` 시 차단 + 에러 로그. READY/REMATCH 게이트 `players.length >= roomMaxPlayers && players.every(...)`. 전원 퇴장 시 `roomMaxPlayers = 2` 리셋. `/test/inject` p1~p4 지원 + `roomMaxPlayers` injection. `REMATCH_STATUS`에 `playersReady` 배열 추가(p1Ready/p2Ready 후방 호환 병존)
+- **`yutnori/public/js/ui.js`**: P3 초록(`#27ae60`)/P4 보라(`#8e44ad`) 색상. HOME 영역 Y 오프셋 `p1:-36, p2:-18, p3:0, p4:24`(겹침 회피). 보드 말 4방향 분산 오프셋 `{x:-6,y:-4},{x:6,y:-4},{x:-6,y:8},{x:6,y:8}`. GOAL 영역 N인 포지셔닝. `renderPieceStatus` 동적 상대 추적. `--p3`, `--p4` CSS 변수 추가
+- **`yutnori/public/js/main.js`**: N인 레이블(P1~P4 + 색상). 동적 턴 표시. N인 rematch 상태 핸들러. N인 game-over 메시지. N인 yut 결과 레이블. `showReadyStatus` 배열 확장
+- **`yutnori/public/js/piece.js`**: HOME 클릭 영역 bottom-left 통일(전 플레이어 동일, §13-9 기준)
+- **`yutnori/public/index.html`**: `#ready-mark-p3`, `#ready-mark-p4` DOM 요소 추가
+- **`yutnori/public/css/style.css`**: `--p3`, `--p4` CSS 변수 추가
+- **`yutnori/tests/multiplayer-1b-qa.spec.js`** (신규, 22건): N인 정상 시나리오 17건(YM-001~005 + YM-001b/002b/004a~c) + 예외 시나리오 5건(YM-006~017 중 Playwright 자동화 12건)
+
+### 변경
+- **`yutnori/server.js`**: 기존 `players.length >= 2` 하드코딩을 전부 `players.length >= roomMaxPlayers`로 교체. `passTurn()`이 `opponentOf()` 대신 `nextPlayer()` 사용(N인 턴 순환). 잡기 판정이 2인 상대 고정에서 N-1인 동적 검사로 확장. `broadcastState()`는 기존 `for...of` 패턴이라 자동 확장. `opponentOf()` 함수 보존(삭제 안 함). `createApp()` 함수 보존
+
+### 검증
+- 신규 N인 QA: **22/22 PASS** (2회 연속 안정)
+- 서버리스 회귀: **342/342 PASS** (yut.unit 84 + ws.scenarios 20 + rulebook-c1~c19 212 + qa-defect2 2 + qa-rulefix-edge 26)
+- bot-smoke: **10/10 PASS** (YBOT-001~005)
+- 전체: **374건 PASS, 0 FAIL**
+
+### 알려진 이슈 (LOW, 비차단)
+- 상대 말 패널(`#opp-pieces`)이 현재 턴 상대 1명만 표시. 4인 시 전원 표시 미지원(향후 UI 폴리시 대상)
+- P3/P4 ready 마크 DOM 미존재(`#ready-mark-p3/p4` 추가됨으로 부분 해소). 기능적으로 전원 READY 대기 정상 동작
+- 3~4인 disconnect 메시지 "상대방 연결이 끊겼습니다" 단수 표현(N인에서 어색)
+- `/test/inject`에서 `lastPath` 필드 미복원(테스트 전용, 실 서비스 영향 없음)
+
+### 참고
+- 스펙: `.claude/specs/2026-06-23-multiplayer-plan.md` (Phase 1-B 섹션)
+- 구현 리포트: `.claude/specs/2026-06-23-multiplayer-plan-1b-report.md`
+- QA: `.claude/specs/2026-06-23-multiplayer-1b-qa-report.md` (PASS)
+
+---
+
 ## [2026-05-31] - 장기 AI 봇 추가 (mode=ai 자동 spawn)
 
 ### 추가

@@ -104,6 +104,7 @@ export function createNetwork(handlers) {
       case 'GAME_OVER':
         handlers.onGameOver && handlers.onGameOver({
           winner: msg.winner,
+          totals: msg.totals || {},
           p1Total: msg.p1Total,
           p2Total: msg.p2Total,
           breakdown: msg.breakdown,
