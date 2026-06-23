@@ -400,11 +400,12 @@ const gamesMap = loadGamesMap();
 // ── 로비 상태 (모듈 수준) ─────────────────────────────────────
 /**
  * 접속 중인 WS 클라이언트.
- * key: ws 객체, value: { id, role }
+ * key: ws 객체, value: { id, role, name }
  *   - id: 'p1' | 'p2'  (입장 순서 기반)
  *   - role: 'host' | 'guest'
+ *   - name: string|null  (JOIN 수신 전까지 null — 닉네임 게이트 통과 후 확정)
  * 최대 2명까지만 수용.
- * @type {Map<import('ws').WebSocket, { id: string, role: 'host'|'guest' }>}
+ * @type {Map<import('ws').WebSocket, { id: string, role: 'host'|'guest', name: string|null }>}
  */
 const clients = new Map();
 
@@ -468,6 +469,13 @@ function sendLobbyStateTo(ws) {
   for (const [gameId, playerSet] of votes) {
     votesSnapshot[gameId] = playerSet.size;
   }
+  // 접속자 목록 (이름 + 역할 + 온라인 여부). name은 JOIN 전까지 null.
+  const players = [...clients.values()].map((m) => ({
+    id: m.id,
+    name: m.name,
+    role: m.role,
+    online: true,
+  }));
   sendJson(ws, {
     type: 'LOBBY_STATE',
     count: clients.size,
@@ -475,6 +483,7 @@ function sendLobbyStateTo(ws) {
     hostId: hostEntry ? hostEntry.id : null,
     mode: currentMode,
     votes: votesSnapshot,
+    players, // 신규: presence 목록 (기존 필드는 후방호환 유지)
   });
 }
 
@@ -540,6 +549,22 @@ function handleMessage(ws, msg) {
   if (!meta) return;
 
   switch (msg.type) {
+    case 'JOIN': {
+      // 닉네임 게이트 통과 후 최초 송신. name 누락 시 '(알 수 없음)' 폴백(후방호환).
+      const raw = typeof msg.name === 'string' ? msg.name.trim().slice(0, 12) : '';
+      meta.name = raw || '(알 수 없음)';
+      console.log(`[launcher] JOIN: ${meta.id} (${meta.role}) → "${meta.name}"`);
+      // 자신을 제외한 기존 접속자에게 PLAYER_JOINED broadcast (입장 토스트용)
+      for (const otherWs of clients.keys()) {
+        if (otherWs !== ws) {
+          sendJson(otherWs, { type: 'PLAYER_JOINED', name: meta.name, role: meta.role });
+        }
+      }
+      // 전체에 LOBBY_STATE 재broadcast (players 배열에 확정된 name 반영)
+      broadcastLobbyState();
+      break;
+    }
+
     case 'PICK_GAME': {
       if (meta.role !== 'host') return;
       const gameId = String(msg.gameId || '');
@@ -548,23 +573,18 @@ function handleMessage(ws, msg) {
         console.warn(`[launcher] PICK_GAME 알 수 없는 gameId: ${gameId}`);
         return;
       }
-      // 인원수에 따라 모드 결정 (pick 시점에 확정)
-      const isAiMode = clients.size === 1;
-      // AI 모드 + 봇 미지원 게임이면 차단 (서버 이중 안전망)
-      if (isAiMode && !game.botAvailable) {
-        sendJson(ws, { type: 'ERROR', message: '이 게임은 AI 봇을 지원하지 않습니다.' });
-        console.warn(`[launcher] PICK_GAME 차단: ${gameId} (AI 모드이나 봇 미지원)`);
-        return;
-      }
-      currentMode = isAiMode ? 'ai' : 'human';
+      // 결정 B: presence(1/2 vs 2/2) 기반 AI 자동 결정 완전 제거.
+      // 카드 클릭은 항상 게임방(대기 상태)으로 입장한다. mode는 항상 'human'.
+      // AI 진입은 게임방의 "🤖 AI랑 시작" 버튼으로만 일어난다.
+      currentMode = 'human';
       // 통합 라우터: 같은 포트(3000) 내 `/{gameId}/`로 이동한다.
       const redirectPath = `/${gameId}/`;
-      console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=${currentMode}`);
+      console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=human`);
       broadcast({
         type: 'REDIRECT',
         gameId,
         path: redirectPath,
-        mode: currentMode,
+        mode: 'human',
       });
       break;
     }
@@ -609,7 +629,8 @@ lobbyWss.on('connection', (ws) => {
   const role = clients.size === 0 ? 'host' : 'guest';
   const id = `p${nextIdSeq}`;
   nextIdSeq += 1;
-  clients.set(ws, { id, role });
+  // name은 JOIN 수신 전까지 null (닉네임 게이트 통과 후 확정)
+  clients.set(ws, { id, role, name: null });
   console.log(`[launcher] 접속: ${id} (${role}), 현재 ${clients.size}/2`);
 
   // 전체에 갱신 상태 broadcast (각자 role이 다름)
@@ -632,6 +653,9 @@ lobbyWss.on('connection', (ws) => {
     if (!departed) return;
     clients.delete(ws);
     console.log(`[launcher] 퇴장: ${departed.id} (${departed.role}), 잔여 ${clients.size}/2`);
+
+    // 잔여 접속자에게 퇴장 토스트용 PLAYER_LEFT broadcast (name 없으면 폴백)
+    broadcast({ type: 'PLAYER_LEFT', name: departed.name || '(알 수 없음)' });
 
     if (clients.size === 0) {
       // 모두 나감 → 상태 리셋
