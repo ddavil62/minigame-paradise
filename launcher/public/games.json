@@ -8,7 +8,9 @@
     "wsPath": "/codenames-duet/ws",
     "color": "#4A90D9",
     "emoji": "🕵️",
-    "botAvailable": false
+    "botAvailable": false,
+    "minPlayers": 2,
+    "maxPlayers": 2
   },
   {
     "id": "davinci-code",
@@ -19,7 +21,9 @@
     "wsPath": "/davinci-code/ws",
     "color": "#7B68EE",
     "emoji": "🎴",
-    "botAvailable": false
+    "botAvailable": false,
+    "minPlayers": 2,
+    "maxPlayers": 2
   },
   {
     "id": "matgo",
@@ -30,18 +34,22 @@
     "wsPath": "/matgo/ws",
     "color": "#2E8B57",
     "emoji": "🃏",
-    "botAvailable": true
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 2
   },
   {
     "id": "yutnori",
     "name": "윷놀이",
-    "description": "전통 윷가락을 던져 말을 먼저 완주시켜라! 2인 윷놀이",
+    "description": "전통 윷가락을 던져 말을 먼저 완주시켜라! 2~4인 윷놀이",
     "port": 3004,
     "httpPath": "/yutnori/",
     "wsPath": "/yutnori/ws",
     "color": "#D4A017",
     "emoji": "🎲",
-    "botAvailable": true
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 4
   },
   {
     "id": "tetris-battle",
@@ -52,7 +60,9 @@
     "wsPath": "/tetris-battle/ws",
     "color": "#5DADE2",
     "emoji": "🟦",
-    "botAvailable": true
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 2
   },
   {
     "id": "janggi",
@@ -63,7 +73,9 @@
     "wsPath": "/janggi/ws",
     "color": "#C8102E",
     "emoji": "♟",
-    "botAvailable": true
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 2
   },
   {
     "id": "hanabi",
@@ -74,7 +86,9 @@
     "wsPath": "/hanabi/ws",
     "color": "#FF6B35",
     "emoji": "🎇",
-    "botAvailable": false
+    "botAvailable": false,
+    "minPlayers": 2,
+    "maxPlayers": 5
   },
   {
     "id": "yahtzee",
@@ -85,7 +99,9 @@
     "wsPath": "/yahtzee/ws",
     "color": "#E84A5F",
     "emoji": "🎲",
-    "botAvailable": true
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 4
   },
   {
     "id": "rummikub",
@@ -96,17 +112,21 @@
     "wsPath": "/rummikub/ws",
     "color": "#3FA7D6",
     "emoji": "🀄",
-    "botAvailable": true
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 4
   },
   {
     "id": "omok",
     "name": "오목",
-    "description": "19×19 바둑판에 5목을 먼저 완성하라! 1:1 오목 대전 (금수 없음)",
+    "description": "19x19 바둑판에 5목을 먼저 완성하라! 1:1 오목 대전 (금수 없음)",
     "port": 3012,
     "httpPath": "/omok/",
     "wsPath": "/omok/ws",
     "color": "#6B4226",
     "emoji": "⚫",
-    "botAvailable": true
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 2
   }
 ]

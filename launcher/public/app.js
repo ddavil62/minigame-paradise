@@ -34,6 +34,9 @@ let gamesCache = [];
 /** @type {number} 서버에서 수신한 현재 접속 인원 수 */
 let currentCount = 0;
 
+/** @type {number} 서버에서 수신한 목표 인원 수 (기본값 2) */
+let currentTarget = 2;
+
 /** @type {{ [gameId: string]: number }} 서버에서 수신한 투표 현황 */
 let currentVotes = {};
 
@@ -140,6 +143,8 @@ function createCard(game) {
     if (event) event.stopPropagation();
     if (!cardClickEnabled) return;
     if (myRole !== 'host') return;
+    // 인원 범위 초과/미달 카드는 선택 불가
+    if (card.classList.contains('player-disabled')) return;
     // 결정 B: presence 기반 AI 자동결정 제거. 카드 클릭은 항상 게임방(대기) 입장.
     // 봇 미지원 게임이어도 카드 클릭 가능(게임방 입장). AI 버튼 노출 여부는 게임방이 자체 결정.
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -197,42 +202,57 @@ function renderCards() {
 // ── 메시지 핸들러 ───────────────────────────────────────────────
 /**
  * LOBBY_STATE 메시지 처리: 카운트/역할/힌트/투표 갱신.
- * @param {{count:number, role:'host'|'guest', mode:string|null, votes:object}} msg
+ * @param {{count:number, target?:number, role:'host'|'guest', mode:string|null, votes:object}} msg
  */
 function updateLobbyUI(msg) {
   const { count, role, mode, votes } = msg;
+  const target = msg.target || 2; // 후방호환: target 없으면 2
   myRole = role;
   currentMode = mode;
   currentCount = count;
+  currentTarget = target;
   currentVotes = votes || {};
 
-  // 카운트 표시
+  // 카운트 표시 — N/M (현재/목표) 형식
   const countEl = document.getElementById('player-count');
-  if (countEl) countEl.textContent = `${count}/2`;
+  if (countEl) countEl.textContent = `${count}/${target}`;
 
   // 역할 표시
   const roleEl = document.getElementById('player-role');
   if (roleEl) roleEl.textContent = role === 'host' ? '호스트' : '게스트';
+
+  // 인원 선택 UI — 호스트에게만 표시
+  const selectorEl = document.getElementById('player-count-selector');
+  if (selectorEl) {
+    selectorEl.hidden = role !== 'host';
+    // 현재 target에 맞는 버튼에 active 클래스 부여
+    for (const btn of selectorEl.querySelectorAll('.pcs-btn')) {
+      const btnTarget = Number(btn.dataset.target);
+      btn.classList.toggle('active', btnTarget === target);
+    }
+  }
 
   // 힌트 텍스트 — 게스트 2/2에서는 #guest-waiting만 표시하므로 중복 방지
   const hintEl = document.getElementById('lobby-hint');
   const guestWait = document.getElementById('guest-waiting');
   if (hintEl) {
     if (role === 'guest') {
-      // 게스트는 #guest-waiting이 안내를 담당 → #lobby-hint 비움
-      hintEl.textContent = '';
-    } else if (count === 1) {
-      hintEl.textContent = '종목을 선택하면 게임방에서 친구를 기다리거나 AI와 시작할 수 있어요';
+      // 게스트에게 투표 안내 힌트 표시
+      hintEl.textContent = '투표 버튼으로 하고 싶은 게임을 추천할 수 있어요 \uD83D\uDC4D';
+    } else if (count < target) {
+      hintEl.textContent = `${target}명이 모이면 종목을 선택할 수 있어요 (현재 ${count}/${target})`;
     } else {
-      hintEl.textContent = '친구가 들어왔습니다! 종목을 선택하세요';
+      hintEl.textContent = '인원이 모였습니다! 종목을 선택하세요';
     }
   }
 
   // 게스트 대기 안내 — 호스트에게는 숨김
   if (guestWait) guestWait.hidden = role === 'host';
 
-  // cardClickEnabled: 호스트이면 항상 클릭 가능 (모든 카드=게임방 입장)
-  cardClickEnabled = role === 'host';
+  // cardClickEnabled: 호스트이면 클릭 가능.
+  // 단, targetPlayers>=3이면 정원이 채워져야만 클릭 가능 (목표 인원 대기).
+  // targetPlayers=2(기본값)는 기존과 동일하게 1인도 즉시 클릭 가능 (AI 모드 하위 호환).
+  cardClickEnabled = role === 'host' && (target <= 2 || count >= target);
 
   // 그리드 비활성 CSS 클래스 갱신
   const grid = document.getElementById(GRID_EL_ID);
@@ -241,6 +261,9 @@ function updateLobbyUI(msg) {
     grid.classList.toggle('guest-mode', role === 'guest');
     // 결정 B: ai-mode(1인 봇 미지원 카드 비활성) 토글 제거 — 카드는 항상 클릭 가능
   }
+
+  // 게임 카드별 인원 범위 활성/비활성 갱신
+  updateCardPlayerDisabled(count);
 
   // 접속자 목록 (presence) 실시간 렌더 — 새로고침 불필요
   if (Array.isArray(msg.players)) {
@@ -320,6 +343,39 @@ function updateVoteBadges() {
 }
 
 /**
+ * 게임 카드의 인원 범위 비활성 상태를 갱신한다.
+ * currentCount가 game.maxPlayers 초과이면 항상 "최대 N인까지" 비활성 표시.
+ * currentCount가 game.minPlayers 미만이면 "최소 N인 필요" 비활성 표시 —
+ *   단, currentTarget=2(기본값)일 때는 미적용 (1인이 AI 모드로 입장 가능한 하위 호환 흐름).
+ * @param {number} count 현재 접속 인원 수
+ */
+function updateCardPlayerDisabled(count) {
+  const grid = document.getElementById(GRID_EL_ID);
+  if (!grid) return;
+  // targetPlayers>=3이면 minPlayers 미달 비활성 적용. 기본값(2)이면 AI 모드 호환으로 미적용.
+  const applyMinCheck = currentTarget > 2;
+  for (const card of grid.querySelectorAll('.game-card')) {
+    const gameId = card.dataset.gameId;
+    const game = gamesCache.find((g) => g.id === gameId);
+    if (!game) continue;
+
+    const minP = game.minPlayers || 2;
+    const maxP = game.maxPlayers || 2;
+
+    if (applyMinCheck && count < minP) {
+      card.classList.add('player-disabled');
+      card.dataset.disableReason = `최소 ${minP}인 필요`;
+    } else if (count > maxP) {
+      card.classList.add('player-disabled');
+      card.dataset.disableReason = `최대 ${maxP}인까지`;
+    } else {
+      card.classList.remove('player-disabled');
+      delete card.dataset.disableReason;
+    }
+  }
+}
+
+/**
  * REDIRECT 수신: 해당 게임 페이지로 이동.
  * 통합 라우터(단일 포트) 환경에서는 같은 origin의 path(`/{gameId}/`)로 이동한다.
  * @param {{path?:string, gameId:string, mode:string}} msg
@@ -331,7 +387,9 @@ function handleRedirect(msg) {
   const basePath = msg.path || `/${msg.gameId}/`;
   const sep = basePath.includes('?') ? '&' : '?';
   // 닉네임을 ?name= 쿼리로 게임 방에 전달 (포크 A — 게임 방이 첫 JOIN에 사용)
-  const targetPath = `${basePath}${sep}mode=${encodeURIComponent(msg.mode || 'human')}&name=${encodeURIComponent(myName || '')}`;
+  // 다인용 확장: playerCount를 ?players=N 으로 전달하여 게임 서버가 정원을 설정
+  const playerCount = msg.playerCount || currentTarget || 2;
+  const targetPath = `${basePath}${sep}mode=${encodeURIComponent(msg.mode || 'human')}&name=${encodeURIComponent(myName || '')}&players=${playerCount}`;
   // 약간의 시각 피드백
   const statusEl = document.getElementById('lobby-status');
   if (statusEl) statusEl.textContent = `→ ${msg.gameId} (${msg.mode}) 로 이동 중...`;
@@ -343,8 +401,10 @@ function handleRedirect(msg) {
 
 /**
  * FULL 수신: 정원 초과 안내.
+ * @param {object} [msg] FULL 메시지 (target 포함 가능)
  */
-function showFullAlert() {
+function showFullAlert(msg) {
+  const target = (msg && msg.target) || currentTarget || 2;
   const statusEl = document.getElementById('lobby-status');
   if (statusEl) {
     statusEl.textContent = '현재 게임이 진행 중입니다. 잠시 후 다시 시도하세요.';
@@ -352,7 +412,7 @@ function showFullAlert() {
   }
   // 카운트/역할 표시도 정리
   const countEl = document.getElementById('player-count');
-  if (countEl) countEl.textContent = '2/2';
+  if (countEl) countEl.textContent = `${target}/${target}`;
   const roleEl = document.getElementById('player-role');
   if (roleEl) roleEl.textContent = '관전 불가';
 }
@@ -362,6 +422,7 @@ function showFullAlert() {
  */
 function resetToLobby() {
   currentVotes = {};
+  currentTarget = 2;
   cardClickEnabled = false;
   myRole = null;
   // LOBBY_STATE가 곧 다시 오므로 그때 UI 갱신됨
@@ -405,7 +466,7 @@ function onMessage(event) {
       handleRedirect(msg);
       break;
     case 'FULL':
-      showFullAlert();
+      showFullAlert(msg);
       break;
     case 'RESET':
       resetToLobby();
@@ -467,7 +528,8 @@ function enterLobby(name) {
 
 /**
  * 닉네임 게이트 UI를 초기화하고 제출 핸들러를 연결한다.
- * localStorage에 저장된 닉네임이 있으면 input에 pre-fill한다.
+ * localStorage에 저장된 닉네임이 있으면 게이트를 건너뛰고 즉시 로비에 진입한다.
+ * 없으면 input에 포커스를 주고 사용자 입력을 대기한다.
  */
 function setupNicknameGate() {
   const input = /** @type {HTMLInputElement|null} */ (document.getElementById('nickname-input'));
@@ -477,7 +539,12 @@ function setupNicknameGate() {
   // 재방문 자동 pre-fill
   let stored = '';
   try { stored = localStorage.getItem(NICKNAME_KEY) || ''; } catch (_) { stored = ''; }
-  if (input && stored) input.value = stored;
+
+  // 저장된 닉네임이 있으면 게이트 표시 없이 즉시 로비 진입
+  if (stored) {
+    enterLobby(stored);
+    return;
+  }
 
   /**
    * 닉네임 제출: trim + 길이 검사(1~12자) → 저장 → 로비 진입.
@@ -507,6 +574,24 @@ function setupNicknameGate() {
   }
 }
 
+// ── 인원 선택 UI ──────────────────────────────────────────────
+/**
+ * 호스트 전용 인원 선택 버튼에 이벤트를 바인딩한다.
+ * 버튼 클릭 시 SET_TARGET WS 메시지를 서버로 전송한다.
+ */
+function setupPlayerCountSelector() {
+  const selectorEl = document.getElementById('player-count-selector');
+  if (!selectorEl) return;
+  selectorEl.addEventListener('click', (event) => {
+    const btn = /** @type {HTMLElement} */ (event.target).closest('.pcs-btn');
+    if (!btn) return;
+    const target = Number(btn.dataset.target);
+    if (!target || target < 2 || target > 5) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'SET_TARGET', target }));
+  });
+}
+
 // ── 부트스트랩 ─────────────────────────────────────────────────
 /**
  * 페이지 초기화.
@@ -523,6 +608,9 @@ async function init() {
     const grid = document.getElementById(GRID_EL_ID);
     if (grid) renderMessage(grid, '게임 목록을 불러올 수 없습니다. (콘솔 확인)');
   }
+
+  // 인원 선택 UI 이벤트 바인딩
+  setupPlayerCountSelector();
 
   // 닉네임 게이트 표시 — 제출 전까지 WS 연결/JOIN 보류
   setupNicknameGate();

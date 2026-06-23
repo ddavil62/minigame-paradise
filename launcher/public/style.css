@@ -275,6 +275,74 @@ body {
   min-height: 18px;
 }
 
+/* ── 인원 선택 UI (호스트 전용) ────────────────────────── */
+.player-count-selector[hidden] { display: none !important; }
+.player-count-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(245, 233, 201, 0.04);
+  border: 1px solid rgba(245, 233, 201, 0.14);
+  border-radius: 12px;
+}
+
+.pcs-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(245, 233, 201, 0.66);
+  margin-right: 4px;
+  letter-spacing: 0.04em;
+}
+
+.pcs-btn {
+  padding: 7px 16px;
+  border: 1px solid rgba(245, 233, 201, 0.22);
+  border-radius: 8px;
+  background: rgba(245, 233, 201, 0.06);
+  color: rgba(245, 233, 201, 0.72);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
+  font-family: inherit;
+}
+
+.pcs-btn:hover {
+  background: rgba(245, 233, 201, 0.14);
+  border-color: rgba(245, 233, 201, 0.4);
+}
+
+.pcs-btn.active {
+  background: rgba(255, 217, 122, 0.2);
+  border-color: rgba(255, 217, 122, 0.6);
+  color: #ffd97a;
+}
+
+/* ── 게임 카드 비활성 (인원 범위 초과/미달) ──────────────── */
+.game-card.player-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+
+.game-card.player-disabled::after {
+  content: attr(data-disable-reason);
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #1a1106;
+  background: #ffd97a;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 3;
+}
+
 /* ── 게스트 모드: 카드 비활성 + 오버레이 ─────────────────── */
 .game-grid.guest-mode .game-card {
   cursor: not-allowed;
@@ -373,9 +441,29 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
+  position: relative;
+  overflow: hidden;
 }
 
+/* 배경 게임 이모지 장식 — 흐릿하게 화면 전체를 채우는 패턴 */
+.game-bg-hint {
+  position: absolute;
+  inset: -40px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.08;
+  font-size: 64px;
+  line-height: 1.6;
+  letter-spacing: 0.3em;
+  word-spacing: 0.4em;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* 닉네임 카드 — 배경 이모지 위에 뜨도록 z-index 1 */
 .nickname-card {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;

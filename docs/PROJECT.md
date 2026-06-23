@@ -1,6 +1,7 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-06-17 — 버그리포트 배치 6건 수정 + 1건 보류. A 맞고 바닥 우측/스택 슬롯 fly 착지 좌표 어긋남(`client.js` 6개 클론 지점 `clone.style.transform=''` 초기화, 오차 0.02px) / B 윷놀이 준비버튼 :hover 위치 튐(CSS `.ready-btn:hover` translate override) / C 공통 초대 패널 제거 → P1/P2 ready 패턴 통일(omok/rummikub/hanabi/tetris-battle + yutnori, 서버 hostUrl 유지·클라 표시만 제거, tetris 회귀 단언 "제거됨 검증"으로 전환) / D 윷놀이 윷·모 이동 시 보너스 던지기 소실(`server.js` MOVE_PIECE/CHOOSE_PATH `bonusFromConsumed`를 splice 이전 계산) / F 요트 점수표 가로줄 정렬(stripe → tbody td border-bottom, `--score-row-h`) / G 요트 카테고리 색 3상태 차별화(색맹 대응 비색 단서) / **E 윷놀이 레이아웃 재디자인은 보류**(별도 작업 예정). 검증: 맞고 단위100+adhoc47+e2e32+VIS3 / 요트 222+시각 / 윷놀이 서버리스338+봇10+e2e25 / omok106·rummikub174·tetris336(Q7b 사전결함 1 FAIL 범위밖)·hanabi clean, 전부 QA PASS·AD3 APPROVED.
+> 최종 업데이트: 2026-06-23 — Phase 1-A 런처 로비 다인용 지원 + Lobby Entry UX 개선. 런처 로비를 2인 고정에서 2~5인 가변 정원으로 확장(`targetPlayers` 변수, `SET_TARGET` WS 메시지, PICK_GAME 목표 인원 가드, REDIRECT에 `playerCount` 추가, `games.json` 10종에 `minPlayers`/`maxPlayers` 추가). 인원 설정 UI(호스트 전용 2~5인 버튼), `N/M` 카운트 표시, 게임 카드 인원 범위 비활성(`player-disabled` 클래스 + 배지). Lobby Entry UX: localStorage 닉네임 자동 입장, 이모지 배경 패턴(`.game-bg-hint`), 게스트 안내 문구 변경. BUG-1(게스트 인원 선택 UI 노출 — CSS `hidden` 속성 오버라이드) 수정 완료. 검증: Playwright 31/31 PASS + 기존 회귀 게이트 정상. QA PASS.
+> 이전 갱신: 2026-06-17 — 버그리포트 배치 6건 수정 + 1건 보류.
 > 이전 갱신: 2026-06-15 — 맞고 선공 바닥 조커 연출 수정 + 바닥 리필 룰 (사안 A: `client.js` `isRoundStart`에 `floor_joker_to_first` 추가 → 조커·리필 카드 fly 없이 appear. 사안 B: `game.js applyFloorJokerToFirst`가 조커 제거 후 `deck.pop()`으로 floor를 항상 8로 리필(연쇄 최대 2, deck 소진 방어) → `floor === 8`, `deck === 22 - N` 가변(22 불변 폐기), 총합 50 불변. joker 23/0, 단위 98/0, smoke 5/5(floor8/total50), e2e 3회 30/0/0. score.js 무수정)
 > 이전 갱신: 2026-06-13 — 맞고 레거시 shake_decision/pendingShake 데드코드 정리 (죽은 `shake_decision` 분기 + `pendingShake` 필드 제거, 동작 무변경 프로덕션 no-op. 레거시 테스트 G-22/G-23 제거로 game.unit 42, 단위 98 passed / adhoc 42 / e2e 30 passed. 커밋 513a603)
 > 이전 갱신: 2026-06-13 — 맞고 E-15/E-16 흔들기 E2E 현행 모달 흐름 재작성(skip 해제) (inject 1월 손 3장+바닥 0장 → 카드 클릭 → shake-modal 표시(E-15) / btn-shake 클릭 → shaking.p1 반영(E-16). 3회 연속 30 passed / 0 skipped / 0 failed, 28 passed/2 skipped → 30 passed/0 skipped)
@@ -12,7 +13,7 @@
 
 ## 프로젝트 개요
 
-LAN 환경에서 1:1로 즐기는 미니게임 6종 통합 패키지. 단일 포트(3000)에서 통합 라우터로 런처와 6개 게임을 path 라우팅으로 서빙한다.
+LAN 환경에서 2~5인이 즐기는 미니게임 10종 통합 패키지. 단일 포트(3000)에서 통합 라우터로 런처와 10개 게임을 path 라우팅으로 서빙한다. 호스트가 로비에서 목표 인원(2~5인)을 설정하고, 인원이 모이면 게임을 선택한다.
 
 ## 기술 스택
 
@@ -46,16 +47,18 @@ minigame-paradise/
 |------|------|------|
 | 통합 라우터 | `launcher/server.js` | 단일 HTTP/WS 서버, path별 게임 dispatch, 로비 WS 관리 |
 | 로비 클라이언트 | `launcher/public/app.js` | 로비 UI 상태 관리, 카드 렌더링, 투표, 리다이렉트 |
-| 게임 목록 | `launcher/public/games.json` | 6개 게임 메타데이터 (경로, 봇 지원 여부 등) |
+| 게임 목록 | `launcher/public/games.json` | 10종 게임 메타데이터 (경로, 봇 지원, `minPlayers`/`maxPlayers` 인원 범위) |
 | 각 게임 서버 | `{game}/server.js` | `createApp()` factory로 launcher에 연결 |
 
 ## 기능 목록
 
 | 기능 | 설명 | 상태 |
 |------|------|------|
-| 단일 포트 통합 라우터 | HTTP/WS를 path segment로 6개 게임에 dispatch | 완료 |
-| 단일 화면 로비 | 접속 즉시 게임 카드 6개 표시, 호스트가 클릭하여 게임 선택 | 완료 |
-| AI/인간 모드 자동 분기 | 1/2=AI, 2/2=인간 대전. 카드 클릭 시점에 결정 | 완료 |
+| 단일 포트 통합 라우터 | HTTP/WS를 path segment로 10개 게임에 dispatch | 완료 |
+| 단일 화면 로비 | 접속 즉시 게임 카드 10개 표시, 호스트가 클릭하여 게임 선택 | 완료 |
+| 다인용 로비 (Phase 1-A) | 호스트가 목표 인원(2~5인) 설정, `N/M` 카운트 표시, 인원 범위 밖 게임 카드 비활성 | 완료 |
+| 닉네임 자동 입장 | localStorage 닉네임 존재 시 게이트 스킵하여 즉시 로비 진입 | 완료 |
+| AI/인간 모드 자동 분기 | 1인=AI, 2인 이상=인간 대전. 카드 클릭 시점에 결정 | 완료 |
 | 투표 시스템 | 호스트/게스트가 카드에 투표하여 선호 종목 공유 (toggle) | 완료 |
 | 로비 복귀 | 게임 완료 후 "다른 종목" 버튼으로 양쪽 동시 복귀 | 완료 |
 | 게임 중 뒤로가기 | 6개 게임 헤더에 상시 "게임 선택" 버튼(`#btn-back-to-lobby`). confirm 다이얼로그 + disconnect 감지로 양쪽 로비 복귀 | 완료 |
@@ -69,13 +72,16 @@ minigame-paradise/
 
 ## 알려진 제약사항
 
-- 봇은 matgo만 지원. 나머지 5종은 AI 대전 불가.
-- 최대 2명 동시 접속. 3인 이상 로비 미지원.
+- 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle 지원. hanabi, codenames-duet, davinci-code는 AI 대전 불가.
+- 로비 최대 5인 접속. 단, 게임별 다인용 로직은 Phase 1-A(로비)만 완료. 개별 게임 3~4인 플레이(Phase 1-B~E)는 미구현.
+- 서버 PICK_GAME에 `maxPlayers < clients.size` 서버 측 가드 미구현 (클라이언트 CSS/JS 가드만 존재).
+- 단일 룸 구조. 동시 여러 방 운영 불가.
 - 모바일 반응형 미지원.
 - LAN 전용 설계 (인증/보안 없음).
 
 ## 향후 계획
 
-- 나머지 5종 게임 봇 구현 (장기 포함)
+- 다인용 Phase 1-B~E: 윷놀이/요트/루미큐브/하나비 게임 로직 3~4인 확장
+- 다인용 Phase 2: 다빈치 코드/맞고/테트리스/코드네임/장기/오목 다인용 검토
 - 모바일 반응형 레이아웃
 - 장기: 무승부 거절 피드백(DRAW_REJECT), showCheckToast/showToast stale DOM 수정

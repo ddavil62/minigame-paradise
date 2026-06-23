@@ -428,6 +428,13 @@ const votes = new Map();
  */
 let nextIdSeq = 1;
 
+/**
+ * 호스트가 설정한 목표 인원 수 (2~5).
+ * SET_TARGET 메시지로 변경되며, 모든 클라이언트가 나가면 2(기본값)로 리셋된다.
+ * @type {number}
+ */
+let targetPlayers = 2;
+
 // ── 런처 로비 WebSocket 서버 (noServer 모드) ──────────────────────
 const lobbyWss = new WebSocketServer({ noServer: true });
 
@@ -479,6 +486,7 @@ function sendLobbyStateTo(ws) {
   sendJson(ws, {
     type: 'LOBBY_STATE',
     count: clients.size,
+    target: targetPlayers, // 다인용 확장: 목표 인원 수 (기본값 2, 후방호환)
     role: meta.role,
     hostId: hostEntry ? hostEntry.id : null,
     mode: currentMode,
@@ -565,26 +573,53 @@ function handleMessage(ws, msg) {
       break;
     }
 
+    case 'SET_TARGET': {
+      // 호스트만 목표 인원 수를 설정할 수 있다
+      if (meta.role !== 'host') return;
+      const t = Number(msg.target);
+      if (!Number.isInteger(t) || t < 2 || t > 5) {
+        sendJson(ws, { type: 'ERROR', message: `목표 인원은 2~5 사이 정수여야 합니다 (received: ${msg.target})` });
+        return;
+      }
+      // 현재 접속 인원이 목표보다 많으면 거부
+      if (clients.size > t) {
+        sendJson(ws, { type: 'ERROR', message: `현재 접속 인원(${clients.size})이 목표(${t})보다 많아 변경할 수 없습니다` });
+        return;
+      }
+      targetPlayers = t;
+      console.log(`[launcher] SET_TARGET: ${meta.id} → targetPlayers=${targetPlayers}`);
+      broadcastLobbyState();
+      break;
+    }
+
     case 'PICK_GAME': {
       if (meta.role !== 'host') return;
+      // 목표 인원 미달 시 게임 시작 불가.
+      // targetPlayers=2(기본값)일 때는 1인도 허용 (AI 봇과 시작 가능, 하위 호환).
+      // targetPlayers>=3이면 정원이 채워져야만 시작 가능.
+      if (targetPlayers > 2 && clients.size < targetPlayers) {
+        console.log(`[launcher] PICK_GAME 무시: 현재 ${clients.size}/${targetPlayers} (목표 미달)`);
+        return;
+      }
       const gameId = String(msg.gameId || '');
       const game = gamesMap.get(gameId);
       if (!game) {
         console.warn(`[launcher] PICK_GAME 알 수 없는 gameId: ${gameId}`);
         return;
       }
-      // 결정 B: presence(1/2 vs 2/2) 기반 AI 자동 결정 완전 제거.
-      // 카드 클릭은 항상 게임방(대기 상태)으로 입장한다. mode는 항상 'human'.
-      // AI 진입은 게임방의 "🤖 AI랑 시작" 버튼으로만 일어난다.
-      currentMode = 'human';
+      // 모드 결정: targetPlayers=2이고 1인 단독이면 AI 모드 (기존 2인 AI 흐름 하위 호환).
+      // targetPlayers>=3이거나 2인 이상 입장이면 human 모드 (다인 실제 대전).
+      const isAiMode = targetPlayers <= 2 && clients.size === 1 && game.botAvailable;
+      currentMode = isAiMode ? 'ai' : 'human';
       // 통합 라우터: 같은 포트(3000) 내 `/{gameId}/`로 이동한다.
       const redirectPath = `/${gameId}/`;
-      console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=human`);
+      console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=${currentMode}, playerCount=${clients.size}`);
       broadcast({
         type: 'REDIRECT',
         gameId,
         path: redirectPath,
-        mode: 'human',
+        mode: currentMode,
+        playerCount: clients.size, // 다인용 확장: 게임 서버에 인원 수 전달
       });
       break;
     }
@@ -615,13 +650,13 @@ function handleMessage(ws, msg) {
  * 신규 WS 연결 처리.
  */
 lobbyWss.on('connection', (ws) => {
-  // 정원 초과: FULL 송신 후 연결 종료
-  if (clients.size >= 2) {
-    sendJson(ws, { type: 'FULL', message: '현재 게임이 진행 중입니다. 잠시 후 다시 시도하세요.' });
+  // 정원 초과: FULL 송신 후 연결 종료 (동적 targetPlayers 기준)
+  if (clients.size >= targetPlayers) {
+    sendJson(ws, { type: 'FULL', message: '현재 게임이 진행 중입니다. 잠시 후 다시 시도하세요.', target: targetPlayers });
     setTimeout(() => {
       try { ws.close(1000, 'FULL'); } catch (_) { /* noop */ }
     }, 50);
-    console.log(`[launcher] FULL 거절 (정원 초과, 현재 ${clients.size}/2)`);
+    console.log(`[launcher] FULL 거절 (정원 초과, 현재 ${clients.size}/${targetPlayers})`);
     return;
   }
 
@@ -631,7 +666,7 @@ lobbyWss.on('connection', (ws) => {
   nextIdSeq += 1;
   // name은 JOIN 수신 전까지 null (닉네임 게이트 통과 후 확정)
   clients.set(ws, { id, role, name: null });
-  console.log(`[launcher] 접속: ${id} (${role}), 현재 ${clients.size}/2`);
+  console.log(`[launcher] 접속: ${id} (${role}), 현재 ${clients.size}/${targetPlayers}`);
 
   // 전체에 갱신 상태 broadcast (각자 role이 다름)
   broadcastLobbyState();
@@ -652,15 +687,16 @@ lobbyWss.on('connection', (ws) => {
     const departed = clients.get(ws);
     if (!departed) return;
     clients.delete(ws);
-    console.log(`[launcher] 퇴장: ${departed.id} (${departed.role}), 잔여 ${clients.size}/2`);
+    console.log(`[launcher] 퇴장: ${departed.id} (${departed.role}), 잔여 ${clients.size}/${targetPlayers}`);
 
     // 잔여 접속자에게 퇴장 토스트용 PLAYER_LEFT broadcast (name 없으면 폴백)
     broadcast({ type: 'PLAYER_LEFT', name: departed.name || '(알 수 없음)' });
 
     if (clients.size === 0) {
-      // 모두 나감 → 상태 리셋
+      // 모두 나감 → 상태 리셋 (targetPlayers도 기본값 2로 복원)
       currentMode = null;
       nextIdSeq = 1;
+      targetPlayers = 2;
       votes.clear();
       return;
     }
