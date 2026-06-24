@@ -36,6 +36,8 @@ console.log(`[janggi-bot] 서버에 접속 시도: ${URL}`);
 let mySide = null;
 /** 중복 행동 방지 키 (phase|turn|moveCount). */
 let lastActedFor = null;
+/** 자동 READY 예약 타이머 (JOINED 수신 후 데드락 방지). */
+let readyTimer = null;
 
 const ws = new WebSocket(URL);
 
@@ -59,6 +61,11 @@ ws.on('message', (data) => {
     case 'JOINED':
       mySide = msg.side;
       console.log(`[janggi-bot] 진영 배정: ${mySide}`);
+      // 입장 즉시 자동 READY 예약(0.3~0.5초 지연, 데드락 방지).
+      scheduleReady();
+      break;
+    case 'READY_STATE':
+      // 봇은 READY 상태를 화면에 표시하지 않으므로 무시(수신만).
       break;
     case 'GAME_START':
       console.log(`[janggi-bot] 게임 시작 (phase=${msg.phase})`);
@@ -211,4 +218,16 @@ function chooseMove(board, side) {
 function send(msg) {
   if (ws.readyState !== 1) return;
   ws.send(JSON.stringify(msg));
+}
+
+/**
+ * 자동 READY 예약 (0.3~0.5초 지연).
+ * JOINED 수신 직후 호출. 기존 타이머가 있으면 취소 후 재예약한다.
+ */
+function scheduleReady() {
+  if (readyTimer) clearTimeout(readyTimer);
+  readyTimer = setTimeout(() => {
+    readyTimer = null;
+    send({ type: 'READY' });
+  }, 300 + Math.floor(Math.random() * 200));
 }

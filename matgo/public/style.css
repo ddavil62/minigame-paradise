@@ -989,3 +989,182 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .toast.hidden { display: none; }
+
+/* ── 유틸리티: hidden ────────────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── 대기 화면 (READY 게이트) ────────────────────────────────── */
+.screen-waiting {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.waiting-card {
+  background: var(--bg-panel);
+  border: 2px solid var(--gold-deep);
+  border-radius: 14px;
+  padding: 28px 24px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+.waiting-logo {
+  font-size: 2.6rem;
+  margin-bottom: 8px;
+}
+
+.waiting-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: var(--gold);
+}
+
+/* 인라인 닉네임 게이트 */
+.name-gate-inline { margin: 8px 0 18px; }
+.name-gate-msg {
+  font-size: 0.9rem;
+  color: var(--gold-soft);
+  margin: 0 0 10px;
+}
+.name-gate-inline input {
+  width: 70%;
+  max-width: 240px;
+  padding: 10px 12px;
+  border: 2px solid var(--gold-deep);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--bg-darker);
+  color: #ece6d6;
+}
+.btn-inline-enter {
+  margin-top: 10px;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--gold-deep);
+}
+.btn-inline-enter:hover { filter: brightness(1.1); }
+
+/* 혼자 대기(1인) 안내 + AI 진입 */
+.waiting-solo { margin: 8px 0 18px; }
+.waiting-message {
+  font-size: 1rem;
+  color: var(--gold-soft);
+  margin: 0 0 14px;
+}
+.ai-hint { font-size: 0.8rem; color: var(--grey-soft); margin-top: 8px; }
+
+.btn-start-ai {
+  background: var(--green-go);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #2a6b40;
+}
+.btn-start-ai:hover { filter: brightness(1.08); }
+.btn-start-ai:disabled { opacity: 0.6; cursor: default; }
+
+/* 상대 이름 표시 */
+.opponent-info {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--green-go);
+  margin: 6px 0 14px;
+}
+
+/* 양방향 READY 상태 패널 */
+.ready-panel { margin: 8px 0 16px; }
+.ready-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ece6d6;
+  margin-bottom: 12px;
+}
+.ready-label { color: var(--gold-soft); }
+.ready-sep { color: var(--gold-deep); opacity: .4; }
+.ready-mark {
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+.ready-mark.ready { transform: scale(1.15); }
+.ready-mark.not-ready { opacity: 0.7; }
+.ready-hint {
+  font-size: 0.8rem;
+  color: var(--grey-soft);
+  margin-top: 6px;
+}
+.btn-ready {
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--gold-deep);
+}
+.btn-ready:hover { filter: brightness(1.08); }
+.btn-ready:disabled { opacity: 0.6; cursor: default; }
+
+/* 룰 요약 */
+.rules-summary {
+  text-align: left;
+  margin-top: 18px;
+  border-top: 1px solid var(--grey-mid);
+  padding-top: 14px;
+}
+.rules-summary h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--gold);
+}
+.rules-summary ul { margin: 0; padding-left: 18px; font-size: 0.88rem; line-height: 1.6; color: var(--gold-soft); }
+
+/* 상대 이탈 배너 */
+.opponent-left-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--red-deep);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.btn-banner-return-lobby {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.btn-banner-return-lobby:hover { background: rgba(255,255,255,0.3); }

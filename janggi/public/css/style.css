@@ -564,7 +564,255 @@ body {
   animation: toast-fade 2s ease-out forwards;
 }
 
+/* ── 대기 화면 (READY 게이트) ───────────────────────────────────── */
+.screen-waiting {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.waiting-card {
+  background: rgba(20, 20, 40, 0.92);
+  border: 1px solid rgba(200, 170, 120, 0.2);
+  border-radius: 16px;
+  padding: 40px 36px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.waiting-logo {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.waiting-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--janggi-text-primary);
+  margin-bottom: 24px;
+}
+
+/* 인라인 닉네임 게이트 */
+.name-gate-inline {
+  margin: 16px 0;
+}
+
+.name-gate-msg {
+  font-size: 14px;
+  color: rgba(245, 233, 201, 0.7);
+  margin-bottom: 8px;
+}
+
+.name-gate-inline input[type="text"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(200, 170, 120, 0.3);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.3);
+  color: var(--janggi-text-primary);
+  font-size: 15px;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+.name-gate-inline input[type="text"]:focus {
+  border-color: var(--janggi-cho-primary);
+  box-shadow: 0 0 0 2px rgba(46, 91, 186, 0.25);
+}
+
+.btn-inline-enter {
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--janggi-cho-primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.btn-inline-enter:hover {
+  background: #3a6dd4;
+}
+
+/* 혼자 대기 (AI 버튼 포함) */
+.waiting-solo {
+  margin: 20px 0;
+}
+
+.waiting-message {
+  font-size: 14px;
+  color: rgba(245, 233, 201, 0.6);
+  margin-bottom: 12px;
+}
+
+.btn-start-ai {
+  padding: 12px 28px;
+  border: 2px solid var(--janggi-han-primary);
+  border-radius: 10px;
+  background: rgba(200, 16, 46, 0.15);
+  color: var(--janggi-text-primary);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms, transform 80ms;
+}
+
+.btn-start-ai:hover {
+  background: rgba(200, 16, 46, 0.3);
+  transform: scale(1.03);
+}
+
+.btn-start-ai:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ai-hint {
+  font-size: 12px;
+  color: rgba(245, 233, 201, 0.4);
+  margin-top: 6px;
+}
+
+/* 상대 입장 표시 */
+.opponent-info {
+  margin: 12px 0;
+  font-size: 16px;
+  color: var(--janggi-text-primary);
+  font-weight: 600;
+}
+
+/* READY 상태 패널 */
+.ready-panel {
+  margin: 20px 0 16px;
+}
+
+.ready-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.ready-label {
+  color: rgba(245, 233, 201, 0.7);
+  font-size: 14px;
+}
+
+.ready-mark {
+  font-size: 22px;
+  transition: transform 200ms;
+}
+
+.ready-mark.ready {
+  transform: scale(1.15);
+}
+
+.ready-sep {
+  color: rgba(245, 233, 201, 0.3);
+  font-size: 14px;
+}
+
+.btn-ready {
+  padding: 12px 32px;
+  border: 2px solid var(--janggi-cho-primary);
+  border-radius: 10px;
+  background: rgba(46, 91, 186, 0.2);
+  color: var(--janggi-text-primary);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms, transform 80ms;
+}
+
+.btn-ready:hover {
+  background: rgba(46, 91, 186, 0.4);
+  transform: scale(1.03);
+}
+
+.ready-hint {
+  font-size: 12px;
+  color: rgba(245, 233, 201, 0.4);
+  margin-top: 8px;
+}
+
+/* 룰 요약 */
+.rules-summary {
+  margin-top: 24px;
+  text-align: left;
+  padding: 16px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(200, 170, 120, 0.1);
+}
+
+.rules-summary h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--janggi-text-primary);
+  margin-bottom: 8px;
+}
+
+.rules-summary ul {
+  padding-left: 18px;
+  font-size: 13px;
+  color: rgba(245, 233, 201, 0.6);
+  line-height: 1.7;
+}
+
+/* 상대 이탈 배너 */
+.opponent-left-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 24px;
+  background: rgba(200, 16, 46, 0.92);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 500;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+
+.opponent-left-msg {
+  flex: 0 1 auto;
+}
+
+.btn-banner-return-lobby {
+  padding: 8px 20px;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms;
+}
+
+.btn-banner-return-lobby:hover {
+  background: rgba(255,255,255,0.3);
+}
+
 /* ── 유틸리티 ────────────────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}
+
 [hidden] {
   display: none !important;
 }

@@ -7,7 +7,64 @@
   <link rel="stylesheet" href="style.css?v=19" />
 </head>
 <body>
-  <main class="play-area">
+  <!-- 대기 화면 (READY 게이트) -->
+  <section id="screen-waiting" class="screen screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">🎴</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+
+      <!-- 직접 진입(닉네임 미전달) 시 인라인 닉네임 게이트 -->
+      <div id="name-gate-inline" class="name-gate-inline hidden">
+        <p class="name-gate-msg">닉네임을 입력하고 입장하세요</p>
+        <input id="inline-name-input" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button id="btn-inline-enter" class="btn-inline-enter" type="button">입장</button>
+      </div>
+
+      <!-- 혼자 대기 중(1인) — 친구 기다림 안내 + AI 진입 버튼 -->
+      <div id="waiting-solo" class="waiting-solo">
+        <p class="waiting-message">친구를 기다리는 중...</p>
+        <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
+        <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+      </div>
+
+      <!-- 상대 입장 시 표시 -->
+      <div id="opponent-info" class="opponent-info hidden">
+        <span id="opponent-name-label"></span>님과 대전
+      </div>
+
+      <!-- 양방향 READY 상태 패널 -->
+      <div id="ready-panel" class="ready-panel">
+        <div class="ready-status">
+          <span class="ready-label">나</span>
+          <span id="my-ready-mark" class="ready-mark not-ready">⌛</span>
+          <span class="ready-sep">·</span>
+          <span class="ready-label">상대</span>
+          <span id="opp-ready-mark" class="ready-mark not-ready">⌛</span>
+        </div>
+        <button id="btn-ready" class="btn-ready" type="button" hidden>준비 완료</button>
+        <div class="ready-hint">양쪽 모두 준비를 누르면 게임이 시작됩니다.</div>
+      </div>
+
+      <!-- 룰 요약 -->
+      <div class="rules-summary">
+        <h3>맞고 규칙 요약</h3>
+        <ul>
+          <li>화투 48장 + 조커 2장으로 1:1 대전.</li>
+          <li>같은 월 카드를 매칭하여 <strong>광·끗·띠·피</strong>를 모은다.</li>
+          <li>7점 이상 달성 시 <strong>고/스톱</strong> 선택 가능.</li>
+          <li>피박·멍박·광박·고박 시 배수가 적용된다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 상대 이탈 배너 -->
+  <div id="opponent-left-banner" class="opponent-left-banner hidden" role="alert">
+    <span id="opponent-left-msg" class="opponent-left-msg"></span>
+    <button id="btn-banner-return-lobby" class="btn-banner-return-lobby" type="button">로비로 돌아가기</button>
+  </div>
+
+  <main class="play-area hidden" id="screen-game">
 
     <!-- row 1 col 1: 상대 먹은 패 -->
     <section class="captured-zone opp-captured-zone" id="opp-captured-zone">

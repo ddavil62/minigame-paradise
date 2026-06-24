@@ -47,6 +47,14 @@ let pieceMap = new Map();
 /** @type {boolean} 게임 종료 여부 */
 let gameEnded = false;
 
+// ── 대기 화면 상태 ──────────────────────────────────────────────
+/** 상대 닉네임(JOINED.opponentName 수신 시 갱신). */
+let opponentName = null;
+/** 내 READY 상태. */
+let myReady = false;
+/** 상대 READY 상태. */
+let opponentReady = false;
+
 // ── DOM 참조 ────────────────────────────────────────────────────
 const boardCanvas = document.getElementById('janggi-board');
 const piecesLayer = document.getElementById('janggi-pieces-layer');
@@ -56,9 +64,140 @@ const btnDraw = document.getElementById('btn-draw');
 const btnBackToLobby = document.getElementById('btn-back-to-lobby');
 const btnReturnLobby = document.getElementById('btn-return-lobby');
 
+// ── 대기 화면 (READY 게이트) DOM 참조 ─────────────────────────
+const screenWaitingEl     = document.getElementById('screen-waiting');
+const screenGameEl        = document.getElementById('screen-game');
+const topbarEl            = document.getElementById('topbar');
+const waitingTitleEl      = screenWaitingEl ? screenWaitingEl.querySelector('.waiting-title') : null;
+const nameGateInlineEl    = document.getElementById('name-gate-inline');
+const inlineNameInputEl   = document.getElementById('inline-name-input');
+const btnInlineEnterEl    = document.getElementById('btn-inline-enter');
+const waitingSoloEl       = document.getElementById('waiting-solo');
+const btnStartAiEl        = document.getElementById('btn-start-ai');
+const opponentInfoEl      = document.getElementById('opponent-info');
+const opponentNameLabelEl = document.getElementById('opponent-name-label');
+const readyPanelEl        = document.getElementById('ready-panel');
+const myReadyMarkEl       = document.getElementById('my-ready-mark');
+const oppReadyMarkEl      = document.getElementById('opp-ready-mark');
+const btnReadyEl          = document.getElementById('btn-ready');
+const oppLeftBannerEl     = document.getElementById('opponent-left-banner');
+const oppLeftMsgEl        = document.getElementById('opponent-left-msg');
+const btnBannerReturnEl   = document.getElementById('btn-banner-return-lobby');
+
 // ── 초기 렌더링 ─────────────────────────────────────────────────
 const ctx = boardCanvas.getContext('2d');
 renderBoard(ctx);
+
+// ── 대기 화면 헬퍼 함수 ──────────────────────────────────────────
+
+/**
+ * 현재 모드(ai|human)를 URL/sessionStorage에서 읽는다.
+ * @returns {string}
+ */
+function getCurrentMode() {
+  return new URLSearchParams(location.search).get('mode')
+    || sessionStorage.getItem('janggi:mode')
+    || 'human';
+}
+
+/**
+ * "AI랑 시작" 버튼(혼자 대기 패널)을 숨긴다.
+ */
+function hideAiButton() {
+  if (waitingSoloEl) waitingSoloEl.classList.add('hidden');
+  if (btnStartAiEl) btnStartAiEl.classList.add('hidden');
+}
+
+/**
+ * 혼자 대기 패널을 다시 표시한다.
+ */
+function showAiButton() {
+  if (getCurrentMode() === 'ai') return;
+  updateWaitingTitle(false);
+  if (waitingSoloEl) waitingSoloEl.classList.remove('hidden');
+  if (btnStartAiEl) {
+    btnStartAiEl.classList.remove('hidden');
+    btnStartAiEl.disabled = false;
+    btnStartAiEl.textContent = '🤖 AI랑 시작';
+  }
+}
+
+/**
+ * 대기 카드 제목(.waiting-title)을 현재 인원 상태에 맞게 갱신한다.
+ * @param {boolean} hasOpponent 상대가 합류했는가
+ */
+function updateWaitingTitle(hasOpponent) {
+  if (!waitingTitleEl) return;
+  waitingTitleEl.textContent = hasOpponent
+    ? '대전 준비 중'
+    : '상대방을 기다리는 중...';
+}
+
+/**
+ * 상대 이름 표시("OO님과 대전")를 갱신한다.
+ */
+function updateOpponentInfo() {
+  if (opponentName && opponentInfoEl) {
+    opponentInfoEl.classList.remove('hidden');
+    if (opponentNameLabelEl) opponentNameLabelEl.textContent = opponentName;
+  }
+}
+
+/**
+ * 양방향 READY 상태 마크 + 준비 버튼 표시를 갱신한다.
+ */
+function updateReadyUI() {
+  if (myReadyMarkEl) {
+    myReadyMarkEl.textContent = myReady ? '✅' : '⌛';
+    myReadyMarkEl.classList.toggle('ready', myReady);
+    myReadyMarkEl.classList.toggle('not-ready', !myReady);
+  }
+  if (oppReadyMarkEl) {
+    oppReadyMarkEl.textContent = opponentReady ? '✅' : '⌛';
+    oppReadyMarkEl.classList.toggle('ready', opponentReady);
+    oppReadyMarkEl.classList.toggle('not-ready', !opponentReady);
+  }
+  if (btnReadyEl) btnReadyEl.hidden = myReady;
+}
+
+/**
+ * 상대 이탈 배너를 표시한다.
+ * @param {string} name 이탈한 상대 이름
+ */
+function showOpponentLeftBanner(name) {
+  if (oppLeftMsgEl) {
+    oppLeftMsgEl.textContent = `${name || '상대방'}님이 나갔어요.`;
+  }
+  if (oppLeftBannerEl) oppLeftBannerEl.classList.remove('hidden');
+}
+
+/**
+ * 화면 전환: 'waiting' → 대기, 'game' → 게임(topbar + janggi-app).
+ * @param {'waiting'|'game'} name
+ */
+function showScreen(name) {
+  if (screenWaitingEl) screenWaitingEl.classList.toggle('hidden', name !== 'waiting');
+  if (screenGameEl) screenGameEl.classList.toggle('hidden', name !== 'game');
+  if (topbarEl) topbarEl.classList.toggle('hidden', name !== 'game');
+}
+
+/**
+ * 인라인 닉네임 입력 제출(직접 진입 폴백 B).
+ */
+function submitInlineName() {
+  const raw = (inlineNameInputEl ? inlineNameInputEl.value : '').trim().slice(0, 12);
+  if (!raw) {
+    if (inlineNameInputEl) inlineNameInputEl.focus();
+    return;
+  }
+  sessionStorage.setItem('janggi:name', raw);
+  if (nameGateInlineEl) nameGateInlineEl.classList.add('hidden');
+  if (getCurrentMode() !== 'ai' && waitingSoloEl) {
+    waitingSoloEl.classList.remove('hidden');
+  }
+  if (readyPanelEl) readyPanelEl.classList.remove('hidden');
+  send({ type: 'JOIN', name: raw });
+}
 
 // ── URL 쿼리 파싱 ───────────────────────────────────────────────
 const urlParams = new URLSearchParams(window.location.search);
@@ -101,6 +240,15 @@ function connect() {
   ws.onopen = () => {
     console.log('[janggi] WS 연결 성공');
     reconnectDelay = 1000;
+    // ── 닉네임 3단계 폴백: URL ?name= → sessionStorage janggi:name → 인라인 게이트 ──
+    const urlName = urlParams.get('name');
+    if (urlName) {
+      sessionStorage.setItem('janggi:name', decodeURIComponent(urlName));
+    }
+    const storedName = sessionStorage.getItem('janggi:name');
+    if (storedName) {
+      send({ type: 'JOIN', name: storedName });
+    }
   };
 
   ws.onmessage = (event) => {
@@ -151,6 +299,11 @@ function handleMessage(msg) {
     case 'JOINED':
       handleJoined(msg);
       break;
+    case 'READY_STATE':
+      myReady = !!msg.myReady;
+      opponentReady = !!msg.opponentReady;
+      updateReadyUI();
+      break;
     case 'GAME_START':
       handleGameStart(msg);
       break;
@@ -192,6 +345,38 @@ function handleJoined(msg) {
   mySide = msg.side;
   updateYouTag(mySide, msg.waiting);
   console.log(`[janggi] 접속: ${myPlayerId} (${mySide}), 대기: ${msg.waiting}`);
+
+  // 상대 이름 수신 시 갱신 + AI 버튼 소멸
+  if (msg.opponentName) {
+    opponentName = msg.opponentName;
+    updateOpponentInfo();
+    hideAiButton();
+  }
+
+  // 대기 카드 제목
+  updateWaitingTitle(!!msg.opponentName || !msg.waiting);
+
+  // 양쪽 입장 시 혼자 대기 패널 숨김
+  if (!msg.waiting || msg.opponentName) {
+    hideAiButton();
+  } else {
+    if (getCurrentMode() !== 'ai') {
+      if (waitingSoloEl) waitingSoloEl.classList.remove('hidden');
+    } else {
+      hideAiButton();
+    }
+  }
+
+  // 닉네임이 없으면(직접 진입) 인라인 게이트 노출
+  if (!msg.hasName) {
+    if (nameGateInlineEl) nameGateInlineEl.classList.remove('hidden');
+    if (waitingSoloEl) waitingSoloEl.classList.add('hidden');
+    if (readyPanelEl) readyPanelEl.classList.add('hidden');
+  } else {
+    if (readyPanelEl) readyPanelEl.classList.remove('hidden');
+  }
+
+  showScreen('waiting');
 }
 
 /**
@@ -201,6 +386,11 @@ function handleJoined(msg) {
 function handleGameStart(msg) {
   gameEnded = false;
   hideGameOverModal();
+  // READY 상태 초기화
+  myReady = false;
+  opponentReady = false;
+  // 대기 화면 → 게임 화면 전환
+  showScreen('game');
   console.log(`[janggi] 게임 시작: phase=${msg.phase}`);
 }
 
@@ -333,12 +523,9 @@ function handleDrawOffered(msg) {
  * @param {object} msg
  */
 function handleOpponentLeft(msg) {
-  showToast(msg.message || '상대방이 나갔다.');
-  // 런처 모드이면 로비로 자동 복귀
-  if (window.location.pathname.startsWith('/janggi/')) {
-    autoReconnect = false;
-    setTimeout(() => { window.location.href = '/'; }, 1200);
-  }
+  hideGameOverModal();
+  // 자동 redirect 제거 — 배너 + "로비로 돌아가기" 버튼만 표시
+  showOpponentLeftBanner(msg.name || '상대방');
 }
 
 // ── 사용자 입력 처리 ────────────────────────────────────────────
@@ -501,6 +688,52 @@ window.addEventListener('pagehide', () => {
   autoReconnect = false;
   if (ws) ws.close();
 });
+
+// ── 대기 화면 이벤트 리스너 ──────────────────────────────────────
+
+// 인라인 닉네임 입력 → 입장
+if (btnInlineEnterEl) {
+  btnInlineEnterEl.addEventListener('click', submitInlineName);
+}
+if (inlineNameInputEl) {
+  inlineNameInputEl.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitInlineName();
+    }
+  });
+}
+
+// 준비 완료(READY) 버튼
+if (btnReadyEl) {
+  btnReadyEl.addEventListener('click', () => {
+    if (btnReadyEl) btnReadyEl.hidden = true;
+    send({ type: 'READY' });
+  });
+}
+
+// AI랑 시작 — mode=ai로 재접속
+if (btnStartAiEl) {
+  btnStartAiEl.addEventListener('click', () => {
+    btnStartAiEl.disabled = true;
+    btnStartAiEl.textContent = '🤖 AI 호출 중...';
+    const name = sessionStorage.getItem('janggi:name') || '';
+    const base = location.pathname;
+    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+  });
+}
+
+// 상대 이탈 배너 → 로비로 돌아가기
+if (btnBannerReturnEl) {
+  btnBannerReturnEl.addEventListener('click', () => {
+    if (window.location.pathname.startsWith('/janggi/')) {
+      autoReconnect = false;
+      window.location.href = '/';
+    } else {
+      window.location.reload();
+    }
+  });
+}
 
 // ── 연결 시작 ───────────────────────────────────────────────────
 connect();

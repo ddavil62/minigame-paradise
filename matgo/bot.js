@@ -29,6 +29,8 @@ let pendingActTimer = null;
 // (예약 시점 closure 캡처된 STATE를 그대로 쓰면, 예약과 fire 사이에 도착한 STATE 변경을
 //  반영 못해 stale 결정 → 서버 거절 → stuck 케이스가 발생한다.)
 let lastState = null;
+/** 자동 READY 예약 타이머 (JOINED 수신 후 데드락 방지). */
+let readyTimer = null;
 
 const ws = new WebSocket(URL);
 
@@ -52,6 +54,11 @@ ws.on('message', (data) => {
     case 'JOINED':
       myId = msg.playerId;
       console.log(`[bot] ${myId} 자리 점유`);
+      // 입장 즉시 자동 READY 예약(0.3~0.5초 지연, 데드락 방지).
+      scheduleReady();
+      break;
+    case 'READY_STATE':
+      // 봇은 READY 상태를 화면에 표시하지 않으므로 무시(수신만).
       break;
     case 'GAME_START':
       console.log('[bot] 게임 시작');
@@ -256,6 +263,19 @@ function doSelfReveal(s) {
   if (unrevealedIdx < 0) return;
   console.log(`[bot] SELF_REVEAL: slot=${unrevealedIdx}`);
   send({ type: 'SELF_REVEAL', slot: unrevealedIdx });
+}
+
+/**
+ * JOINED 수신 후 자동 READY를 예약한다(0.3~0.5초 지연).
+ * 데드락 방지 — 봇이 READY 없이 무한 대기하는 것을 막는다.
+ */
+function scheduleReady() {
+  if (readyTimer) clearTimeout(readyTimer);
+  readyTimer = setTimeout(() => {
+    readyTimer = null;
+    send({ type: 'READY' });
+    console.log('[bot] READY 송신');
+  }, 300 + Math.floor(Math.random() * 200));
 }
 
 /**

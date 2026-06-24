@@ -112,6 +112,146 @@
   const myCapturedZoneEl  = document.getElementById('my-captured-zone');
   const oppCapturedZoneEl = document.getElementById('opp-captured-zone');
 
+  // ── 대기 화면 (READY 게이트) DOM 참조 ─────────────────────────
+  const screenWaitingEl     = document.getElementById('screen-waiting');
+  const screenGameEl        = document.getElementById('screen-game');
+  const waitingTitleEl      = screenWaitingEl ? screenWaitingEl.querySelector('.waiting-title') : null;
+  const nameGateInlineEl    = document.getElementById('name-gate-inline');
+  const inlineNameInputEl   = document.getElementById('inline-name-input');
+  const btnInlineEnterEl    = document.getElementById('btn-inline-enter');
+  const waitingSoloEl       = document.getElementById('waiting-solo');
+  const btnStartAiEl        = document.getElementById('btn-start-ai');
+  const opponentInfoEl      = document.getElementById('opponent-info');
+  const opponentNameLabelEl = document.getElementById('opponent-name-label');
+  const readyPanelEl        = document.getElementById('ready-panel');
+  const myReadyMarkEl       = document.getElementById('my-ready-mark');
+  const oppReadyMarkEl      = document.getElementById('opp-ready-mark');
+  const btnReadyEl          = document.getElementById('btn-ready');
+  const oppLeftBannerEl     = document.getElementById('opponent-left-banner');
+  const oppLeftMsgEl        = document.getElementById('opponent-left-msg');
+  const btnBannerReturnEl   = document.getElementById('btn-banner-return-lobby');
+
+  // ── 대기 화면 상태 ──────────────────────────────────────────
+  /** 상대 닉네임(JOINED.opponentName 수신 시 갱신). */
+  let opponentName = null;
+  /** 내 READY 상태. */
+  let myReady = false;
+  /** 상대 READY 상태. */
+  let opponentReady = false;
+
+  /**
+   * 현재 모드(ai|human)를 URL/sessionStorage에서 읽는다.
+   * @returns {string}
+   */
+  function getCurrentMode() {
+    return new URLSearchParams(location.search).get('mode')
+      || sessionStorage.getItem('matgo:mode')
+      || 'human';
+  }
+
+  /**
+   * "🤖 AI랑 시작" 버튼(혼자 대기 패널)을 숨긴다.
+   * 친구가 합류해 2인이 되면 호출(사람 대전 흐름 전환).
+   */
+  function hideAiButton() {
+    if (waitingSoloEl) waitingSoloEl.classList.add('hidden');
+    if (btnStartAiEl) btnStartAiEl.classList.add('hidden');
+  }
+
+  /**
+   * 혼자 대기 패널을 다시 표시한다(상대 이탈 시 — AI 모드가 아니고 사람일 때만).
+   */
+  function showAiButton() {
+    if (getCurrentMode() === 'ai') return;
+    updateWaitingTitle(false);
+    if (waitingSoloEl) waitingSoloEl.classList.remove('hidden');
+    if (btnStartAiEl) {
+      btnStartAiEl.classList.remove('hidden');
+      btnStartAiEl.disabled = false;
+      btnStartAiEl.textContent = '🤖 AI랑 시작';
+    }
+  }
+
+  /**
+   * 대기 카드 제목(.waiting-title)을 현재 인원 상태에 맞게 갱신한다.
+   * @param {boolean} hasOpponent 상대가 합류했는가
+   */
+  function updateWaitingTitle(hasOpponent) {
+    if (!waitingTitleEl) return;
+    waitingTitleEl.textContent = hasOpponent
+      ? '대전 준비 중'
+      : '상대방을 기다리는 중...';
+  }
+
+  /**
+   * 상대 이름 표시("○○님과 대전")를 갱신한다.
+   */
+  function updateOpponentInfo() {
+    if (opponentName && opponentInfoEl) {
+      opponentInfoEl.classList.remove('hidden');
+      if (opponentNameLabelEl) opponentNameLabelEl.textContent = opponentName;
+    }
+  }
+
+  /**
+   * 양방향 READY 상태 마크 + 준비 버튼 표시를 갱신한다.
+   */
+  function updateReadyUI() {
+    if (myReadyMarkEl) {
+      myReadyMarkEl.textContent = myReady ? '✅' : '⌛';
+      myReadyMarkEl.classList.toggle('ready', myReady);
+      myReadyMarkEl.classList.toggle('not-ready', !myReady);
+    }
+    if (oppReadyMarkEl) {
+      oppReadyMarkEl.textContent = opponentReady ? '✅' : '⌛';
+      oppReadyMarkEl.classList.toggle('ready', opponentReady);
+      oppReadyMarkEl.classList.toggle('not-ready', !opponentReady);
+    }
+    // 내가 아직 준비 안 했으면 버튼 노출.
+    if (btnReadyEl) btnReadyEl.hidden = myReady;
+  }
+
+  /**
+   * 상대 이탈 배너를 표시한다(자동 사라지지 않음 — 사용자가 버튼 클릭 시 이동).
+   * @param {string} name 이탈한 상대 이름
+   */
+  function showOpponentLeftBanner(name) {
+    if (oppLeftMsgEl) {
+      oppLeftMsgEl.textContent = `${name || '상대방'}님이 나갔어요.`;
+    }
+    if (oppLeftBannerEl) oppLeftBannerEl.classList.remove('hidden');
+  }
+
+  /**
+   * 화면 전환: 'waiting' → 대기 화면, 'game' → 게임 플레이 화면.
+   * @param {'waiting'|'game'} name
+   */
+  function showScreen(name) {
+    if (screenWaitingEl) screenWaitingEl.classList.toggle('hidden', name !== 'waiting');
+    if (screenGameEl) screenGameEl.classList.toggle('hidden', name !== 'game');
+  }
+
+  /**
+   * 인라인 닉네임 입력 제출(직접 진입 폴백 B).
+   */
+  function submitInlineName() {
+    const raw = (inlineNameInputEl ? inlineNameInputEl.value : '').trim().slice(0, 12);
+    if (!raw) {
+      if (inlineNameInputEl) inlineNameInputEl.focus();
+      return;
+    }
+    sessionStorage.setItem('matgo:name', raw);
+    if (nameGateInlineEl) nameGateInlineEl.classList.add('hidden');
+    // 닉네임 확정 후 혼자 대기/READY 패널 노출 + JOIN 송신.
+    if (getCurrentMode() !== 'ai' && waitingSoloEl) {
+      waitingSoloEl.classList.remove('hidden');
+    }
+    if (readyPanelEl) readyPanelEl.classList.remove('hidden');
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'JOIN', name: raw }));
+    }
+  }
+
   // ── 상태 ─────────────────────────────────────────────────────
   /** @type {WebSocket|null} */
   let ws = null;
@@ -295,6 +435,17 @@
       console.log('[client] 연결됨');
       reconnectAttempts = 0;
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      // ── 닉네임 3단계 폴백: URL ?name= → sessionStorage matgo:name → 인라인 게이트 ──
+      const urlName = urlParams.get('name');
+      if (urlName) {
+        sessionStorage.setItem('matgo:name', decodeURIComponent(urlName));
+      }
+      const storedName = sessionStorage.getItem('matgo:name');
+      if (storedName) {
+        // 닉네임 확정 → 즉시 JOIN 송신
+        ws.send(JSON.stringify({ type: 'JOIN', name: storedName }));
+      }
+      // hasName 여부에 따라 인라인 게이트 노출/숨김(JOINED에서 처리)
     });
     ws.addEventListener('message', (ev) => {
       let msg;
@@ -333,10 +484,50 @@
       case 'JOINED':
         me = msg.playerId;
         youTagEl.textContent = `너는 ${me === 'p1' ? 'P1 (선공)' : 'P2 (후공)'}`;
-        if (msg.waiting) {
+
+        // 상대 이름 수신 시 갱신 + AI 버튼 소멸(사람 대전 흐름 전환).
+        if (msg.opponentName) {
+          opponentName = msg.opponentName;
+          updateOpponentInfo();
+          hideAiButton();
+        }
+
+        // 대기 카드 제목: 상대 합류(상대 이름 존재 또는 waiting=false) 시 "대전 준비 중".
+        updateWaitingTitle(!!msg.opponentName || !msg.waiting);
+
+        // 양쪽 입장(waiting=false 또는 상대 이름 존재)이면 혼자 대기 패널 숨김.
+        if (!msg.waiting || msg.opponentName) {
+          hideAiButton();
+        } else {
+          // 단독 대기: AI 버튼은 mode!=ai일 때만.
+          if (getCurrentMode() !== 'ai') {
+            if (waitingSoloEl) waitingSoloEl.classList.remove('hidden');
+          } else {
+            hideAiButton();
+          }
+        }
+
+        // 닉네임이 없으면(직접 진입) 인라인 게이트 노출, READY/대기 패널 숨김.
+        if (!msg.hasName) {
+          if (nameGateInlineEl) nameGateInlineEl.classList.remove('hidden');
+          if (waitingSoloEl) waitingSoloEl.classList.add('hidden');
+          if (readyPanelEl) readyPanelEl.classList.add('hidden');
+        } else {
+          // 닉네임 확정 후 READY 패널 항상 노출.
+          if (readyPanelEl) readyPanelEl.classList.remove('hidden');
+        }
+
+        if (msg.waiting && !msg.opponentName) {
           bannerStatusEl.textContent = '상대 대기 중';
           actionDisplay.textContent = '친구가 접속하기를 기다리는 중...';
         }
+
+        showScreen('waiting');
+        break;
+      case 'READY_STATE':
+        myReady = !!msg.myReady;
+        opponentReady = !!msg.opponentReady;
+        updateReadyUI();
         break;
       case 'GAME_START':
         hideRoundModal();
@@ -348,6 +539,11 @@
         pendingPpeokToast = null;
         // 조커 fly 중복 가드 키 리셋 — 다음 라운드 조커 fly 정상 동작.
         lastJokerFlyActionKey = '';
+        // READY 상태 초기화(다음 리매치 대비).
+        myReady = false;
+        opponentReady = false;
+        // 대기 화면 → 게임 화면 전환
+        showScreen('game');
         break;
       case 'ROUND_START':
         hideRoundModal();
@@ -378,15 +574,9 @@
         }
         break;
       case 'OPPONENT_LEFT':
-        showToast(msg.message || '상대방이 나갔다.');
-        bannerStatusEl.textContent = '상대 대기 중';
-        actionDisplay.textContent = '새 친구가 접속하기를 기다리는 중...';
         hideRoundModal();
-        // 런처 모드(경로가 /matgo/로 시작)이면 로비로 자동 복귀
-        if (window.location.pathname.startsWith('/matgo/')) {
-          autoReconnect = false;
-          setTimeout(() => { window.location.href = '/'; }, 1200);
-        }
+        // 자동 redirect 제거 — 배너 + "로비로 돌아가기" 버튼만 표시(사용자가 직접 이동).
+        showOpponentLeftBanner(msg.name || '상대방');
         break;
       case 'ERROR':
         if (msg.message && msg.message.includes('가득')) {
@@ -2101,6 +2291,55 @@
     toastTimer = setTimeout(() => {
       toastEl.classList.add('hidden');
     }, 3000);
+  }
+
+  // ── 대기 화면 이벤트 리스너 ──────────────────────────────────
+
+  // 인라인 닉네임 입력 → 입장 (직접 진입 폴백 B)
+  if (btnInlineEnterEl) {
+    btnInlineEnterEl.addEventListener('click', submitInlineName);
+  }
+  if (inlineNameInputEl) {
+    inlineNameInputEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        submitInlineName();
+      }
+    });
+  }
+
+  // 준비 완료(READY) 버튼
+  if (btnReadyEl) {
+    btnReadyEl.addEventListener('click', () => {
+      if (btnReadyEl) btnReadyEl.hidden = true;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'READY' }));
+      }
+    });
+  }
+
+  // 🤖 AI랑 시작 — mode=ai로 재접속
+  if (btnStartAiEl) {
+    btnStartAiEl.addEventListener('click', () => {
+      btnStartAiEl.disabled = true;
+      btnStartAiEl.textContent = '🤖 AI 호출 중...';
+      const name = sessionStorage.getItem('matgo:name') || '';
+      const base = location.pathname; // '/matgo/' 또는 '/'
+      location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+    });
+  }
+
+  // 상대 이탈 배너 → 로비로 돌아가기
+  if (btnBannerReturnEl) {
+    btnBannerReturnEl.addEventListener('click', () => {
+      // 런처 모드이면 POST /lobby/return 후 로비로, standalone이면 새로고침.
+      if (window.location.pathname.startsWith('/matgo/')) {
+        autoReconnect = false;
+        window.location.href = '/';
+      } else {
+        window.location.reload();
+      }
+    });
   }
 
   // ── 시작 ────────────────────────────────────────────────────

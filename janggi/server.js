@@ -70,6 +70,11 @@ export function createApp(opts = {}) {
   let tickInterval = null;
   /** @type {NodeJS.Timeout|null} 배치 선택 30초 타이머 */
   let setupTimer = null;
+  /**
+   * READY 선언한 playerId Set. 양쪽 모두 READY일 때만 게임 시작.
+   * @type {Set<string>}
+   */
+  let readySet = new Set();
 
   // ── 브로드캐스트 유틸 ───────────────────────────────────────────
 
@@ -123,6 +128,45 @@ export function createApp(opts = {}) {
    */
   function findPlayerBySide(side) {
     return players.find(p => p.side === side);
+  }
+
+  /**
+   * 상대 Player를 반환한다.
+   * @param {Player} player
+   * @returns {Player|undefined}
+   */
+  function otherPlayer(player) {
+    return players.find((p) => p.id !== player.id);
+  }
+
+  /**
+   * 각 플레이어에게 자신 관점의 READY_STATE를 개별 전송한다.
+   * (myReady = 본인, opponentReady = 상대 기준)
+   */
+  function broadcastReadyState() {
+    for (const p of players) {
+      const other = otherPlayer(p);
+      sendTo(p, {
+        type: 'READY_STATE',
+        myReady: readySet.has(p.id),
+        opponentReady: other ? readySet.has(other.id) : false,
+      });
+    }
+  }
+
+  /**
+   * 양쪽 모두 입장 + 양쪽 모두 READY일 때만 게임 시작한다.
+   * (기존 "2인 JOIN 즉시 배치선택" 대체)
+   */
+  function maybeStartGame() {
+    if (players.length === 2 && readySet.size === 2 && !game) {
+      game = createGameSession();
+      console.log('[janggi] 양쪽 READY 완료 → 배치 선택 시작');
+      broadcastAll({ type: 'GAME_START', phase: 'setup_cho' });
+      broadcastState();
+      // 초가 먼저 배치 선택 (30초 타이머)
+      startSetupTimer('cho');
+    }
   }
 
   // ── 시간 tick ────────────────────────────────────────────────────
@@ -321,23 +365,41 @@ export function createApp(opts = {}) {
     }
 
     /** @type {Player} */
-    const player = { id: playerId, side, ws };
+    // 봇은 JOIN을 보내지 않으므로 서버가 즉시 name='AI'를 부여한다.
+    const player = { id: playerId, side, ws, name: isBot ? 'AI' : '(알 수 없음)' };
     players.push(player);
     console.log(`[janggi] ${playerId}(${side}) 연결됨 (${players.length}/2)`);
 
-    sendTo(player, { type: 'JOINED', playerId, side, waiting: players.length < 2 });
+    // JOINED 전송 — 상대가 이미 있으면 상대 이름 포함
+    const existingOpp = otherPlayer(player);
+    sendTo(player, {
+      type: 'JOINED',
+      playerId,
+      side,
+      waiting: players.length < 2,
+      hasName: isBot,
+      opponentName: (existingOpp && existingOpp.name && existingOpp.name !== '(알 수 없음)') ? existingOpp.name : undefined,
+    });
 
-    // 두 명 모두 입장 시 새 게임 시작 (배치 선택 단계)
-    if (players.length === 2) {
-      game = createGameSession();
-      console.log('[janggi] 두 플레이어 입장 완료 → 배치 선택 시작');
-      broadcastAll({ type: 'GAME_START', phase: 'setup_cho' });
-      broadcastState();
-      // 초가 먼저 배치 선택 (30초 타이머)
-      startSetupTimer('cho');
-    } else if (wsMode === 'ai' && !isBot) {
+    // 봇은 JOIN을 보내지 않으므로 connection 즉시 상대에게 알림
+    if (isBot) {
+      const human = otherPlayer(player);
+      if (human) {
+        sendTo(human, {
+          type: 'JOINED',
+          playerId: human.id,
+          side: human.side,
+          waiting: false,
+          hasName: true,
+          opponentName: 'AI',
+        });
+      }
+      broadcastReadyState();
+    }
+
+    if (wsMode === 'ai' && !isBot && players.length === 1) {
       // mode=ai 사용자가 혼자 들어왔다 → 봇 자동 spawn (자기 자식 프로세스).
-      // 봇이 connect하면 위 분기로 게임 시작.
+      // 봇이 connect하면 READY 게이트를 통해 게임 시작.
       // 약간의 지연: 사용자가 JOINED를 받기 전 봇이 먼저 와서 side 충돌 가능성 회피.
       setTimeout(() => spawnBotChild(), 200);
     }
@@ -362,6 +424,38 @@ export function createApp(opts = {}) {
       }
 
       switch (msg.type) {
+        case 'JOIN': {
+          // 닉네임 전달. name 누락 시 '(알 수 없음)' 폴백(후방호환 — JOIN 미수신 smoke 무영향).
+          const raw = typeof msg.name === 'string' ? msg.name.trim().slice(0, 12) : '';
+          player.name = raw || '(알 수 없음)';
+          console.log(`[janggi] JOIN: ${player.id} → "${player.name}"`);
+          // 상대가 이미 있으면 상대에게 opponentName 포함 JOINED 재전송
+          const other = otherPlayer(player);
+          if (other) {
+            sendTo(other, {
+              type: 'JOINED',
+              playerId: other.id,
+              side: other.side,
+              waiting: false,
+              hasName: true,
+              opponentName: player.name,
+            });
+          }
+          broadcastReadyState();
+          break;
+        }
+
+        case 'READY': {
+          // 양방향 READY 게이트. 양쪽 READY 시에만 게임 시작.
+          readySet.add(player.id);
+          console.log(`[janggi] READY: ${player.id} (readySet.size=${readySet.size})`);
+          broadcastReadyState();
+          if (readySet.size === 2) {
+            maybeStartGame();
+          }
+          break;
+        }
+
         case 'SELECT_SETUP': {
           if (!game) break;
           const code = msg.setup || msg.code;
@@ -482,6 +576,8 @@ export function createApp(opts = {}) {
 
     ws.on('close', () => {
       console.log(`[janggi] ${player.id}(${player.side}) 연결 해제 (mode=${ws._mode})`);
+      const disconnectedName = player.name || '(알 수 없음)';
+      readySet.delete(player.id);
       players = players.filter((p) => p.id !== player.id);
       // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
       // 새 사용자가 다시 들어오면 새 봇이 spawn된다.
@@ -495,8 +591,12 @@ export function createApp(opts = {}) {
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
-          message: '상대방이 나갔다. 새 친구가 접속하면 게임이 재시작된다.',
+          name: disconnectedName,
+          message: `${disconnectedName}님이 나갔습니다.`,
         });
+        game = null;
+        stopTickTimer();
+        clearSetupTimer();
       }
     });
 

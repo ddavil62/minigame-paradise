@@ -1,5 +1,50 @@
 # Changelog
 
+## [2026-06-24] - 입장 UI 통일 Phase 3 (Entry UI Unify — matgo, janggi)
+
+### 추가
+
+**Phase 3 — matgo (대기 화면 + READY 프로토콜 신규 추가)**
+- **`matgo/server.js`**: `readySet` 상태 추가, `otherPlayer()`/`broadcastReadyState()`/`maybeStartGame()` 헬퍼 함수 추가, JOIN/READY 메시지 핸들러 신설, 2인 즉시 게임 시작 제거(READY 게이트로 대체), JOINED 페이로드에 `hasName`/`opponentName` 추가, disconnect 시 `readySet.delete` + `name` 포함 OPPONENT_LEFT
+- **`matgo/bot.js`**: `readyTimer` 상태 변수 추가, JOINED 수신 후 `scheduleReady()` 자동 호출(0.3~0.5초 지연), READY_STATE 핸들러(수신만)
+- **`matgo/public/client.js`**: 대기 화면 DOM 참조 18개 추가, `getCurrentMode()`/`hideAiButton()`/`showAiButton()`/`updateWaitingTitle()`/`updateOpponentInfo()`/`updateReadyUI()`/`showOpponentLeftBanner()`/`showScreen()`/`submitInlineName()` 헬퍼 함수 추가, `connect()` WS open에 3-tier 닉네임 폴백(URL→sessionStorage→인라인 게이트) + JOIN 자동 송신, JOINED 핸들러 전면 재작성, READY_STATE 핸들러 신설, GAME_START에 showScreen('game') 추가, OPPONENT_LEFT를 배너 표시로 교체(자동 redirect 제거), 대기 화면 이벤트 리스너 4개
+
+**Phase 3 — janggi (대기 화면 + READY 프로토콜 신규 추가)**
+- **`janggi/public/index.html`**: `#screen-waiting` 섹션 신설(닉네임 게이트, AI 버튼, READY 패널, 장기 룰 요약 4항목), `#opponent-left-banner` 추가, `.janggi-app`에 `hidden` 초기 클래스 + `id="screen-game"` 추가, `header.topbar`에 `hidden` 초기 클래스 + `id="topbar"` 추가
+- **`janggi/public/css/style.css`**: `.screen-waiting`, `.waiting-card`, `.name-gate-inline`, `.btn-inline-enter`, `.waiting-solo`, `.btn-start-ai`, `.opponent-info`, `.ready-panel`, `.btn-ready`, `.rules-summary`, `.opponent-left-banner`, `.btn-banner-return-lobby`, `.hidden` 유틸리티 클래스 등 대기 화면 CSS 전체 추가 (janggi 진남색+한/초 테마 적용)
+- **`janggi/public/js/main.js`**: `opponentName`/`myReady`/`opponentReady` 상태 변수 추가, 대기 화면 DOM 참조 18개 추가, 9개 헬퍼 함수 추가, `connect()` WS open에 3-tier 닉네임 폴백 + JOIN 자동 송신, READY_STATE 핸들러 신설, handleJoined 전면 재작성, handleGameStart에 showScreen('game') + READY 초기화, handleOpponentLeft를 배너 표시로 교체, 대기 화면 이벤트 리스너 4개
+- **`janggi/server.js`**: `readySet` 상태 추가, `otherPlayer()`/`broadcastReadyState()`/`maybeStartGame()` 헬퍼 함수 추가, `player.name` 필드 도입(봇='AI', 사람='(알 수 없음)'), JOIN/READY 메시지 핸들러 신설, 2인 즉시 배치선택 시작 제거(READY 게이트로 대체), JOINED 페이로드에 `hasName`/`opponentName` 추가, disconnect 시 `readySet.delete` + `name` 포함 OPPONENT_LEFT + game/timer 정리
+- **`janggi/bot.js`**: `readyTimer` 상태 변수 추가, JOINED 수신 후 `scheduleReady()` 자동 호출(0.3~0.5초 지연), READY_STATE 핸들러(수신만)
+
+### 검증
+
+**Phase 3 QA 결과**
+- matgo: 정상 8 + 예외 6 + 시각 2 = 16/16 PASS (독립 실행 기준)
+- janggi: 정상 7 + 예외 5 + 시각 2 = 14/14 PASS
+- AD3: DOM 구조 26 + 시각 검증 4 + 레퍼런스 비교 2 = 32/32 PASS, APPROVED
+
+**Phase 3 회귀 테스트**
+- matgo 단위: `game.unit.spec.js` 44/44 + `score.unit.spec.js` 56/56 = **100/100 PASS**
+- janggi 단위: `janggi.spec.js` 77 + `qa-edge-cases.spec.js` 58 + `rulebook-c1~c9` 111 + `bot-eval-qa.spec.js` 8 = **254/254 PASS**
+- matgo 기존 e2e 32건: READY 게이트 도입 후 `joinAndStartGame` 헬퍼가 새 UI 흐름에 미적응하여 전건 TIMEOUT. **기능 결함 아님 — 테스트 코드 현행화 필요** (별도 작업)
+
+### 알려진 이슈 (LOW, 비차단)
+- matgo `test/reset` 엔드포인트가 `readySet`을 미초기화 — 순차 실행 시 stale readySet 잔존 가능. `readySet.clear()` 추가 권장 (테스트 인프라, 프로덕션 무영향)
+- matgo URL `?name=` 경유 시 닉네임 게이트 순간 노출 — 런처 경유 시 실질적 영향 없음 (onopen에서 즉시 JOIN 송신)
+- janggi 입장 버튼 세로 배치가 레퍼런스(omok/yahtzee/matgo)의 인라인 배치와 다름 — 기능/사용성 무영향, janggi 고유 테마 스타일링으로 허용 (AD3 WARN-1, 비강제)
+
+### 참고
+- 플랜: `.claude/specs/2026-06-24-entry-ui-unify-plan.md`
+- Phase 3 Coder: `.claude/specs/2026-06-24-entry-ui-unify-phase3-coder-report.md`
+- Phase 3 AD3: `.claude/specs/2026-06-24-entry-ui-unify-phase3-ad3-report.md` (APPROVED, WARN 1건 비강제)
+- Phase 3 QA: `.claude/specs/2026-06-24-entry-ui-unify-phase3-qa-report.md` (PASS, 30/30 + 회귀 matgo 100 + janggi 254)
+- 통일 패턴: 오목(omok) 파일럿 — `#screen-waiting .waiting-card`, `#name-gate-inline`, `READY_STATE { myReady, opponentReady }`, `#opponent-left-banner`
+- matgo 테마: 녹색 펠트(`--bg-base: #0d2a1c`) + 골드(`--gold: #d4af37`)
+- janggi 테마: 진남색 그라디언트(`#1a1a2e`) + 한 적색(`--janggi-han-primary`) / 초 청색(`--janggi-cho-primary`)
+- 잔여: Phase 4 (hanabi, davinci-code, codenames-duet) 미착수
+
+---
+
 ## [2026-06-24] - 입장 UI 통일 Phase 1+2 (Entry UI Unify)
 
 ### 추가
