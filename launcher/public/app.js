@@ -37,6 +37,9 @@ let currentCount = 0;
 /** @type {number} 서버에서 수신한 목표 인원 수 (기본값 2) */
 let currentTarget = 2;
 
+/** @type {number} 서버에서 수신한 AI 슬롯 카운트 */
+let currentAiSlotCount = 0;
+
 /** @type {{ [gameId: string]: number }} 서버에서 수신한 투표 현황 */
 let currentVotes = {};
 
@@ -212,6 +215,7 @@ function updateLobbyUI(msg) {
   currentCount = count;
   currentTarget = target;
   currentVotes = votes || {};
+  currentAiSlotCount = msg.aiSlotCount || 0;
 
   // 카운트 표시 — N/M (현재/목표) 형식
   const countEl = document.getElementById('player-count');
@@ -239,6 +243,8 @@ function updateLobbyUI(msg) {
     if (role === 'guest') {
       // 게스트에게 투표 안내 힌트 표시
       hintEl.textContent = '투표 버튼으로 하고 싶은 게임을 추천할 수 있어요 \uD83D\uDC4D';
+    } else if (count + currentAiSlotCount >= target && currentAiSlotCount > 0) {
+      hintEl.textContent = 'AI로 채웠습니다! 종목을 선택하세요';
     } else if (count < target) {
       hintEl.textContent = `${target}명이 모이면 종목을 선택할 수 있어요 (현재 ${count}/${target})`;
     } else {
@@ -251,8 +257,9 @@ function updateLobbyUI(msg) {
 
   // cardClickEnabled: 호스트이면 클릭 가능.
   // 단, targetPlayers>=3이면 정원이 채워져야만 클릭 가능 (목표 인원 대기).
+  // AI 슬롯 포함하여 정원 충족 시 카드 클릭 가능.
   // targetPlayers=2(기본값)는 기존과 동일하게 1인도 즉시 클릭 가능 (AI 모드 하위 호환).
-  cardClickEnabled = role === 'host' && (target <= 2 || count >= target);
+  cardClickEnabled = role === 'host' && (target <= 2 || (count + currentAiSlotCount) >= target);
 
   // 그리드 비활성 CSS 클래스 갱신
   const grid = document.getElementById(GRID_EL_ID);
@@ -262,12 +269,37 @@ function updateLobbyUI(msg) {
     // 결정 B: ai-mode(1인 봇 미지원 카드 비활성) 토글 제거 — 카드는 항상 클릭 가능
   }
 
-  // 게임 카드별 인원 범위 활성/비활성 갱신
-  updateCardPlayerDisabled(count);
+  // 게임 카드별 인원 범위 활성/비활성 갱신 (실제 인원 + AI 슬롯 합산)
+  updateCardPlayerDisabled(count + currentAiSlotCount);
+
+  // AI 채우기 컨트롤 표시/숨김
+  const aiControls = document.getElementById('ai-fill-controls');
+  if (aiControls) {
+    // 호스트 + 3인 이상 목표 + 빈 슬롯 존재 (AI 채운 상태에서도 취소 버튼 보이려면 표시 유지)
+    const canShowAiFill = role === 'host' && target >= 3 && (count < target || currentAiSlotCount > 0);
+    aiControls.hidden = !canShowAiFill;
+  }
+  const btnFillAi = document.getElementById('btn-fill-ai');
+  if (btnFillAi) {
+    // AI 채우기 버튼: 빈 슬롯이 있고 아직 AI 안 채웠을 때만 활성
+    const hasEmptySlots = (target - count - currentAiSlotCount) > 0;
+    btnFillAi.disabled = !hasEmptySlots;
+    btnFillAi.hidden = currentAiSlotCount > 0; // AI 채운 상태면 채우기 버튼 숨김
+  }
+  const btnCancelAi = document.getElementById('btn-cancel-ai');
+  if (btnCancelAi) {
+    btnCancelAi.hidden = currentAiSlotCount === 0;
+  }
+  const aiFillHint = document.getElementById('ai-fill-hint');
+  if (aiFillHint) {
+    aiFillHint.textContent = currentAiSlotCount > 0
+      ? `AI ${currentAiSlotCount}명 대기 중`
+      : '';
+  }
 
   // 접속자 목록 (presence) 실시간 렌더 — 새로고침 불필요
   if (Array.isArray(msg.players)) {
-    renderPresence(msg.players);
+    renderPresence(msg.players, msg.aiSlots);
   }
 
   // 투표 배지 갱신
@@ -280,9 +312,11 @@ function updateLobbyUI(msg) {
  * 본인 항목에는 '(나)' 텍스트 + .self 강조 스타일을 부여한다.
  *   본인 판별: role은 클라당 유일(host/guest)하므로 myRole 일치를 1순위로 쓰고,
  *   동명 방어를 위해 name(myName)도 함께 비교한다. 첫 일치 1개에만 표시한다.
+ * AI 슬롯은 실제 플레이어 뒤에 이어 표시한다.
  * @param {Array<{id:string, name:string|null, role:string, online:boolean}>} players
+ * @param {Array<{id:string, name:string, online:boolean}>} [aiSlots] AI 슬롯 목록
  */
-function renderPresence(players) {
+function renderPresence(players, aiSlots) {
   const listEl = document.getElementById('presence-list');
   if (!listEl) return;
   listEl.innerHTML = '';
@@ -299,11 +333,26 @@ function renderPresence(players) {
     }
     const dot = document.createElement('span');
     dot.className = 'presence-dot';
-    dot.textContent = p.online ? '🟢' : '⚪';
+    dot.textContent = p.online ? '\uD83D\uDFE2' : '\u26AA';
     dot.setAttribute('aria-hidden', 'true');
     const label = document.createElement('span');
     label.className = 'presence-name';
     label.textContent = (p.name || '(입장 중...)') + (isSelf ? ' (나)' : '');
+    item.appendChild(dot);
+    item.appendChild(label);
+    listEl.appendChild(item);
+  }
+  // AI 슬롯 항목 렌더
+  for (const ai of (aiSlots || [])) {
+    const item = document.createElement('span');
+    item.className = 'presence-item ai-slot';
+    const dot = document.createElement('span');
+    dot.className = 'presence-dot';
+    dot.textContent = '\uD83E\uDD16';
+    dot.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.className = 'presence-name';
+    label.textContent = ai.name;
     item.appendChild(dot);
     item.appendChild(label);
     listEl.appendChild(item);
@@ -423,6 +472,7 @@ function showFullAlert(msg) {
 function resetToLobby() {
   currentVotes = {};
   currentTarget = 2;
+  currentAiSlotCount = 0;
   cardClickEnabled = false;
   myRole = null;
   // LOBBY_STATE가 곧 다시 오므로 그때 UI 갱신됨
@@ -592,6 +642,30 @@ function setupPlayerCountSelector() {
   });
 }
 
+// ── AI 채우기 버튼 ────────────────────────────────────────────
+/**
+ * AI 채우기 / AI 취소 버튼에 이벤트를 바인딩한다.
+ * FILL_WITH_AI / CANCEL_AI_FILL WS 메시지를 서버로 전송한다.
+ */
+function setupAiFillButtons() {
+  const btnFillAi = document.getElementById('btn-fill-ai');
+  const btnCancelAi = document.getElementById('btn-cancel-ai');
+
+  if (btnFillAi) {
+    btnFillAi.addEventListener('click', () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'FILL_WITH_AI' }));
+    });
+  }
+
+  if (btnCancelAi) {
+    btnCancelAi.addEventListener('click', () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'CANCEL_AI_FILL' }));
+    });
+  }
+}
+
 // ── 부트스트랩 ─────────────────────────────────────────────────
 /**
  * 페이지 초기화.
@@ -611,6 +685,9 @@ async function init() {
 
   // 인원 선택 UI 이벤트 바인딩
   setupPlayerCountSelector();
+
+  // AI 채우기 버튼 이벤트 바인딩
+  setupAiFillButtons();
 
   // 닉네임 게이트 표시 — 제출 전까지 WS 연결/JOIN 보류
   setupNicknameGate();

@@ -1,5 +1,27 @@
 # Changelog
 
+## [2026-06-24] - 로비 AI 슬롯 채우기 (Lobby AI Fill)
+
+### 추가
+- **`launcher/server.js`**: `aiSlotCount` 상태 변수 추가. `FILL_WITH_AI`/`CANCEL_AI_FILL` WS 메시지 핸들러. `PICK_GAME` 정원 체크에 `effectiveCount = clients.size + aiSlotCount` 적용. REDIRECT 시 `spawnBotForAiFill()` 함수로 AI 슬롯 수만큼 `?mode=bot` 쿼리 포함 bot.js spawn. `sendLobbyStateTo`에 `aiSlotCount`/`aiSlots` 필드 추가. connection 핸들러에서 AI 슬롯 양보 로직(실제 플레이어 입장 시 aiSlotCount 1 감소). 리셋 위치 4곳(전원 퇴장/호스트 disconnect/POST lobby-return/SET_TARGET)에 `aiSlotCount=0` 추가
+- **`launcher/public/app.js`**: `currentAiSlotCount` 상태 변수. `updateLobbyUI`에 AI 채우기 컨트롤 표시/숨김 + 힌트 텍스트 AI 케이스. `renderPresence`에 `aiSlots` 파라미터 추가, AI 슬롯 "AI N" 이탤릭 표시. `cardClickEnabled` 수식에 `currentAiSlotCount` 포함. `setupAiFillButtons()` 함수 신규. `resetToLobby`에 `currentAiSlotCount` 리셋
+- **`launcher/public/index.html`**: `#ai-fill-controls` 영역 추가 (`btn-fill-ai` "AI로 채우기" + `btn-cancel-ai` "AI 취소" + `ai-fill-hint`). player-count-selector 아래, lobby-hint 위에 배치
+- **`launcher/public/style.css`**: `.ai-fill-controls`, `.ai-fill-btn`(녹색 반투명), `.ai-fill-cancel-btn`, `.ai-fill-hint`, `.presence-item.ai-slot`(이탤릭 녹색) 스타일 추가
+
+### 수정
+- **BUG-1** (`app.js` 라인 273): `updateCardPlayerDisabled(count)` -> `updateCardPlayerDisabled(count + currentAiSlotCount)`. AI 슬롯 채운 상태에서 minPlayers/maxPlayers 비교가 실제 인원만으로 계산되어 적격 게임 카드가 `player-disabled`로 비활성화되던 버그 수정
+
+### 참고
+- 스코프: `.claude/specs/2026-06-24-lobby-ai-fill-scope.md`
+- 플랜: `.claude/specs/2026-06-24-lobby-ai-fill-plan.md`
+- 구현 리포트: `.claude/specs/2026-06-24-lobby-ai-fill-coder-report.md`
+- QA: `.claude/specs/2026-06-24-lobby-ai-fill-qa-report.md` (PASS, 15/15)
+- WS 프로토콜 신규: `FILL_WITH_AI`(C->S), `CANCEL_AI_FILL`(C->S). `LOBBY_STATE`에 `aiSlotCount`/`aiSlots` 필드 확장
+- AI 채우기 대상 게임: 윷놀이, 요트 다이스 (botAvailable=true + maxPlayers>=3). 루미큐브는 서버 2인 고정으로 실질 제외
+- `targetPlayers=2` 기존 AI 흐름(1인 단독 -> mode=ai) 무변경
+
+---
+
 ## [2026-06-23] - Phase 1-B: 윷놀이 N인 확장 (2~4인 가변 플레이)
 
 ### 추가

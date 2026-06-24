@@ -41,6 +41,12 @@
         <button class="pcs-btn" data-target="4" type="button">4인</button>
         <button class="pcs-btn" data-target="5" type="button">5인</button>
       </div>
+      <!-- AI 채우기 컨트롤 (호스트 전용, 3인 이상 목표에서만 활성) -->
+      <div id="ai-fill-controls" class="ai-fill-controls" hidden>
+        <button id="btn-fill-ai" type="button" class="ai-fill-btn">&#x1F916; AI로 채우기</button>
+        <button id="btn-cancel-ai" type="button" class="ai-fill-cancel-btn" hidden>AI 취소</button>
+        <span id="ai-fill-hint" class="ai-fill-hint"></span>
+      </div>
       <p class="lobby-hint" id="lobby-hint">친구가 접속하면 종목을 선택하세요</p>
       <!-- 게스트 대기 안내 (호스트에게는 hidden) -->
       <p class="guest-waiting" id="guest-waiting" hidden>호스트가 종목을 고르면 자동으로 게임방으로 이동돼요 &#x1F3AE;</p>

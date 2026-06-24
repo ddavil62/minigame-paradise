@@ -358,6 +358,7 @@ const server = http.createServer((req, res) => {
     res.end();
     // 로비 상태 리셋
     currentMode = null;
+    aiSlotCount = 0;
     votes.clear();
     broadcast({ type: 'RETURN_LOBBY' });
     console.log('[launcher] POST /lobby/return → RETURN_LOBBY broadcast');
@@ -435,6 +436,15 @@ let nextIdSeq = 1;
  */
 let targetPlayers = 2;
 
+/**
+ * AI로 채우기 슬롯 카운트.
+ * targetPlayers - clients.size 만큼 최대 허용.
+ * 실제 플레이어가 추가 입장할 때마다 1 감소.
+ * 모든 클라이언트 퇴장 / REDIRECT / POST /lobby/return 시 0으로 리셋.
+ * @type {number}
+ */
+let aiSlotCount = 0;
+
 // ── 런처 로비 WebSocket 서버 (noServer 모드) ──────────────────────
 const lobbyWss = new WebSocketServer({ noServer: true });
 
@@ -483,6 +493,11 @@ function sendLobbyStateTo(ws) {
     role: m.role,
     online: true,
   }));
+  // AI 슬롯 presence 배열 생성
+  const aiSlots = [];
+  for (let i = 0; i < aiSlotCount; i++) {
+    aiSlots.push({ id: `ai${i + 1}`, name: `\uD83E\uDD16 AI ${i + 1}`, online: true });
+  }
   sendJson(ws, {
     type: 'LOBBY_STATE',
     count: clients.size,
@@ -492,6 +507,8 @@ function sendLobbyStateTo(ws) {
     mode: currentMode,
     votes: votesSnapshot,
     players, // 신규: presence 목록 (기존 필드는 후방호환 유지)
+    aiSlotCount,  // AI 채우기 슬롯 수
+    aiSlots,      // AI 슬롯 presence 배열
   });
 }
 
@@ -548,6 +565,33 @@ function spawnBot(gameId) {
 }
 
 /**
+ * AI 채우기용 봇을 spawn한다.
+ * 기존 spawnBot()과 달리 mode=bot 쿼리를 URL에 부착한다.
+ * @param {string} gameId games.json의 id
+ */
+function spawnBotForAiFill(gameId) {
+  const botPath = path.join(MINIGAMES_ROOT, gameId, 'bot.js');
+  if (!fs.existsSync(botPath)) {
+    console.warn(`[launcher] bot.js 없음, AI 채우기 봇 생략: ${gameId}`);
+    return;
+  }
+  const url = `ws://localhost:${PORT}/${gameId}/ws?mode=bot`;
+  try {
+    const child = spawn(process.execPath, [botPath, '--url', url], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.on('error', (err) => {
+      console.error(`[launcher] AI채우기 봇 spawn 에러 (${gameId}):`, err.message);
+    });
+    child.unref();
+    console.log(`[launcher] AI채우기 봇 기동: ${gameId} --url ${url} (pid=${child.pid})`);
+  } catch (err) {
+    console.error(`[launcher] AI채우기 봇 spawn 예외 (${gameId}):`, err.message);
+  }
+}
+
+/**
  * 클라이언트 메시지 처리 라우터.
  * @param {import('ws').WebSocket} ws
  * @param {object} msg 파싱된 JSON 메시지
@@ -587,6 +631,11 @@ function handleMessage(ws, msg) {
         return;
       }
       targetPlayers = t;
+      // 목표 인원 변경 시 AI 슬롯 리셋 (정원 불일치 방지)
+      if (aiSlotCount > 0) {
+        aiSlotCount = 0;
+        console.log(`[launcher] SET_TARGET → aiSlotCount 리셋 (목표 인원 변경)`);
+      }
       console.log(`[launcher] SET_TARGET: ${meta.id} → targetPlayers=${targetPlayers}`);
       broadcastLobbyState();
       break;
@@ -596,9 +645,10 @@ function handleMessage(ws, msg) {
       if (meta.role !== 'host') return;
       // 목표 인원 미달 시 게임 시작 불가.
       // targetPlayers=2(기본값)일 때는 1인도 허용 (AI 봇과 시작 가능, 하위 호환).
-      // targetPlayers>=3이면 정원이 채워져야만 시작 가능.
-      if (targetPlayers > 2 && clients.size < targetPlayers) {
-        console.log(`[launcher] PICK_GAME 무시: 현재 ${clients.size}/${targetPlayers} (목표 미달)`);
+      // targetPlayers>=3이면 실제 인원 + AI 슬롯이 정원을 채워야만 시작 가능.
+      const effectiveCount = clients.size + aiSlotCount;
+      if (targetPlayers > 2 && effectiveCount < targetPlayers) {
+        console.log(`[launcher] PICK_GAME 무시: 현재 ${effectiveCount}/${targetPlayers} (목표 미달, AI=${aiSlotCount})`);
         return;
       }
       const gameId = String(msg.gameId || '');
@@ -611,16 +661,58 @@ function handleMessage(ws, msg) {
       // targetPlayers>=3이거나 2인 이상 입장이면 human 모드 (다인 실제 대전).
       const isAiMode = targetPlayers <= 2 && clients.size === 1 && game.botAvailable;
       currentMode = isAiMode ? 'ai' : 'human';
+      // AI 채우기 봇 spawn (aiSlotCount > 0이고 해당 게임이 봇 지원할 때)
+      if (aiSlotCount > 0 && game.botAvailable) {
+        console.log(`[launcher] AI채우기 봇 ${aiSlotCount}개 spawn 시작: ${gameId}`);
+        for (let i = 0; i < aiSlotCount; i++) {
+          spawnBotForAiFill(gameId);
+        }
+      }
+      // REDIRECT 후 AI 슬롯 리셋 (게임 이동 후 로비 상태 정리)
+      const spawnedAiCount = aiSlotCount;
+      aiSlotCount = 0;
       // 통합 라우터: 같은 포트(3000) 내 `/{gameId}/`로 이동한다.
       const redirectPath = `/${gameId}/`;
-      console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=${currentMode}, playerCount=${clients.size}`);
+      // playerCount에 AI 슬롯 포함하여 게임 서버에 전달
+      const totalPlayerCount = clients.size + spawnedAiCount;
+      console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=${currentMode}, playerCount=${totalPlayerCount} (human=${clients.size}, ai=${spawnedAiCount})`);
       broadcast({
         type: 'REDIRECT',
         gameId,
         path: redirectPath,
         mode: currentMode,
-        playerCount: clients.size, // 다인용 확장: 게임 서버에 인원 수 전달
+        playerCount: totalPlayerCount, // 다인용 확장: 실제 인원 + AI 봇 수
       });
+      break;
+    }
+
+    case 'FILL_WITH_AI': {
+      // 호스트만 AI 채우기 가능
+      if (meta.role !== 'host') return;
+      // 3인 이상 설정에서만 가능
+      if (targetPlayers <= 2) {
+        sendJson(ws, { type: 'ERROR', message: 'AI 채우기는 3인 이상 설정에서만 가능합니다' });
+        return;
+      }
+      // 이미 정원이 채워져 있으면 무시
+      const emptySlots = targetPlayers - clients.size - aiSlotCount;
+      if (emptySlots <= 0) {
+        sendJson(ws, { type: 'ERROR', message: '이미 정원이 채워져 있습니다' });
+        return;
+      }
+      // 빈 슬롯 전체를 AI로 채움 (부분 채우기 미지원)
+      aiSlotCount = targetPlayers - clients.size;
+      console.log(`[launcher] FILL_WITH_AI: ${meta.id} → aiSlotCount=${aiSlotCount} (target=${targetPlayers}, clients=${clients.size})`);
+      broadcastLobbyState();
+      break;
+    }
+
+    case 'CANCEL_AI_FILL': {
+      // 호스트만 AI 취소 가능
+      if (meta.role !== 'host') return;
+      aiSlotCount = 0;
+      console.log(`[launcher] CANCEL_AI_FILL: ${meta.id} → aiSlotCount=0`);
+      broadcastLobbyState();
       break;
     }
 
@@ -650,14 +742,20 @@ function handleMessage(ws, msg) {
  * 신규 WS 연결 처리.
  */
 lobbyWss.on('connection', (ws) => {
-  // 정원 초과: FULL 송신 후 연결 종료 (동적 targetPlayers 기준)
-  if (clients.size >= targetPlayers) {
-    sendJson(ws, { type: 'FULL', message: '현재 게임이 진행 중입니다. 잠시 후 다시 시도하세요.', target: targetPlayers });
-    setTimeout(() => {
-      try { ws.close(1000, 'FULL'); } catch (_) { /* noop */ }
-    }, 50);
-    console.log(`[launcher] FULL 거절 (정원 초과, 현재 ${clients.size}/${targetPlayers})`);
-    return;
+  // 정원 초과: AI 슬롯 포함하여 판정
+  if (clients.size + aiSlotCount >= targetPlayers) {
+    // AI 슬롯이 있으면 실제 플레이어를 위해 AI 슬롯 1개 양보
+    if (aiSlotCount > 0) {
+      aiSlotCount -= 1;
+      console.log(`[launcher] 실제 플레이어 입장 → AI 슬롯 1개 양보, aiSlotCount=${aiSlotCount}`);
+    } else {
+      sendJson(ws, { type: 'FULL', message: '현재 게임이 진행 중입니다. 잠시 후 다시 시도하세요.', target: targetPlayers });
+      setTimeout(() => {
+        try { ws.close(1000, 'FULL'); } catch (_) { /* noop */ }
+      }, 50);
+      console.log(`[launcher] FULL 거절 (정원 초과, 현재 ${clients.size}/${targetPlayers})`);
+      return;
+    }
   }
 
   // 역할 부여: 첫 번째 접속자 = 호스트
@@ -666,7 +764,7 @@ lobbyWss.on('connection', (ws) => {
   nextIdSeq += 1;
   // name은 JOIN 수신 전까지 null (닉네임 게이트 통과 후 확정)
   clients.set(ws, { id, role, name: null });
-  console.log(`[launcher] 접속: ${id} (${role}), 현재 ${clients.size}/${targetPlayers}`);
+  console.log(`[launcher] 접속: ${id} (${role}), 현재 ${clients.size}/${targetPlayers} (ai=${aiSlotCount})`);
 
   // 전체에 갱신 상태 broadcast (각자 role이 다름)
   broadcastLobbyState();
@@ -697,6 +795,7 @@ lobbyWss.on('connection', (ws) => {
       currentMode = null;
       nextIdSeq = 1;
       targetPlayers = 2;
+      aiSlotCount = 0;
       votes.clear();
       return;
     }
@@ -706,6 +805,7 @@ lobbyWss.on('connection', (ws) => {
       // 남아있는 게스트 모두에게 RESET 전송 (UI를 로비로)
       broadcast({ type: 'RESET' });
       currentMode = null;
+      aiSlotCount = 0;
       votes.clear();
       reassignHost();
     }
