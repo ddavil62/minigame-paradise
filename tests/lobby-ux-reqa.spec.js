@@ -10,12 +10,19 @@ import { test, expect } from '@playwright/test';
 
 const SS = 'tests/screenshots';
 
+// Phase 1-A에서 닉네임 게이트가 추가됨.
+// localStorage에 닉네임이 없으면 게이트가 표시되고 .game-card가 숨겨지므로
+// addInitScript로 사전 설정하여 게이트를 건너뛴다.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터'));
+});
+
 // =====================================================================
 // R1 : EX-07 재검증 — 1/2 AI 모드에서 botAvailable=false 게임 차단
 // =====================================================================
 test.describe('R1: EX-07 재검증 (botAvailable=false 차단)', () => {
 
-  test('EX-07a: 1/2 호스트가 yutnori(봇 미지원) — CSS가 pointer-events:none으로 차단', async ({ page }) => {
+  test('EX-07a: 1/2 호스트가 yutnori — 결정 B로 CSS 차단 제거, pointer-events 활성', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
@@ -24,126 +31,84 @@ test.describe('R1: EX-07 재검증 (botAvailable=false 차단)', () => {
     const countText = await page.locator('#player-count').textContent();
     expect(countText).toContain('1/2');
 
-    // CSS에 의해 no-bot 카드가 pointer-events:none으로 차단됨을 확인
+    // 결정 B: ai-mode CSS 차단 제거 — yutnori는 botAvailable:true로 변경되었으며 CSS pointer-events 차단 없음
     const yutnoriCard = page.locator('.game-card[data-game-id="yutnori"]');
     const pointerEvents = await yutnoriCard.evaluate(el => getComputedStyle(el).pointerEvents);
-    expect(pointerEvents).toBe('none');
+    expect(pointerEvents).not.toBe('none');
 
-    // 클릭해도 이동하지 않음 (CSS 차단 검증: 일반 클릭은 pointer-events:none 카드에 도달 불가)
-    // Playwright actionability 검증: 카드가 클릭 불가능한 상태임을 확인
+    // 카드가 클릭 가능한 상태임을 확인
     const isClickable = await yutnoriCard.evaluate(el => {
       const cs = getComputedStyle(el);
       return cs.pointerEvents !== 'none' && cs.visibility !== 'hidden' && cs.display !== 'none';
     });
-    expect(isClickable).toBe(false);
+    expect(isClickable).toBe(true);
 
     await page.screenshot({ path: `${SS}/reqa-ex07a-yutnori-css-blocked.png` });
   });
 
-  test('EX-07a-js: 1/2 호스트가 yutnori — JS 가드도 차단 메시지 표시 (CSS 우회 시)', async ({ page }) => {
+  test('EX-07a-js: 1/2 호스트가 yutnori — 결정 B로 JS 가드 제거, 카드 클릭 시 AI 모드로 이동', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
-    // JS로 직접 click() 호출하여 CSS를 우회하더라도 JS 가드가 차단하는지 확인
-    const result = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        const card = document.querySelector('.game-card[data-game-id="yutnori"]');
-        if (!card) { resolve({ error: 'card not found' }); return; }
-        card.click();
-        setTimeout(() => {
-          const status = document.getElementById('lobby-status');
-          resolve({
-            statusText: status ? status.textContent : '',
-            url: location.href,
-          });
-        }, 300);
-      });
-    });
+    // 결정 B: JS 가드 제거 — yutnori(botAvailable:true)는 이제 클릭 시 AI 모드로 이동
+    const yutnoriCard = page.locator('.game-card[data-game-id="yutnori"]');
+    await yutnoriCard.click();
 
-    // 이동하지 않아야 함
-    expect(result.url).not.toContain('/yutnori/');
-    // JS 가드가 차단 메시지를 표시해야 함
-    expect(result.statusText).toContain('AI 봇을 지원하지 않습니다');
+    // /yutnori/ 페이지로 AI 모드로 이동 대기
+    await page.waitForURL(/\/yutnori\//, { timeout: 5000 });
+    expect(page.url()).toContain('/yutnori/');
+    expect(page.url()).toContain('mode=ai');
 
     await page.screenshot({ path: `${SS}/reqa-ex07a-yutnori-js-blocked.png` });
   });
 
-  test('EX-07b: 1/2 호스트가 tetris-battle(봇 미지원) — CSS + JS 이중 차단', async ({ page }) => {
+  test('EX-07b: 1/2 호스트가 tetris-battle — 결정 B로 CSS + JS 차단 제거, pointer-events 활성', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
-    // CSS 차단 확인
+    // 결정 B: tetris-battle은 botAvailable:true로 변경됨 — CSS 차단 없음
     const pointerEvents = await page.locator('.game-card[data-game-id="tetris-battle"]').evaluate(
       el => getComputedStyle(el).pointerEvents
     );
-    expect(pointerEvents).toBe('none');
+    expect(pointerEvents).not.toBe('none');
 
-    // JS 차단 확인
-    const result = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        document.querySelector('.game-card[data-game-id="tetris-battle"]').click();
-        setTimeout(() => {
-          resolve({
-            statusText: document.getElementById('lobby-status')?.textContent || '',
-            url: location.href,
-          });
-        }, 300);
-      });
-    });
-    expect(result.url).not.toContain('/tetris-battle/');
-    expect(result.statusText).toContain('AI 봇을 지원하지 않습니다');
+    // 로비 status에 'AI 봇을 지원하지 않습니다' 메시지가 없어야 함
+    const statusText = await page.locator('#lobby-status').textContent();
+    expect(statusText).not.toContain('AI 봇을 지원하지 않습니다');
   });
 
-  test('EX-07c: 1/2 호스트가 davinci-code(봇 미지원) — CSS + JS 이중 차단', async ({ page }) => {
+  test('EX-07c: 1/2 호스트가 davinci-code(봇 미지원) — 결정 B로 CSS + JS 차단 제거, pointer-events 활성', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
+    // 결정 B: davinci-code는 botAvailable:false이지만 CSS 차단 제거 (모든 카드 클릭=게임방 입장)
     const pointerEvents = await page.locator('.game-card[data-game-id="davinci-code"]').evaluate(
       el => getComputedStyle(el).pointerEvents
     );
-    expect(pointerEvents).toBe('none');
+    expect(pointerEvents).not.toBe('none');
 
-    const result = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        document.querySelector('.game-card[data-game-id="davinci-code"]').click();
-        setTimeout(() => {
-          resolve({
-            statusText: document.getElementById('lobby-status')?.textContent || '',
-            url: location.href,
-          });
-        }, 300);
-      });
-    });
-    expect(result.url).not.toContain('/davinci-code/');
-    expect(result.statusText).toContain('AI 봇을 지원하지 않습니다');
+    // 로비 status에 'AI 봇을 지원하지 않습니다' 메시지가 없어야 함
+    const statusText = await page.locator('#lobby-status').textContent();
+    expect(statusText).not.toContain('AI 봇을 지원하지 않습니다');
   });
 
-  test('EX-07d: 1/2 호스트가 codenames-duet(봇 미지원) — CSS + JS 이중 차단', async ({ page }) => {
+  test('EX-07d: 1/2 호스트가 codenames-duet(봇 미지원) — 결정 B로 CSS + JS 차단 제거, pointer-events 활성', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
+    // 결정 B: codenames-duet은 botAvailable:false이지만 CSS 차단 제거
     const pointerEvents = await page.locator('.game-card[data-game-id="codenames-duet"]').evaluate(
       el => getComputedStyle(el).pointerEvents
     );
-    expect(pointerEvents).toBe('none');
+    expect(pointerEvents).not.toBe('none');
 
-    const result = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        document.querySelector('.game-card[data-game-id="codenames-duet"]').click();
-        setTimeout(() => {
-          resolve({
-            statusText: document.getElementById('lobby-status')?.textContent || '',
-            url: location.href,
-          });
-        }, 300);
-      });
-    });
-    expect(result.url).not.toContain('/codenames-duet/');
-    expect(result.statusText).toContain('AI 봇을 지원하지 않습니다');
+    // 로비 status에 'AI 봇을 지원하지 않습니다' 메시지가 없어야 함
+    const statusText = await page.locator('#lobby-status').textContent();
+    expect(statusText).not.toContain('AI 봇을 지원하지 않습니다');
   });
 
   test('EX-07e: 1/2 호스트가 matgo(봇 지원) 클릭 시에는 정상 이동', async ({ page }) => {
@@ -253,35 +218,37 @@ test.describe('R1: EX-07 재검증 (botAvailable=false 차단)', () => {
 // =====================================================================
 test.describe('R2: ai-mode CSS 클래스 검증', () => {
 
-  test('R2-01: 1/2 상태에서 #game-grid에 ai-mode 클래스 적용', async ({ page }) => {
+  test('R2-01: 1/2 상태에서 #game-grid에 ai-mode 클래스 미적용 (결정 B: 토글 제거)', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
+    // 결정 B: ai-mode CSS 토글 제거 — #game-grid에 ai-mode 클래스가 적용되지 않아야 함
     const hasAiMode = await page.locator('#game-grid').evaluate(
       el => el.classList.contains('ai-mode')
     );
-    expect(hasAiMode).toBe(true);
+    expect(hasAiMode).toBe(false);
   });
 
-  test('R2-02: 1/2 상태에서 no-bot 카드가 시각적으로 비활성화 (opacity, grayscale)', async ({ page }) => {
+  test('R2-02: 1/2 상태에서 모든 카드 정상 활성 (결정 B: no-bot 비활성화 제거)', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
-    // 4개 봇 미지원 게임 모두 확인
-    const noBotIds = ['yutnori', 'tetris-battle', 'davinci-code', 'codenames-duet'];
-    for (const id of noBotIds) {
+    // 결정 B: ai-mode/no-bot CSS 차단 제거 — 이전에 비활성화되던 카드도 정상 표시
+    // yutnori·tetris-battle은 botAvailable:true로 변경됨. davinci-code·codenames-duet은 여전히 false이나 차단 없음.
+    const checkIds = ['yutnori', 'tetris-battle', 'davinci-code', 'codenames-duet'];
+    for (const id of checkIds) {
       const card = page.locator(`.game-card[data-game-id="${id}"]`);
       const opacity = await card.evaluate(el => getComputedStyle(el).opacity);
-      expect(parseFloat(opacity)).toBeLessThan(1);
+      expect(parseFloat(opacity)).toBe(1);
       const filter = await card.evaluate(el => getComputedStyle(el).filter);
-      expect(filter).toContain('grayscale');
+      expect(filter).not.toContain('grayscale');
       const pe = await card.evaluate(el => getComputedStyle(el).pointerEvents);
-      expect(pe).toBe('none');
+      expect(pe).not.toBe('none');
     }
 
-    // matgo는 영향 없어야 함
+    // matgo도 정상 활성
     const matgoOpacity = await page.locator('.game-card[data-game-id="matgo"]').evaluate(
       el => getComputedStyle(el).opacity
     );
@@ -292,7 +259,9 @@ test.describe('R2: ai-mode CSS 클래스 검증', () => {
 
   test('R2-03: 2/2 상태에서 ai-mode 클래스 해제, no-bot 카드 정상 활성', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -323,16 +292,17 @@ test.describe('R2: ai-mode CSS 클래스 검증', () => {
     }
   });
 
-  test('R2-04: no-bot 카드에 "AI 봇 미지원" 배지 표시 (1/2 상태, ::after 가상 요소)', async ({ page }) => {
+  test('R2-04: 1/2 상태에서 no-bot 배지 미표시 (결정 B: ai-mode 제거로 ::after 배지 없음)', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
-    // ::after pseudo-element의 content 확인
+    // 결정 B: ai-mode CSS 제거로 .game-grid.ai-mode .game-card.no-bot::after 규칙이 적용되지 않음
+    // yutnori 카드의 ::after에 'AI 봇 미지원' 배지가 없어야 함
     const afterContent = await page.locator('.game-card[data-game-id="yutnori"]').evaluate(el => {
       return getComputedStyle(el, '::after').content;
     });
-    expect(afterContent).toContain('AI');
+    expect(afterContent).not.toContain('AI');
 
     // yutnori 카드 영역만 클립 스크린샷
     const box = await page.locator('.game-card[data-game-id="yutnori"]').boundingBox();
@@ -357,7 +327,9 @@ test.describe('R3: 힌트 텍스트 중복 해소', () => {
 
   test('R3-01: 2/2 게스트 화면에서 #lobby-hint와 #guest-waiting 중복 없이 하나만 표시', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -369,16 +341,16 @@ test.describe('R3: 힌트 텍스트 중복 해소', () => {
       await guestPage.waitForSelector('.game-card', { timeout: 5000 });
       await guestPage.waitForTimeout(800);
 
-      // 게스트 화면에서 #lobby-hint가 비어있어야 함 (중복 방지)
+      // 게스트 화면에서 #lobby-hint에는 투표 안내가 표시됨 (중복 방지가 아닌 투표 힌트로 변경됨)
       const hintText = await guestPage.locator('#lobby-hint').textContent();
-      expect(hintText.trim()).toBe('');
+      expect(hintText).toContain('투표 버튼');
 
-      // #guest-waiting만 보여야 함
+      // #guest-waiting도 표시됨
       const guestWaiting = guestPage.locator('#guest-waiting');
       const isHidden = await guestWaiting.evaluate(el => el.hidden);
       expect(isHidden).toBe(false);
       const waitingText = await guestWaiting.textContent();
-      expect(waitingText).toContain('호스트가 종목을 선택 중');
+      expect(waitingText).toContain('호스트가 종목을 고르면');
 
       // 호스트 화면에서는 #lobby-hint에 텍스트가 있어야 하고, #guest-waiting은 hidden
       const hostHintText = await hostPage.locator('#lobby-hint').textContent();
@@ -395,13 +367,14 @@ test.describe('R3: 힌트 텍스트 중복 해소', () => {
     }
   });
 
-  test('R3-02: 1/2 호스트 화면에서 #lobby-hint에 AI 대전 안내, #guest-waiting은 hidden', async ({ page }) => {
+  test('R3-02: 1/2 호스트 화면에서 #lobby-hint에 인원 모집 안내, #guest-waiting은 hidden', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(600);
 
+    // 힌트 텍스트: "2명이 모이면 종목을 선택할 수 있어요 (현재 1/2)"
     const hintText = await page.locator('#lobby-hint').textContent();
-    expect(hintText).toContain('AI 대전');
+    expect(hintText).toContain('2명이 모이면');
 
     const guestWaitingHidden = await page.locator('#guest-waiting').evaluate(el => el.hidden);
     expect(guestWaitingHidden).toBe(true);
@@ -415,7 +388,9 @@ test.describe('R4: 핵심 회귀 테스트', () => {
 
   test('T-06 회귀: 2/2 호스트 카드 클릭 -> 양쪽 게임 페이지 리다이렉트', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 

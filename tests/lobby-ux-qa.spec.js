@@ -11,6 +11,13 @@ import { test, expect } from '@playwright/test';
 
 const SS = 'tests/screenshots';
 
+// Phase 1-A에서 닉네임 게이트가 추가됨.
+// localStorage에 닉네임이 없으면 게이트가 표시되고 .game-card가 숨겨지므로
+// addInitScript로 사전 설정하여 게이트를 건너뛴다.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터'));
+});
+
 // =====================================================================
 // S1 : 로비 기본 구조 변경
 // =====================================================================
@@ -52,10 +59,14 @@ test.describe('S1: 로비 기본 구조 변경', () => {
 
     await page.waitForSelector('.game-card', { timeout: 5000 });
     const cards = page.locator('.game-card');
-    await expect(cards).toHaveCount(5);
+    // games.json이 10종으로 확장되어 카드 수 업데이트
+    await expect(cards).toHaveCount(10);
 
-    // 각 게임 ID 카드 존재 확인
-    const expectedIds = ['codenames-duet', 'davinci-code', 'matgo', 'yutnori', 'tetris-battle'];
+    // 각 게임 ID 카드 존재 확인 (전체 10종)
+    const expectedIds = [
+      'codenames-duet', 'davinci-code', 'matgo', 'yutnori', 'tetris-battle',
+      'janggi', 'hanabi', 'yahtzee', 'rummikub', 'omok',
+    ];
     for (const id of expectedIds) {
       const card = page.locator(`.game-card[data-game-id="${id}"]`);
       await expect(card).toBeVisible();
@@ -95,10 +106,14 @@ test.describe('S1: 로비 기본 구조 변경', () => {
     await page.waitForSelector('.game-card', { timeout: 5000 });
 
     const voteButtons = page.locator('.game-card-vote');
-    await expect(voteButtons).toHaveCount(5);
+    // games.json이 10종으로 확장되어 vote 버튼 수 업데이트
+    await expect(voteButtons).toHaveCount(10);
 
-    // 각 vote 버튼에 data-gameId 속성 존재
-    const expectedIds = ['codenames-duet', 'davinci-code', 'matgo', 'yutnori', 'tetris-battle'];
+    // 각 vote 버튼에 data-gameId 속성 존재 (전체 10종)
+    const expectedIds = [
+      'codenames-duet', 'davinci-code', 'matgo', 'yutnori', 'tetris-battle',
+      'janggi', 'hanabi', 'yahtzee', 'rummikub', 'omok',
+    ];
     for (const id of expectedIds) {
       const voteBtn = page.locator(`.game-card-vote[data-game-id="${id}"]`);
       await expect(voteBtn).toBeVisible();
@@ -109,17 +124,22 @@ test.describe('S1: 로비 기본 구조 변경', () => {
       expect(countText).toBe('0');
     }
 
-    // 투표 버튼 근접 스크린샷
+    // 투표 버튼 근접 스크린샷 (뷰포트 내로 스크롤 후 캡처)
     const firstVoteBtn = voteButtons.first();
+    await firstVoteBtn.scrollIntoViewIfNeeded();
     const box = await firstVoteBtn.boundingBox();
     if (box) {
+      const vw = page.viewportSize()?.width || 1280;
+      const vh = page.viewportSize()?.height || 800;
+      const clipX = Math.max(0, box.x - 20);
+      const clipY = Math.max(0, box.y - 20);
       await page.screenshot({
         path: `${SS}/t05-vote-button-detail.png`,
         clip: {
-          x: Math.max(0, box.x - 20),
-          y: Math.max(0, box.y - 20),
-          width: box.width + 40,
-          height: box.height + 40,
+          x: clipX,
+          y: clipY,
+          width: Math.min(box.width + 40, vw - clipX),
+          height: Math.min(box.height + 40, vh - clipY),
         },
       });
     }
@@ -133,7 +153,9 @@ test.describe('S2: WS 기능 (두 탭)', () => {
 
   test('T-06: 두 탭 접속 시 2/2 표시, 호스트 카드 활성화', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -185,7 +207,9 @@ test.describe('S2: WS 기능 (두 탭)', () => {
 
   test('T-07: 호스트 카드 클릭 시 양쪽 모두 게임 페이지로 리다이렉트', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -222,7 +246,9 @@ test.describe('S2: WS 기능 (두 탭)', () => {
 
   test('T-08: vote 버튼 클릭 시 VOTE_GAME -> 카운트 업데이트', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -350,7 +376,9 @@ test.describe('S4: 기존 기능 회귀 방지', () => {
 
   test('T-16: 2/2 상태에서 LOBBY_STATE에 votes 필드 존재', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -481,7 +509,9 @@ test.describe('EX: 자체 도출 예외 시나리오', () => {
 
   test('EX-03: 호스트 disconnect -> 게스트 승격 -> 로비 정상', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -522,8 +552,11 @@ test.describe('EX: 자체 도출 예외 시나리오', () => {
 
   test('EX-04: FULL 거절 (3번째 접속 시)', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const ctx3 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx3.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터3'));
     const p1 = await ctx1.newPage();
     const p2 = await ctx2.newPage();
     const p3 = await ctx3.newPage();
@@ -571,26 +604,29 @@ test.describe('EX: 자체 도출 예외 시나리오', () => {
     expect([404, 405]).toContain(resp.status());
   });
 
-  test('EX-07: 1/2 호스트가 botAvailable=false 게임 클릭 시 이동하지 않음', async ({ page }) => {
+  test('EX-07: 1/2 호스트가 yutnori 클릭 시 AI 모드로 이동 (결정 B: 봇 미지원 차단 제거)', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('.game-card', { timeout: 5000 });
     await page.waitForTimeout(500);
 
-    // yutnori는 botAvailable=false
+    // 결정 B: ai-mode CSS 차단 제거 — yutnori는 botAvailable:true로 변경되어 이제 AI 모드로 이동 가능
+    // CSS pointer-events 차단이 없는지 확인
     const yutnoriCard = page.locator('.game-card[data-game-id="yutnori"]');
-    await yutnoriCard.click();
+    const pe = await yutnoriCard.evaluate(el => getComputedStyle(el).pointerEvents);
+    expect(pe).not.toBe('none');
 
-    // 이동하지 않아야 함 (여전히 로비에 있어야 함)
-    await page.waitForTimeout(500);
-    expect(page.url()).not.toContain('/yutnori/');
-    // 로비에 여전히 있는지 확인
-    const grid = page.locator('#game-grid');
-    await expect(grid).toBeVisible();
+    // 1/2 호스트가 클릭하면 AI 모드로 이동
+    await yutnoriCard.click();
+    await page.waitForURL(/\/yutnori\//, { timeout: 5000 });
+    expect(page.url()).toContain('/yutnori/');
+    expect(page.url()).toContain('mode=ai');
   });
 
   test('EX-08: 투표 후 호스트 disconnect -> 투표 초기화 확인', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
@@ -622,7 +658,9 @@ test.describe('EX: 자체 도출 예외 시나리오', () => {
 
   test('EX-09: 게스트 모드에서 카드 클릭 시 PICK_GAME 전송되지 않음', async ({ browser }) => {
     const ctx1 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx1.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터1'));
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => localStorage.setItem('minigames:nickname', '테스터2'));
     const hostPage = await ctx1.newPage();
     const guestPage = await ctx2.newPage();
 
