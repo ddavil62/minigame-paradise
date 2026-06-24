@@ -43,6 +43,54 @@
     </div>
   </header>
 
+  <!-- 대기 화면 (READY 게이트 패턴 — omok 파일럿) -->
+  <section id="screen-waiting" class="screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">🕵️</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+
+      <!-- 직접 진입(닉네임 미전달) 시 인라인 닉네임 게이트 -->
+      <div id="name-gate-inline" class="name-gate-inline hidden">
+        <p class="name-gate-msg">닉네임을 입력하고 입장하세요</p>
+        <input id="inline-name-input" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button id="btn-inline-enter" class="btn-inline-enter" type="button">입장</button>
+      </div>
+
+      <!-- 혼자 대기 중 안내 (2인 합류 시 숨김) -->
+      <div id="waiting-solo" class="waiting-solo">
+        <p class="waiting-message">친구를 기다리는 중...</p>
+      </div>
+
+      <!-- 상대 입장 시 표시 -->
+      <div id="opponent-info" class="opponent-info hidden">
+        <span id="opponent-name-label"></span>님과 협력 시작
+      </div>
+
+      <!-- 양방향 READY 상태 패널 -->
+      <div id="ready-panel" class="ready-panel">
+        <div class="ready-status">
+          <span class="ready-label">나</span>
+          <span id="my-ready-mark" class="ready-mark not-ready">⌛</span>
+          <span class="ready-sep">·</span>
+          <span class="ready-label">상대</span>
+          <span id="opp-ready-mark" class="ready-mark not-ready">⌛</span>
+        </div>
+        <button id="btn-ready" class="btn-ready" type="button" hidden>준비 완료</button>
+      </div>
+
+      <!-- 코드네임 듀엣 규칙 요약 -->
+      <div class="rules-summary">
+        <h3>코드네임 듀엣 규칙 요약</h3>
+        <ul>
+          <li>단어 카드 25장 중 <strong>15개 그린 단어</strong>를 협력해서 찾아라.</li>
+          <li>각자에게만 보이는 <strong>비밀 키 카드</strong>로 단서를 준다.</li>
+          <li><strong>미션 토큰(기본 9)</strong>이 남아 있을 때 모두 찾으면 승리.</li>
+          <li>검은 암살자 카드 추측 또는 토큰 소진 시 패배.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <!-- 복기 모드 상단 패널: 결과 + 종료 버튼 (모달과 별개로 보드 위에 떠 있음) -->
   <div id="review-banner" class="review-banner hidden">
     <div class="review-banner-left">
@@ -56,11 +104,12 @@
     </div>
   </div>
 
-  <main class="board-wrap">
+  <!-- 게임 보드 (READY 완료 전까지 hidden) -->
+  <main class="board-wrap hidden">
     <div id="board" class="board"></div>
   </main>
 
-  <section class="clue-panel">
+  <section class="clue-panel hidden">
     <div id="clue-display" class="clue-display">단서를 기다리는 중...</div>
     <div class="clue-input">
       <input type="text" id="clue-word" placeholder="단서 단어" maxlength="20" />
@@ -78,6 +127,12 @@
       <button id="btn-new-game">새 게임 시작</button>
       <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
     </div>
+  </div>
+
+  <!-- 상대 이탈 배너 -->
+  <div id="opponent-left-banner" class="opponent-left-banner hidden" role="alert">
+    <span id="opponent-left-msg" class="opponent-left-msg"></span>
+    <button id="btn-banner-return-lobby" class="btn-banner-return-lobby" type="button">로비로 돌아가기</button>
   </div>
 
   <div id="toast" class="toast hidden"></div>

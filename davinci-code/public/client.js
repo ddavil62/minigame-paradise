@@ -49,6 +49,23 @@
   const memoBoardEl      = document.getElementById('memo-board');
   const guessHistoryEl   = document.getElementById('guess-history');
 
+  // ── READY 게이트 DOM 참조 ──────────────────────────────────────
+  const screenWaiting       = document.getElementById('screen-waiting');
+  const waitingTitle        = screenWaiting ? screenWaiting.querySelector('.waiting-title') : null;
+  const nameGateInline      = document.getElementById('name-gate-inline');
+  const inlineNameInput     = document.getElementById('inline-name-input');
+  const btnInlineEnter      = document.getElementById('btn-inline-enter');
+  const opponentInfo        = document.getElementById('opponent-info');
+  const opponentNameLabel   = document.getElementById('opponent-name-label');
+  const readyPanel          = document.getElementById('ready-panel');
+  const myReadyMark         = document.getElementById('my-ready-mark');
+  const oppReadyMark        = document.getElementById('opp-ready-mark');
+  const btnReady            = document.getElementById('btn-ready');
+  const playArea            = document.querySelector('.play-area');
+  const opponentLeftBanner  = document.getElementById('opponent-left-banner');
+  const opponentLeftMsg     = document.getElementById('opponent-left-msg');
+  const btnBannerReturnLobby = document.getElementById('btn-banner-return-lobby');
+
   // ── 색상 이름 매핑 ──────────────────────────────────────────
   const COLOR_NAME = { red: '빨강', yellow: '노랑', blue: '파랑' };
 
@@ -72,6 +89,12 @@
   /** 중복 방지 키 (from+slot+value 튜플) */
   let lastHistoryKey = null;
 
+  /** 상대 닉네임 */
+  let opponentName = '';
+  /** READY 상태 */
+  let myReady = false;
+  let opponentReady = false;
+
   // ── WebSocket 연결 ───────────────────────────────────────────
   /**
    * WebSocket 연결을 시작한다. 현재 페이지의 host:port를 그대로 사용.
@@ -82,11 +105,27 @@
     // standalone 실행 시에는 pathname이 '/' 이므로 prefix 없이 '/ws'로 연결한다.
     const seg = location.pathname.split('/').filter(Boolean)[0] || '';
     const wsPath = seg ? `/${seg}/ws` : '/ws';
+
+    // 닉네임 3단계 폴백: URL ?name= -> sessionStorage davinci-code:name -> #name-gate-inline
+    const urlParams = new URLSearchParams(location.search);
+    const urlName = urlParams.get('name');
+    if (urlName) {
+      sessionStorage.setItem('davinci-code:name', decodeURIComponent(urlName));
+    }
+
     ws = new WebSocket(`${proto}://${location.host}${wsPath}`);
     ws.addEventListener('open', () => {
       console.log('[client] 연결됨');
       reconnectAttempts = 0;
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      // 닉네임이 있으면 즉시 JOIN. 없으면 인라인 게이트가 JOIN 시점을 결정한다.
+      const storedName = sessionStorage.getItem('davinci-code:name');
+      if (storedName) {
+        ws.send(JSON.stringify({ type: 'JOIN', name: storedName }));
+      } else {
+        // 닉네임 게이트 표시
+        if (nameGateInline) nameGateInline.classList.remove('hidden');
+      }
     });
     ws.addEventListener('message', (ev) => {
       let msg;
@@ -124,16 +163,32 @@
       case 'JOINED':
         me = msg.playerId;
         youTagEl.textContent = `너는 ${me === 'p1' ? '플레이어 1 (선공)' : '플레이어 2 (후공)'}`;
-        if (msg.waiting) {
-          turnEl.textContent = '상대 대기 중';
-          actionDisplay.textContent = '친구가 접속하기를 기다리는 중...';
+        // 상대 닉네임 표시
+        if (msg.opponentName) {
+          opponentName = msg.opponentName;
+          updateOpponentInfo();
         }
+        if (msg.waiting) {
+          updateWaitingTitle('상대방을 기다리는 중...');
+        } else {
+          updateWaitingTitle('상대 입장 완료! 준비 버튼을 눌러주세요.');
+        }
+        // READY 버튼 표시 (JOIN 완료 후)
+        if (btnReady) btnReady.hidden = false;
+        break;
+      case 'READY_STATE':
+        myReady = !!msg.myReady;
+        opponentReady = !!msg.opponentReady;
+        updateReadyUI();
         break;
       case 'GAME_START':
         hideModal();
         selectedSlot = null;
         resetGuessHistory();
         initMemoBoard();
+        // 대기 화면 숨기고 게임 보드 표시
+        if (screenWaiting) screenWaiting.classList.add('hidden');
+        if (playArea) playArea.classList.remove('hidden');
         break;
       case 'STATE':
         lastState = msg;
@@ -151,21 +206,61 @@
         break;
       }
       case 'OPPONENT_LEFT':
-        showToast(msg.message || '상대방이 나갔다.');
-        turnEl.textContent = '상대 대기 중';
-        actionDisplay.textContent = '새 친구가 접속하면 게임이 재시작된다.';
         hideModal();
-        // 런처 모드(경로가 /davinci-code/로 시작)이면 로비로 자동 복귀
-        if (window.location.pathname.startsWith('/davinci-code/')) {
-          autoReconnect = false;
-          setTimeout(() => { window.location.href = '/'; }, 1200);
-        }
+        showOpponentLeftBanner(msg.name, msg.message || '상대방이 나갔습니다.');
         break;
       case 'ERROR':
         showToast(msg.message || '알 수 없는 오류');
         break;
       default:
         console.warn('[client] 알 수 없는 메시지:', msg);
+    }
+  }
+
+  // ── READY 게이트 UI ──────────────────────────────────────────
+  /**
+   * 대기 화면 타이틀을 갱신한다.
+   * @param {string} text
+   */
+  function updateWaitingTitle(text) {
+    if (waitingTitle) waitingTitle.textContent = text;
+  }
+
+  /**
+   * 상대 닉네임을 대기 화면에 표시한다.
+   */
+  function updateOpponentInfo() {
+    if (!opponentInfo || !opponentNameLabel) return;
+    if (opponentName) {
+      opponentNameLabel.textContent = opponentName;
+      opponentInfo.classList.remove('hidden');
+    }
+  }
+
+  /**
+   * READY 마크(나/상대) + 버튼 상태를 갱신한다.
+   */
+  function updateReadyUI() {
+    if (myReadyMark) {
+      myReadyMark.textContent = myReady ? '\u2705' : '\u231B';
+      myReadyMark.className = `ready-mark ${myReady ? 'is-ready' : 'not-ready'}`;
+    }
+    if (oppReadyMark) {
+      oppReadyMark.textContent = opponentReady ? '\u2705' : '\u231B';
+      oppReadyMark.className = `ready-mark ${opponentReady ? 'is-ready' : 'not-ready'}`;
+    }
+    if (btnReady) btnReady.disabled = myReady;
+  }
+
+  /**
+   * 상대 이탈 배너를 표시한다 (자동 로비 이동 제거, 사용자 버튼 클릭으로 이동).
+   * @param {string} name
+   * @param {string} message
+   */
+  function showOpponentLeftBanner(name, message) {
+    if (opponentLeftBanner && opponentLeftMsg) {
+      opponentLeftMsg.textContent = message || `${name || '상대방'}님이 나갔습니다.`;
+      opponentLeftBanner.classList.remove('hidden');
     }
   }
 
@@ -635,6 +730,39 @@
     toastTimer = setTimeout(() => {
       toastEl.classList.add('hidden');
     }, 3000);
+  }
+
+  // ── 닉네임 게이트 이벤트 ────────────────────────────────────
+  if (btnInlineEnter && inlineNameInput) {
+    const doEnter = () => {
+      const name = inlineNameInput.value.trim();
+      if (!name) { showToast('닉네임을 입력해 주세요'); return; }
+      sessionStorage.setItem('davinci-code:name', name);
+      if (nameGateInline) nameGateInline.classList.add('hidden');
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'JOIN', name }));
+      }
+    };
+    btnInlineEnter.addEventListener('click', doEnter);
+    inlineNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doEnter();
+    });
+  }
+
+  // READY 버튼 핸들러
+  if (btnReady) {
+    btnReady.addEventListener('click', () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'READY' }));
+    });
+  }
+
+  // 상대 이탈 배너 → 로비로 돌아가기 버튼 핸들러
+  if (btnBannerReturnLobby) {
+    btnBannerReturnLobby.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
   }
 
   // ── 시작 ────────────────────────────────────────────────────

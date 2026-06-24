@@ -8,23 +8,53 @@
  *  - 본인 손패의 색·숫자는 직접 표시하지 않는다(§1, §13 손패 가림 원칙 유지).
  *  - 표준 분포(50장)에서 보이는 카드(상대 손패 + 불꽃 + 버림)만 차감한다.
  *
- * 사전 요건: hanabi 서버가 http://localhost:3097 에서 실행 중이어야 한다.
- *   node server.js --port 3097
+ * 사전 요건: 없음 — createApp()으로 동적 포트에서 자체 서버를 생성한다.
  *
  * 실행:
  *   npx playwright test tests/rulebook-c12-counter.spec.js --reporter=list
  */
 
 import { test, expect } from 'playwright/test';
+import http from 'http';
+import { createApp } from '../server.js';
 
-const BASE = 'http://localhost:3097';
+// ── 서버 헬퍼 ──────────────────────────────────────────────────────
+function startServer() {
+  return new Promise((resolve, reject) => {
+    const app = createApp();
+    const server = http.createServer(app.handleHttp);
+    server.on('upgrade', app.handleUpgrade);
+    server.listen(0, () => resolve({ server, port: server.address().port }));
+    server.once('error', reject);
+  });
+}
+function stopServer(server) {
+  return new Promise((resolve) => {
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    server.close(() => resolve());
+    setTimeout(resolve, 300);
+  });
+}
+
+let _server;
+let BASE = '';
+
+test.beforeAll(async () => {
+  const { server, port } = await startServer();
+  _server = server;
+  BASE = `http://localhost:${port}`;
+});
+test.afterAll(async () => {
+  await stopServer(_server);
+});
+
 const COLORS = ['white', 'red', 'blue', 'green', 'yellow'];
 const INITIAL_COUNTS = { 1: 3, 2: 2, 3: 2, 4: 2, 5: 1 };
 const COLOR_TOTAL = 10;                // 색당 10장
 const DECK_TOTAL = COLORS.length * COLOR_TOTAL; // 50장
 
 /**
- * 두 플레이어 입장 + 게임 시작 + 첫 STATE 렌더 완료까지 대기.
+ * 두 플레이어 입장 + READY 게이트 + 게임 시작 + 첫 STATE 렌더 완료까지 대기.
  * @returns {{ctx1, ctx2, p1, p2, errs}}
  */
 async function joinTwo(browser) {
@@ -35,8 +65,12 @@ async function joinTwo(browser) {
   const errs = [];
   p1.on('pageerror', (e) => errs.push('p1:' + e.message));
   p2.on('pageerror', (e) => errs.push('p2:' + e.message));
-  await p1.goto(BASE);
-  await p2.goto(BASE);
+  await p1.goto(`${BASE}?name=P1`);
+  await p2.goto(`${BASE}?name=P2`);
+  await p1.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+  await p2.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+  await p1.click('#btn-ready');
+  await p2.click('#btn-ready');
   await p1.waitForSelector('#my-hand .card', { timeout: 15000 });
   await p2.waitForSelector('#my-hand .card', { timeout: 15000 });
   return { ctx1, ctx2, p1, p2, errs };
@@ -198,8 +232,8 @@ test('HR-C12-004 카드 버리기 → 그 색·숫자 셀 카운트 -1, 합계 -
     await p2.waitForTimeout(800);
 
     // p1 화면에서 버림 더미가 1장 누적되었는지.
-    const discardCount = parseInt(await p1.locator('#discard-count').textContent(), 10);
-    expect(discardCount).toBe(1);
+    const discountCount = parseInt(await p1.locator('#discard-count').textContent(), 10);
+    expect(discountCount).toBe(1);
 
     // 버려진 카드의 색·숫자를 p1 화면 discard-chip에서 직접 읽는다.
     const chipClass = await p1.locator('#discard-pile .discard-chip').first().getAttribute('class');

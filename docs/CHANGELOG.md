@@ -1,5 +1,56 @@
 # Changelog
 
+## [2026-06-25] - 입장 UI 통일 Phase 4 (Entry UI Unify — hanabi, davinci-code, codenames-duet)
+
+### 확인 (코드 변경 없음)
+
+Phase 4 대상 3개 게임(hanabi, davinci-code, codenames-duet)은 **이전 작업에서 이미 입장 UI 통일 패턴이 완전 구현된 상태**였다. 코드 변경 없이 스펙 수용 기준 준수를 검증하였다.
+
+**hanabi** (이미 구현 완료 확인)
+- `index.html`: `#screen-waiting`(line 27~74), `#name-gate-inline`(line 32~36), `#ready-panel`(line 43~54), `#opponent-info`(line 39~41), `#opponent-left-banner`(line 77~80), `#screen-game` 초기 `hidden`
+- 가이드 슬라이더 7장(`#guide-slider`, line 57~72) `.waiting-card` 내부 유지 (HR-C11 9/9 PASS)
+- `js/main.js`: 닉네임 게이트 3단계 폴백, READY 처리(`updateReadyUI()`), 이탈 배너(`showOpponentLeftBanner()`)
+- `server.js`: `readySet` + `broadcastReadyState()` + `maybeStartGameIfReady()`, JOIN/READY 핸들러 완비
+
+**davinci-code** (이미 구현 완료 확인)
+- `index.html`: `#screen-waiting`(line 36~59), `#name-gate-inline`(line 39~43), `#ready-panel`(line 47~57), `.play-area` 초기 `hidden`
+- `client.js`: READY 게이트 DOM 참조, 닉네임 3단계 폴백, JOINED/READY_STATE/GAME_START 핸들러
+- `server.js`: `readySet` + `broadcastReadyState()` + `maybeStartGameIfReady()` 완비
+
+**codenames-duet** (이미 구현 완료 확인)
+- `index.html`: `#screen-waiting`(line 47~92), `#name-gate-inline`(line 53~57), `#ready-panel`(line 70~79), `.board-wrap` 초기 `hidden`
+- 복기 모드 `#review-banner`(line 95~105) 정상 보존
+- `server.js`: `readySet` + `broadcastReadyState()` + `maybeStartGameIfReady()` 완비
+
+### 검증
+
+**Phase 4 QA 결과**
+- hanabi: Playwright **78/78 PASS** (유닛 31 + WS 7 + QA엣지 8 + E2E 6 + 가이드 슬라이더 9 + 추가분 17)
+- davinci-code: 단위 **53/53 PASS** (E2E는 READY 게이트 이전 테스트 미현행화 기존 결함)
+- codenames-duet: `#review-banner` 복기 모드 보존 확인 (review-smoke/visual은 READY 게이트 이전 테스트 미현행화 기존 결함)
+- AD3: **32/32 APPROVED** (WARN 3건 비강제: davinci-code/codenames-duet `screen` 클래스 누락 + CSS 중복 선언 — 렌더링 기능 동등)
+
+**입장 UI 통일 전 페이즈 완료 현황**
+- Phase 1: yahtzee, rummikub (2026-06-24)
+- Phase 2: yutnori, tetris-battle (2026-06-24)
+- Phase 3: matgo, janggi (2026-06-24)
+- Phase 4: hanabi, davinci-code, codenames-duet (2026-06-25)
+- **9개 게임 전부 오목 파일럿 패턴 통일 완료**
+
+### 알려진 이슈 (기존 결함, 비차단)
+- davinci-code E2E 테스트(`davinci-plus-qa.spec.js`): `connectTwoPlayers()` 헬퍼에 JOIN/READY 시퀀스 미추가로 전건 TIMEOUT. 테스트 현행화 필요 (별도 작업)
+- codenames-duet review-smoke/visual: raw WS 클라이언트에 JOIN/READY 미추가로 GAME_START 미수신. 테스트 현행화 필요 (별도 작업)
+- AD3 WARN: davinci-code/codenames-duet `class="screen-waiting"` (표준 `class="screen screen-waiting"`에서 `.screen` 클래스 누락 — CSS 기능 동등, Phase 3 동일 선례 허용)
+
+### 참고
+- 플랜: `.claude/specs/2026-06-24-entry-ui-unify-plan.md`
+- Phase 4 Coder: `.claude/specs/2026-06-25-entry-ui-unify-phase4-coder-report.md`
+- Phase 4 AD3: `.claude/specs/2026-06-25-entry-ui-unify-phase4-ad3-report.md` (APPROVED, WARN 3건 비강제)
+- Phase 4 QA: `.claude/specs/2026-06-25-entry-ui-unify-phase4-qa-report.md` (PASS, hanabi 78/78 + davinci-code 53/53)
+- 통일 패턴: 오목(omok) 파일럿 — `#screen-waiting .waiting-card`, `#name-gate-inline`, `READY_STATE { myReady, opponentReady }`, `#opponent-left-banner`
+
+---
+
 ## [2026-06-24] - 입장 UI 통일 Phase 3 (Entry UI Unify — matgo, janggi)
 
 ### 추가

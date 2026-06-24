@@ -4,12 +4,42 @@
  * 폭탄 3소진 패배까지 양쪽이 번갈아 내기를 반복하여 종료 오버레이를 시각 검증한다.
  * §13-6: 폭탄 패배 시 현재 점수 + "실패" 라벨.
  *
- * 사전 요건: node server.js --port 3095
+ * 사전 요건: 없음 — createApp()으로 동적 포트에서 자체 서버를 생성한다.
  */
 
 import { test, expect } from 'playwright/test';
+import http from 'http';
+import { createApp } from '../server.js';
 
-const BASE = 'http://localhost:3095';
+// ── 서버 헬퍼 ──────────────────────────────────────────────────────
+function startServer() {
+  return new Promise((resolve, reject) => {
+    const app = createApp();
+    const server = http.createServer(app.handleHttp);
+    server.on('upgrade', app.handleUpgrade);
+    server.listen(0, () => resolve({ server, port: server.address().port }));
+    server.once('error', reject);
+  });
+}
+function stopServer(server) {
+  return new Promise((resolve) => {
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    server.close(() => resolve());
+    setTimeout(resolve, 300);
+  });
+}
+
+let _server;
+let BASE = '';
+
+test.beforeAll(async () => {
+  const { server, port } = await startServer();
+  _server = server;
+  BASE = `http://localhost:${port}`;
+});
+test.afterAll(async () => {
+  await stopServer(_server);
+});
 
 test('HR-C10-001 폭탄 소진 또는 게임 진행 끝까지 → 종료 오버레이 시각 검증', async ({ browser }) => {
   test.setTimeout(60000);
@@ -20,8 +50,14 @@ test('HR-C10-001 폭탄 소진 또는 게임 진행 끝까지 → 종료 오버�
   const errs = [];
   p1.on('pageerror', (e) => errs.push('p1:' + e.message));
   p2.on('pageerror', (e) => errs.push('p2:' + e.message));
-  await p1.goto(BASE);
-  await p2.goto(BASE);
+
+  // READY 게이트: 입장 + 준비 버튼 클릭.
+  await p1.goto(`${BASE}?name=P1`);
+  await p2.goto(`${BASE}?name=P2`);
+  await p1.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+  await p2.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+  await p1.click('#btn-ready');
+  await p2.click('#btn-ready');
   await p1.waitForSelector('#my-hand .card', { timeout: 15000 });
   await p2.waitForSelector('#my-hand .card', { timeout: 15000 });
 

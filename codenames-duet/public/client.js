@@ -35,6 +35,25 @@
   const btnReviewReturn    = document.getElementById('btn-review-return-lobby');
   const btnReviewClose     = document.getElementById('btn-review-close');
 
+  // ── READY 게이트 DOM 참조 ──────────────────────────────────────
+  const screenWaiting      = document.getElementById('screen-waiting');
+  const waitingTitle       = screenWaiting ? screenWaiting.querySelector('.waiting-title') : null;
+  const nameGateInline     = document.getElementById('name-gate-inline');
+  const inlineNameInput    = document.getElementById('inline-name-input');
+  const btnInlineEnter     = document.getElementById('btn-inline-enter');
+  const waitingSolo        = document.getElementById('waiting-solo');
+  const opponentInfo       = document.getElementById('opponent-info');
+  const opponentNameLabel  = document.getElementById('opponent-name-label');
+  const readyPanel         = document.getElementById('ready-panel');
+  const myReadyMark        = document.getElementById('my-ready-mark');
+  const oppReadyMark       = document.getElementById('opp-ready-mark');
+  const btnReady           = document.getElementById('btn-ready');
+  const boardWrap          = document.querySelector('.board-wrap');
+  const cluePanel          = document.querySelector('.clue-panel');
+  const opponentLeftBanner = document.getElementById('opponent-left-banner');
+  const opponentLeftMsg    = document.getElementById('opponent-left-msg');
+  const btnBannerReturnLobby = document.getElementById('btn-banner-return-lobby');
+
   // ── 상태 ─────────────────────────────────────────────────────
   /** @type {WebSocket|null} */
   let ws = null;
@@ -59,6 +78,11 @@
   let reviewData = null;
   /** 결과 모달이 한 번 열렸을 때 보관해두는 마지막 GAME_END 컨텍스트 (모달 닫았다 다시 열 때 재사용). */
   let lastGameEndContext = null;
+  /** 상대 닉네임 */
+  let opponentName = '';
+  /** READY 상태 */
+  let myReady = false;
+  let opponentReady = false;
 
   // ── 초기 보드 그리기 ─────────────────────────────────────────
   /**
@@ -93,11 +117,27 @@
     // standalone 실행 시에는 pathname이 '/' 이므로 prefix 없이 '/ws'로 연결한다.
     const seg = location.pathname.split('/').filter(Boolean)[0] || '';
     const wsPath = seg ? `/${seg}/ws` : '/ws';
+
+    // 닉네임 3단계 폴백: URL ?name= → sessionStorage codenames-duet:name → #name-gate-inline
+    const urlParams = new URLSearchParams(location.search);
+    const urlName = urlParams.get('name');
+    if (urlName) {
+      sessionStorage.setItem('codenames-duet:name', decodeURIComponent(urlName));
+    }
+
     ws = new WebSocket(`${proto}://${location.host}${wsPath}`);
     ws.addEventListener('open', () => {
       console.log('[client] 연결됨');
       reconnectAttempts = 0;
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      // 닉네임이 있으면 즉시 JOIN. 없으면 인라인 게이트가 JOIN 시점을 결정한다.
+      const storedName = sessionStorage.getItem('codenames-duet:name');
+      if (storedName) {
+        ws.send(JSON.stringify({ type: 'JOIN', name: storedName }));
+      } else {
+        // 닉네임 게이트 표시
+        if (nameGateInline) nameGateInline.classList.remove('hidden');
+      }
     });
     ws.addEventListener('message', (ev) => {
       let msg;
@@ -136,12 +176,31 @@
       case 'JOINED':
         me = msg.playerId;
         youTagEl.textContent = `너는 ${me === 'p1' ? '플레이어 1 (호스트)' : '플레이어 2 (게스트)'}`;
-        if (msg.waiting) {
-          turnEl.textContent = '상대 대기 중';
-          clueDisplay.textContent = '친구가 접속하기를 기다리는 중...';
+        // 상대 닉네임 표시
+        if (msg.opponentName) {
+          opponentName = msg.opponentName;
+          updateOpponentInfo();
         }
+        if (msg.waiting) {
+          updateWaitingTitle('상대방을 기다리는 중...');
+          if (waitingSolo) waitingSolo.style.display = '';
+        } else {
+          updateWaitingTitle('상대 입장 완료! 준비 버튼을 눌러주세요.');
+          if (waitingSolo) waitingSolo.style.display = 'none';
+        }
+        // READY 버튼 표시 (JOIN 완료 후)
+        if (btnReady) btnReady.hidden = false;
+        break;
+      case 'READY_STATE':
+        myReady = !!msg.myReady;
+        opponentReady = !!msg.opponentReady;
+        updateReadyUI();
         break;
       case 'GAME_START':
+        // 대기 화면 숨기고 게임 보드 표시
+        if (screenWaiting) screenWaiting.classList.add('hidden');
+        if (boardWrap) boardWrap.classList.remove('hidden');
+        if (cluePanel) cluePanel.classList.remove('hidden');
         // 새 게임 시작 시 복기 상태/배너/문맥을 모두 정리한다.
         reviewData = null;
         lastGameEndContext = null;
@@ -176,13 +235,11 @@
       }
       case 'OPPONENT_LEFT':
         showToast(msg.message || '상대방이 나갔다.');
-        turnEl.textContent = '상대 대기 중';
-        clueDisplay.textContent = '새 친구가 접속하기를 기다리는 중...';
         hideModal();
-        // 런처 모드(경로가 /codenames-duet/로 시작)이면 로비로 자동 복귀
-        if (window.location.pathname.startsWith('/codenames-duet/')) {
-          autoReconnect = false;
-          setTimeout(() => { window.location.href = '/'; }, 1200);
+        // 이탈 배너 표시 (사라지지 않음 — 사용자가 버튼을 눌러야 이동)
+        if (opponentLeftBanner) {
+          if (opponentLeftMsg) opponentLeftMsg.textContent = msg.message || '상대방이 나갔다.';
+          opponentLeftBanner.classList.remove('hidden');
         }
         break;
       case 'ERROR':
@@ -560,6 +617,84 @@
     toastTimer = setTimeout(() => {
       toastEl.classList.add('hidden');
     }, 3000);
+  }
+
+  // ── READY 게이트 UI 헬퍼 ─────────────────────────────────────
+
+  /**
+   * 대기 화면 제목 텍스트를 변경한다.
+   * @param {string} text
+   */
+  function updateWaitingTitle(text) {
+    if (waitingTitle) waitingTitle.textContent = text;
+  }
+
+  /**
+   * 상대 이름 패널을 갱신한다.
+   */
+  function updateOpponentInfo() {
+    if (!opponentName) return;
+    if (waitingSolo) waitingSolo.style.display = 'none';
+    if (opponentInfo) {
+      opponentInfo.classList.remove('hidden');
+      if (opponentNameLabel) opponentNameLabel.textContent = opponentName;
+    }
+  }
+
+  /**
+   * READY 마크(나/상대) + 버튼 상태를 갱신한다.
+   */
+  function updateReadyUI() {
+    if (myReadyMark) {
+      myReadyMark.textContent = myReady ? '✅' : '⌛';
+      myReadyMark.className = `ready-mark ${myReady ? 'ready' : 'not-ready'}`;
+    }
+    if (oppReadyMark) {
+      oppReadyMark.textContent = opponentReady ? '✅' : '⌛';
+      oppReadyMark.className = `ready-mark ${opponentReady ? 'ready' : 'not-ready'}`;
+    }
+    if (btnReady) {
+      btnReady.disabled = myReady;
+      btnReady.textContent = myReady ? '준비 완료 ✅' : '준비 완료';
+    }
+  }
+
+  // 인라인 닉네임 게이트 — 입장 버튼
+  if (btnInlineEnter) {
+    const doJoinWithName = () => {
+      const name = (inlineNameInput ? inlineNameInput.value.trim() : '').slice(0, 12);
+      if (!name) { showToast('닉네임을 입력해주세요.'); return; }
+      sessionStorage.setItem('codenames-duet:name', name);
+      if (nameGateInline) nameGateInline.classList.add('hidden');
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'JOIN', name }));
+      }
+    };
+    btnInlineEnter.addEventListener('click', doJoinWithName);
+    if (inlineNameInput) {
+      inlineNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') doJoinWithName();
+      });
+    }
+  }
+
+  // READY 버튼
+  if (btnReady) {
+    btnReady.addEventListener('click', () => {
+      if (myReady) return;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'READY' }));
+      }
+    });
+  }
+
+  // 이탈 배너 — 로비로 돌아가기 버튼
+  if (btnBannerReturnLobby) {
+    btnBannerReturnLobby.addEventListener('click', () => {
+      autoReconnect = false;
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
   }
 
   // ── 부트스트랩 ──────────────────────────────────────────────

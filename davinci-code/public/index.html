@@ -32,7 +32,39 @@
     </div>
   </header>
 
-  <main class="play-area">
+  <!-- 대기 화면 (READY 게이트) -->
+  <section id="screen-waiting" class="screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+      <div id="name-gate-inline" class="name-gate-inline hidden">
+        <p class="name-gate-msg">닉네임을 입력하고 입장하세요</p>
+        <input id="inline-name-input" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button id="btn-inline-enter" class="btn-inline-enter" type="button">입장</button>
+      </div>
+      <div id="opponent-info" class="opponent-info hidden">
+        <span id="opponent-name-label"></span>님과 대전
+      </div>
+      <div id="ready-panel" class="ready-panel">
+        <div class="ready-status">
+          <span class="ready-label">나</span>
+          <span id="my-ready-mark" class="ready-mark not-ready">⌛</span>
+          <span class="ready-sep">·</span>
+          <span class="ready-label">상대</span>
+          <span id="opp-ready-mark" class="ready-mark not-ready">⌛</span>
+        </div>
+        <button id="btn-ready" class="btn-ready" type="button" hidden>준비 완료</button>
+        <div class="ready-hint">양쪽 모두 준비를 누르면 게임이 시작됩니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 상대 이탈 배너 -->
+  <div id="opponent-left-banner" class="opponent-left-banner hidden" role="alert">
+    <span id="opponent-left-msg" class="opponent-left-msg"></span>
+    <button id="btn-banner-return-lobby" class="btn-banner-return-lobby" type="button">로비로 돌아가기</button>
+  </div>
+
+  <main class="play-area hidden">
     <!-- 좌 컬럼: 게임보드 -->
     <div class="game-board">
       <section class="hand opp-hand">

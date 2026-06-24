@@ -4,8 +4,7 @@
  * #screen-waiting에 추가된 7장 인포그래픽(assets/guide/1.png~7.png) 슬라이더의
  * 렌더·탐색·경계·인디케이터·이미지 로드·키보드/게임중 비활성·모바일 가로스크롤을 검증한다.
  *
- * 사전 요건: hanabi 서버가 http://localhost:3095 에서 실행 중이어야 한다.
- *   node server.js --port 3095
+ * 사전 요건: 없음 — createApp()으로 동적 포트에서 자체 서버를 생성한다.
  *
  * 실행:
  *   npx playwright test tests/rulebook-c11-guide-slider.spec.js --reporter=list
@@ -15,8 +14,39 @@
  */
 
 import { test, expect } from 'playwright/test';
+import http from 'http';
+import { createApp } from '../server.js';
 
-const BASE = 'http://localhost:3095';
+// ── 서버 헬퍼 ──────────────────────────────────────────────────────
+function startServer() {
+  return new Promise((resolve, reject) => {
+    const app = createApp();
+    const server = http.createServer(app.handleHttp);
+    server.on('upgrade', app.handleUpgrade);
+    server.listen(0, () => resolve({ server, port: server.address().port }));
+    server.once('error', reject);
+  });
+}
+function stopServer(server) {
+  return new Promise((resolve) => {
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    server.close(() => resolve());
+    setTimeout(resolve, 300);
+  });
+}
+
+let _server;
+let BASE = '';
+
+test.beforeAll(async () => {
+  const { server, port } = await startServer();
+  _server = server;
+  BASE = `http://localhost:${port}`;
+});
+test.afterAll(async () => {
+  await stopServer(_server);
+});
+
 const TOTAL = 7;
 
 /**
@@ -28,7 +58,10 @@ async function openWaiting(browser, viewport = { width: 900, height: 900 }) {
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', (e) => errs.push(e.message));
-  await page.goto(BASE);
+  await page.goto(`${BASE}?name=P1`);
+  // READY 게이트: 준비 버튼 클릭(1인이면 대기 화면에 머문다).
+  await page.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+  await page.click('#btn-ready');
   await page.waitForSelector('#guide-slider', { timeout: 15000 });
   // 대기 화면이 실제로 보이는 상태인지 확인(게임 진입 전).
   await page.waitForSelector('#screen-waiting:not(.hidden)', { timeout: 15000 });
@@ -176,15 +209,19 @@ test('HR-C11-007 게임 진입 후 키보드 ←/→가 슬라이더를 움직�
   const errs = [];
   p1.on('pageerror', (e) => errs.push('p1:' + e.message));
   try {
-    await p1.goto(BASE);
-    // p1 대기 화면에서 슬라이더를 3/7로 옮겨 둔다.
+    await p1.goto(`${BASE}?name=P1`);
+    // p1 준비 버튼 클릭 후 대기 화면에서 슬라이더를 조작.
+    await p1.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+    await p1.click('#btn-ready');
     await p1.waitForSelector('#guide-slider', { timeout: 15000 });
     await p1.click('#guide-next');
     await p1.click('#guide-next');
     expect((await p1.locator('#guide-indicator').textContent()).trim()).toBe(`3 / ${TOTAL}`);
 
-    // p2 입장 → 양쪽 게임 화면 진입.
-    await p2.goto(BASE);
+    // p2 입장 + READY → 양쪽 게임 화면 진입.
+    await p2.goto(`${BASE}?name=P2`);
+    await p2.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+    await p2.click('#btn-ready');
     await p1.waitForSelector('#my-hand .card', { timeout: 15000 });
     await p2.waitForSelector('#my-hand .card', { timeout: 15000 });
     // 대기 화면이 hidden인지 확인.
@@ -205,7 +242,7 @@ test('HR-C11-007 게임 진입 후 키보드 ←/→가 슬라이더를 움직�
 });
 
 test('HR-C11-008 이미지 7장 + 범위 밖 404 — HTTP 상태/Content-Type 검증', async ({ request }) => {
-  // 단독 실행 포트 3095 기준. 7장 모두 200 image/png.
+  // 7장 모두 200 image/png.
   for (let n = 1; n <= TOTAL; n++) {
     const res = await request.get(`${BASE}/assets/guide/${n}.png`);
     expect(res.status(), `${n}.png status`).toBe(200);

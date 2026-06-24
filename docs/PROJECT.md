@@ -1,6 +1,6 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-06-24 — 입장 UI 통일 Phase 3 완료 (matgo, janggi). 오목 파일럿 패턴을 matgo/janggi에 추가 적용: `#screen-waiting` 신설 + READY 게이트 서버 신규 추가 + AI봇 scheduleReady() 패턴. janggi는 `#screen-waiting` → READY → `#setup-modal` → 게임 흐름 정상 동작. Phase 3 QA 30/30 PASS (matgo 16 + janggi 14). AD3 32/32 APPROVED. 회귀: matgo 단위 100, janggi 단위 254 전부 PASS. 잔여: Phase 4 (hanabi, davinci-code, codenames-duet).
+> 최종 업데이트: 2026-06-25 — 입장 UI 통일 Phase 4 완료 (hanabi, davinci-code, codenames-duet). 오목 파일럿 패턴(#screen-waiting + #name-gate-inline + #ready-panel + #opponent-left-banner + READY 게이트 서버)이 이미 구현된 상태 확인. hanabi: Playwright 78/78 PASS (HR-C11 가이드 슬라이더 9/9 포함). davinci-code: 단위 53/53 PASS. codenames-duet: #review-banner 복기 모드 보존 확인. AD3 32/32 APPROVED. 입장 UI 통일 전 페이즈(1~4, 9개 게임) 완료.
 > 이전 갱신: 2026-06-23 — Phase 1-B 윷놀이 N인 확장 완료.
 > 이전 갱신: 2026-06-23 — Phase 1-A 런처 로비 다인용 지원 + Lobby Entry UX 개선.
 > 이전 갱신: 2026-06-17 — 버그리포트 배치 6건 수정 + 1건 보류.
@@ -66,7 +66,7 @@ minigame-paradise/
 | 로비 복귀 | 게임 완료 후 "다른 종목" 버튼으로 양쪽 동시 복귀 | 완료 |
 | 게임 중 뒤로가기 | 6개 게임 헤더에 상시 "게임 선택" 버튼(`#btn-back-to-lobby`). confirm 다이얼로그 + disconnect 감지로 양쪽 로비 복귀 | 완료 |
 | 봇 미지원 게임 차단 | AI 모드에서 봇 없는 게임 카드 비활성 (CSS+JS+서버 3중 가드) | 완료 |
-| 입장 UI 통일 (Phase 1~3) | 오목 파일럿 패턴으로 yahtzee/rummikub/yutnori/tetris-battle/matgo/janggi 입장 UI 통일. 닉네임 게이트 + 대기 화면 + READY 프로토콜 + 이탈 배너 | 완료 |
+| 입장 UI 통일 (Phase 1~4) | 오목 파일럿 패턴으로 9개 게임 전체 입장 UI 통일. 닉네임 게이트 + 대기 화면 + READY 프로토콜 + 이탈 배너 | 완료 |
 | 맞고 (matgo) | 2인 화투 고스톱, AI 봇 지원 | 완료 |
 | 윷놀이 N인 (Phase 1-B) | 윷놀이 2~4인 가변 플레이. N인 턴 순환, 잡기/업기 N인 판정, P3/P4 색상, rematch N인 확장 | 완료 |
 | 테트리스 배틀 | 한게임 스타일 1:1 테트리스 대전 | 완료 |
@@ -87,8 +87,9 @@ minigame-paradise/
 
 ## 향후 계획
 
-- 입장 UI 통일 Phase 4: hanabi, davinci-code, codenames-duet (대기 화면 신규, AI 없음)
 - matgo 기존 e2e 32건 현행화 (READY 게이트 도입 후 `joinAndStartGame` 헬퍼 적응 필요)
+- davinci-code E2E 테스트 현행화 (READY 게이트 도입 후 `connectTwoPlayers` 헬퍼 적응 필요)
+- codenames-duet review-smoke/visual 테스트 현행화 (READY 게이트 도입 후 JOIN/READY 시퀀스 추가 필요)
 - 다인용 Phase 1-C~E: 요트/루미큐브/하나비 게임 로직 3~4인 확장
 - 다인용 Phase 2: 다빈치 코드/맞고/테트리스/코드네임/장기/오목 다인용 검토
 - 모바일 반응형 레이아웃

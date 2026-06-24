@@ -2,27 +2,23 @@
  * @fileoverview 하나비 WebSocket 클라이언트 — 서버와 메시지 송수신.
  *
  * 서버 권위 모델(server.js 기준 진실 원천). 메시지 프로토콜:
- *  C→S: JOIN { playerName } / GIVE_CLUE { clueType, value } /
+ *  C->S: JOIN { name } / READY {} / GIVE_CLUE { clueType, value } /
  *       PLAY_CARD { handIndex } / DISCARD_CARD { handIndex } / REMATCH {}
- *  S→C: JOINED { playerId, waiting, hostUrl } / START {} /
+ *  S->C: JOINED { playerId, waiting, hostUrl, opponentName? } / START {} /
+ *       READY_STATE { myReady, opponentReady } /
  *       STATE (snapshotForPlayer 구조) / GAME_OVER { result } /
- *       OPPONENT_LEFT { message } / REMATCH_STATUS { p1Ready, p2Ready } /
+ *       OPPONENT_LEFT { name, message } / REMATCH_STATUS { p1Ready, p2Ready } /
  *       ERROR { message }
  *
- * 힌트 대상(target)은 서버가 항상 상대로 자동 판정하므로(§5-3) 클라가 보내지 않는다.
+ * 힌트 대상(target)은 서버가 항상 상대로 자동 판정하므로(S5-3) 클라가 보내지 않는다.
+ *
+ * 닉네임 3단계 폴백: URL ?name= -> sessionStorage hanabi:name -> #name-gate-inline
  */
 
 /**
  * 네트워크 인스턴스 생성.
  *
  * @param {object} handlers
- * @param {(payload:{playerId:string, waiting:boolean, hostUrl:string}) => void} handlers.onJoined
- * @param {() => void} handlers.onStart
- * @param {(state:object) => void} handlers.onState
- * @param {(result:object) => void} handlers.onGameOver
- * @param {(message:string) => void} handlers.onOpponentLeft
- * @param {(payload:{p1Ready:boolean, p2Ready:boolean}) => void} handlers.onRematchStatus
- * @param {(message:string) => void} handlers.onError
  * @returns {object} 네트워크 컨트롤러
  */
 export function createNetwork(handlers) {
@@ -37,6 +33,14 @@ export function createNetwork(handlers) {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const seg = location.pathname.split('/').filter(Boolean)[0] || '';
     const wsPath = seg ? `/${seg}/ws` : '/ws';
+
+    // 닉네임 전달(3단계 폴백): URL ?name= 우선 -> sessionStorage hanabi:name 저장.
+    const urlParams = new URLSearchParams(location.search);
+    const urlName = urlParams.get('name');
+    if (urlName) {
+      sessionStorage.setItem('hanabi:name', decodeURIComponent(urlName));
+    }
+
     const url = `${proto}://${location.host}${wsPath}`;
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
@@ -44,8 +48,12 @@ export function createNetwork(handlers) {
     ws.addEventListener('open', () => {
       console.log('[net] 연결됨');
       reconnectAttempted = false;
-      // 연결 직후 JOIN 자동 전송(고정 타이머 race 방지). 재연결 시에도 재입장된다.
-      if (typeof handlers.onOpen === 'function') handlers.onOpen();
+      // 닉네임이 있으면 즉시 JOIN 송신. 없으면 인라인 게이트가 JOIN 시점을 결정한다.
+      const storedName = sessionStorage.getItem('hanabi:name');
+      if (storedName) {
+        ws.send(JSON.stringify({ type: 'JOIN', name: storedName }));
+      }
+      if (typeof handlers.onOpen === 'function') handlers.onOpen({ hasName: !!storedName });
     });
     ws.addEventListener('message', (event) => {
       let msg;
@@ -69,10 +77,17 @@ export function createNetwork(handlers) {
     switch (msg.type) {
       case 'JOINED':
         myPlayerId = msg.playerId;
-        handlers.onJoined({
+        handlers.onJoined && handlers.onJoined({
           playerId: msg.playerId,
           waiting: !!msg.waiting,
           hostUrl: typeof msg.hostUrl === 'string' ? msg.hostUrl : '',
+          opponentName: typeof msg.opponentName === 'string' ? msg.opponentName : '',
+        });
+        break;
+      case 'READY_STATE':
+        handlers.onReadyState && handlers.onReadyState({
+          myReady: !!msg.myReady,
+          opponentReady: !!msg.opponentReady,
         });
         break;
       case 'START':
@@ -85,7 +100,10 @@ export function createNetwork(handlers) {
         handlers.onGameOver(msg.result || {});
         break;
       case 'OPPONENT_LEFT':
-        handlers.onOpponentLeft(msg.message || '상대방이 나갔습니다.');
+        handlers.onOpponentLeft({
+          name: typeof msg.name === 'string' ? msg.name : '',
+          message: msg.message || '상대방이 나갔습니다.',
+        });
         break;
       case 'REMATCH_STATUS':
         handlers.onRematchStatus({
@@ -112,8 +130,9 @@ export function createNetwork(handlers) {
   return {
     connect,
     getMyId() { return myPlayerId; },
-    join(playerName) { send({ type: 'JOIN', playerName: playerName || 'Player' }); },
-    /** 힌트 주기 — target은 서버가 상대로 자동 판정(§5-3). */
+    sendJoin(name) { send({ type: 'JOIN', name }); },
+    sendReady() { send({ type: 'READY' }); },
+    /** 힌트 주기 — target은 서버가 상대로 자동 판정(S5-3). */
     giveClue(clueType, value) { send({ type: 'GIVE_CLUE', clueType, value }); },
     playCard(handIndex) { send({ type: 'PLAY_CARD', handIndex }); },
     discardCard(handIndex) { send({ type: 'DISCARD_CARD', handIndex }); },

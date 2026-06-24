@@ -210,21 +210,98 @@ body {
   }
 }
 
-/* P1/P2 입장 상태 라벨 (invite-panel 대체, 다크 테마) */
-.player-status-panel { margin: 8px 0 14px; }
-.player-status-slot {
-  font-family: 'Jua', sans-serif;
-  font-size: 15px;
-  color: var(--text);
-  white-space: nowrap;
-}
-.player-status-divider { color: var(--text-dim); opacity: .6; margin: 0 8px; }
-.player-status-mark {
+/* 인라인 닉네임 게이트 (직접 진입 폴백 — omok 패턴) */
+.name-gate-inline { margin: 8px 0 18px; }
+.name-gate-msg {
+  font-size: 0.9rem;
   color: var(--text-dim);
-  font-weight: 600;
-  font-size: 13px;
+  margin: 0 0 10px;
 }
-.player-status-mark.joined { color: var(--card-green); }
+.name-gate-inline input {
+  width: 70%;
+  max-width: 240px;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--panel-2);
+  color: var(--text);
+}
+.btn-inline-enter {
+  margin-top: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.btn-inline-enter:hover { filter: brightness(1.08); }
+
+/* 상대 이름 표시 ("○○님과 대전") */
+.opponent-info {
+  font-size: 1.05rem;
+  color: var(--accent);
+  margin: 6px 0 14px;
+}
+
+/* 양방향 READY 상태 패널 (omok 패턴) */
+.ready-panel { margin: 8px 0 16px; }
+.ready-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.ready-label { color: var(--text-dim); }
+.ready-sep { color: var(--text-dim); opacity: .4; }
+.ready-mark {
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+.ready-mark.ready { transform: scale(1.15); }
+.ready-mark.not-ready { opacity: 0.7; }
+.ready-hint { font-size: 0.8rem; color: var(--text-dim); margin-top: 8px; }
+.btn-ready {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.btn-ready:hover { filter: brightness(1.08); }
+.btn-ready:disabled { opacity: 0.6; cursor: default; }
+
+/* 상대 이탈 배너 (omok 패턴) */
+.opponent-left-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, #7c2d2d, #4a1a1a);
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 18px;
+  z-index: 8000;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.btn-banner-return-lobby {
+  background: #fbbf24;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
 
 /* ── 게임 화면 레이아웃 ─────────────────────────────────────── */
 .screen-game {

@@ -2,12 +2,12 @@
  * @fileoverview 하나비 클라이언트 진입점 — 상태 렌더링 + 사용자 입력 조율.
  *
  * 흐름:
- *  1) DOM 준비 → Network 연결 → JOIN
- *  2) JOINED(waiting) → 대기 화면 + 초대 URL
- *  3) START + STATE → 게임 화면 렌더
- *  4) 내 턴: [카드 내기]/[버리기] → 내 손패 카드 선택 → 전송
- *           [힌트 주기] → 색/숫자 선택 → 전송(서버가 상대 손패에 마킹)
- *  5) GAME_OVER → 종료 오버레이(점수·등급·사유) + 재대결 / 다른 종목
+ *  1) DOM 준비 -> Network 연결 -> 닉네임 3단계 폴백(URL ?name= -> sessionStorage hanabi:name -> #name-gate-inline)
+ *  2) JOIN -> JOINED(waiting) -> 대기 화면 + READY 게이트
+ *  3) 양쪽 READY -> START + STATE -> 게임 화면 렌더
+ *  4) 내 턴: [카드 내기]/[버리기] -> 내 손패 카드 선택 -> 전송
+ *           [힌트 주기] -> 색/숫자 선택 -> 전송(서버가 상대 손패에 마킹)
+ *  5) GAME_OVER -> 종료 오버레이(점수/등급/사유) + 재대결 / 다른 종목
  *
  * 서버가 보내는 STATE 필드(snapshotForPlayer): you, currentTurn, phase, tokens{clue,fuse},
  *   fireworks{white,red,blue,green,yellow}, discardPile[], deckSize, lastRoundTurnsLeft,
@@ -17,7 +17,7 @@
 import { createNetwork } from './network.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // ── 상수 (game.js / RULEBOOK §2-1 과 동기화) ──
+  // ── 상수 (game.js / RULEBOOK S2-1 과 동기화) ──
   const COLORS = ['white', 'red', 'blue', 'green', 'yellow'];
   const COLOR_KO = { white: '흰', red: '빨', blue: '파', green: '초', yellow: '노' };
   const COLOR_KO_FULL = { white: '흰색', red: '빨강', blue: '파랑', green: '초록', yellow: '노랑' };
@@ -33,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     statusMsg: document.getElementById('status-msg'),
     turnLabel: document.getElementById('turn-label'),
     scoreLabel: document.getElementById('score-label'),
-    p1StatusMark: document.getElementById('p1-status-mark'),
-    p2StatusMark: document.getElementById('p2-status-mark'),
     opponentHand: document.getElementById('opponent-hand'),
     myHand: document.getElementById('my-hand'),
     deckCount: document.getElementById('deck-count'),
@@ -55,6 +53,21 @@ document.addEventListener('DOMContentLoaded', () => {
     resultReason: document.getElementById('result-reason'),
     rematchBtn: document.getElementById('rematch-btn'),
     toast: document.getElementById('toast'),
+    // 대기 화면 — READY 게이트 UI (omok 패턴)
+    waitingTitle: document.querySelector('#screen-waiting .waiting-title'),
+    nameGateInline: document.getElementById('name-gate-inline'),
+    inlineNameInput: document.getElementById('inline-name-input'),
+    btnInlineEnter: document.getElementById('btn-inline-enter'),
+    opponentInfo: document.getElementById('opponent-info'),
+    opponentNameLabel: document.getElementById('opponent-name-label'),
+    readyPanel: document.getElementById('ready-panel'),
+    myReadyMark: document.getElementById('my-ready-mark'),
+    oppReadyMark: document.getElementById('opp-ready-mark'),
+    btnReady: document.getElementById('btn-ready'),
+    // 상대 이탈 배너
+    opponentLeftBanner: document.getElementById('opponent-left-banner'),
+    opponentLeftMsg: document.getElementById('opponent-left-msg'),
+    btnBannerReturnLobby: document.getElementById('btn-banner-return-lobby'),
   };
 
   // ── 클라 상태 캐시 ──
@@ -62,6 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let state = null;
   /** 현재 행동 모드: null | 'play' | 'discard'. 카드 선택 대기 상태를 나타낸다. */
   let actionMode = null;
+  /** 상대 닉네임(JOINED.opponentName 수신 시 갱신). */
+  let opponentName = null;
+  /** 내 READY 상태. */
+  let myReady = false;
+  /** 상대 READY 상태. */
+  let opponentReady = false;
 
   // ── 토스트 ──
   let toastTimer = null;
@@ -78,11 +97,54 @@ document.addEventListener('DOMContentLoaded', () => {
     els.screenGame.classList.toggle('hidden', name !== 'game');
   }
 
+  // ── 대기 화면 제목 갱신 ──
+  /**
+   * @param {boolean} hasOpponent 상대가 합류했는가
+   */
+  function updateWaitingTitle(hasOpponent) {
+    if (!els.waitingTitle) return;
+    els.waitingTitle.textContent = hasOpponent
+      ? '대전 준비 중'
+      : '상대방을 기다리는 중...';
+  }
+
+  // ── 상대 이름 표시("○○님과 대전") ──
+  function updateOpponentInfo() {
+    if (opponentName && els.opponentInfo) {
+      els.opponentInfo.classList.remove('hidden');
+      if (els.opponentNameLabel) els.opponentNameLabel.textContent = opponentName;
+    }
+  }
+
+  // ── 양방향 READY 상태 마크 갱신 ──
+  function updateReadyUI() {
+    if (els.myReadyMark) {
+      els.myReadyMark.textContent = myReady ? '✅' : '⌛';
+      els.myReadyMark.classList.toggle('ready', myReady);
+      els.myReadyMark.classList.toggle('not-ready', !myReady);
+    }
+    if (els.oppReadyMark) {
+      els.oppReadyMark.textContent = opponentReady ? '✅' : '⌛';
+      els.oppReadyMark.classList.toggle('ready', opponentReady);
+      els.oppReadyMark.classList.toggle('not-ready', !opponentReady);
+    }
+    // 내가 아직 준비 안 했으면 버튼 노출.
+    if (els.btnReady) els.btnReady.hidden = myReady;
+  }
+
+  // ── 상대 이탈 배너 표시 ──
+  function showOpponentLeftBanner(name) {
+    if (els.opponentLeftMsg) {
+      els.opponentLeftMsg.textContent = `${name || '상대방'}님이 나갔어요.`;
+    }
+    if (els.opponentLeftBanner) els.opponentLeftBanner.classList.remove('hidden');
+  }
+
   // ── 카드 DOM 생성 ──
   /**
    * 카드 엘리먼트를 만든다.
    * @param {object} card { id, color, number, clues }
-   * @param {boolean} hidden 가림 여부(내 손패는 true → 색·숫자 숨김)
+   * @param {boolean} hidden 가림 여부(내 손패는 true -> 색/숫자 숨김)
    * @param {boolean} touched 직전 힌트가 닿았는지(하이라이트)
    * @returns {HTMLElement}
    */
@@ -92,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.dataset.cardId = card.id;
 
     if (hidden) {
-      // §1, §12-6: 내 손패는 색·숫자를 볼 수 없다 → 가림 표현.
+      // S1, S12-6: 내 손패는 색/숫자를 볼 수 없다 -> 가림 표현.
       el.classList.add('card--hidden');
       const mark = document.createElement('div');
       mark.className = 'card-back-mark';
@@ -114,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el.appendChild(br);
     }
 
-    // 받은 힌트 마킹(누적). 본인/상대 모두 표시(§13-4).
+    // 받은 힌트 마킹(누적). 본인/상대 모두 표시(S13-4).
     const clues = card.clues || [];
     if (clues.length > 0) {
       const wrap = document.createElement('div');
@@ -271,9 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
     els.btnCancel.classList.add('hidden');
 
     els.btnPlay.disabled = !myTurn;
-    // §13-5: 힌트 토큰이 가득(8)이면 버리기 불가.
+    // S13-5: 힌트 토큰이 가득(8)이면 버리기 불가.
     els.btnDiscard.disabled = !myTurn || clue >= TOTAL_CLUE_TOKENS;
-    // §5-2: 힌트 토큰이 0이면 힌트 불가.
+    // S5-2: 힌트 토큰이 0이면 힌트 불가.
     els.btnClue.disabled = !myTurn || clue === 0;
 
     if (!myTurn) {
@@ -346,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     els.resultOutcome.className = 'result-outcome ' + (result.outcome === 'win' ? 'win' : 'lose');
     els.resultScore.textContent = `${result.score}점`;
     els.resultGrade.textContent = result.grade || '';
-    // §13-6: 폭탄 3소진 패배는 "실패" 라벨 + 현재 점수.
+    // S13-6: 폭탄 3소진 패배는 "실패" 라벨 + 현재 점수.
     const reasonText = {
       perfect: '5색 불꽃 완성 — 25점 만점!',
       fuse: '폭탄 토큰 3개 소진 — 실패',
@@ -358,45 +420,47 @@ document.addEventListener('DOMContentLoaded', () => {
     els.screenGameOver.classList.remove('hidden');
   }
 
-  // ── P1/P2 입장 상태 라벨 (invite-panel 대체) ──
-  /**
-   * 대기 화면의 P1/P2 입장 상태 마크를 갱신한다.
-   * @param {boolean} bothPending true면 p1만 입장(p2 대기), false면 양쪽 입장 완료
-   */
-  function updateStatusMarks(bothPending) {
-    // p1은 항상 입장한 상태(대기 화면을 보고 있는 호스트 기준).
-    if (els.p1StatusMark) {
-      els.p1StatusMark.textContent = '입장';
-      els.p1StatusMark.classList.add('joined');
-    }
-    if (els.p2StatusMark) {
-      els.p2StatusMark.textContent = bothPending ? '대기' : '입장';
-      els.p2StatusMark.classList.toggle('joined', !bothPending);
-    }
-  }
-
-  // 입장 닉네임은 1회만 생성하여 재연결 시에도 유지한다.
-  const playerName = `Player-${Math.floor(Math.random() * 1000)}`;
-
   // ── 네트워크 핸들러 ──
   const net = createNetwork({
-    // WS open 직후 JOIN 전송(고정 타이머 race 방지).
-    onOpen: () => { net.join(playerName); },
-    onJoined: ({ playerId, waiting }) => {
+    onOpen: ({ hasName }) => {
+      // 닉네임이 없으면(직접 진입) 인라인 게이트를 노출하고 JOIN을 보류한다.
+      if (!hasName) {
+        if (els.nameGateInline) els.nameGateInline.classList.remove('hidden');
+        // 닉네임 확정 전까지 READY 패널은 숨긴다.
+        if (els.readyPanel) els.readyPanel.classList.add('hidden');
+      }
+    },
+    onJoined: ({ playerId, waiting, opponentName: oppName }) => {
       myId = playerId;
       els.playerLabel.textContent = playerId === 'p1' ? '나 (P1, 선공)' : '나 (P2, 후공)';
-      if (waiting) {
-        showScreen('waiting');
-        els.statusMsg.textContent = '상대방 대기 중';
-        updateStatusMarks(true);
-      } else {
-        els.statusMsg.textContent = '상대 입장 완료';
-        updateStatusMarks(false);
+
+      // 상대 이름 수신 시 갱신.
+      if (oppName) {
+        opponentName = oppName;
+        updateOpponentInfo();
       }
+
+      els.statusMsg.textContent = (waiting && !oppName) ? '상대방 대기 중' : '게임 시작 준비';
+
+      // 대기 카드 제목: 상대 합류(상대 이름 존재 또는 waiting=false) 시 "대전 준비 중".
+      updateWaitingTitle(!!oppName || !waiting);
+
+      // READY 패널은 닉네임 확정(JOIN 송신) 이후 항상 노출.
+      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+
+      showScreen('waiting');
+    },
+    onReadyState: ({ myReady: mr, opponentReady: or }) => {
+      myReady = mr;
+      opponentReady = or;
+      updateReadyUI();
     },
     onStart: () => {
       els.screenGameOver.classList.add('hidden');
       actionMode = null;
+      // READY 상태 초기화(다음 리매치 대비).
+      myReady = false;
+      opponentReady = false;
       showScreen('game');
     },
     onState: (s) => {
@@ -414,27 +478,53 @@ document.addEventListener('DOMContentLoaded', () => {
     onGameOver: (result) => {
       renderGameOver(result);
     },
-    onOpponentLeft: (message) => {
-      showToast(message, 'error');
-      // 런처 모드에서는 상대 이탈 시 로비로 자동 복귀(yutnori 패턴).
-      if (window.location.pathname.startsWith('/hanabi/')) {
-        setTimeout(() => { window.location.href = '/'; }, 1500);
-      } else {
-        showScreen('waiting');
-        els.statusMsg.textContent = '상대방 대기 중';
-        updateStatusMarks(true);
-      }
+    onOpponentLeft: ({ name }) => {
+      // 상대 이탈 배너 표시 (자동 redirect 없음 — 사용자가 직접 이동).
+      els.screenGameOver.classList.add('hidden');
+      showOpponentLeftBanner(name);
     },
     onRematchStatus: ({ p1Ready, p2Ready }) => {
-      const myReady = (myId === 'p1' && p1Ready) || (myId === 'p2' && p2Ready);
-      const oppReady = (myId === 'p1' && p2Ready) || (myId === 'p2' && p1Ready);
-      showToast(`재대결 대기: 나 ${myReady ? '완료' : '대기'} / 상대 ${oppReady ? '완료' : '대기'}`);
+      const myR = (myId === 'p1' && p1Ready) || (myId === 'p2' && p2Ready);
+      const oppR = (myId === 'p1' && p2Ready) || (myId === 'p2' && p1Ready);
+      showToast(`재대결 대기: 나 ${myR ? '완료' : '대기'} / 상대 ${oppR ? '완료' : '대기'}`);
     },
     onError: (message) => {
       showToast(message, 'error');
       console.warn('[main] 서버 오류:', message);
     },
   });
+
+  // ── 인라인 닉네임 게이트 이벤트 ──
+  if (els.btnInlineEnter) {
+    els.btnInlineEnter.addEventListener('click', () => {
+      const name = (els.inlineNameInput.value || '').trim();
+      if (!name) { showToast('닉네임을 입력하세요.', 'error'); return; }
+      sessionStorage.setItem('hanabi:name', name);
+      els.nameGateInline.classList.add('hidden');
+      net.sendJoin(name);
+    });
+  }
+  if (els.inlineNameInput) {
+    els.inlineNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') els.btnInlineEnter.click();
+    });
+  }
+
+  // ── READY 버튼 ──
+  if (els.btnReady) {
+    els.btnReady.addEventListener('click', () => {
+      net.sendReady();
+      els.btnReady.disabled = true;
+    });
+  }
+
+  // ── 상대 이탈 배너 버튼 ──
+  if (els.btnBannerReturnLobby) {
+    els.btnBannerReturnLobby.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
+    });
+  }
 
   // ── 행동 버튼 이벤트 ──
   els.btnPlay.addEventListener('click', () => enterActionMode('play'));
@@ -490,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── 가이드 슬라이더 초기화 ──────────────────────────────────────
   /**
    * 대기 화면 룰 가이드 슬라이더를 초기화하고 이벤트를 등록한다.
-   * 7장 인포그래픽(public/assets/guide/1.png~7.png)을 좌/우 버튼·키보드·터치 스와이프로 탐색한다.
+   * 7장 인포그래픽(public/assets/guide/1.png~7.png)을 좌/우 버튼/키보드/터치 스와이프로 탐색한다.
    * 화면 전환과 무관하게 1회만 초기화하며 현재 인덱스를 유지한다.
    */
   (function initGuideSlider() {
@@ -550,13 +640,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 가이드 모달 초기화 ─────────────────────────────────────────
   /**
-   * 헤더의 📖 가이드 버튼으로 호출되는 모달 슬라이더를 초기화한다.
+   * 헤더의 가이드 버튼으로 호출되는 모달 슬라이더를 초기화한다.
    * 대기 화면의 인라인 슬라이더(`initGuideSlider`)와 **독립된 인덱스**를 가지며,
    * 게임 진행 중에도 룰 가이드를 다시 볼 수 있게 해준다.
    *
    * 키보드 가드:
-   *  - 인라인 슬라이더: "대기 화면이 보이고 모달이 닫혀 있을 때"만 ←/→ 동작 (기존 가드에 모달 추가 가드 병합).
-   *  - 모달 슬라이더: "모달이 열려 있을 때"만 ←/→ 동작 + ESC로 닫힘.
+   *  - 인라인 슬라이더: "대기 화면이 보이고 모달이 닫혀 있을 때"만 동작 (기존 가드에 모달 추가 가드 병합).
+   *  - 모달 슬라이더: "모달이 열려 있을 때"만 동작 + ESC로 닫힘.
    */
   (function initGuideModal() {
     const TOTAL = 7;
@@ -623,14 +713,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 카운터 모달 초기화 ─────────────────────────────────────────
   /**
-   * 헤더의 🃏 분포 버튼으로 호출되는 "안 보이는 카드 분포 카운터" 모달을 초기화한다.
+   * 헤더의 분포 버튼으로 호출되는 "안 보이는 카드 분포 카운터" 모달을 초기화한다.
    *
    * 표시 대상:
-   *  - **안 보이는 영역(덱 + 본인 손패)** 에 남아 있는 색×숫자별 카드 수
-   *  - 보이는 영역(상대 손패 · 불꽃 · 버림 더미)을 표준 분포에서 차감한 값
+   *  - **안 보이는 영역(덱 + 본인 손패)** 에 남아 있는 색*숫자별 카드 수
+   *  - 보이는 영역(상대 손패 / 불꽃 / 버림 더미)을 표준 분포에서 차감한 값
    *
-   * 정보 공정성(§1, §13 손패 가림 원칙):
-   *  - 본인 손패의 색·숫자를 직접 표시하지 않으므로 가림 정체성이 깨지지 않는다.
+   * 정보 공정성(S1, S13 손패 가림 원칙):
+   *  - 본인 손패의 색/숫자를 직접 표시하지 않으므로 가림 정체성이 깨지지 않는다.
    *  - 표준 하나비 디지털 도구(BoardGameArena, Hanab.live 등)에서도 동일 정보를 제공한다.
    *
    * 재계산 트리거:
@@ -638,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
    *  - STATE 수신 시(`renderGame()`에서 호출). 모달이 열려있지 않으면 비용 없이 종료.
    */
   (function initCounterModal() {
-    /** 표준 하나비 1색당 분포(§2-1): 1→3, 2→2, 3→2, 4→2, 5→1. 색당 10장 × 5색 = 50장. */
+    /** 표준 하나비 1색당 분포(S2-1): 1->3, 2->2, 3->2, 4->2, 5->1. 색당 10장 x 5색 = 50장. */
     const INITIAL_COUNTS = { 1: 3, 2: 2, 3: 2, 4: 2, 5: 1 };
 
     const modalEl     = document.getElementById('counter-modal');
@@ -651,19 +741,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!modalEl || !openBtn || !closeBtn || !gridEl || !deckCountEl || !totalEl) return;
 
     /**
-     * 안 보이는 영역(덱 + 본인 손패)의 색×숫자별 카운트를 계산한다.
-     *
-     * 알고리즘:
-     *  1) `INITIAL_COUNTS`로 5색 × 5숫자 격자를 초기화(각 색당 합 10장).
-     *  2) `state.fireworks[color]`(완성 숫자 max) → 1..max까지 각 1장씩 차감.
-     *  3) `state.discardPile` 전체 차감(공개 카드).
-     *  4) `state.opponentHand` 차감(공개 카드 — 본인은 상대 손패의 색·숫자를 안다).
-     *
-     * 본인 손패(`state.myHand`)는 색·숫자가 마스킹돼 있으므로 차감하지 않는다 →
-     * 결과 = "내 손패 + 덱"에 분포된 카드 수의 합과 정확히 일치.
+     * 안 보이는 영역(덱 + 본인 손패)의 색*숫자별 카운트를 계산한다.
      *
      * @param {object} st 서버에서 받은 STATE(snapshotForPlayer)
-     * @returns {{counts: object, totalHidden: number, deckSize: number}} 색별 카운트 + 합계 + 덱 크기
+     * @returns {{counts: object, totalHidden: number, deckSize: number}}
      */
     function computeHiddenCounts(st) {
       const counts = {};
@@ -679,13 +760,13 @@ document.addEventListener('DOMContentLoaded', () => {
           counts[c][n] = Math.max(0, counts[c][n] - 1);
         }
       }
-      // discardPile: 모든 카드 색·숫자 공개.
+      // discardPile: 모든 카드 색/숫자 공개.
       for (const card of (st.discardPile || [])) {
         if (card && card.color && card.number) {
           counts[card.color][card.number] = Math.max(0, counts[card.color][card.number] - 1);
         }
       }
-      // opponentHand: 상대 손패는 본인이 색·숫자 안다.
+      // opponentHand: 상대 손패는 본인이 색/숫자 안다.
       for (const card of (st.opponentHand || [])) {
         if (card && card.color && card.number) {
           counts[card.color][card.number] = Math.max(0, counts[card.color][card.number] - 1);
@@ -728,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gridEl.appendChild(h);
       }
 
-      // 색 행 5개 × 숫자 셀 5개
+      // 색 행 5개 x 숫자 셀 5개
       for (const color of COLORS) {
         const label = document.createElement('div');
         label.className = 'counter-grid-rowlabel card--' + color;
@@ -796,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
   // ── 시작 ──
-  // JOIN은 network.js의 onOpen 콜백에서 자동 전송된다(연결 race 방지).
+  // JOIN은 network.js의 onOpen 콜백에서 닉네임 여부에 따라 자동/지연 전송된다.
   showScreen('waiting');
   net.connect();
 

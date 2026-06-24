@@ -508,3 +508,92 @@ body {
   transition: opacity 0.3s;
 }
 .toast.hidden { opacity: 0; pointer-events: none; }
+
+/* ── hidden 유틸리티 (대기화면 READY 게이트 사용) ──────────────── */
+.board-wrap.hidden,
+.clue-panel.hidden { display: none !important; }
+.screen-waiting.hidden { display: none !important; }
+.opponent-left-banner.hidden { display: none !important; }
+.opponent-info.hidden { display: none !important; }
+.name-gate-inline.hidden { display: none !important; }
+
+/* ── 대기 화면 (READY 게이트 패턴 — omok 파일럿) ─────────────── */
+.screen-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: calc(100vh - 60px);
+}
+.waiting-card {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 14px;
+  padding: 28px 32px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+.waiting-logo { font-size: 40px; margin-bottom: 10px; }
+.waiting-title { font-size: 20px; font-weight: 700; margin-bottom: 18px; color: #e6e6f0; }
+
+/* 인라인 닉네임 게이트 */
+.name-gate-inline { margin: 8px 0 18px; }
+.name-gate-msg { font-size: 0.9rem; color: #aaa; margin: 0 0 10px; }
+.name-gate-inline input {
+  width: 70%; max-width: 240px; padding: 10px 12px;
+  border: 2px solid #2a2a4a; border-radius: 8px;
+  font-size: 0.95rem; background: #1a1a2e; color: #e6e6f0;
+}
+.btn-inline-enter {
+  margin-top: 10px; background: #3a7bd5; color: #fff;
+  border: none; border-radius: 8px; padding: 10px 22px;
+  font-size: 0.95rem; cursor: pointer;
+}
+.btn-inline-enter:hover { filter: brightness(1.08); }
+
+/* 대기 중 안내 */
+.waiting-solo { margin: 8px 0 14px; }
+.waiting-message { font-size: 0.95rem; color: #aaa; }
+
+/* 상대 이름 표시 */
+.opponent-info { font-size: 1.05rem; color: #f1c40f; margin: 6px 0 14px; }
+
+/* READY 패널 */
+.ready-panel { margin: 8px 0 16px; }
+.ready-status {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 1rem; color: #e6e6f0; margin-bottom: 12px;
+}
+.ready-label { color: #aaa; }
+.ready-sep { color: #aaa; opacity: .4; }
+.ready-mark { font-size: 1.2rem; transition: transform 0.2s; }
+.ready-mark.ready { transform: scale(1.15); }
+.ready-mark.not-ready { opacity: 0.7; }
+.btn-ready {
+  background: #3a7bd5; color: #fff; border: none; border-radius: 10px;
+  padding: 12px 28px; font-size: 1.05rem; cursor: pointer;
+}
+.btn-ready:hover { filter: brightness(1.08); }
+.btn-ready:disabled { opacity: 0.6; cursor: default; }
+
+/* 규칙 요약 */
+.rules-summary {
+  border-top: 1px solid #2a2a4a; margin-top: 18px; padding-top: 14px; text-align: left;
+}
+.rules-summary h3 { font-size: 0.95rem; color: #aaa; margin: 0 0 8px; }
+.rules-summary ul { margin: 0; padding-left: 18px; }
+.rules-summary li { font-size: 0.85rem; color: #c0c0d0; margin-bottom: 4px; }
+
+/* 상대 이탈 배너 */
+.opponent-left-banner {
+  position: fixed; top: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, #7c2d2d, #4a1a1a);
+  color: #fbbf24; display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 14px 18px; z-index: 8000;
+  font-size: 1rem; font-weight: 600;
+}
+.btn-banner-return-lobby {
+  background: #fbbf24; color: #1a1a1a; border: none; border-radius: 8px;
+  padding: 8px 18px; font-weight: 700; cursor: pointer;
+}

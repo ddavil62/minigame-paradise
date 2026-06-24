@@ -46,6 +46,8 @@ export function createApp() {
   /**
    * @typedef {Object} Player
    * @property {'p1'|'p2'} id
+   * @property {string} name
+   * @property {boolean} joined   JOIN 메시지 수신 여부
    * @property {import('ws').WebSocket} ws
    */
 
@@ -53,6 +55,8 @@ export function createApp() {
   let players = [];
   /** @type {import('./game.js').GameState|null} */
   let game = null;
+  /** READY 게이트: 양쪽 모두 들어있으면 게임 시작 (omok 패턴). */
+  const readySet = new Set();
 
   /**
    * 모든 플레이어에게 각자의 시점 스냅샷을 브로드캐스트.
@@ -88,6 +92,36 @@ export function createApp() {
     }
   }
 
+  /**
+   * 각 플레이어에게 본인 기준 READY 상태를 개별 전송한다(omok 패턴).
+   */
+  function broadcastReadyState() {
+    for (const p of players) {
+      if (p.ws.readyState !== 1) continue;
+      const opp = players.find(q => q.id !== p.id);
+      sendTo(p, {
+        type: 'READY_STATE',
+        myReady: readySet.has(p.id),
+        opponentReady: opp ? readySet.has(opp.id) : false,
+      });
+    }
+  }
+
+  /**
+   * 양쪽 READY 시 게임을 시작한다(READY 게이트).
+   */
+  function maybeStartGameIfReady() {
+    if (players.length < 2) return;
+    if (!players.every(p => p.joined)) return;
+    if (!players.every(p => readySet.has(p.id))) return;
+    if (game) return;
+    console.log('[davinci] 양쪽 READY → 새 게임 시작');
+    game = createGame('p1');
+    readySet.clear();
+    broadcastAll({ type: 'GAME_START' });
+    broadcastState();
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
@@ -116,19 +150,11 @@ export function createApp() {
 
     const playerId = players.length === 0 ? 'p1' : 'p2';
     /** @type {Player} */
-    const player = { id: playerId, ws };
+    const player = { id: playerId, name: playerId, joined: false, ws };
     players.push(player);
     console.log(`[davinci] ${playerId} 연결됨 (${players.length}/2)`);
 
-    sendTo(player, { type: 'JOINED', playerId, waiting: players.length < 2 });
-
-    // 두 명 모두 입장 시 자동으로 새 게임 시작
-    if (players.length === 2) {
-      game = createGame('p1');
-      console.log('[davinci] 두 플레이어 입장 완료 → 새 게임 시작');
-      broadcastAll({ type: 'GAME_START' });
-      broadcastState();
-    }
+    // JOIN 메시지를 기다린다 (자동 JOINED 제거 — READY 게이트 패턴).
 
     // ── 메시지 라우터 ──
     ws.on('message', (data) => {
@@ -141,6 +167,37 @@ export function createApp() {
       }
 
       switch (msg.type) {
+        case 'JOIN': {
+          player.name = (msg.name || '(알 수 없음)').toString().slice(0, 32);
+          player.joined = true;
+          const opp = players.find(p => p.id !== player.id && p.joined);
+          sendTo(player, {
+            type: 'JOINED',
+            playerId: player.id,
+            waiting: players.length < 2 || !opp,
+            opponentName: opp ? opp.name : '',
+          });
+          // 상대에게 내 이름을 알린다 — 상대가 이미 입장한 경우 JOINED를 다시 보낸다.
+          if (opp) {
+            sendTo(opp, {
+              type: 'JOINED',
+              playerId: opp.id,
+              waiting: false,
+              opponentName: player.name,
+            });
+          }
+          broadcastReadyState();
+          break;
+        }
+
+        case 'READY': {
+          if (!player.joined) break;
+          readySet.add(player.id);
+          broadcastReadyState();
+          maybeStartGameIfReady();
+          break;
+        }
+
         case 'PLACE_JOKER': {
           if (!game) break;
           const result = placeJoker(game, player.id, msg.insertAfter);
@@ -205,6 +262,7 @@ export function createApp() {
             ? (game.winner === 'p1' ? 'p2' : 'p1')
             : 'p1';
           game = createGame(nextFirst);
+          readySet.clear();
           console.log(`[davinci] NEW_GAME → 새 게임 시작 (선공: ${nextFirst})`);
           broadcastAll({ type: 'GAME_START' });
           broadcastState();
@@ -218,13 +276,17 @@ export function createApp() {
 
     ws.on('close', () => {
       console.log(`[davinci] ${player.id} 연결 해제`);
+      const leftName = player.name || '(알 수 없음)';
+      readySet.delete(player.id);
       players = players.filter((p) => p.id !== player.id);
       if (players.length === 0) {
         game = null;
+        readySet.clear();
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
-          message: '상대방이 나갔다. 새 친구가 접속하면 게임이 재시작된다.',
+          name: leftName,
+          message: `${leftName}님이 나갔습니다.`,
         });
         game = null;
       }

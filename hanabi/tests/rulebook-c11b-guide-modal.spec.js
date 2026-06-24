@@ -4,8 +4,7 @@
  * 헤더에 추가된 📖 가이드 버튼으로 호출되는 모달 슬라이더 검증.
  * 게임 시작 후에도 대기 화면 인라인 슬라이더와 독립적으로 룰 가이드를 재열람할 수 있어야 한다.
  *
- * 사전 요건: hanabi 서버가 http://localhost:3096 에서 실행 중이어야 한다.
- *   node server.js --port 3096
+ * 사전 요건: 없음 — createApp()으로 동적 포트에서 자체 서버를 생성한다.
  *
  * 실행:
  *   npx playwright test tests/rulebook-c11b-guide-modal.spec.js --reporter=list
@@ -19,8 +18,39 @@
  */
 
 import { test, expect } from 'playwright/test';
+import http from 'http';
+import { createApp } from '../server.js';
 
-const BASE = 'http://localhost:3096';
+// ── 서버 헬퍼 ──────────────────────────────────────────────────────
+function startServer() {
+  return new Promise((resolve, reject) => {
+    const app = createApp();
+    const server = http.createServer(app.handleHttp);
+    server.on('upgrade', app.handleUpgrade);
+    server.listen(0, () => resolve({ server, port: server.address().port }));
+    server.once('error', reject);
+  });
+}
+function stopServer(server) {
+  return new Promise((resolve) => {
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    server.close(() => resolve());
+    setTimeout(resolve, 300);
+  });
+}
+
+let _server;
+let BASE = '';
+
+test.beforeAll(async () => {
+  const { server, port } = await startServer();
+  _server = server;
+  BASE = `http://localhost:${port}`;
+});
+test.afterAll(async () => {
+  await stopServer(_server);
+});
+
 const TOTAL = 7;
 
 /**
@@ -32,7 +62,10 @@ async function openPage(browser, viewport = { width: 1000, height: 900 }) {
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', (e) => errs.push(e.message));
-  await page.goto(BASE);
+  await page.goto(`${BASE}?name=P1`);
+  // READY 게이트: 준비 버튼 클릭(1인이면 대기 화면에 머문다).
+  await page.waitForSelector('#btn-ready:not([hidden])', { timeout: 10000 });
+  await page.click('#btn-ready');
   await page.waitForSelector('#btn-open-guide', { timeout: 15000 });
   await page.waitForSelector('#screen-waiting:not(.hidden)', { timeout: 15000 });
   return { ctx, page, errs };

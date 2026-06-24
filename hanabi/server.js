@@ -70,6 +70,8 @@ export function createApp(opts = {}) {
   let players = [];
   /** @type {import('./game.js').GameState|null} */
   let game = null;
+  /** READY 게이트: 양쪽 모두 들어있으면 게임 시작 (omok 패턴). */
+  const readySet = new Set();
 
   /**
    * 모든 플레이어에게 각자의 마스킹된 STATE 스냅샷을 개별 전송한다(§12-6).
@@ -119,10 +121,38 @@ export function createApp(opts = {}) {
   }
 
   /**
+   * 각 플레이어에게 본인 기준 READY 상태를 개별 전송한다(omok 패턴).
+   */
+  function broadcastReadyState() {
+    for (const p of players) {
+      if (p.ws.readyState !== 1) continue;
+      const opp = players.find(q => q.id !== p.id);
+      sendTo(p, {
+        type: 'READY_STATE',
+        myReady: readySet.has(p.id),
+        opponentReady: opp ? readySet.has(opp.id) : false,
+      });
+    }
+  }
+
+  /**
+   * 양쪽 READY 시 게임을 시작한다(READY 게이트).
+   */
+  function maybeStartGameIfReady() {
+    if (players.length < 2) return;
+    if (!players.every(p => p.joined)) return;
+    if (!players.every(p => readySet.has(p.id))) return;
+    if (game) return; // 이미 시작
+    console.log('[hanabi] 양쪽 READY → 새 게임 시작');
+    startNewGame();
+  }
+
+  /**
    * 새 게임을 시작하고 START + STATE를 전송한다.
    */
   function startNewGame() {
     game = createGame();
+    readySet.clear();
     for (const p of players) p.rematchReady = false;
     broadcastAll({ type: 'START' });
     broadcastState();
@@ -172,19 +202,36 @@ export function createApp(opts = {}) {
 
       switch (msg.type) {
         case 'JOIN': {
-          player.name = (msg.playerName || playerId).toString().slice(0, 32);
+          player.name = (msg.name || msg.playerName || '(알 수 없음)').toString().slice(0, 32);
           player.joined = true;
+          const opp = players.find(p => p.id !== player.id && p.joined);
           sendTo(player, {
             type: 'JOINED',
             playerId: player.id,
-            waiting: players.length < 2,
+            waiting: players.length < 2 || !opp,
             hostUrl: HOST_URL,
+            opponentName: opp ? opp.name : '',
           });
-          // 두 명이 모두 접속 + JOIN 완료했을 때만 새 게임 시작(중복 시작 방지).
-          if (players.length === 2 && players.every((p) => p.joined) && !game) {
-            console.log('[hanabi] 두 플레이어 입장 완료 → 새 게임 시작');
-            startNewGame();
+          // 상대에게 내 이름을 알린다 — 상대가 이미 입장한 경우 JOINED를 다시 보낸다.
+          if (opp) {
+            sendTo(opp, {
+              type: 'JOINED',
+              playerId: opp.id,
+              waiting: false,
+              hostUrl: HOST_URL,
+              opponentName: player.name,
+            });
           }
+          // READY 상태 전송 (JOIN 직후 양쪽에 현재 READY 상태 알림).
+          broadcastReadyState();
+          break;
+        }
+
+        case 'READY': {
+          if (!player.joined) break;
+          readySet.add(player.id);
+          broadcastReadyState();
+          maybeStartGameIfReady();
           break;
         }
 
@@ -255,15 +302,19 @@ export function createApp(opts = {}) {
     // ── 연결 해제 ──
     ws.on('close', () => {
       console.log(`[hanabi] ${player.id} 연결 해제`);
+      const leftName = player.name || '(알 수 없음)';
+      readySet.delete(player.id);
       players = players.filter((p) => p.id !== player.id);
       if (players.length === 0) {
         game = null;
+        readySet.clear();
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
-          message: '상대방이 나갔다. 새 친구가 접속하면 게임이 재시작된다.',
+          name: leftName,
+          message: `${leftName}님이 나갔습니다.`,
         });
-        game = null; // 1명 남으면 게임 무효화 → 두 번째 접속 시 새 게임 시작.
+        game = null; // 1명 남으면 게임 무효화 -> 두 번째 접속 시 새 게임 시작.
       }
     });
 

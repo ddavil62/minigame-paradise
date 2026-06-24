@@ -106,7 +106,9 @@ async function setupGame(port) {
   await p1.next('JOINED');
   p2.send({ type: 'JOIN', playerName: 'P2' });
   await p2.next('JOINED');
-  // p2 JOIN으로 두 명 완료 → START + STATE broadcast.
+  // READY 게이트: 양쪽 모두 READY 전송 후 START + STATE 수신.
+  p1.send({ type: 'READY' });
+  p2.send({ type: 'READY' });
   await p1.next('START');
   await p2.next('START');
   const s1 = await p1.next('STATE');
