@@ -90,6 +90,15 @@ export function createApp(opts = {}) {
   }
 
   /**
+   * 지정 플레이어의 상대를 반환한다. 없으면 null.
+   * @param {string} pid
+   * @returns {Player|null}
+   */
+  function otherPlayer(pid) {
+    return players.find((p) => p.id !== pid) || null;
+  }
+
+  /**
    * 모든 플레이어에게 임의 페이로드를 broadcast 한다.
    * @param {object} payload
    */
@@ -97,6 +106,31 @@ export function createApp(opts = {}) {
     const msg = JSON.stringify(payload);
     for (const p of players) {
       if (p.ws.readyState === 1) p.ws.send(msg);
+    }
+  }
+
+  /**
+   * 각 플레이어에게 개인화된 READY_STATE를 보내고,
+   * 후방 호환용 READY_STATUS도 broadcast 한다.
+   */
+  function broadcastReadyState() {
+    const p1 = players.find((p) => p.id === 'p1');
+    const p2 = players.find((p) => p.id === 'p2');
+    // 후방 호환 broadcast.
+    broadcastAll({
+      type: 'READY_STATUS',
+      p1Ready: p1 ? p1.ready : false,
+      p2Ready: p2 ? p2.ready : false,
+    });
+    // 개인화 READY_STATE (omok 패턴).
+    for (const p of players) {
+      if (p.ws.readyState !== 1) continue;
+      const opp = otherPlayer(p.id);
+      sendTo(p, {
+        type: 'READY_STATE',
+        myReady: p.ready,
+        opponentReady: opp ? opp.ready : false,
+      });
     }
   }
 
@@ -257,24 +291,37 @@ export function createApp(opts = {}) {
 
       switch (msg.type) {
         case 'JOIN': {
-          player.name = (msg.playerName || playerId).toString().slice(0, 32);
+          // 닉네임: playerName(클라 기존) 또는 name(omok 패턴) 폴백.
+          const rawName = typeof msg.playerName === 'string' ? msg.playerName
+            : (typeof msg.name === 'string' ? msg.name : '');
+          player.name = (rawName || '(알 수 없음)').toString().slice(0, 32);
           player.joined = true;
+
+          const opp = otherPlayer(player.id);
           sendTo(player, {
             type: 'JOINED',
             playerId: player.id,
             waiting: players.length < 2,
             hostUrl: HOST_URL,
+            opponentName: opp && opp.joined ? opp.name : '',
           });
+
+          // 상대가 이미 입장해 있으면 상대에게도 갱신된 JOINED 재송신 (닉네임 전달).
+          if (opp && opp.joined && opp.ws.readyState === 1) {
+            sendTo(opp, {
+              type: 'JOINED',
+              playerId: opp.id,
+              waiting: false,
+              hostUrl: HOST_URL,
+              opponentName: player.name,
+            });
+          }
           break;
         }
 
         case 'READY': {
           player.ready = true;
-          broadcastAll({
-            type: 'READY_STATUS',
-            p1Ready: players.find((p) => p.id === 'p1')?.ready || false,
-            p2Ready: players.find((p) => p.id === 'p2')?.ready || false,
-          });
+          broadcastReadyState();
           if (
             players.length === 2 &&
             players.every((p) => p.joined && p.ready) &&
@@ -396,6 +443,7 @@ export function createApp(opts = {}) {
 
     // ── 연결 해제 ──
     ws.on('close', () => {
+      const leftName = player.name || '';
       console.log(`[rummikub] ${player.id} 연결 해제 (mode=${ws._mode})`);
       players = players.filter((p) => p.id !== player.id);
       // [#7] 이탈 후 잔류 플레이어의 ready 리셋 — 재접속 시 한 명만 READY로 자동 게임 시작 방지.
@@ -411,8 +459,10 @@ export function createApp(opts = {}) {
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
+          name: leftName,
           message: '상대방이 나갔다. 새 친구가 접속하면 게임이 재시작된다.',
         });
+        broadcastReadyState();
         game = null;
       }
     });

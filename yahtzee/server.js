@@ -118,6 +118,38 @@ export function createApp(opts = {}) {
   }
 
   /**
+   * 상대 player를 반환한다(2인 전용 헬퍼).
+   * @param {Player} player
+   * @returns {Player|undefined}
+   */
+  function otherPlayer(player) {
+    return players.find((p) => p.id !== player.id);
+  }
+
+  /**
+   * 각 플레이어에게 자신 관점의 READY_STATE를 개별 전송한다.
+   * (myReady = 본인, opponentReady = 상대 기준 — 오목 패턴)
+   * 후방 호환: 기존 READY_STATUS도 동시 broadcast 한다.
+   */
+  function broadcastReadyState() {
+    // 오목 패턴: 개별 전송 READY_STATE
+    for (const p of players) {
+      const other = otherPlayer(p);
+      sendTo(p, {
+        type: 'READY_STATE',
+        myReady: p.ready,
+        opponentReady: other ? other.ready : false,
+      });
+    }
+    // 후방 호환: 기존 READY_STATUS broadcast (N인 확장 형식)
+    const readyStatus = { type: 'READY_STATUS' };
+    for (const p of players) {
+      readyStatus[p.id + 'Ready'] = p.ready;
+    }
+    broadcastAll(readyStatus);
+  }
+
+  /**
    * 게임이 종료됐으면 GAME_OVER를 broadcast 한다.
    * N인 확장: totals 객체에 전원 합계 포함. 후방 호환으로 p1Total/p2Total도 유지.
    * @returns {boolean} 종료됐으면 true
@@ -283,26 +315,44 @@ export function createApp(opts = {}) {
 
       switch (msg.type) {
         case 'JOIN': {
-          player.name = (msg.playerName || playerId).toString().slice(0, 32);
+          // 닉네임 전달. name 누락 시 '(알 수 없음)' 폴백(후방호환 — JOIN 미수신 smoke 무영향).
+          const rawName = typeof msg.playerName === 'string'
+            ? msg.playerName.trim().slice(0, 32)
+            : (typeof msg.name === 'string' ? msg.name.trim().slice(0, 12) : '');
+          player.name = rawName || '(알 수 없음)';
           player.joined = true;
+          console.log(`[yahtzee] JOIN: ${player.id} → "${player.name}"`);
+          // 상대가 이미 있으면 opponentName을 포함하여 전송.
+          const existingOpp = otherPlayer(player);
           sendTo(player, {
             type: 'JOINED',
             playerId: player.id,
             waiting: players.length < roomMaxPlayers,
             hostUrl: HOST_URL,
             roomMaxPlayers,
+            opponentName: (existingOpp && existingOpp.name && existingOpp.name !== '(알 수 없음)') ? existingOpp.name : undefined,
           });
+          // 상대에게 내 이름 고지(JOINED 재전송).
+          if (existingOpp) {
+            sendTo(existingOpp, {
+              type: 'JOINED',
+              playerId: existingOpp.id,
+              waiting: false,
+              hostUrl: HOST_URL,
+              roomMaxPlayers,
+              opponentName: player.name,
+            });
+          }
+          // READY_STATE 초기 전송.
+          broadcastReadyState();
           break;
         }
 
         case 'READY': {
           player.ready = true;
-          // N인 확장: 전원의 READY 상태를 동적으로 생성
-          const readyStatus = { type: 'READY_STATUS' };
-          for (const p of players) {
-            readyStatus[p.id + 'Ready'] = p.ready;
-          }
-          broadcastAll(readyStatus);
+          console.log(`[yahtzee] READY: ${player.id} (${players.filter(p => p.ready).length}/${players.length})`);
+          // 오목 패턴 READY_STATE 개별 전송 + 후방호환 READY_STATUS broadcast.
+          broadcastReadyState();
           // N명 모두 접속 + JOIN + READY 완료 시 새 게임 시작.
           if (
             players.length === roomMaxPlayers &&
@@ -419,9 +469,13 @@ export function createApp(opts = {}) {
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
-          message: '상대방이 나갔다. 새 친구가 접속하면 게임이 재시작된다.',
+          name: player.name || '(알 수 없음)',
+          message: '상대방이 나갔어요.',
         });
         game = null; // 정원 미달 시 게임 무효화 → 전원 재접속 + READY 시 새 게임.
+        // 남은 사람의 READY도 초기화(상대 합류 후 다시 READY).
+        for (const p of players) p.ready = false;
+        broadcastReadyState();
       }
     });
 

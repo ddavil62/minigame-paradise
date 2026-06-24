@@ -198,6 +198,23 @@ function sendTo(player, payload) {
 }
 
 /**
+ * 각 플레이어에게 개별 관점으로 READY_STATE를 전송한다 (오목 파일럿 패턴).
+ * myReady: 자기 자신의 ready, opponentReady: 상대의 ready.
+ * @returns {void}
+ */
+function broadcastReadyState() {
+  for (const me of players) {
+    if (me.ws.readyState !== 1) continue;
+    const opp = players.find((p) => p.id !== me.id);
+    sendTo(me, {
+      type: 'READY_STATE',
+      myReady: me.ready,
+      opponentReady: opp ? opp.ready : false,
+    });
+  }
+}
+
+/**
  * 라인 클리어 시 50% 확률로 아이템을 지급한다 (Phase 2).
  * 슬롯이 가득 차 있으면 무시한다.
  * @param {Player} player 수혜자
@@ -281,6 +298,7 @@ wss.on('connection', (ws, req) => {
       case 'READY':
         player.ready = true;
         console.log(`[server] ${player.id} READY`);
+        broadcastReadyState();
         // 두 명 모두 READY면 카운트다운 시작
         if (players.length === 2 && players.every((p) => p.ready)) {
           console.log('[server] 양쪽 READY → 게임 시작 카운트다운');
@@ -417,13 +435,16 @@ wss.on('connection', (ws, req) => {
   // ── 연결 해제 ──
   ws.on('close', () => {
     console.log(`[server] ${player.id} 연결 해제`);
+    const leaverName = player.name || '(알 수 없음)';
     players = players.filter((p) => p.id !== player.id);
     // 사람(비봇)이 끊긴 경우 봇 자식 프로세스도 종료 (자원 누수 방지).
     if (!isBot) {
       killBotChild();
     }
-    // 상대가 있으면 disconnect 결과 알림
+    // 상대가 있으면 이탈 배너 + disconnect 결과 알림
     if (players.length > 0) {
+      // 상대 이탈 배너용 OPPONENT_LEFT 메시지 전송
+      broadcastAll({ type: 'OPPONENT_LEFT', name: leaverName });
       const remainingId = players[0].id;
       broadcastAll({
         type: 'GAME_RESULT',

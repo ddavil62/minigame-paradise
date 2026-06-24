@@ -52,13 +52,25 @@ export function createNetwork(handlers) {
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
 
+    // 닉네임 3단계 폴백: URL ?name= → sessionStorage yutnori:name → 인라인 입력.
+    const urlName = urlParams.get('name');
+    let resolvedName = null;
+    if (urlName) {
+      resolvedName = urlName.slice(0, 12);
+      sessionStorage.setItem('yutnori:name', resolvedName);
+    } else {
+      resolvedName = sessionStorage.getItem('yutnori:name') || null;
+    }
+
     ws.addEventListener('open', () => {
       console.log('[net] 연결됨');
       reconnectAttempted = false;
-      // 연결 확립 시점을 상위(main.js)에 알린다 — JOIN은 반드시 open 이후에 보내야 한다.
-      // (고정 타이머로 JOIN을 보내면 연결이 늦게 열릴 때 JOIN이 유실되어
-      //  myId=null 소프트락("상대 턴" 오표시)이 발생한다. 재연결 시 재JOIN도 이 경로로 처리.)
-      if (typeof handlers.onOpen === 'function') handlers.onOpen();
+      const hasName = !!resolvedName;
+      // 닉네임이 있으면 즉시 JOIN, 없으면 main.js가 인라인 게이트를 표시.
+      if (hasName) {
+        ws.send(JSON.stringify({ type: 'JOIN', playerName: resolvedName }));
+      }
+      if (typeof handlers.onOpen === 'function') handlers.onOpen({ hasName });
     });
     ws.addEventListener('message', (event) => {
       let msg;
@@ -118,10 +130,25 @@ export function createNetwork(handlers) {
           reason: msg.reason || 'finish',
         });
         break;
+      case 'READY_STATE':
+        if (typeof handlers.onReadyState === 'function') {
+          handlers.onReadyState({
+            myReady: !!msg.myReady,
+            opponentReady: !!msg.opponentReady,
+          });
+        }
+        break;
+      case 'OPPONENT_LEFT':
+        if (typeof handlers.onOpponentLeft === 'function') {
+          handlers.onOpponentLeft({ name: msg.name || '' });
+        }
+        break;
       case 'REMATCH_STATUS':
         handlers.onRematchStatus({
           p1Ready: !!msg.p1Ready,
           p2Ready: !!msg.p2Ready,
+          // N인 확장: playersReady 배열 전달
+          playersReady: Array.isArray(msg.playersReady) ? msg.playersReady : undefined,
         });
         break;
       case 'ERROR':

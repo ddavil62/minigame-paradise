@@ -19,6 +19,28 @@ import { createItems } from './items.js';
 document.addEventListener('DOMContentLoaded', () => {
   // 요소 참조
   const els = {
+    // 화면 전환 대상
+    screenWaiting: document.getElementById('screen-waiting'),
+    gameMain: document.querySelector('.game-main'),
+    // 대기 화면 요소
+    waitingTitle: document.querySelector('#screen-waiting .waiting-title'),
+    waitingSolo: document.getElementById('waiting-solo'),
+    aiStartBtn: document.getElementById('btn-start-ai'),
+    opponentInfo: document.getElementById('opponent-info'),
+    opponentNameLabel: document.getElementById('opponent-name-label'),
+    readyPanel: document.getElementById('ready-panel'),
+    myReadyMark: document.getElementById('my-ready-mark'),
+    oppReadyMark: document.getElementById('opp-ready-mark'),
+    btnReady: document.getElementById('btn-ready'),
+    // 닉네임 게이트
+    nameGateInline: document.getElementById('name-gate-inline'),
+    inlineNameInput: document.getElementById('inline-name-input'),
+    btnInlineEnter: document.getElementById('btn-inline-enter'),
+    // 상대 이탈 배너
+    opponentLeftBanner: document.getElementById('opponent-left-banner'),
+    opponentLeftMsg: document.getElementById('opponent-left-msg'),
+    btnBannerReturnLobby: document.getElementById('btn-banner-return-lobby'),
+    // 게임 화면 요소
     boardCanvas: document.getElementById('board-canvas'),
     nextCanvas: document.getElementById('next-canvas'),
     holdCanvas: document.getElementById('hold-canvas'),
@@ -30,14 +52,49 @@ document.addEventListener('DOMContentLoaded', () => {
     statusEl: document.getElementById('status-msg'),
     resultOverlay: document.getElementById('result-overlay'),
     resultText: document.getElementById('result-text'),
-    readyBtn: document.getElementById('ready-btn'),
-    aiPanel: document.getElementById('ai-panel'),
-    aiStartBtn: document.getElementById('btn-start-ai'),
     rematchBtn: document.getElementById('rematch-btn'),
     playerLabel: document.getElementById('player-label'),
     opponentStatus: document.getElementById('opponent-status'),
     countdownEl: document.getElementById('countdown'),
   };
+
+  // ── 화면 전환 ──
+  /** @param {'waiting'|'game'} name */
+  function showScreen(name) {
+    if (els.screenWaiting) els.screenWaiting.classList.toggle('hidden', name !== 'waiting');
+    if (els.gameMain) els.gameMain.classList.toggle('hidden', name !== 'game');
+  }
+
+  function getCurrentMode() {
+    return new URLSearchParams(location.search).get('mode')
+      || sessionStorage.getItem('tetris:mode')
+      || 'human';
+  }
+
+  function updateWaitingTitle(hasOpponent) {
+    if (!els.waitingTitle) return;
+    els.waitingTitle.textContent = hasOpponent ? '대전 준비 중' : '상대방을 기다리는 중...';
+  }
+
+  function updateReadyUI(myReadyVal, oppReadyVal) {
+    if (els.myReadyMark) {
+      els.myReadyMark.textContent = myReadyVal ? '✅' : '⌛';
+      els.myReadyMark.classList.toggle('ready', myReadyVal);
+      els.myReadyMark.classList.toggle('not-ready', !myReadyVal);
+    }
+    if (els.oppReadyMark) {
+      els.oppReadyMark.textContent = oppReadyVal ? '✅' : '⌛';
+      els.oppReadyMark.classList.toggle('ready', oppReadyVal);
+      els.oppReadyMark.classList.toggle('not-ready', !oppReadyVal);
+    }
+  }
+
+  function showOpponentLeftBanner(name) {
+    if (els.opponentLeftMsg) {
+      els.opponentLeftMsg.textContent = `${name || '상대방'}이(가) 나갔습니다.`;
+    }
+    if (els.opponentLeftBanner) els.opponentLeftBanner.classList.remove('hidden');
+  }
 
   // UI
   const ui = createUI(els);
@@ -69,33 +126,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Network
   net = createNetwork({
+    // 연결 확립 직후 — 닉네임 3단계 폴백에 따라 JOIN 여부를 결정한다.
+    onOpen: ({ hasName }) => {
+      if (!hasName) {
+        // 닉네임 없음(직접 URL 접근) → 인라인 게이트 표시, JOIN 보류.
+        if (els.nameGateInline) els.nameGateInline.classList.remove('hidden');
+        if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
+        if (els.readyPanel) els.readyPanel.classList.add('hidden');
+      }
+      // hasName=true인 경우 network.js가 이미 자동 JOIN을 보냈다.
+    },
     onJoined: ({ playerId, waiting }) => {
       els.playerLabel.textContent = playerId === 'p1' ? '나 (P1)' : '나 (P2)';
       if (waiting) {
         ui.setStatus('상대방을 기다리는 중...');
         els.opponentStatus.textContent = '대기 중';
+        updateWaitingTitle(false);
       } else {
         ui.setStatus('상대 입장. 준비 버튼을 눌러주세요.');
         els.opponentStatus.textContent = '입장 완료';
+        updateWaitingTitle(true);
       }
-      // "🤖 AI랑 시작" 패널: 호스트(p1) + 단독 대기 + 현재 mode≠ai 일 때만 노출.
-      // (이미 AI 모드로 들어왔거나 상대가 입장한 경우엔 숨긴다.)
-      if (els.aiPanel) {
-        const currentMode = new URLSearchParams(location.search).get('mode')
-          || sessionStorage.getItem('tetris:mode')
-          || '';
-        if (playerId === 'p1' && waiting && currentMode !== 'ai') {
-          els.aiPanel.classList.remove('hidden');
-        } else {
-          els.aiPanel.classList.add('hidden');
-        }
+      // READY 마크 초기화
+      updateReadyUI(false, false);
+      // AI 버튼: p1이고 혼자 대기 중이고 mode!=ai일 때만
+      if (playerId === 'p1' && waiting && getCurrentMode() !== 'ai') {
+        if (els.waitingSolo) els.waitingSolo.classList.remove('hidden');
+      } else {
+        if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
       }
+      // 상대 입장 시 READY 패널/버튼 표시
+      if (!waiting) {
+        if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+        if (els.btnReady) els.btnReady.hidden = false;
+      }
+      showScreen('waiting');
     },
     onStart: (countdown) => {
-      // 카운트다운 표시 후 게임 시작
+      // 게임 화면으로 전환
+      showScreen('game');
       ui.hideResult();
-      els.readyBtn.classList.add('hidden');
-      if (els.aiPanel) els.aiPanel.classList.add('hidden');
       els.rematchBtn.classList.add('hidden');
       ui.setStatus('');
       els.opponentStatus.textContent = '대전 중';
@@ -134,10 +204,20 @@ document.addEventListener('DOMContentLoaded', () => {
       ui.setItemSlotsInteractive(false);
       els.rematchBtn.classList.remove('hidden');
       els.opponentStatus.textContent = '대기 중';
-      // 런처 모드에서 상대 disconnect 시 로비로 자동 복귀
-      if (reason === 'disconnect' && window.location.pathname.startsWith('/tetris-battle/')) {
-        setTimeout(() => { window.location.href = '/'; }, 1200);
+      // 상대 disconnect 시 이탈 배너 표시 (자동 redirect 제거)
+      if (reason === 'disconnect') {
+        showOpponentLeftBanner();
       }
+    },
+    onReadyState: ({ myReady: mr, opponentReady: or }) => {
+      updateReadyUI(mr, or);
+      updateWaitingTitle(true);
+      if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
+      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+      if (els.btnReady && !mr) els.btnReady.hidden = false;
+    },
+    onOpponentLeft: ({ name }) => {
+      showOpponentLeftBanner(name);
     },
     onRematchStatus: ({ p1Ready, p2Ready }) => {
       const myId = net.getMyId();
@@ -189,20 +269,48 @@ document.addEventListener('DOMContentLoaded', () => {
   items.reset();
 
   // ── 버튼 이벤트 ──
-  els.readyBtn.addEventListener('click', () => {
-    net.ready();
-    els.readyBtn.disabled = true;
-    els.readyBtn.textContent = '준비 완료 (상대 대기)';
-  });
+  if (els.btnReady) {
+    els.btnReady.addEventListener('click', () => {
+      net.ready();
+      els.btnReady.disabled = true;
+      els.btnReady.textContent = '준비 완료 (상대 대기)';
+      updateReadyUI(true, false);
+    });
+  }
 
   // ── AI랑 시작 버튼 ──
-  // ?mode=ai 쿼리로 재접속 → network.js가 sessionStorage 저장 + WS URL에 mode=ai 부착
-  // → server.js가 봇 자식 프로세스를 자동 spawn.
   if (els.aiStartBtn) {
     els.aiStartBtn.addEventListener('click', () => {
       els.aiStartBtn.disabled = true;
       els.aiStartBtn.textContent = '🤖 AI 호출 중...';
       net.aiStart();
+    });
+  }
+
+  // ── 닉네임 게이트 (인라인 입력) ──
+  function submitInlineName() {
+    const name = (els.inlineNameInput ? els.inlineNameInput.value.trim() : '').slice(0, 12);
+    if (!name) return;
+    sessionStorage.setItem('tetris-battle:name', name);
+    if (els.nameGateInline) els.nameGateInline.classList.add('hidden');
+    if (els.waitingSolo) els.waitingSolo.classList.remove('hidden');
+    if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+    net.join(name);
+  }
+  if (els.btnInlineEnter) {
+    els.btnInlineEnter.addEventListener('click', submitInlineName);
+  }
+  if (els.inlineNameInput) {
+    els.inlineNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitInlineName();
+    });
+  }
+
+  // ── 상대 이탈 배너 — 로비 복귀 버튼 ──
+  if (els.btnBannerReturnLobby) {
+    els.btnBannerReturnLobby.addEventListener('click', () => {
+      fetch('/lobby/return', { method: 'POST' }).catch(() => {});
+      location.href = '/';
     });
   }
 
@@ -351,13 +459,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   requestAnimationFrame(perfTick);
 
-  // ── 시작: WebSocket 연결 + JOIN ──
+  // ── 시작: WebSocket 연결 ──
+  // JOIN은 network.js onOpen에서 닉네임 게이트 결과에 따라 자동 전송한다.
   net.connect();
-  // 약간의 지연 후 JOIN (open 이벤트 안정성)
-  setTimeout(() => {
-    const playerName = `Player-${Math.floor(Math.random() * 1000)}`;
-    net.join(playerName);
-  }, 300);
 
   console.log('[main] 초기화 완료');
 });

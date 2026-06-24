@@ -95,8 +95,8 @@ ws.on('message', (data) => {
   switch (msg.type) {
     case 'JOINED':
       myId = msg.playerId;
-      console.log(`[yutnori-bot] ${myId} 자리 점유 → READY 송신`);
-      send({ type: 'READY' });
+      console.log(`[yutnori-bot] ${myId} 자리 점유 → scheduleReady`);
+      scheduleReady();
       break;
     case 'START':
       console.log('[yutnori-bot] 게임 시작');
@@ -261,6 +261,23 @@ function choosePiece(pieces, resultName) {
     return a - b;                  // 동률 → 인덱스 오름차순
   });
   return candidates[0];
+}
+
+/** READY 타이머 (중복 방지). */
+let readyTimer = null;
+
+/**
+ * JOINED 수신 후 200~500ms 지연으로 READY를 자동 송신한다 (scheduleReady 패턴).
+ * 봇이 READY 없이 무한 대기하는 데드락을 방지한다.
+ */
+function scheduleReady() {
+  if (readyTimer) clearTimeout(readyTimer);
+  const delay = 200 + Math.floor(Math.random() * 300); // 200~500ms
+  readyTimer = setTimeout(() => {
+    readyTimer = null;
+    console.log('[yutnori-bot] READY 송신');
+    send({ type: 'READY' });
+  }, delay);
 }
 
 /**

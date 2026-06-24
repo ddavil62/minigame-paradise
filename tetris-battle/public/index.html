@@ -19,7 +19,57 @@
     <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
   </header>
 
-  <main class="game-main">
+  <!-- 대기 화면 -->
+  <section id="screen-waiting" class="screen screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">🎮</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+
+      <!-- 닉네임 게이트 (직접 진입 폴백) -->
+      <div id="name-gate-inline" class="name-gate-inline hidden">
+        <p class="name-gate-msg">닉네임을 입력하고 입장하세요</p>
+        <input id="inline-name-input" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button id="btn-inline-enter" class="btn-inline-enter" type="button">입장</button>
+      </div>
+
+      <!-- 혼자 대기(1인) — AI 진입 버튼 -->
+      <div id="waiting-solo" class="waiting-solo">
+        <p class="waiting-message">친구를 기다리는 중...</p>
+        <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
+        <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+      </div>
+
+      <!-- 상대 입장 시 -->
+      <div id="opponent-info" class="opponent-info hidden">
+        <span id="opponent-name-label"></span>님과 대전
+      </div>
+
+      <!-- 양방향 READY 패널 -->
+      <div id="ready-panel" class="ready-panel">
+        <div class="ready-status-marks">
+          <span class="ready-label">나</span>
+          <span id="my-ready-mark" class="ready-mark not-ready">⌛</span>
+          <span class="ready-sep">·</span>
+          <span class="ready-label">상대</span>
+          <span id="opp-ready-mark" class="ready-mark not-ready">⌛</span>
+        </div>
+        <button id="btn-ready" class="btn-ready" type="button" hidden>준비 완료</button>
+      </div>
+
+      <!-- 룰 요약 -->
+      <div class="rules-summary">
+        <h3>테트리스 배틀 규칙</h3>
+        <ul>
+          <li>라인 클리어 시 상대에게 가비지 전송</li>
+          <li>2줄 이상 동시 클리어 → 보너스 가비지</li>
+          <li>콤보: 연속 클리어 시 추가 가비지</li>
+          <li>보드 천장 도달 시 패배</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <main class="game-main hidden">
     <!-- 좌측: 내 보드 영역 -->
     <section class="player-area me">
       <!-- 좌측 사이드: HOLD + 점수 + 아이템 슬롯 -->
@@ -72,18 +122,10 @@
       </aside>
     </section>
 
-    <!-- 중앙: VS + 카운트다운 + 결과 -->
+    <!-- 중앙: VS + 카운트다운 -->
     <section class="center-area">
       <div class="vs-label">VS</div>
       <div id="countdown" class="countdown hidden">3</div>
-      <!-- 대기 화면 P1/P2 입장 상태는 헤더의 #opponent-status가 표시한다(초대 패널 제거). -->
-      <button id="ready-btn" class="primary-btn">준비</button>
-      <!-- AI 모드 진입 패널 — 클릭 시 ?mode=ai로 재접속(대기 중에만 노출, 게임 시작 후 숨김) -->
-      <div id="ai-panel" class="ai-panel hidden">
-        <div class="ai-divider"><span>또는</span></div>
-        <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
-        <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
-      </div>
     </section>
 
     <!-- 우측: 상대방 미니맵 -->
@@ -112,6 +154,12 @@
 
   <!-- Phase 4 C-2: 토스트 메시지 (주소 복사 성공 등). JS가 .show 클래스로 토글. -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- 상대 이탈 배너 -->
+  <div id="opponent-left-banner" class="opponent-left-banner hidden">
+    <span id="opponent-left-msg">상대방이 나갔습니다.</span>
+    <button id="btn-banner-return-lobby" class="btn-banner-return-lobby" type="button">로비로 돌아가기</button>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

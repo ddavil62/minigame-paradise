@@ -152,6 +152,215 @@ body {
   color: var(--text-on-wood);
 }
 
+/* ── 화면 전환 유틸 ──────────────────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── 대기 화면 ───────────────────────────────────────────────────── */
+.screen-waiting {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: 0;
+}
+
+.waiting-card {
+  background: linear-gradient(180deg, var(--hanji), var(--hanji-2));
+  border: 2px solid var(--hanji-line);
+  border-radius: 14px;
+  padding: 32px 36px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .5),
+    0 8px 32px rgba(0, 0, 0, .5);
+}
+
+.waiting-logo {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.waiting-title {
+  font-family: 'Jua', sans-serif;
+  font-size: 20px;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+
+/* ── 닉네임 게이트 (인라인) ──────────────────────────────────────── */
+.name-gate-inline {
+  margin: 8px 0 18px;
+  text-align: center;
+}
+
+.name-gate-msg {
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 13px;
+  color: var(--ink-dim);
+  margin-bottom: 8px;
+}
+
+.name-gate-inline input {
+  padding: 8px 12px;
+  border: 1.5px solid var(--hanji-line);
+  border-radius: 8px;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 14px;
+  width: 100%;
+  max-width: 260px;
+  text-align: center;
+  background: rgba(255, 255, 255, .7);
+  color: var(--ink);
+}
+
+.btn-inline-enter {
+  margin-top: 8px;
+  padding: 8px 24px;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: var(--text-on-wood);
+  border: none;
+  border-radius: 8px;
+  font-family: 'Jua', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--plank-dark);
+}
+
+/* ── 혼자 대기(AI 버튼) ──────────────────────────────────────────── */
+.waiting-solo {
+  margin: 12px 0;
+}
+
+.waiting-message {
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 14px;
+  color: var(--ink-dim);
+  margin-bottom: 10px;
+}
+
+/* ── 상대 입장 정보 ──────────────────────────────────────────────── */
+.opponent-info {
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 15px;
+  color: var(--ink);
+  margin: 12px 0;
+  padding: 8px;
+  background: rgba(212, 129, 42, .12);
+  border-radius: 8px;
+}
+
+/* ── READY 패널 ──────────────────────────────────────────────────── */
+.ready-panel {
+  margin: 8px 0 16px;
+}
+
+.ready-status-marks {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.ready-label { font-weight: bold; }
+
+.ready-mark.not-ready { color: var(--ink-dim); }
+.ready-mark.is-ready { color: var(--win); }
+
+.ready-sep { opacity: 0.4; }
+
+.btn-ready {
+  padding: 10px 28px;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: var(--text-on-wood);
+  border: none;
+  border-radius: 10px;
+  font-family: 'Jua', sans-serif;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--plank-dark), 0 6px 14px rgba(0, 0, 0, .35);
+  width: 100%;
+}
+
+.btn-ready:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── 룰 요약 ─────────────────────────────────────────────────────── */
+.rules-summary {
+  margin-top: 16px;
+  text-align: left;
+  padding: 12px;
+  background: rgba(240, 230, 200, .5);
+  border-radius: 8px;
+  border: 1px dashed var(--hanji-line);
+}
+
+.rules-summary h3 {
+  font-family: 'Jua', sans-serif;
+  font-size: 13px;
+  color: var(--accent-label);
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.rules-summary ul {
+  list-style: none;
+  padding: 0;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+  line-height: 1.6;
+}
+
+.rules-summary li {
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--hanji-line);
+}
+
+.rules-summary li:last-child { border-bottom: none; }
+
+/* ── 상대 이탈 배너 ─────────────────────────────────────────────── */
+.opponent-left-banner {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 24px;
+  background: linear-gradient(180deg, rgba(192, 57, 43, .92), rgba(139, 32, 32, .92));
+  color: var(--text-on-wood);
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 15px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .5);
+}
+
+.opponent-left-banner.hidden { display: none; }
+
+.btn-banner-return-lobby {
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, .2);
+  border: 1px solid rgba(255, 255, 255, .4);
+  border-radius: 6px;
+  color: var(--text-on-wood);
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-banner-return-lobby:hover {
+  background: rgba(255, 255, 255, .3);
+}
+
 /* ── 메인 (2단: 보드 1fr + 인포바 고정폭) ───────────────────────── */
 /* 요트다이스 .screen-game(grid 360px 1fr) 패턴을 거울로 적용:
    윷놀이는 보드가 왼쪽 큰 영역, 인포바가 오른쪽 고정폭. */

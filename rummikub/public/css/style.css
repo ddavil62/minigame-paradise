@@ -86,13 +86,48 @@ body.theme-rummikub {
 .waiting-logo { font-size:40px; }
 .waiting-title { font-family:'Jua',sans-serif; font-size:24px; color:var(--ink); margin:8px 0 18px; }
 
+/* 인라인 닉네임 게이트 (직접 진입 폴백 3단계) */
+.name-gate-inline { margin:8px 0 18px; }
+.name-gate-msg { font-size:13px; color:var(--ink-dim); margin:0 0 10px; }
+.name-gate-inline input[type="text"] {
+  font-family:'Gowun Dodum',sans-serif; font-size:14px;
+  padding:10px 14px; border:2px solid var(--paper-line); border-radius:10px;
+  width:65%; max-width:220px; outline:none; color:var(--ink);
+  background:var(--paper);
+}
+.name-gate-inline input[type="text"]:focus { border-color:var(--felt-1); }
+.btn-inline-enter {
+  font-family:'Jua',sans-serif; font-size:14px; color:#fff;
+  background:var(--felt-1); border:none; border-radius:10px;
+  padding:10px 18px; margin-left:6px; cursor:pointer;
+}
+.btn-inline-enter:hover { filter:brightness(1.08); }
+
+/* 혼자 대기 중 (AI 진입) */
+.waiting-solo { margin:6px 0 16px; }
+.waiting-message { font-size:13px; color:var(--ink-dim); margin:0 0 10px; }
+
+/* 상대 정보 표시 */
+.opponent-info {
+  font-family:'Jua',sans-serif; font-size:16px; color:var(--felt-1);
+  margin:8px 0 14px; letter-spacing:.5px;
+}
+
 .ready-panel { margin:14px 0; }
 .ready-status { display:flex; gap:12px; justify-content:center; align-items:center; margin-bottom:12px; }
-.ready-slot { font-family:'Jua',sans-serif; font-size:15px; color:var(--ink); white-space:nowrap; }
-.ready-mark { color:var(--ink-dim); font-weight:600; font-family:'Gowun Dodum',sans-serif; font-size:13px; white-space:nowrap; }
+.ready-label { font-family:'Jua',sans-serif; font-size:14px; color:var(--ink); white-space:nowrap; }
+.ready-mark { font-weight:600; font-family:'Gowun Dodum',sans-serif; font-size:13px; white-space:nowrap; color:var(--ink-dim); }
 .ready-mark.ready { color:var(--felt-1); }
-.ready-divider { color:var(--ink-dim); opacity:.5; }
+.ready-sep { color:var(--ink-dim); opacity:.5; }
 .ready-hint { font-size:12px; color:var(--ink-dim); margin-top:8px; }
+.btn-ready {
+  font-family:'Jua',sans-serif; font-size:15px; color:#fff; cursor:pointer;
+  background:linear-gradient(180deg,#e26b42,#c2451f); border:none; border-radius:12px;
+  padding:11px 30px; box-shadow:0 4px 0 #8f3214;
+  transition:transform .06s, box-shadow .06s, filter .1s;
+}
+.btn-ready:hover { filter:brightness(1.05); }
+.btn-ready:active { transform:translateY(4px); box-shadow:0 0 0 #8f3214; }
 
 .primary-btn {
   font-family:'Jua',sans-serif; font-size:15px; color:#fff; cursor:pointer; font-weight:400; white-space:nowrap;

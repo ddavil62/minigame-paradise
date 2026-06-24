@@ -51,14 +51,29 @@ export function createNetwork(handlers) {
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
 
+    // 닉네임 3단계 폴백: URL ?name= → sessionStorage tetris-battle:name → 인라인 입력.
+    const nameParam = urlParams.get('name');
+    let resolvedName = null;
+    if (nameParam) {
+      resolvedName = nameParam.slice(0, 12);
+      sessionStorage.setItem('tetris-battle:name', resolvedName);
+    } else {
+      resolvedName = sessionStorage.getItem('tetris-battle:name') || null;
+    }
+    // 이전에 join()으로 보관된 이름보다 폴백 이름을 우선한다.
+    if (resolvedName && !pendingJoinName) {
+      pendingJoinName = resolvedName;
+    }
+
     ws.addEventListener('open', () => {
       console.log('[net] 연결됨');
       reconnectAttempted = false;
-      // 레이스 컨디션 수정: 연결 open 전에 보낸 JOIN은 드롭되어 서버가 플레이어를 등록하지 못하고
-      // (mode=ai 시) 봇도 spawn되지 않는다. open 직후 보관된 입장 이름으로 JOIN을 확실히 전송한다.
-      if (pendingJoinName !== null) {
+      const hasName = !!pendingJoinName;
+      // 닉네임이 있으면 즉시 JOIN, 없으면 main.js가 인라인 게이트를 표시.
+      if (hasName) {
         ws.send(JSON.stringify({ type: 'JOIN', playerName: pendingJoinName }));
       }
+      if (typeof handlers.onOpen === 'function') handlers.onOpen({ hasName });
     });
 
     ws.addEventListener('message', (event) => {
@@ -121,6 +136,19 @@ export function createNetwork(handlers) {
           p1Ready: !!msg.p1Ready,
           p2Ready: !!msg.p2Ready,
         });
+        break;
+      case 'READY_STATE':
+        if (typeof handlers.onReadyState === 'function') {
+          handlers.onReadyState({
+            myReady: !!msg.myReady,
+            opponentReady: !!msg.opponentReady,
+          });
+        }
+        break;
+      case 'OPPONENT_LEFT':
+        if (typeof handlers.onOpponentLeft === 'function') {
+          handlers.onOpponentLeft({ name: msg.name || '' });
+        }
         break;
       case 'ERROR':
         handlers.onError(msg.message || 'Unknown error');

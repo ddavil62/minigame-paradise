@@ -57,6 +57,8 @@ let lastActedFor = null;
 let lastState = null;
 /** 예약된 act 타이머 (새 STATE 도착 시 취소). */
 let pendingActTimer = null;
+/** 자동 READY 예약 타이머 (JOINED 재전송 대비 재예약 방어). */
+let readyTimer = null;
 
 const ws = new WebSocket(URL);
 
@@ -80,9 +82,9 @@ ws.on('message', (data) => {
   switch (msg.type) {
     case 'JOINED':
       myId = msg.playerId;
-      console.log(`[yahtzee-bot] ${myId} 자리 점유 → READY 송신`);
-      // 양쪽 READY 후 서버가 자동으로 게임을 시작한다.
-      send({ type: 'READY' });
+      console.log(`[yahtzee-bot] ${myId} 자리 점유(갱신)`);
+      // 입장(또는 리매치 재진입) 즉시 자동 READY 예약(0.2~0.5초 지연).
+      scheduleReady();
       break;
     case 'START':
       console.log('[yahtzee-bot] 게임 시작');
@@ -107,8 +109,10 @@ ws.on('message', (data) => {
       break;
     case 'OPPONENT_LEFT':
       console.log('[yahtzee-bot] 상대 이탈 → 연결 종료');
+      if (readyTimer) { clearTimeout(readyTimer); readyTimer = null; }
       ws.close();
       break;
+    case 'READY_STATE':
     case 'READY_STATUS':
     case 'REMATCH_STATUS':
       // 정보성 메시지 — 무시.
@@ -132,6 +136,19 @@ ws.on('message', (data) => {
       break;
   }
 });
+
+/**
+ * JOINED 수신 후 자동 READY를 예약한다(0.2~0.5초 지연).
+ * 리매치 시 JOINED가 재전송되므로 기존 예약을 clear 후 재예약한다(중복 방어).
+ */
+function scheduleReady() {
+  if (readyTimer) clearTimeout(readyTimer);
+  readyTimer = setTimeout(() => {
+    readyTimer = null;
+    send({ type: 'READY' });
+    console.log('[yahtzee-bot] READY 송신');
+  }, 200 + Math.floor(Math.random() * 300));
+}
 
 /**
  * STATE 메시지를 받아 자기 차례면 행동 예약.

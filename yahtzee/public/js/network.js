@@ -2,11 +2,12 @@
  * @fileoverview 요트 다이스 WebSocket 클라이언트 — 서버와 메시지 송수신.
  *
  * 서버 권위 모델(server.js 기준 진실 원천). 메시지 프로토콜:
- *  C→S: JOIN { playerName? } / READY {} / ROLL_DICE { keep:bool[5] } /
+ *  C→S: JOIN { playerName?, name? } / READY {} / ROLL_DICE { keep:bool[5] } /
  *       TOGGLE_KEEP { index:0~4, value:bool } / SCORE_CATEGORY { category } / REMATCH {}
- *  S→C: JOINED { playerId, waiting, hostUrl } / READY_STATUS / START {} /
+ *  S→C: JOINED { playerId, waiting, hostUrl, opponentName? } /
+ *       READY_STATE { myReady, opponentReady } / READY_STATUS / START {} /
  *       DICE_ROLLED { by, dice, rollCount } / STATE / CATEGORY_SCORED /
- *       GAME_OVER / OPPONENT_LEFT / REMATCH_STATUS / ERROR
+ *       GAME_OVER / OPPONENT_LEFT { name?, message } / REMATCH_STATUS / ERROR
  */
 
 /**
@@ -41,10 +42,21 @@ export function createNetwork(handlers) {
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
 
+    // 닉네임 전달(3단계 폴백): URL ?name= 우선 → sessionStorage yahtzee:name 저장.
+    const urlName = urlParams.get('name');
+    if (urlName) {
+      sessionStorage.setItem('yahtzee:name', decodeURIComponent(urlName));
+    }
+
     ws.addEventListener('open', () => {
       console.log('[net] 연결됨');
       reconnectAttempted = false;
-      if (typeof handlers.onOpen === 'function') handlers.onOpen();
+      // 닉네임이 있으면 즉시 JOIN 송신. 없으면 인라인 게이트가 JOIN 시점을 결정한다.
+      const storedName = sessionStorage.getItem('yahtzee:name');
+      if (storedName) {
+        ws.send(JSON.stringify({ type: 'JOIN', playerName: storedName }));
+      }
+      if (typeof handlers.onOpen === 'function') handlers.onOpen({ hasName: !!storedName });
     });
     ws.addEventListener('message', (event) => {
       let msg;
@@ -72,9 +84,17 @@ export function createNetwork(handlers) {
           playerId: msg.playerId,
           waiting: !!msg.waiting,
           hostUrl: typeof msg.hostUrl === 'string' ? msg.hostUrl : '',
+          opponentName: typeof msg.opponentName === 'string' ? msg.opponentName : '',
+        });
+        break;
+      case 'READY_STATE':
+        handlers.onReadyState && handlers.onReadyState({
+          myReady: !!msg.myReady,
+          opponentReady: !!msg.opponentReady,
         });
         break;
       case 'READY_STATUS':
+        // 후방 호환 — 기존 테스트가 아직 READY_STATUS를 구독할 수 있다.
         handlers.onReadyStatus && handlers.onReadyStatus({
           p1Ready: !!msg.p1Ready,
           p2Ready: !!msg.p2Ready,
@@ -111,7 +131,10 @@ export function createNetwork(handlers) {
         });
         break;
       case 'OPPONENT_LEFT':
-        handlers.onOpponentLeft && handlers.onOpponentLeft(msg.message || '상대방이 나갔습니다.');
+        handlers.onOpponentLeft && handlers.onOpponentLeft({
+          name: typeof msg.name === 'string' ? msg.name : '',
+          message: msg.message || '상대방이 나갔습니다.',
+        });
         break;
       case 'REMATCH_STATUS':
         handlers.onRematchStatus && handlers.onRematchStatus({
@@ -139,6 +162,7 @@ export function createNetwork(handlers) {
     connect,
     getMyId() { return myPlayerId; },
     join(playerName) { send({ type: 'JOIN', playerName: playerName || 'Player' }); },
+    sendJoin(name) { send({ type: 'JOIN', playerName: name }); },
     sendReady() { send({ type: 'READY' }); },
     rollDice(keep) { send({ type: 'ROLL_DICE', keep }); },
     // 본인 턴 keep 1개 토글을 즉시 서버에 전송 → 서버가 STATE broadcast → 상대도 실시간 keep 시각화.

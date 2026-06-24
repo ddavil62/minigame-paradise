@@ -100,6 +100,132 @@ body {
   color: rgba(0, 240, 240, 0.85);
 }
 
+/* ── 유틸리티 ──────────────────────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── 대기 화면 (screen-waiting) ────────────────────────────────── */
+.screen-waiting {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.waiting-card {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid var(--board-border);
+  border-radius: 14px;
+  padding: 32px 28px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  color: var(--hud-text);
+}
+.waiting-logo { font-size: 3rem; margin-bottom: 8px; }
+.waiting-title { font-size: 1.2rem; margin-bottom: 16px; color: var(--accent); font-weight: 700; }
+
+/* 닉네임 게이트 */
+.name-gate-inline { margin: 8px 0 18px; }
+.name-gate-msg { font-size: 0.9rem; margin-bottom: 8px; color: var(--hud-text); opacity: 0.85; }
+.name-gate-inline input {
+  display: block;
+  width: 80%;
+  margin: 0 auto 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  background: var(--cell-empty);
+  color: var(--hud-text);
+  font-size: 1rem;
+  text-align: center;
+}
+.btn-inline-enter {
+  padding: 8px 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.btn-inline-enter:hover { opacity: 0.85; }
+
+/* 혼자 대기 */
+.waiting-solo { margin: 12px 0; }
+.waiting-message { font-size: 0.95rem; margin-bottom: 10px; opacity: 0.7; }
+.btn-start-ai {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent-ai);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.btn-start-ai:hover { opacity: 0.85; }
+.ai-hint { font-size: 0.8rem; opacity: 0.6; margin-top: 6px; }
+
+/* 상대 입장 표시 */
+.opponent-info {
+  margin: 10px 0;
+  font-size: 1rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* READY 패널 */
+.ready-panel { margin: 8px 0 16px; }
+.ready-status-marks { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+.ready-label { font-size: 0.85rem; font-weight: 700; }
+.ready-mark { font-size: 1.3rem; }
+.ready-mark.ready { color: #2ecc71; }
+.ready-mark.not-ready { opacity: 0.5; }
+.ready-sep { opacity: 0.3; }
+.btn-ready {
+  padding: 10px 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.btn-ready:hover { opacity: 0.85; }
+.btn-ready:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 룰 요약 */
+.rules-summary { margin-top: 16px; text-align: left; }
+.rules-summary h3 { font-size: 0.9rem; margin-bottom: 6px; color: var(--accent); }
+.rules-summary ul { list-style: disc; padding-left: 20px; font-size: 0.82rem; line-height: 1.6; opacity: 0.7; }
+
+/* 상대 이탈 배너 */
+.opponent-left-banner {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 70;
+  background: rgba(240, 0, 0, 0.9);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 24px;
+  font-weight: 700;
+}
+.btn-banner-return-lobby {
+  padding: 6px 18px;
+  border: 2px solid #fff;
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-banner-return-lobby:hover { background: rgba(255,255,255,0.15); }
+
 /* ── 메인 게임 영역 ─────────────────────────────────────────────── */
 .game-main {
   flex: 1;

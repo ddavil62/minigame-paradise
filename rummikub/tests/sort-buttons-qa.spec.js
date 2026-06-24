@@ -17,8 +17,8 @@ test.describe('루미큐브 손패 정렬 버튼', () => {
     await page.goto(`${BASE}/?mode=ai`);
 
     // AI 모드: p1(인간)이 준비 완료를 눌러야 START. 봇은 자동 READY.
-    await page.waitForSelector('#ready-btn', { state: 'visible', timeout: 15000 });
-    await page.click('#ready-btn');
+    await page.waitForSelector('#btn-ready', { state: 'visible', timeout: 15000 });
+    await page.click('#btn-ready');
 
     // 게임 시작 대기 — 손패 영역에 타일이 렌더될 때까지.
     await page.waitForSelector('#screen-game:not(.hidden)', { timeout: 15000 });

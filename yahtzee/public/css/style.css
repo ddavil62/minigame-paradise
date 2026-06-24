@@ -105,12 +105,46 @@ body.theme-wood {
 .copy-btn:active { transform:translateY(3px); box-shadow:0 0 0 #3f5a29; }
 .invite-hint { font-size:12px; color:var(--ink-dim); margin-top:8px; }
 
+/* 인라인 닉네임 게이트 (직접 진입 폴백) */
+.name-gate-inline { margin:8px 0 18px; }
+.name-gate-msg { font-size:0.9rem; color:var(--ink-dim); margin:0 0 10px; }
+.name-gate-inline input {
+  width:70%; max-width:240px; padding:10px 12px;
+  border:2px solid var(--plank-edge); border-radius:8px;
+  font-family:'Gowun Dodum',sans-serif; font-size:0.95rem;
+  background:#fff; color:var(--ink);
+}
+.btn-inline-enter {
+  margin-top:10px; background:var(--tomato); color:#fff; border:none;
+  border-radius:8px; padding:10px 22px;
+  font-family:'Jua',sans-serif; font-size:0.95rem; cursor:pointer;
+  box-shadow:0 3px 0 var(--tomato-2);
+}
+.btn-inline-enter:hover { filter:brightness(1.08); }
+
+/* 혼자 대기(1인) 안내 + AI 진입 */
+.waiting-solo { margin:8px 0 18px; }
+.waiting-message { font-size:1rem; color:var(--ink-dim); margin:0 0 14px; }
+
+/* 상대 이름 표시 ("○○님과 대전") */
+.opponent-info { font-family:'Jua',sans-serif; font-size:1.05rem; color:var(--leaf); margin:6px 0 14px; }
+
 .ready-panel { margin:14px 0; }
 .ready-status { display:flex; gap:12px; justify-content:center; align-items:center; margin-bottom:12px; }
-.ready-slot { font-family:'Jua',sans-serif; font-size:15px; color:var(--ink); white-space:nowrap; }
-.ready-mark { color:var(--ink-dim); font-weight:600; font-family:'Gowun Dodum',sans-serif; font-size:13px; white-space:nowrap; }
-.ready-mark.ready { color:var(--leaf); }
-.ready-divider { color:var(--ink-dim); opacity:.5; }
+.ready-label { font-family:'Jua',sans-serif; font-size:15px; color:var(--ink-dim); }
+.ready-sep { color:var(--ink-dim); opacity:.4; }
+.ready-mark {
+  font-size:1.2rem; transition:transform 0.2s;
+}
+.ready-mark.ready { transform:scale(1.15); }
+.ready-mark.not-ready { opacity:0.7; }
+.btn-ready {
+  font-family:'Jua',sans-serif; font-size:15px; color:#fff; cursor:pointer;
+  background:linear-gradient(180deg,#e26b42,#c2451f); border:none; border-radius:12px;
+  padding:11px 30px; box-shadow:0 4px 0 #8f3214;
+}
+.btn-ready:hover:not(:disabled) { filter:brightness(1.05); }
+.btn-ready:disabled { opacity:.55; cursor:not-allowed; }
 .ready-hint { font-size:12px; color:var(--ink-dim); margin-top:8px; }
 
 /* 공용 버튼 */
@@ -379,6 +413,20 @@ body.theme-wood {
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 .toast.error { background:var(--tomato-2); color:#fff; }
+
+/* ── 상대 이탈 배너 ── */
+.opponent-left-banner {
+  position:fixed; left:0; right:0; top:0; z-index:70;
+  display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;
+  padding:14px 18px; background:rgba(210,86,47,.96); color:#fff;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);
+}
+.opponent-left-msg { font-family:'Jua',sans-serif; font-size:1rem; }
+.btn-banner-return-lobby {
+  background:#fff; color:var(--tomato-2); border:none; border-radius:8px;
+  padding:10px 18px; font-family:'Jua',sans-serif; font-size:0.95rem; cursor:pointer;
+}
+.btn-banner-return-lobby:hover { filter:brightness(0.95); }
 
 /* ── 반응형 ── */
 @media (max-width:820px) {

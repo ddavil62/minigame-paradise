@@ -1,5 +1,52 @@
 # Changelog
 
+## [2026-06-24] - 입장 UI 통일 Phase 1+2 (Entry UI Unify)
+
+### 추가
+
+**Phase 1 — yahtzee, rummikub (대기 화면 거의 완성형)**
+- **`yahtzee/public/index.html`**: `#name-gate-inline` 닉네임 게이트 추가, `#invite-panel` 제거, `#opponent-info` + `#opponent-left-banner` 추가, READY 마크 ID 오목 패턴으로 통일 (`#my-ready-mark`/`#opp-ready-mark`)
+- **`yahtzee/public/css/style.css`**: `name-gate-inline`, `opponent-left-banner`, `btn-start-ai` 클래스 추가
+- **`yahtzee/public/js/main.js`**: 닉네임 게이트 로직(sessionStorage `yahtzee:name`), `READY_STATE` → `myReady`/`oppReady` 매핑, 이탈 배너 처리, `submitInlineName()` 함수
+- **`yahtzee/public/js/network.js`**: `sessionStorage.getItem('yahtzee:name')` 3단계 폴백(URL `?name=` → sessionStorage → 게이트), `onOpen({ hasName })` 콜백
+- **`yahtzee/server.js`**: `broadcastReadyState()` 함수 신설(각 플레이어에 `READY_STATE { myReady, opponentReady }` 개별 전송)
+- **`rummikub/public/index.html`**: `#name-gate-inline` 추가, `#opponent-info` + `#opponent-left-banner` 추가
+- **`rummikub/public/css/style.css`**: `name-gate-inline`, `opponent-left-banner` 클래스 추가
+- **`rummikub/public/js/main.js`**: DOM 참조 ID 전면 수정(`ready-btn`→`btn-ready`, `p1-ready-mark`→`my-ready-mark`, `p2-ready-mark`→`opp-ready-mark`, `ai-panel`→`waitingSolo` 구조), `onOpen({ hasName })` 핸들러, `submitInlineName()` + 클릭/Enter 이벤트, `onReadyState`/`showOpponentLeftBanner()` 핸들러, 8개 헬퍼 함수 추가
+- **`rummikub/public/js/network.js`**: 닉네임 3단계 폴백(URL `?name=` → sessionStorage `rummikub:name` → 게이트), `READY_STATE`/`OPPONENT_LEFT` 라우팅 추가, `sendJoin()` API 추가
+
+**Phase 2 — yutnori, tetris-battle (대기 화면 분리 + 신설)**
+- **`yutnori/public/index.html`**: `#screen-waiting` 신설(`.game-main` 위), `waiting-card` > `waiting-logo`(주사위) + `#name-gate-inline` + `#waiting-solo`(AI 버튼) + `#opponent-info` + `#ready-panel` + 룰 요약. `.game-main`에 초기 hidden 처리(`#screen-game` 패턴)
+- **`yutnori/public/css/style.css`**: `.screen-waiting`, `name-gate-inline`, `opponent-left-banner` 스타일 추가 (우드/한지 테마 유지)
+- **`yutnori/public/js/main.js`**: `showScreen('waiting'/'game')` 화면 전환, 닉네임 게이트, 이탈 배너, `onOpen({ hasName })` 콜백
+- **`yutnori/public/js/network.js`**: sessionStorage `yutnori:name` 3단계 폴백, `onOpen({ hasName })`
+- **`yutnori/server.js`**: `broadcastReadyState()` 신설, JOIN 시 `player.name` 폴백 `'(알 수 없음)'` 확인
+- **`tetris-battle/public/index.html`**: `#screen-waiting` 신설, `waiting-card` > `waiting-logo`(게임패드) + `#name-gate-inline` + `#waiting-solo`(AI 버튼) + `#ready-panel` + 룰 요약. `.center-area`에 `VS` 라벨만 유지(게임 중). `.game-main` 초기 hidden
+- **`tetris-battle/public/css/style.css`**: `.screen-waiting`, `name-gate-inline`, `opponent-left-banner` 스타일 추가 (다크 테마 유지)
+- **`tetris-battle/public/js/main.js`**: `showScreen('waiting'/'game')`, 닉네임 게이트, `onOpen({ hasName })` 콜백 추가, `onReadyState`/`onOpponentLeft` 핸들러 (초기 구현 시 dead code → coder fix에서 연결)
+- **`tetris-battle/public/js/network.js`**: sessionStorage `tetris-battle:name` 3단계 폴백, `READY_STATE`/`OPPONENT_LEFT` 라우팅 추가
+- **`tetris-battle/server.js`**: `broadcastReadyState()` 함수 신설, READY 핸들러에서 호출, disconnect 시 `OPPONENT_LEFT` 전송 추가
+
+### 수정
+- **rummikub QA FAIL 수정**: 초기 구현 시 HTML은 통일 패턴으로 갱신되었으나 JS(`main.js`, `network.js`)가 미갱신되어 페이지 로드 시 `Cannot read properties of null` 크래시 발생. DOM ID 전면 수정 + 닉네임 게이트 로직 추가 + `READY_STATE` 지원으로 해소
+- **rummikub/tests/sort-buttons-qa.spec.js**: `#ready-btn` 셀렉터를 `#btn-ready`로 수정 (회귀 방지)
+- **tetris-battle QA FAIL 수정 (HIGH-1 BLOCKER)**: `main.js`에 `onOpen` 콜백 누락으로 닉네임 게이트 미동작 + `network.js`에 `READY_STATE`/`OPPONENT_LEFT` 라우팅 없음 + `server.js`에 `broadcastReadyState()` 미구현. 3파일 수정으로 해소
+- **yahtzee AD3 REVISE**: `#ready-panel`에 hidden 클래스가 있어 초기 비표시. hidden 클래스 제거로 오목 패턴(항상 visible)과 일치시킴
+
+### 참고
+- 스코프: `.claude/specs/2026-06-24-entry-ui-unify-scope.md`
+- 플랜: `.claude/specs/2026-06-24-entry-ui-unify-plan.md`
+- Phase 1 AD3: `.claude/specs/2026-06-24-entry-ui-unify-phase1-ad3-report.md` (yahtzee REVISE→재검수 APPROVED, rummikub APPROVED)
+- Phase 1 QA: `.claude/specs/2026-06-24-entry-ui-unify-phase1-qa-report.md` (yahtzee PASS 13/13, rummikub FAIL→재검증 PASS 11/11, 전체 24/24 PASS)
+- Phase 1 rummikub JS fix: `.claude/specs/2026-06-24-entry-ui-unify-phase1-rummikub-fix-report.md`
+- Phase 2 AD3: `.claude/specs/2026-06-24-entry-ui-unify-phase2-ad3-report.md` (APPROVED, WARN 2건 비강제)
+- Phase 2 QA: `.claude/specs/2026-06-24-entry-ui-unify-phase2-qa-report.md` (yutnori PASS 21/21, tetris-battle FAIL→재검증 PASS 44/44, 전체 65/65 PASS)
+- Phase 2 tetris-battle fix: `.claude/specs/2026-06-24-entry-ui-unify-phase2-coder-fix-report.md`
+- 통일 패턴: 오목(omok) 파일럿 — `#screen-waiting .waiting-card`, `#name-gate-inline`, `READY_STATE { myReady, opponentReady }`, `#opponent-left-banner`
+- 남은 게임: Phase 3 (matgo, janggi), Phase 4 (hanabi, davinci-code, codenames-duet) 미착수
+
+---
+
 ## [2026-06-24] - 로비 AI 슬롯 채우기 (Lobby AI Fill)
 
 ### 추가

@@ -44,31 +44,36 @@
       <div class="waiting-logo">🎲</div>
       <div class="waiting-title">상대방을 기다리는 중...</div>
 
-      <div id="invite-panel" class="invite-panel hidden">
-        <div class="invite-label">친구에게 이 주소를 알려주세요</div>
-        <div class="invite-url-row">
-          <code id="invite-url" class="invite-url">http://...</code>
-          <button id="copy-url-btn" class="copy-btn" type="button">주소 복사</button>
-        </div>
-        <div class="invite-hint">친구 PC 브라우저에 붙여넣으면 자동 입장됩니다.</div>
+      <!-- 직접 진입(닉네임 미전달) 시 인라인 닉네임 게이트 (폴백 3단계) -->
+      <div id="name-gate-inline" class="name-gate-inline hidden">
+        <p class="name-gate-msg">닉네임을 입력하고 입장하세요</p>
+        <input id="inline-name-input" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button id="btn-inline-enter" class="btn-inline-enter" type="button">입장</button>
       </div>
 
-      <!-- READY -->
-      <div id="ready-panel" class="ready-panel hidden">
-        <div class="ready-status">
-          <span class="ready-slot">P1 <span id="p1-ready-mark" class="ready-mark">대기</span></span>
-          <span class="ready-divider">/</span>
-          <span class="ready-slot">P2 <span id="p2-ready-mark" class="ready-mark">대기</span></span>
-        </div>
-        <button id="ready-btn" class="primary-btn ready-btn" type="button">준비 완료</button>
-        <div class="ready-hint">양쪽 모두 준비를 누르면 게임이 시작됩니다.</div>
+      <!-- 혼자 대기 중(1인) — 친구 기다림 안내 + AI 진입 버튼 -->
+      <div id="waiting-solo" class="waiting-solo">
+        <p class="waiting-message">친구를 기다리는 중...</p>
+        <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
+        <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+      </div>
 
-        <!-- AI 진입 -->
-        <div id="ai-panel" class="ai-panel hidden">
-          <div class="ai-divider"><span>또는</span></div>
-          <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
-          <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
+      <!-- 상대 입장 시 표시 -->
+      <div id="opponent-info" class="opponent-info hidden">
+        <span id="opponent-name-label"></span>님과 대전
+      </div>
+
+      <!-- 양방향 READY 상태 패널 -->
+      <div id="ready-panel" class="ready-panel">
+        <div class="ready-status">
+          <span class="ready-label">나</span>
+          <span id="my-ready-mark" class="ready-mark not-ready">⌛</span>
+          <span class="ready-sep">·</span>
+          <span class="ready-label">상대</span>
+          <span id="opp-ready-mark" class="ready-mark not-ready">⌛</span>
         </div>
+        <button id="btn-ready" class="btn-ready" type="button" hidden>준비 완료</button>
+        <div class="ready-hint">양쪽 모두 준비를 누르면 게임이 시작됩니다.</div>
       </div>
 
       <!-- 룰 요약 -->
@@ -159,6 +164,12 @@
       </div>
       <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
     </div>
+  </div>
+
+  <!-- 상대 이탈 배너 (사라지지 않음 — 사용자가 버튼을 눌러야 로비 이동) -->
+  <div id="opponent-left-banner" class="opponent-left-banner hidden" role="alert">
+    <span id="opponent-left-msg" class="opponent-left-msg"></span>
+    <button id="btn-banner-return-lobby" class="btn-banner-return-lobby" type="button">로비로 돌아가기</button>
   </div>
 
   <!-- 토스트 -->

@@ -656,6 +656,25 @@ function broadcastAll(payload) {
   }
 }
 
+/**
+ * 각 플레이어에게 개별 관점으로 READY_STATE를 전송한다 (오목 파일럿 패턴).
+ * myReady: 자기 자신의 ready, opponentReady: 상대의 ready.
+ * N인(3~4인)은 전체 ready 상태를 playersReady 배열로 추가 전달.
+ */
+function broadcastReadyState() {
+  for (const me of players) {
+    if (me.ws.readyState !== 1) continue;
+    // 2인 기본: 상대 1명의 ready
+    const opp = players.find((p) => p.id !== me.id);
+    const payload = {
+      type: 'READY_STATE',
+      myReady: me.ready,
+      opponentReady: opp ? opp.ready : false,
+    };
+    me.ws.send(JSON.stringify(payload));
+  }
+}
+
 function sendTo(player, payload) {
   if (player && player.ws.readyState === 1) {
     player.ws.send(JSON.stringify(payload));
@@ -922,16 +941,17 @@ wss.on('connection', (ws, req) => {
 
     switch (msg.type) {
       case 'JOIN': {
-        player.name = (msg.playerName || playerId).toString().slice(0, 32);
+        player.name = (msg.playerName || '(알 수 없음)').toString().slice(0, 32);
         sendTo(player, {
           type: 'JOINED',
           playerId: player.id,
           waiting: players.length < roomMaxPlayers,
           hostUrl: HOST_URL,
         });
-        // 정원이 다 들어오면 알림용 STATE도 broadcast (대기 화면에서 상대 입장 즉시 반영)
+        // 정원이 다 들어오면 알림용 STATE + READY_STATE broadcast
         if (players.length >= roomMaxPlayers) {
           broadcastState();
+          broadcastReadyState();
         }
         break;
       }
@@ -939,6 +959,7 @@ wss.on('connection', (ws, req) => {
       case 'READY': {
         player.ready = true;
         console.log(`[server] ${player.id} READY`);
+        broadcastReadyState();
         if (players.length >= roomMaxPlayers && players.every((p) => p.ready)) {
           console.log(`[server] 전원 READY → 게임 시작 (${players.length}인)`);
           resetGame();
@@ -1260,8 +1281,11 @@ wss.on('connection', (ws, req) => {
     if (wsMode === 'ai' && !isBot) {
       killBotChild();
     }
+    const leaverName = player.name || '(알 수 없음)';
     players = players.filter((p) => p.id !== player.id);
     if (players.length > 0) {
+      // 상대 이탈 배너용 OPPONENT_LEFT 메시지 전송
+      broadcastAll({ type: 'OPPONENT_LEFT', name: leaverName });
       const remainingId = players[0].id;
       broadcastAll({
         type: 'GAME_OVER',

@@ -36,15 +36,24 @@ document.addEventListener('DOMContentLoaded', () => {
     hdrP2Total: document.getElementById('hdr-p2-total'),
     tblP1Name: document.getElementById('tbl-p1-name'),
     tblP2Name: document.getElementById('tbl-p2-name'),
-    invitePanel: document.getElementById('invite-panel'),
-    inviteUrl: document.getElementById('invite-url'),
-    copyUrlBtn: document.getElementById('copy-url-btn'),
-    readyPanel: document.getElementById('ready-panel'),
-    readyBtn: document.getElementById('ready-btn'),
-    p1ReadyMark: document.getElementById('p1-ready-mark'),
-    p2ReadyMark: document.getElementById('p2-ready-mark'),
-    aiPanel: document.getElementById('ai-panel'),
+    // 대기 화면 — 신규 Entry UI 통합 요소
+    waitingTitle: document.querySelector('#screen-waiting .waiting-title'),
+    waitingSolo: document.getElementById('waiting-solo'),
     btnStartAi: document.getElementById('btn-start-ai'),
+    opponentInfo: document.getElementById('opponent-info'),
+    opponentNameLabel: document.getElementById('opponent-name-label'),
+    readyPanel: document.getElementById('ready-panel'),
+    myReadyMark: document.getElementById('my-ready-mark'),
+    oppReadyMark: document.getElementById('opp-ready-mark'),
+    btnReady: document.getElementById('btn-ready'),
+    // 직접 진입 인라인 닉네임 게이트
+    nameGateInline: document.getElementById('name-gate-inline'),
+    inlineNameInput: document.getElementById('inline-name-input'),
+    btnInlineEnter: document.getElementById('btn-inline-enter'),
+    // 상대 이탈 배너
+    opponentLeftBanner: document.getElementById('opponent-left-banner'),
+    opponentLeftMsg: document.getElementById('opponent-left-msg'),
+    btnBannerReturnLobby: document.getElementById('btn-banner-return-lobby'),
 
     diceArea: document.getElementById('dice-area'),
     rollCount: document.getElementById('roll-count'),
@@ -92,6 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let playerIds = ['p1', 'p2'];
   // keep 입력 누적 (다음 ROLL_DICE에 보낼 값). STATE 수신 시 서버 권위로 동기화.
   let pendingKeep = [false, false, false, false, false];
+  /** 상대 닉네임(JOINED.opponentName 수신 시 갱신). */
+  let opponentName = null;
+  /** 내 READY 상태. */
+  let myReady = false;
+  /** 상대 READY 상태. */
+  let opponentReady = false;
   // 효과음 트리거용: 본인 상단 보너스가 0→35 순간을 감지하기 위한 직전값 캐시.
   let lastMyUpperBonus = 0;
   // 카테고리 강조 큐: CATEGORY_SCORED 도착 시 { by, category }를 push,
@@ -115,43 +130,131 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /**
+   * 현재 모드(ai|human)를 URL/sessionStorage에서 읽는다.
+   * @returns {string}
+   */
+  function getCurrentMode() {
+    return new URLSearchParams(location.search).get('mode')
+      || sessionStorage.getItem('yahtzee:mode')
+      || 'human';
+  }
+
+  /**
+   * "🤖 AI랑 시작" 버튼(혼자 대기 패널)을 숨긴다.
+   */
+  function hideAiButton() {
+    if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
+  }
+
+  /**
+   * 혼자 대기 패널을 다시 표시한다(상대 이탈 시 — AI 모드가 아니고 사람일 때만).
+   */
+  function showAiButton() {
+    if (getCurrentMode() === 'ai') return;
+    updateWaitingTitle(false);
+    if (els.waitingSolo) els.waitingSolo.classList.remove('hidden');
+    if (els.btnStartAi) {
+      els.btnStartAi.disabled = false;
+      els.btnStartAi.textContent = '🤖 AI랑 시작';
+    }
+  }
+
+  /**
+   * 대기 카드 제목을 현재 인원 상태에 맞게 갱신한다.
+   * @param {boolean} hasOpponent
+   */
+  function updateWaitingTitle(hasOpponent) {
+    if (!els.waitingTitle) return;
+    els.waitingTitle.textContent = hasOpponent
+      ? '대전 준비 중'
+      : '상대방을 기다리는 중...';
+  }
+
+  /**
+   * 상대 이름 표시("○○님과 대전")를 갱신한다.
+   */
+  function updateOpponentInfo() {
+    if (opponentName && els.opponentInfo) {
+      els.opponentInfo.classList.remove('hidden');
+      if (els.opponentNameLabel) els.opponentNameLabel.textContent = opponentName;
+    }
+  }
+
+  /**
+   * 양방향 READY 상태 마크 + 준비 버튼 표시를 갱신한다.
+   */
+  function updateReadyUI() {
+    if (els.myReadyMark) {
+      els.myReadyMark.textContent = myReady ? '✅' : '⌛';
+      els.myReadyMark.classList.toggle('ready', myReady);
+      els.myReadyMark.classList.toggle('not-ready', !myReady);
+    }
+    if (els.oppReadyMark) {
+      els.oppReadyMark.textContent = opponentReady ? '✅' : '⌛';
+      els.oppReadyMark.classList.toggle('ready', opponentReady);
+      els.oppReadyMark.classList.toggle('not-ready', !opponentReady);
+    }
+    if (els.btnReady) els.btnReady.hidden = myReady;
+  }
+
+  /**
+   * 상대 이탈 배너를 표시한다(자동 사라지지 않음).
+   * @param {string} name
+   */
+  function showOpponentLeftBanner(name) {
+    if (els.opponentLeftMsg) {
+      els.opponentLeftMsg.textContent = `${name || '상대방'}님이 나갔어요.`;
+    }
+    if (els.opponentLeftBanner) els.opponentLeftBanner.classList.remove('hidden');
+  }
+
   // ── 네트워크 핸들러 ──────────────────────────────────────────
   const net = createNetwork({
-    onOpen: () => {
-      net.join('Player');
+    onOpen: ({ hasName }) => {
+      // 닉네임이 없으면(직접 진입) 인라인 게이트를 노출하고 JOIN을 보류한다.
+      // ready-panel은 omok 파일럿 패턴에 따라 게이트 중에도 항상 표시한다.
+      if (!hasName) {
+        if (els.nameGateInline) els.nameGateInline.classList.remove('hidden');
+        if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
+      }
     },
-    onJoined: ({ playerId, waiting, hostUrl }) => {
+    onJoined: ({ playerId, waiting, opponentName: oppName }) => {
       myId = playerId;
       els.playerLabel.textContent = `${playerId === 'p1' ? 'P1 (호스트)' : 'P2 (게스트)'}`;
-      els.statusMsg.textContent = waiting ? '상대방 대기 중' : '준비를 눌러주세요';
 
-      // 초대 URL: 호스트(p1)에게만 의미. 단독 실행 + LAN 환경에서 hostUrl 표시.
-      if (playerId === 'p1' && hostUrl) {
-        els.inviteUrl.textContent = hostUrl;
-        els.invitePanel.classList.remove('hidden');
-      } else {
-        els.invitePanel.classList.add('hidden');
+      // 상대 이름 수신 시 갱신 + AI 버튼 소멸(사람 대전 흐름 전환).
+      if (oppName) {
+        opponentName = oppName;
+        updateOpponentInfo();
+        hideAiButton();
       }
-      // READY 패널 노출.
-      els.readyPanel.classList.remove('hidden');
-      // AI 진입 버튼: 현재 mode가 ai가 아니고(이미 ai면 봇이 곧 들어오므로 불필요)
-      // 호스트(p1) + 단독 대기(waiting=true)일 때만 노출.
-      // 게스트(p2)는 이미 누군가 만든 방에 들어온 상황이라 AI 모드 진입 의미 없음.
-      const currentMode = new URLSearchParams(location.search).get('mode')
-        || sessionStorage.getItem('yahtzee:mode')
-        || 'human';
-      if (playerId === 'p1' && waiting && currentMode !== 'ai') {
-        els.aiPanel.classList.remove('hidden');
+
+      els.statusMsg.textContent = (waiting && !oppName) ? '상대방 대기 중' : '게임 시작 준비';
+
+      // 대기 카드 제목: 상대 합류 시 "대전 준비 중".
+      updateWaitingTitle(!!oppName || !waiting);
+
+      // 양쪽 입장이면 혼자 대기 패널 숨김.
+      if (!waiting || oppName) {
+        hideAiButton();
       } else {
-        els.aiPanel.classList.add('hidden');
+        if (getCurrentMode() !== 'ai') {
+          if (els.waitingSolo) els.waitingSolo.classList.remove('hidden');
+        } else {
+          hideAiButton();
+        }
       }
+
+      // READY 패널은 닉네임 확정(JOIN 송신) 이후 항상 노출.
+      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+
       showScreen('waiting');
     },
-    onReadyStatus: ({ p1Ready, p2Ready }) => {
-      els.p1ReadyMark.textContent = p1Ready ? '✓ 준비' : '대기';
-      els.p2ReadyMark.textContent = p2Ready ? '✓ 준비' : '대기';
-      els.p1ReadyMark.classList.toggle('ready', p1Ready);
-      els.p2ReadyMark.classList.toggle('ready', p2Ready);
+    onReadyState: ({ myReady: mr, opponentReady: or }) => {
+      myReady = mr;
+      opponentReady = or;
+      updateReadyUI();
     },
     onStart: () => {
       pendingKeep = [false, false, false, false, false];
@@ -160,6 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // 새 게임 — N인 직전 선택 강조 초기화. renderAll에서 모든 셀의 .scored-persistent가 제거된다.
       lastScoredCategoryByPlayer = {};
       for (const pid of playerIds) lastScoredCategoryByPlayer[pid] = null;
+      // READY 상태 초기화(다음 리매치 대비).
+      myReady = false;
+      opponentReady = false;
       // N5: 직전 게임에서 재대결 버튼을 눌렀으면 disabled + '재대결 대기 중...' 상태가 남아 있다.
       // 새 게임 시작 시 초기화하지 않으면 다음 GAME_OVER에서 재대결 버튼이 고착되어 연속 대전이 막힌다.
       els.rematchBtn.disabled = false;
@@ -236,28 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     },
-    onOpponentLeft: (message) => {
-      showToast(els.toast, message, 'error');
-      // 게임 중이면 다시 대기 화면으로.
-      showScreen('waiting');
+    onOpponentLeft: ({ name, message }) => {
+      // 자동 redirect 제거 — 사라지지 않는 배너 + "로비로 돌아가기" 버튼만 표시.
       els.screenGameOver.classList.add('hidden');
-      els.statusMsg.textContent = '상대방 대기 중';
-      // 새 사람이 와도 READY부터 다시 받아야 하므로 READY 마크 리셋.
-      els.p1ReadyMark.textContent = '대기';
-      els.p2ReadyMark.textContent = '대기';
-      els.p1ReadyMark.classList.remove('ready');
-      els.p2ReadyMark.classList.remove('ready');
-      els.readyBtn.disabled = false;
-      els.readyBtn.textContent = '준비 완료';
-      // 상대 이탈 → 다시 단독 대기 상황. 현재 모드가 ai가 아니면 AI 옵션 재노출.
-      const currentMode = new URLSearchParams(location.search).get('mode')
-        || sessionStorage.getItem('yahtzee:mode')
-        || 'human';
-      if (myId === 'p1' && currentMode !== 'ai') {
-        els.aiPanel.classList.remove('hidden');
-        els.btnStartAi.disabled = false;
-        els.btnStartAi.textContent = '🤖 AI랑 시작';
-      }
+      showOpponentLeftBanner(name);
     },
     onRematchStatus: ({ p1Ready, p2Ready }) => {
       const status = `재대결 대기: P1 ${p1Ready ? '✓' : '×'} / P2 ${p2Ready ? '✓' : '×'}`;
@@ -380,24 +468,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── 버튼 이벤트 ──────────────────────────────────────────────
-  els.readyBtn.addEventListener('click', () => {
-    els.readyBtn.disabled = true;
-    els.readyBtn.textContent = '준비 완료 ✓';
+  els.btnReady.addEventListener('click', () => {
+    els.btnReady.hidden = true;
     net.sendReady();
   });
 
   // ── AI랑 시작 ─────────────────────────────────────────────
-  // 클릭 시 ?mode=ai 쿼리로 새로고침 → network.js가 sessionStorage에 저장 +
-  // WS URL에 mode=ai 부착하여 재접속 → server.js가 봇 자식 프로세스 자동 spawn.
-  // (서버 무수정. 기존 mode=ai 진입 경로 그대로 활용.)
   els.btnStartAi.addEventListener('click', () => {
     els.btnStartAi.disabled = true;
     els.btnStartAi.textContent = '🤖 AI 호출 중...';
-    // 현재 path는 그대로 두고 쿼리만 mode=ai로 교체.
-    // launcher 모드(/yahtzee/...)와 단독 실행(/) 양쪽 모두 작동.
-    const url = new URL(location.href);
-    url.searchParams.set('mode', 'ai');
-    location.href = url.toString();
+    const name = sessionStorage.getItem('yahtzee:name') || '';
+    const base = location.pathname;
+    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+  });
+
+  // ── 상대 이탈 배너 → 로비로 돌아가기 ─────────────────────────
+  els.btnBannerReturnLobby.addEventListener('click', () => returnToLobby());
+
+  // ── 인라인 닉네임 게이트(직접 진입 폴백) ────────────────────
+  function submitInlineName() {
+    const name = (els.inlineNameInput.value || '').trim().slice(0, 12);
+    if (!name) {
+      els.inlineNameInput.focus();
+      return;
+    }
+    sessionStorage.setItem('yahtzee:name', name);
+    els.nameGateInline.classList.add('hidden');
+    if (getCurrentMode() !== 'ai' && els.waitingSolo) {
+      els.waitingSolo.classList.remove('hidden');
+    }
+    if (els.readyPanel) els.readyPanel.classList.remove('hidden');
+    net.sendJoin(name);
+  }
+  els.btnInlineEnter.addEventListener('click', submitInlineName);
+  els.inlineNameInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitInlineName();
+    }
   });
 
   els.btnRoll.addEventListener('click', () => {
@@ -414,28 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 굴림 효과음(화이트노이즈 rattle ~0.4초). 서버 응답을 기다리지 않고 즉시 재생하여
     // 입력 반응성을 높인다. 다이스 착지음은 onDiceRolled에서 0.42초 뒤 재생.
     playRoll();
-  });
-
-  els.copyUrlBtn.addEventListener('click', async () => {
-    const url = els.inviteUrl.textContent;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast(els.toast, '초대 URL 복사 완료');
-    } catch (e) {
-      // execCommand 폴백.
-      const range = document.createRange();
-      range.selectNode(els.inviteUrl);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      try {
-        document.execCommand('copy');
-        showToast(els.toast, '초대 URL 복사 완료');
-      } catch (e2) {
-        showToast(els.toast, '복사 실패 — 수동으로 복사하세요', 'error');
-      }
-      sel.removeAllRanges();
-    }
   });
 
   els.rematchBtn.addEventListener('click', () => {

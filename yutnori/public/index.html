@@ -21,23 +21,62 @@
     <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
   </header>
 
-  <main class="game-main">
-    <!-- 좌측(주 영역): 보드 -->
-    <section class="board-area">
-      <canvas id="board-canvas"></canvas>
-      <!-- P1~P4 준비 상태 표시 (N인 확장) -->
-      <div id="ready-status" class="ready-status">
-        <span class="ready-slot">P1 <span id="ready-mark-p1" class="ready-mark">대기</span></span>
-        <span class="ready-slot">P2 <span id="ready-mark-p2" class="ready-mark">대기</span></span>
-        <span class="ready-slot">P3 <span id="ready-mark-p3" class="ready-mark">대기</span></span>
-        <span class="ready-slot">P4 <span id="ready-mark-p4" class="ready-mark">대기</span></span>
+  <!-- 대기 화면 -->
+  <section id="screen-waiting" class="screen screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">🎲</div>
+      <div class="waiting-title">상대방을 기다리는 중...</div>
+
+      <!-- 직접 진입(닉네임 미전달) 시 인라인 닉네임 게이트 (3단계 폴백) -->
+      <div id="name-gate-inline" class="name-gate-inline hidden">
+        <p class="name-gate-msg">닉네임을 입력하고 입장하세요</p>
+        <input id="inline-name-input" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button id="btn-inline-enter" class="btn-inline-enter" type="button">입장</button>
       </div>
-      <button id="ready-btn" class="primary-btn ready-btn">준비</button>
-      <div id="ai-panel" class="ai-panel hidden">
-        <div class="ai-divider"><span>또는</span></div>
+
+      <!-- 혼자 대기 중(1인) — AI 진입 버튼 -->
+      <div id="waiting-solo" class="waiting-solo">
+        <p class="waiting-message">친구를 기다리는 중...</p>
         <button id="btn-start-ai" class="btn-start-ai" type="button">🤖 AI랑 시작</button>
         <div class="ai-hint">상대 없이 즉시 AI와 1:1 대전</div>
       </div>
+
+      <!-- 상대 입장 시 표시 -->
+      <div id="opponent-info" class="opponent-info hidden">
+        <span id="opponent-name-label"></span>님과 대전
+      </div>
+
+      <!-- 양방향 READY 패널 -->
+      <div id="ready-panel" class="ready-panel">
+        <div class="ready-status-marks">
+          <span class="ready-label">나</span>
+          <span id="my-ready-mark" class="ready-mark not-ready">⌛</span>
+          <span class="ready-sep">·</span>
+          <span class="ready-label">상대</span>
+          <span id="opp-ready-mark" class="ready-mark not-ready">⌛</span>
+        </div>
+        <button id="btn-ready" class="btn-ready" type="button" hidden>준비 완료</button>
+      </div>
+
+      <!-- 룰 요약 -->
+      <div class="rules-summary">
+        <h3>윷놀이 규칙 요약</h3>
+        <ul>
+          <li>도(1) · 개(2) · 걸(3) · 윷(4) · 모(5)</li>
+          <li>윷/모: 한 번 더 던지기</li>
+          <li>잡기: 상대 말 출발점으로 + 보너스</li>
+          <li>업기: 같은 칸 자기 말 → 함께 이동</li>
+          <li>좌상(5)·우상(10) 정확히 멈춤 → 지름길</li>
+          <li>백도(-1): X 표식 가락만 뒤집힐 때, 출발한 말 1칸 뒤로</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <main class="game-main hidden">
+    <!-- 좌측(주 영역): 보드 -->
+    <section class="board-area">
+      <canvas id="board-canvas"></canvas>
       <div id="countdown" class="countdown hidden">3</div>
       <!-- 분기 선택 모달 -->
       <div id="branch-modal" class="branch-modal hidden">
@@ -125,6 +164,12 @@
 
   <!-- 토스트 -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- 상대 이탈 배너 -->
+  <div id="opponent-left-banner" class="opponent-left-banner hidden">
+    <span id="opponent-left-msg">상대방이 나갔습니다.</span>
+    <button id="btn-banner-return-lobby" class="btn-banner-return-lobby" type="button">로비로 돌아가기</button>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>
