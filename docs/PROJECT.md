@@ -1,6 +1,6 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-06-25 — 입장 UI 통일 Phase 4 완료 (hanabi, davinci-code, codenames-duet). 오목 파일럿 패턴(#screen-waiting + #name-gate-inline + #ready-panel + #opponent-left-banner + READY 게이트 서버)이 이미 구현된 상태 확인. hanabi: Playwright 78/78 PASS (HR-C11 가이드 슬라이더 9/9 포함). davinci-code: 단위 53/53 PASS. codenames-duet: #review-banner 복기 모드 보존 확인. AD3 32/32 APPROVED. 입장 UI 통일 전 페이즈(1~4, 9개 게임) 완료.
+> 최종 업데이트: 2026-06-25 — READY 게이트 노후화 테스트 현행화 완료 (davinci-code E2E 25/25, codenames-duet review-smoke 27/27 + review-visual 11/11). davinci-code/server.js POST /test/reset 신설. davinci-plus-qa.spec.js 동적 턴 판별(determineTurnPlayers) + beforeEach 리셋. review-smoke.mjs JOIN/READY WS 시퀀스 삽입. review-visual.mjs 2탭 READY 흐름으로 변경.
 > 이전 갱신: 2026-06-23 — Phase 1-B 윷놀이 N인 확장 완료.
 > 이전 갱신: 2026-06-23 — Phase 1-A 런처 로비 다인용 지원 + Lobby Entry UX 개선.
 > 이전 갱신: 2026-06-17 — 버그리포트 배치 6건 수정 + 1건 보류.
@@ -88,8 +88,6 @@ minigame-paradise/
 ## 향후 계획
 
 - matgo 기존 e2e 32건 현행화 (READY 게이트 도입 후 `joinAndStartGame` 헬퍼 적응 필요)
-- davinci-code E2E 테스트 현행화 (READY 게이트 도입 후 `connectTwoPlayers` 헬퍼 적응 필요)
-- codenames-duet review-smoke/visual 테스트 현행화 (READY 게이트 도입 후 JOIN/READY 시퀀스 추가 필요)
 - 다인용 Phase 1-C~E: 요트/루미큐브/하나비 게임 로직 3~4인 확장
 - 다인용 Phase 2: 다빈치 코드/맞고/테트리스/코드네임/장기/오목 다인용 검토
 - 모바일 반응형 레이아웃

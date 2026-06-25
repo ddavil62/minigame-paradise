@@ -1,5 +1,39 @@
 # Changelog
 
+## [2026-06-25] - READY 게이트 노후화 테스트 현행화
+
+### 배경
+입장 UI 통일 Phase 1~4 (2026-06-24~25)에서 READY 게이트가 도입된 후, 기존 테스트 3종이 JOIN/READY 시퀀스를 거치지 않아 TIMEOUT 상태였다.
+
+### 변경 파일
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `davinci-code/server.js` | `POST /test/reset` 엔드포인트 신설 (테스트 격리용 -- WS 연결 전체 terminate + `players=[]` + `game=null` + `readySet.clear()`) |
+| `davinci-code/tests/davinci-plus-qa.spec.js` | `connectTwoPlayers()` READY 게이트 대응 (`?name=P1Test/P2Test` + `#btn-ready` + `.play-area:not(.hidden)`), `determineTurnPlayers()` 동적 턴 판별 헬퍼 (E-12/13/14/22/23/24/25), `test.beforeEach` 리셋 |
+| `codenames-duet/tests/review-smoke.mjs` | JOIN/JOINED/READY/GAME_START WS 시퀀스 삽입 |
+| `codenames-duet/tests/review-visual.mjs` | 1탭→2탭 `?name=ReviewA/ReviewB` + `#btn-ready` 클릭 + `.board-wrap:not(.hidden)` 대기로 변경 |
+
+### 수정
+- **davinci E2E 턴 순서 비결정성 (QA 1차 FAIL → 2차 수정)**: QA에서 P1 선공 가정(`waitForFunction('내 턴')`) 7건이 비결정적 실패로 발견됨 (pre-existing 결함, READY 게이트 이전에는 TIMEOUT으로 은폐). `determineTurnPlayers()` 헬퍼로 양쪽 `turn-status`를 읽어 `attacker`/`defender`를 동적 결정하도록 수정
+- **테스트 간 서버 상태 격리**: `davinci-code/server.js`에 `POST /test/reset` 엔드포인트 추가 (WS 전체 terminate + 상태 초기화). `test.beforeEach`에서 호출하여 테스트 격리 확보
+
+### 테스트 결과
+- davinci-plus-qa.spec.js: **25/25 PASS** (3회 연속, 비결정적 실패 0건)
+- review-smoke.mjs: **27/27 PASS**
+- review-visual.mjs: **11/11 PASS**
+- 단위 회귀 (game-unit-qa.spec.js): **53/53 PASS**
+
+### 참고
+- 스코프: `.claude/specs/2026-06-25-test-modernize-scope.md`
+- 플랜: `.claude/specs/2026-06-25-test-modernize-plan.md`
+- Coder 1차: `.claude/specs/2026-06-25-test-modernize-coder-report.md`
+- QA 1차 (FAIL): `.claude/specs/2026-06-25-test-modernize-qa-report.md`
+- Coder 2차 (재수정): `.claude/specs/2026-06-25-test-modernize-coder-report2.md`
+- 스펙 대비 차이: 원래 프로덕션 코드 무변경 원칙이었으나, QA FAIL로 발견된 테스트 격리 문제 해소를 위해 `davinci-code/server.js`에 `/test/reset` 엔드포인트 1개 추가 (게임 로직 무변경, 테스트 인프라 전용)
+
+---
+
 ## [2026-06-25] - 입장 UI 통일 Phase 4 (Entry UI Unify — hanabi, davinci-code, codenames-duet)
 
 ### 확인 (코드 변경 없음)

@@ -316,10 +316,26 @@ export function createApp() {
   // ── HTTP 핸들러 (정적 파일 서빙) ──────────────────────────────
   /**
    * 정적 파일 응답 핸들러. public/ 외 경로는 차단 (디렉토리 탈출 방지).
+   * POST /test/reset — 테스트 간 서버 상태(players/game/readySet) 초기화.
    * @param {http.IncomingMessage} req
    * @param {http.ServerResponse} res
    */
   function handleHttp(req, res) {
+    // ── 테스트 리셋 엔드포인트 ────────────────────────────────
+    if (req.method === 'POST' && req.url === '/test/reset') {
+      // 기존 WS 연결을 모두 강제 종료하고 룸 상태를 완전 초기화
+      for (const p of players) {
+        try { p.ws.terminate(); } catch (_) { /* 이미 닫힘 */ }
+      }
+      players = [];
+      game = null;
+      readySet.clear();
+      console.log('[davinci] /test/reset → 서버 상태 초기화 완료');
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     const reqUrl = req.url || '/';
     const reqPath = reqUrl.split('?')[0] || '/';
     const urlPath = (reqPath === '/' || reqPath === '') ? '/index.html' : reqPath;

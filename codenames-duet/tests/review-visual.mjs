@@ -44,15 +44,25 @@ const ctxB = await browser.newContext();
 const pageA = await ctxA.newPage();
 const pageB = await ctxB.newPage();
 
-// p1
-await pageA.goto(URL);
-await pageA.waitForSelector('#board .card');
-// p2 → 자동 GAME_START 트리거
-await pageB.goto(URL);
+// 두 페이지 동시 접속 (URL ?name= 파라미터로 닉네임 자동 처리 → 즉시 JOIN)
+await Promise.all([
+  pageA.goto(URL + '?name=ReviewA'),
+  pageB.goto(URL + '?name=ReviewB'),
+]);
+// 양쪽 READY 버튼 표시 대기 후 동시 클릭
+await Promise.all([
+  pageA.waitForSelector('#btn-ready', { state: 'visible', timeout: 8000 }),
+  pageB.waitForSelector('#btn-ready', { state: 'visible', timeout: 8000 }),
+]);
+await Promise.all([
+  pageA.click('#btn-ready'),
+  pageB.click('#btn-ready'),
+]);
+// 게임 시작 후 보드 표시 + 턴 상태 도달 대기
 await pageA.waitForFunction(() => {
   const t = document.getElementById('turn-status');
   return t && (t.textContent.includes('단서') || t.textContent.includes('시작') || t.textContent.includes('추측'));
-}, { timeout: 5000 });
+}, { timeout: 10000 });
 
 // 게임 종료까지 빠르게: 양쪽이 PASS 9회 → lost/tokens
 async function whoseTurn(page) {

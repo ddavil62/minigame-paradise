@@ -90,6 +90,19 @@ function waitFor(messages, predicate, timeoutMs = 3000) {
   await waitOpen(a.ws);
   await waitOpen(b.ws);
 
+  // JOIN 전송 (READY 게이트 프로토콜)
+  a.ws.send(JSON.stringify({ type: 'JOIN', name: 'SmokeA' }));
+  b.ws.send(JSON.stringify({ type: 'JOIN', name: 'SmokeB' }));
+
+  // 양쪽 모두 JOINED (opponentName 포함) 수신 대기
+  await waitFor(a.messages, (m) => m.type === 'JOINED' && m.opponentName);
+  await waitFor(b.messages, (m) => m.type === 'JOINED' && m.opponentName);
+
+  // 양쪽 READY 전송
+  a.ws.send(JSON.stringify({ type: 'READY' }));
+  b.ws.send(JSON.stringify({ type: 'READY' }));
+
+  // GAME_START 대기
   await waitFor(a.messages, (m) => m.type === 'GAME_START');
   await waitFor(b.messages, (m) => m.type === 'GAME_START');
 

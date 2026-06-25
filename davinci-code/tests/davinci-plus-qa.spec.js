@@ -2,6 +2,10 @@
  * @fileoverview 다빈치 코드 플러스 E2E 브라우저 테스트.
  * 서버(node server.js, 포트 3002) 사전 실행 필요.
  * 2탭(P1/P2) 시뮬레이션으로 전체 게임 플로우 검증.
+ *
+ * 턴 판별: 서버가 firstTurn을 결정하므로 테스트 측 p1/p2 중 어느 쪽이
+ * 선공('내 턴')인지 보장되지 않는다. 추측 페이즈 이후 액션이 필요한 테스트는
+ * determineTurnPlayers() 헬퍼로 동적으로 attacker/defender를 판별한다.
  */
 
 import { test, expect } from '@playwright/test';
@@ -9,8 +13,43 @@ import { test, expect } from '@playwright/test';
 const BASE = 'http://localhost:3002';
 const SCREENSHOT_DIR = 'tests/screenshots';
 
+// ── 테스트 간 서버 상태 격리 ─────────────────────────────────────────
+test.beforeEach(async () => {
+  await fetch(`${BASE}/test/reset`, { method: 'POST' }).catch(() => {});
+});
+
 /**
- * 2개 페이지(탭)를 열어 P1/P2 연결 + GAME_START 후 STATE 수신 대기.
+ * 양쪽 페이지의 turn-status를 읽어 선공(attacker)과 후공(defender)을 동적 판별한다.
+ * 조커 배치 완료 후 추측 페이즈에서 호출한다.
+ *
+ * @param {import('@playwright/test').Page} p1 - 첫 번째 페이지
+ * @param {import('@playwright/test').Page} p2 - 두 번째 페이지
+ * @returns {Promise<{ attacker: Page, defender: Page }>}
+ */
+async function determineTurnPlayers(p1, p2) {
+  // 양쪽 모두 턴 상태가 결정될 때까지 대기 ('내 턴' 또는 '상대 턴')
+  await Promise.all([
+    p1.waitForFunction(() => {
+      const ts = document.getElementById('turn-status');
+      return ts && (ts.textContent.includes('내 턴') || ts.textContent.includes('상대 턴'));
+    }, { timeout: 8000 }),
+    p2.waitForFunction(() => {
+      const ts = document.getElementById('turn-status');
+      return ts && (ts.textContent.includes('내 턴') || ts.textContent.includes('상대 턴'));
+    }, { timeout: 8000 }),
+  ]);
+
+  const p1IsMyTurn = await p1.evaluate(() =>
+    document.getElementById('turn-status')?.textContent?.includes('내 턴') ?? false
+  );
+
+  // 선공 페이지 = attacker, 후공 페이지 = defender
+  return p1IsMyTurn ? { attacker: p1, defender: p2 } : { attacker: p2, defender: p1 };
+}
+
+/**
+ * 2개 페이지(탭)를 열어 P1/P2 연결 + READY 게이트 통과 + GAME_START 후 STATE 수신 대기.
+ * URL ?name= 파라미터로 닉네임을 자동 전달하면 client.js가 즉시 JOIN을 전송한다.
  */
 async function connectTwoPlayers(browser) {
   const ctx1 = await browser.newContext();
@@ -18,13 +57,27 @@ async function connectTwoPlayers(browser) {
   const p1 = await ctx1.newPage();
   const p2 = await ctx2.newPage();
 
-  // P1 접속
-  await p1.goto(BASE);
-  await p1.waitForSelector('#you-tag:not(:empty)');
+  // 두 플레이어 동시 접속 (URL 파라미터로 닉네임 자동 처리 → 즉시 JOIN)
+  await Promise.all([
+    p1.goto(BASE + '?name=P1Test'),
+    p2.goto(BASE + '?name=P2Test'),
+  ]);
 
-  // P2 접속 -> GAME_START
-  await p2.goto(BASE);
-  await p2.waitForSelector('#you-tag:not(:empty)');
+  // 양쪽 READY 버튼이 표시되면 동시 클릭
+  await Promise.all([
+    p1.waitForSelector('#btn-ready', { state: 'visible', timeout: 8000 }),
+    p2.waitForSelector('#btn-ready', { state: 'visible', timeout: 8000 }),
+  ]);
+  await Promise.all([
+    p1.click('#btn-ready'),
+    p2.click('#btn-ready'),
+  ]);
+
+  // 게임 시작 확인 (대기 화면이 숨겨지고 게임 영역이 표시될 때까지)
+  await Promise.all([
+    p1.waitForSelector('.play-area:not(.hidden)', { state: 'visible', timeout: 10000 }),
+    p2.waitForSelector('.play-area:not(.hidden)', { state: 'visible', timeout: 10000 }),
+  ]);
 
   // 양쪽 모두 STATE 수신 대기 (조커 배치 페이즈)
   await p1.waitForFunction(() => {
@@ -272,18 +325,15 @@ test.describe('조커 추측 UI', () => {
     await p1.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
 
-    // 선공(P1)의 추측 패널 확인
-    await p1.waitForFunction(() => {
-      const ts = document.getElementById('turn-status');
-      return ts && ts.textContent.includes('내 턴');
-    }, { timeout: 5000 });
+    // 선공 페이지를 동적 판별
+    const { attacker } = await determineTurnPlayers(p1, p2);
 
-    const jokerBtn = p1.locator('#btn-guess-joker');
+    const jokerBtn = attacker.locator('#btn-guess-joker');
     await expect(jokerBtn).toBeVisible();
     const text = await jokerBtn.textContent();
     expect(text).toContain('조커');
 
-    await p1.screenshot({ path: `${SCREENSHOT_DIR}/e12-joker-guess-button.png` });
+    await attacker.screenshot({ path: `${SCREENSHOT_DIR}/e12-joker-guess-button.png` });
     await cleanup(ctx1, ctx2);
   });
 
@@ -293,16 +343,14 @@ test.describe('조커 추측 UI', () => {
     await p1.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
 
-    await p1.waitForFunction(() => {
-      const ts = document.getElementById('turn-status');
-      return ts && ts.textContent.includes('내 턴');
-    }, { timeout: 5000 });
+    // 선공 페이지를 동적 판별
+    const { attacker } = await determineTurnPlayers(p1, p2);
 
     // 슬롯 선택 없이 조커 추측 클릭
-    await p1.locator('#btn-guess-joker').click();
+    await attacker.locator('#btn-guess-joker').click();
 
     // 토스트 메시지 확인
-    const toast = p1.locator('#toast');
+    const toast = attacker.locator('#toast');
     await expect(toast).not.toHaveClass(/hidden/, { timeout: 3000 });
     const toastText = await toast.textContent();
     expect(toastText).toContain('선택');
@@ -321,33 +369,30 @@ test.describe('게임 플로우 통합 테스트', () => {
     await p1.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
 
-    // P1(선공) 대기
-    await p1.waitForFunction(() => {
-      const ts = document.getElementById('turn-status');
-      return ts && ts.textContent.includes('내 턴');
-    }, { timeout: 5000 });
+    // 선공 페이지를 동적 판별
+    const { attacker } = await determineTurnPlayers(p1, p2);
 
     // 상대 카드 첫 번째 미공개 카드 클릭
-    const oppCards = p1.locator('#opp-cards .card.hidden-value');
+    const oppCards = attacker.locator('#opp-cards .card.hidden-value');
     const oppCount = await oppCards.count();
     expect(oppCount).toBeGreaterThan(0);
     await oppCards.first().click();
 
     // 선택 슬롯 확인
-    const slotText = await p1.locator('#selected-slot').textContent();
+    const slotText = await attacker.locator('#selected-slot').textContent();
     expect(slotText).toContain('1');
 
     // 일부러 틀리게 추측 (값 11 - 확률적으로 틀릴 수 있음, 여러 값 시도)
-    await p1.locator('#guess-value').fill('11');
-    await p1.locator('#btn-guess').click();
+    await attacker.locator('#guess-value').fill('11');
+    await attacker.locator('#btn-guess').click();
 
     // 결과 확인 - 턴이 바뀌었거나 정답이면 계속 패널
-    await p1.waitForFunction(() => {
+    await attacker.waitForFunction(() => {
       const ts = document.getElementById('turn-status');
       return ts && (ts.textContent.includes('상대 턴') || ts.textContent.includes('정답'));
     }, { timeout: 5000 });
 
-    await p1.screenshot({ path: `${SCREENSHOT_DIR}/e14-after-guess.png` });
+    await attacker.screenshot({ path: `${SCREENSHOT_DIR}/e14-after-guess.png` });
     await cleanup(ctx1, ctx2);
   });
 
@@ -436,8 +481,21 @@ test.describe('UI 안정성', () => {
     const p2 = await ctx2.newPage();
     p2.on('pageerror', err => errors.push(err.message));
 
-    await p1.goto(BASE);
-    await p2.goto(BASE);
+    // URL 파라미터로 닉네임 자동 처리 → 즉시 JOIN
+    await Promise.all([
+      p1.goto(BASE + '?name=E18P1'),
+      p2.goto(BASE + '?name=E18P2'),
+    ]);
+
+    // READY 게이트 통과
+    await Promise.all([
+      p1.waitForSelector('#btn-ready', { state: 'visible', timeout: 8000 }),
+      p2.waitForSelector('#btn-ready', { state: 'visible', timeout: 8000 }),
+    ]);
+    await Promise.all([
+      p1.click('#btn-ready'),
+      p2.click('#btn-ready'),
+    ]);
 
     await p1.waitForFunction(() => {
       const ts = document.getElementById('turn-status');
@@ -517,20 +575,18 @@ test.describe('엣지케이스', () => {
     await p1.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
 
-    await p1.waitForFunction(() => {
-      const ts = document.getElementById('turn-status');
-      return ts && ts.textContent.includes('내 턴');
-    }, { timeout: 5000 });
+    // 선공 페이지를 동적 판별
+    const { attacker } = await determineTurnPlayers(p1, p2);
 
     // 상대 카드 선택
-    await p1.locator('#opp-cards .card.hidden-value').first().click();
+    await attacker.locator('#opp-cards .card.hidden-value').first().click();
 
     // 범위 밖 숫자 입력
-    await p1.locator('#guess-value').fill('12');
-    await p1.locator('#btn-guess').click();
+    await attacker.locator('#guess-value').fill('12');
+    await attacker.locator('#btn-guess').click();
 
     // 토스트 경고 확인
-    const toast = p1.locator('#toast');
+    const toast = attacker.locator('#toast');
     await expect(toast).not.toHaveClass(/hidden/, { timeout: 3000 });
     const toastText = await toast.textContent();
     expect(toastText).toContain('0~11');
@@ -544,20 +600,18 @@ test.describe('엣지케이스', () => {
     await p1.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
 
-    await p1.waitForFunction(() => {
-      const ts = document.getElementById('turn-status');
-      return ts && ts.textContent.includes('내 턴');
-    }, { timeout: 5000 });
+    // 선공 페이지를 동적 판별
+    const { attacker } = await determineTurnPlayers(p1, p2);
 
     // 상대 카드 선택
-    await p1.locator('#opp-cards .card.hidden-value').first().click();
+    await attacker.locator('#opp-cards .card.hidden-value').first().click();
 
     // 빈 입력 그대로 추측
-    await p1.locator('#guess-value').fill('');
-    await p1.locator('#btn-guess').click();
+    await attacker.locator('#guess-value').fill('');
+    await attacker.locator('#btn-guess').click();
 
     // 토스트 경고 확인
-    const toast = p1.locator('#toast');
+    const toast = attacker.locator('#toast');
     await expect(toast).not.toHaveClass(/hidden/, { timeout: 3000 });
 
     await cleanup(ctx1, ctx2);
@@ -569,14 +623,11 @@ test.describe('엣지케이스', () => {
     await p1.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
 
-    // P2는 후공이므로 상대 턴
-    await p2.waitForFunction(() => {
-      const ts = document.getElementById('turn-status');
-      return ts && ts.textContent.includes('상대 턴');
-    }, { timeout: 5000 });
+    // 후공 페이지를 동적 판별 — defender가 '상대 턴'
+    const { defender } = await determineTurnPlayers(p1, p2);
 
-    // P2의 상대 카드에 clickable 클래스가 없어야 함
-    const clickable = p2.locator('#opp-cards .card.clickable');
+    // 후공 페이지의 상대 카드에 clickable 클래스가 없어야 함
+    const clickable = defender.locator('#opp-cards .card.clickable');
     expect(await clickable.count()).toBe(0);
 
     await cleanup(ctx1, ctx2);
@@ -592,19 +643,17 @@ test.describe('추측 기록', () => {
     await p1.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
 
-    await p1.waitForFunction(() => {
-      const ts = document.getElementById('turn-status');
-      return ts && ts.textContent.includes('내 턴');
-    }, { timeout: 5000 });
+    // 선공 페이지를 동적 판별
+    const { attacker } = await determineTurnPlayers(p1, p2);
 
     // 상대 카드 선택 + 추측
-    await p1.locator('#opp-cards .card.hidden-value').first().click();
-    await p1.locator('#guess-value').fill('5');
-    await p1.locator('#btn-guess').click();
+    await attacker.locator('#opp-cards .card.hidden-value').first().click();
+    await attacker.locator('#guess-value').fill('5');
+    await attacker.locator('#btn-guess').click();
 
     // 추측 기록에 항목 추가 확인
-    await p1.waitForTimeout(500);
-    const historyItems = p1.locator('#guess-history .history-item');
+    await attacker.waitForTimeout(500);
+    const historyItems = attacker.locator('#guess-history .history-item');
     expect(await historyItems.count()).toBeGreaterThan(0);
 
     await cleanup(ctx1, ctx2);
