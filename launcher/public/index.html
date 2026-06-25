@@ -21,39 +21,18 @@
     </div>
   </div>
 
-  <!-- ── 로비 화면 (단일 뷰: 인원 정보 + 게임 카드 그리드) ──── -->
-  <div class="lobby-view view hidden" id="lobby-view">
+  <!-- ── 포탈 뷰 (닉네임 인사말 + 게임 카드 그리드, WS 연결 없음) ──── -->
+  <div class="view hidden" id="portal-view">
     <header class="hero">
       <h1 class="hero-title">미니게임 천국</h1>
-      <p class="hero-sub">친구랑 한 판 — LAN 1:1</p>
+      <p class="hero-sub">친구랑 한 판 — LAN 파티</p>
     </header>
 
-    <div class="lobby-meta">
-      <div class="player-count" id="player-count">1/2</div>
-      <div class="player-role" id="player-role">호스트</div>
-      <!-- 접속자 목록 (이름 + 🟢) — LOBBY_STATE.players로 실시간 갱신 -->
-      <div id="presence-list" class="presence-list"></div>
-      <!-- 호스트 전용 인원 선택 UI (게스트에게는 app.js가 hidden 처리) -->
-      <div id="player-count-selector" class="player-count-selector" hidden>
-        <span class="pcs-label">목표 인원</span>
-        <button class="pcs-btn active" data-target="2" type="button">2인</button>
-        <button class="pcs-btn" data-target="3" type="button">3인</button>
-        <button class="pcs-btn" data-target="4" type="button">4인</button>
-        <button class="pcs-btn" data-target="5" type="button">5인</button>
-      </div>
-      <!-- AI 채우기 컨트롤 (호스트 전용, 3인 이상 목표에서만 활성) -->
-      <div id="ai-fill-controls" class="ai-fill-controls" hidden>
-        <button id="btn-fill-ai" type="button" class="ai-fill-btn">&#x1F916; AI로 채우기</button>
-        <button id="btn-cancel-ai" type="button" class="ai-fill-cancel-btn" hidden>AI 취소</button>
-        <span id="ai-fill-hint" class="ai-fill-hint"></span>
-      </div>
-      <p class="lobby-hint" id="lobby-hint">친구가 접속하면 종목을 선택하세요</p>
-      <!-- 게스트 대기 안내 (호스트에게는 hidden) -->
-      <p class="guest-waiting" id="guest-waiting" hidden>호스트가 종목을 고르면 자동으로 게임방으로 이동돼요 &#x1F3AE;</p>
-      <p class="lobby-status" id="lobby-status"></p>
+    <div class="portal-meta">
+      <span id="portal-player-name"></span>
     </div>
 
-    <!-- 게임 카드 그리드 (항상 표시, 인원/역할에 따라 CSS로 비활성) -->
+    <!-- 게임 카드 그리드 -->
     <main class="container">
       <section id="game-grid" class="game-grid" aria-label="게임 목록">
         <!-- app.js가 games.json을 fetch하여 카드 동적 생성 -->
@@ -61,12 +40,26 @@
     </main>
   </div>
 
+  <!-- ── 대기실 뷰 (게임별 독립 WS 연결) ──── -->
+  <div class="view hidden" id="waiting-room-view">
+    <div class="waiting-room-header">
+      <h2 id="wr-game-name">게임 이름</h2>
+      <button id="btn-leave-room" type="button">나가기</button>
+    </div>
+    <div class="waiting-room-players" id="wr-players">
+      <!-- ROOM_STATE로 동적 렌더 -->
+    </div>
+    <div class="waiting-room-actions">
+      <button id="btn-ready" type="button">준비</button>
+      <button id="btn-wr-fill-ai" type="button" hidden>AI로 채우기</button>
+    </div>
+    <div class="waiting-room-status" id="wr-status"></div>
+    <div id="wr-toast" class="lobby-toast" role="status" aria-live="polite"></div>
+  </div>
+
   <footer class="site-footer">
     <p>게임 서버가 모두 실행 중이어야 접속이 가능합니다 · 친구는 호스트 IP로 접속하세요</p>
   </footer>
-
-  <!-- 입장/퇴장 토스트 컨테이너 (2.5초 자동 소멸) -->
-  <div id="lobby-toast" class="lobby-toast" role="status" aria-live="polite"></div>
 
   <script src="app.js" type="module"></script>
 </body>

@@ -43,34 +43,42 @@ node matgo/server.js --port 3013
 - **하나비 (hanabi)**: 룰북 `hanabi/docs/RULEBOOK.md` (Antoine Bauza 표준 Hanabi + 본 구현 비교, §1~§13, 2026-06-01) + 룰북 기반 Playwright 시나리오 61개(`tests/rulebook-c1~c11-*.spec.js`, HR-C1~C11) 완비 (2026-06-01). 2인 완전 협력 카드게임 — 서버 권위 + **손패 가림**(`snapshotForPlayer`가 본인 손패 color/number null 마스킹)이 정체성. §13 구현 vs 표준 차이 **8건 전부 confirmed**. 회귀 게이트: 손패 누설(HR-C6-001/HR-C7-001), §13-7 오프바이원(HR-C7-003/004, 2026-06-01 giveClue checkGameEnd 누락 HIGH 버그 수정). 테스트: 유닛 31 + WS 7 + QA엣지 8 + E2E 6 + 가이드 슬라이더 9. **대기 화면 룰 가이드 슬라이더**(인포그래픽 7장 `public/assets/guide/`, 버튼·키보드·스와이프, HR-C11, 2026-06-01 추가 — game.js/WS 무변경). E2E(C8~C11)는 `node server.js --port 3095` 사전 구동 필요. **AI 봇 미지원.**
 - **오목 (omok)**: 표준 19×19 오목 (2026-06-15 신규, 10번째 종목). 룰: **쌍삼(33)·사사(44) 금수**(흑·백 양쪽 동일, 착수 거부), 5목 이상 연속(가로/세로/대각 4방향) 승리, **장목(6목 이상)도 승리**(반칙 아님), 선공=흑(p1). 서버 권위 — 착수 검증·4방향 `checkWin`(5목 이상·장목 포함)·금수·`checkDraw`(361칸) 모두 `game.js` 순수 함수. **AI 봇 지원**(`bot.js` 휴리스틱 1수 평가 — 빈 교차점 361칸 전수 평가, 공격 1.0 + 수비 0.9 가중치, CHAIN_WEIGHT 테이블, 첫 수 천원, `getBotUrl`+`child_process.spawn` 패턴 + 대기 화면 "🤖 AI랑 시작"). 외부 이미지 에셋 0 — Canvas(728px, 19×19 격자·나뭇결·화점 9곳·좌표 라벨 A~T/1~19) + CSS 우드 테마. 단독 실행 포트 3012(충돌 시 +1 폴백). **2026-06-15 쌍삼·사사 금수 + 세션 유지 리매치 추가**: (1) 금수 — 한 착수로 열린3(`_XXX_`) 2개+ 또는 4목(len===4) 2개+ 동시 생성 시 **착수 거부**(board/moveCount 원복·ERROR 토스트·게임 계속), `game.js`에 `isOpenThree`/`isFour`/`checkDoubleThree`/`checkDoubleFour` 추가, `placeStone` 순서 = 기존검증→가상착수→`checkWin`(승리 우선)→`checkDoubleThree`→`checkDoubleFour`(거부 원복)→`checkDraw`→턴교대. **5목+ 완성 수는 33/44 동시여도 승리**(checkWin 선행), 장목은 여전히 승리. (2) 리매치 — `location.reload()` 제거, WS 연결 유지한 채 양쪽 "한 판 더" 동의 시 재시작. 신규 메시지 `REMATCH`(C→S)/`REMATCH_WAITING{ready}`/`REMATCH_START{nextBlack}`(S→C). 선공: 패자=다음 흑, 기권자=흑, 무승부=색 교체(p1/p2 id 불변·color만 재배정 + `createGame()` 재생성, `server.js` `swapColorsForRematch`/`rematchPending`/`lastGameResult`). 봇은 GAME_OVER/REMATCH_WAITING 시 자동 REMATCH(0.5s, 타임아웃 보호 10s), `REMATCH_START`에서 myColor 재설정, 종료 안 함. 수정: `game.js`/`server.js`/`bot.js`/`public/js/{main,network}.js`/`public/index.html`/`public/css/style.css`. 테스트: smoke 106(OMOK-001~012, 포트 3105) + bot-smoke 14(OMOK-BOT-001~004, 포트 3106) + QA엣지 35(`qa-edge` +QA-R1~R6) + QA draw/bot 9 + QA 금수공격 28(`qa-renju-attack` — 닫힌3 비금수/장목 승리/5목+33 승리/경계 래핑/흑백 양쪽) + QA 리매치공격 14(`qa-rematch-attack` — 색 swap/WAITING/START/원복) + E2E 3 + 모바일 1(격리 포트 3077) = **210건 전부 PASS**(기존 117 회귀 포함, 장목 승리·대각/세로 승리·draw 금수 오탐 0건). QA PASS(결함 0), AD3 APPROVED.
 
-## 런처 로비
+## 런처 로비 (게임 포탈 + 게임별 대기실)
 
-단일 화면에서 게임 카드 10개를 즉시 표시하고, 호스트가 카드를 클릭하여 게임을 선택한다. 스타트 버튼이나 별도의 종목 선택 단계는 없다.
+3-뷰 구조: 닉네임 게이트 → 포탈 뷰(WS 연결 없음, 게임 카드 10개 그리드) → 대기실 뷰(게임별 독립 WS 연결).
 
-- 1/2: 호스트가 카드 클릭 시 AI 모드로 게임 시작 (봇 미지원 게임은 비활성)
-- 2/2: 호스트가 카드 클릭 시 인간 대전으로 양쪽 동시 이동
-- 게스트: 카드 클릭 불가, 투표만 가능
-- 게임 완료 후 "다른 종목" 버튼(`#btn-return-lobby`)으로 양쪽 동시 로비 복귀
-- 게임 진행 중 상시 "게임 선택" 버튼(`#btn-back-to-lobby`)으로 로비 복귀 가능. confirm 다이얼로그 표시 후 `POST /lobby/return` 호출. 상대방은 disconnect 감지(OPPONENT_LEFT / GAME_RESULT disconnect / GAME_OVER disconnect) + path 기반 런처 모드 판정으로 1.2초 후 자동 redirect
+- 포탈 뷰: 닉네임 게이트 통과 후 WS 없이 games.json fetch + 게임 카드 표시. 모든 사용자가 카드 클릭 가능.
+- 대기실: 카드 클릭 시 `/lobby/ws?gameId={gameId}`로 WS 연결 + 대기실 뷰 전환. 정원 = maxPlayers.
+- READY 시스템: 전원 준비(READY 토글) AND 인원 >= minPlayers 두 조건 동시 충족 시 REDIRECT.
+- 타임아웃 킥: 입장 후 60초 내 READY 미완료 시 KICKED + 자동 퇴장.
+- AI 채우기: 호스트(첫 입장자)가 FILL_WITH_AI → 빈 슬롯을 AI 봇으로 채움. botAvailable=false 게임은 ERROR 반환.
+- 나가기: LEAVE_ROOM 전송 → WS 닫기 → 포탈 뷰 복귀.
+- 게임 복귀: 게임 종료 후 `location.href='/'`로 포탈 복귀. 각 게임 "로비로" 버튼 현행 유지.
+- 호스트: Map 첫 번째 입장자. 퇴장 시 두 번째로 승계. AI 채우기 버튼 권한만 다름.
 
-### WS 프로토콜 (launcher /ws)
+### WS 프로토콜 (launcher `/lobby/ws?gameId={gameId}`)
 
 | 방향 | 메시지 | 페이로드 | 설명 |
 |------|--------|---------|------|
-| C->S | `PICK_GAME` | `{ gameId }` | 호스트가 게임 선택 |
-| C->S | `VOTE_GAME` | `{ gameId }` | 투표 toggle |
-| S->C | `LOBBY_STATE` | `{ count, role, hostId, mode, votes }` | 로비 상태 스냅샷 |
-| S->C | `REDIRECT` | `{ gameId, path, mode }` | 게임 페이지 이동 |
-| S->C | `FULL` | `{ message }` | 정원 초과 거절 |
-| S->C | `RESET` | `{}` | 호스트 disconnect 시 초기화 |
-| S->C | `RETURN_LOBBY` | `{}` | 로비 복귀 (양쪽 location.href='/') |
+| C->S | `JOIN` | `{ name }` | 대기실 입장 시 닉네임 송신 |
+| C->S | `READY` | (없음) | 준비 버튼 클릭. 토글(준비/취소) |
+| C->S | `LEAVE_ROOM` | (없음) | 나가기 버튼. 서버가 제거 후 ROOM_STATE 재브로드캐스트 |
+| C->S | `FILL_WITH_AI` | (없음) | 호스트 전용. 빈 슬롯을 AI로 채우고 READY 조건 즉시 평가 |
+| S->C | `ROOM_STATE` | `{ gameId, players, aiSlots, readyCount, totalCount, minPlayers, maxPlayers, myId, myReady, canStart }` | 대기실 상태 스냅샷 |
+| S->C | `ROOM_FULL` | `{ gameId, maxPlayers }` | 정원 초과. 클라이언트는 포탈 복귀 |
+| S->C | `KICKED` | `{ reason: 'timeout' }` | 타임아웃 킥. 클라이언트는 포탈 복귀 |
+| S->C | `REDIRECT` | `{ gameId, path, mode, playerCount }` | 게임 시작 |
+| S->C | `ERROR` | `{ message }` | botAvailable=false 게임에서 FILL_WITH_AI 요청 시 |
+
+**삭제된 메시지**: `SET_TARGET`, `PICK_GAME`, `VOTE_GAME`, `CANCEL_AI_FILL` (C->S), `LOBBY_STATE`, `RESET`, `RETURN_LOBBY`, `FULL`, `PLAYER_JOINED`, `PLAYER_LEFT` (S->C)
 
 ### HTTP 엔드포인트
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| `POST` | `/lobby/return` | 게임 완료 화면에서 호출. 서버가 votes/mode 리셋 + RETURN_LOBBY broadcast. 204 응답 |
 | `POST` | `/bug-report` | 버그 신고 수신 → `bug-reports.jsonl`에 append. 200 `{ok:true}` / 빈 텍스트·비JSON 400. 게임 prefix 라우팅보다 **먼저** 매칭 (공통 버그리포트 위젯 참조) |
+
+**삭제된 엔드포인트**: `POST /lobby/return` (게임 복귀는 `location.href='/'`로 처리)
 
 ## 공통 버그리포트 위젯 (2026-06-16 신규)
 
@@ -90,7 +98,7 @@ node matgo/server.js --port 3013
 
 ### 신고 저장 (`POST /bug-report`)
 
-- 라우팅: `POST /lobby/return` 아래, **게임 prefix 라우팅보다 먼저** 매칭(게임 서버로 전달 방지).
+- 라우팅: **게임 prefix 라우팅보다 먼저** 매칭(게임 서버로 전달 방지).
 - `minigames/bug-reports.jsonl`에 `fs.appendFile`로 1행씩 append (JSON Lines, appendFile 원자성으로 동시 신고 인터리빙 안전).
 - 레코드 5필드: `gameId`(pathname 첫 세그먼트, 로비=`launcher`), `timestamp`(ISO), `screenSize{w,h}`, `url`, `text`.
 - 검증: 비JSON·`text` 누락·공백만 → 400. 서버측 길이 상한 미강제(스펙상 Out of Scope, LAN 한정).

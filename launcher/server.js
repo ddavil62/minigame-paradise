@@ -4,16 +4,15 @@
  *   하나의 http.Server가 다음을 모두 처리한다:
  *     - `/` 및 `/games.json` → 런처 정적 파일 (launcher/public)
  *     - `/{gameId}/...` → 각 게임의 정적 파일 (game.public via createApp().handleHttp)
- *     - WS `/ws` → 런처 로비 WSS
+ *     - WS `/lobby/ws?gameId={gameId}` → 게임별 대기실 WSS
  *     - WS `/{gameId}/ws` → 각 게임 WSS (noServer 모드로 라우팅)
- *     - POST `/lobby/return` → 게임 완료 후 로비 복귀 (RETURN_LOBBY broadcast)
  *
  *   외부 의존성: ws@^8.18.0, express(yutnori/tetris-battle 한정)
  *
- * 로비 흐름:
- *   1. 클라이언트가 `/ws`로 접속 → 정원(2명) 검사 → 호스트/게스트 역할 부여
- *   2. 게임 카드가 즉시 표시됨. 호스트가 PICK_GAME → mode(ai|human) 결정 → REDIRECT broadcast
- *   3. 게임 완료 후 POST /lobby/return → RETURN_LOBBY broadcast → 양쪽 로비 복귀
+ * 로비 흐름 (v2 — 포탈 + 게임별 대기실):
+ *   1. 클라이언트가 포탈 뷰에서 게임 카드 클릭 → `/lobby/ws?gameId={gameId}` WS 연결
+ *   2. 대기실에서 전원 READY + 인원 >= minPlayers → REDIRECT broadcast
+ *   3. 게임 완료 후 location.href='/' 로 포탈 복귀
  */
 
 import http from 'node:http';
@@ -63,7 +62,7 @@ const MIME = {
   '.woff2': 'font/woff2',
 };
 
-// ── 통합 라우터: 5개 게임 앱 인스턴스 ────────────────────────────
+// ── 통합 라우터: 10개 게임 앱 인스턴스 ────────────────────────────
 /**
  * key는 URL path 첫 segment 및 games.json의 `id` 필드와 정확히 일치해야 한다.
  * @type {Record<string, { handleHttp: Function, handleUpgrade: Function, setHostUrl?: Function }>}
@@ -352,19 +351,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /lobby/return — 게임 완료 후 양쪽 로비 복귀
-  if (req.method === 'POST' && urlPath === '/lobby/return') {
-    res.writeHead(204);
-    res.end();
-    // 로비 상태 리셋
-    currentMode = null;
-    aiSlotCount = 0;
-    votes.clear();
-    broadcast({ type: 'RETURN_LOBBY' });
-    console.log('[launcher] POST /lobby/return → RETURN_LOBBY broadcast');
-    return;
-  }
-
   if (first && GAME_APPS[first]) {
     // 게임 prefix 제거 후 req.url 재작성: /matgo/style.css → '/style.css'
     const sub = segments.length === 1
@@ -382,7 +368,7 @@ const server = http.createServer((req, res) => {
 // ── games.json 캐시 ──────────────────────────────────────────
 /**
  * 서버 시작 시 games.json을 1회 읽어 메모리에 캐시한다.
- * PICK_GAME 처리 시 gameId 검증에 사용.
+ * 대기실 gameId 검증 및 게임 메타 참조에 사용.
  * @returns {Map<string, object>}
  */
 function loadGamesMap() {
@@ -398,55 +384,32 @@ function loadGamesMap() {
 
 const gamesMap = loadGamesMap();
 
-// ── 로비 상태 (모듈 수준) ─────────────────────────────────────
+// ── 게임별 대기실 상태 (rooms) ─────────────────────────────────
 /**
- * 접속 중인 WS 클라이언트.
- * key: ws 객체, value: { id, role, name }
- *   - id: 'p1' | 'p2'  (입장 순서 기반)
- *   - role: 'host' | 'guest'
- *   - name: string|null  (JOIN 수신 전까지 null — 닉네임 게이트 통과 후 확정)
- * 최대 2명까지만 수용.
- * @type {Map<import('ws').WebSocket, { id: string, role: 'host'|'guest', name: string|null }>}
+ * 게임별 대기실 상태.
+ * key: gameId, value: RoomState
+ *
+ * @typedef {Object} RoomState
+ * @property {string} gameId                         - gamesMap 키와 동일
+ * @property {Map<import('ws').WebSocket, PlayerMeta>} clients - 입장 중인 WS 클라이언트
+ * @property {number} nextIdSeq                      - 다음 부여할 플레이어 번호 (1~)
+ * @property {number} aiSlotCount                    - AI 채우기 슬롯 수 (0~maxPlayers-1)
+ *
+ * @typedef {Object} PlayerMeta
+ * @property {string} id          - 'p1', 'p2', ...
+ * @property {string|null} name   - 닉네임 (JOIN 수신 전 null)
+ * @property {boolean} ready      - READY 상태
+ * @property {NodeJS.Timeout|null} kickTimer - 타임아웃 킥 타이머 핸들
+ *
+ * @type {Map<string, RoomState>}
  */
-const clients = new Map();
+const rooms = new Map();
 
-/**
- * 현재 대전 모드. PICK_GAME 시 인원수에 따라 결정됨.
- * @type {'ai' | 'human' | null}
- */
-let currentMode = null;
+/** 대기실 READY 타임아웃 (60초). 입장 후 이 시간 안에 READY 하지 않으면 자동 퇴장. */
+const READY_TIMEOUT_MS = 60_000;
 
-/**
- * 게임별 투표 현황.
- * key: gameId (string), value: Set of playerId (string, 'p1'|'p2')
- * @type {Map<string, Set<string>>}
- */
-const votes = new Map();
-
-/**
- * 다음 클라이언트에 부여할 ID 일련번호. 'p1'부터 시작.
- * 클라이언트가 모두 나갈 때 리셋된다.
- */
-let nextIdSeq = 1;
-
-/**
- * 호스트가 설정한 목표 인원 수 (2~5).
- * SET_TARGET 메시지로 변경되며, 모든 클라이언트가 나가면 2(기본값)로 리셋된다.
- * @type {number}
- */
-let targetPlayers = 2;
-
-/**
- * AI로 채우기 슬롯 카운트.
- * targetPlayers - clients.size 만큼 최대 허용.
- * 실제 플레이어가 추가 입장할 때마다 1 감소.
- * 모든 클라이언트 퇴장 / REDIRECT / POST /lobby/return 시 0으로 리셋.
- * @type {number}
- */
-let aiSlotCount = 0;
-
-// ── 런처 로비 WebSocket 서버 (noServer 모드) ──────────────────────
-const lobbyWss = new WebSocketServer({ noServer: true });
+// ── 런처 대기실 WebSocket 서버 (noServer 모드) ──────────────────────
+const roomWss = new WebSocketServer({ noServer: true });
 
 /**
  * 활성 클라이언트에게 JSON 메시지를 보낸다.
@@ -463,110 +426,176 @@ function sendJson(ws, payload) {
 }
 
 /**
- * 모든 활성 클라이언트에게 JSON 메시지를 broadcast 한다.
- * @param {object} payload
+ * 대기실이 없으면 빈 RoomState를 생성해 반환한다.
+ * gameId가 gamesMap에 없으면 null 반환.
+ * @param {string} gameId games.json의 id
+ * @returns {RoomState|null}
  */
-function broadcast(payload) {
-  for (const ws of clients.keys()) {
-    sendJson(ws, payload);
+function getOrCreateRoom(gameId) {
+  if (!gamesMap.has(gameId)) return null;
+  if (!rooms.has(gameId)) {
+    rooms.set(gameId, {
+      gameId,
+      clients: new Map(),
+      nextIdSeq: 1,
+      aiSlotCount: 0,
+    });
   }
+  return rooms.get(gameId);
 }
 
 /**
- * 특정 클라이언트에게만 LOBBY_STATE를 보낸다.
- * count, role, mode, votes 등 현재 스냅샷을 포함.
- * @param {import('ws').WebSocket} ws
+ * 특정 클라이언트에게 ROOM_STATE를 보낸다.
+ * 수신자별로 myId/myReady 필드가 달라지므로 개별 전송한다.
+ * @param {import('ws').WebSocket} ws 대상 클라이언트
+ * @param {RoomState} room 대기실
  */
-function sendLobbyStateTo(ws) {
-  const meta = clients.get(ws);
+function sendRoomStateTo(ws, room) {
+  const meta = room.clients.get(ws);
   if (!meta) return;
-  const hostEntry = [...clients.values()].find((m) => m.role === 'host');
-  // votes를 { gameId: count } 형태로 직렬화
-  const votesSnapshot = {};
-  for (const [gameId, playerSet] of votes) {
-    votesSnapshot[gameId] = playerSet.size;
+
+  const game = gamesMap.get(room.gameId);
+  if (!game) return;
+
+  // 플레이어 목록 구성 (Map 순서 = 입장 순서, 첫 번째 = 호스트)
+  const players = [];
+  let isFirst = true;
+  let readyCount = 0;
+  for (const [, m] of room.clients) {
+    if (m.ready) readyCount++;
+    players.push({
+      id: m.id,
+      name: m.name || '(입장 중...)',
+      ready: m.ready,
+      isHost: isFirst,
+    });
+    isFirst = false;
   }
-  // 접속자 목록 (이름 + 역할 + 온라인 여부). name은 JOIN 전까지 null.
-  const players = [...clients.values()].map((m) => ({
-    id: m.id,
-    name: m.name,
-    role: m.role,
-    online: true,
-  }));
-  // AI 슬롯 presence 배열 생성
+
+  // AI 슬롯 배열 구성
   const aiSlots = [];
-  for (let i = 0; i < aiSlotCount; i++) {
-    aiSlots.push({ id: `ai${i + 1}`, name: `\uD83E\uDD16 AI ${i + 1}`, online: true });
+  for (let i = 0; i < room.aiSlotCount; i++) {
+    aiSlots.push({ id: `ai${i + 1}`, name: `AI ${i + 1}` });
   }
+
+  const totalCount = room.clients.size + room.aiSlotCount;
+  // canStart: 전원 ready AND 인원 >= minPlayers
+  const allReady = room.clients.size > 0 && [...room.clients.values()].every(m => m.ready);
+  const canStart = allReady && totalCount >= game.minPlayers;
+
   sendJson(ws, {
-    type: 'LOBBY_STATE',
-    count: clients.size,
-    target: targetPlayers, // 다인용 확장: 목표 인원 수 (기본값 2, 후방호환)
-    role: meta.role,
-    hostId: hostEntry ? hostEntry.id : null,
-    mode: currentMode,
-    votes: votesSnapshot,
-    players, // 신규: presence 목록 (기존 필드는 후방호환 유지)
-    aiSlotCount,  // AI 채우기 슬롯 수
-    aiSlots,      // AI 슬롯 presence 배열
+    type: 'ROOM_STATE',
+    gameId: room.gameId,
+    players,
+    aiSlots,
+    readyCount,
+    totalCount,
+    minPlayers: game.minPlayers,
+    maxPlayers: game.maxPlayers,
+    myId: meta.id,
+    myReady: meta.ready,
+    canStart,
   });
 }
 
 /**
- * 모든 클라이언트에게 각자에 맞는 LOBBY_STATE를 보낸다 (role이 클라별로 다름).
+ * 대기실의 모든 클라이언트에게 ROOM_STATE를 브로드캐스트한다.
+ * @param {RoomState} room 대기실
  */
-function broadcastLobbyState() {
-  for (const ws of clients.keys()) {
-    sendLobbyStateTo(ws);
+function broadcastRoomState(room) {
+  for (const ws of room.clients.keys()) {
+    sendRoomStateTo(ws, room);
   }
 }
 
 /**
- * 첫 번째 클라이언트(Map 순서상)를 호스트로 재판정한다.
- * 호스트 disconnect 후 남은 게스트를 승격할 때 호출.
+ * 게임 시작 조건을 평가하고, 충족 시 REDIRECT를 브로드캐스트한다.
+ *   - 조건1: 대기실 입장 전원이 READY 상태
+ *   - 조건2: 실인원 + AI 슬롯 >= minPlayers
+ * @param {RoomState} room 대기실
+ * @param {object} game gamesMap의 게임 메타
  */
-function reassignHost() {
-  const entries = [...clients.entries()];
-  if (entries.length === 0) return;
-  // 모두 일단 게스트로 두고 첫 항목만 호스트로
-  for (let i = 0; i < entries.length; i += 1) {
-    const [, meta] = entries[i];
-    meta.role = i === 0 ? 'host' : 'guest';
+function checkReady(room, game) {
+  // 빈 방은 시작 불가
+  if (room.clients.size === 0) return;
+
+  const allReady = [...room.clients.values()].every(m => m.ready);
+  const totalCount = room.clients.size + room.aiSlotCount;
+
+  if (!allReady || totalCount < game.minPlayers) return;
+
+  // ── 게임 시작 시퀀스 ──
+  console.log(`[launcher] 게임 시작: ${room.gameId} (인원=${totalCount}, AI=${room.aiSlotCount})`);
+
+  // 1. 모든 킥 타이머 취소
+  for (const [, m] of room.clients) {
+    if (m.kickTimer) {
+      clearTimeout(m.kickTimer);
+      m.kickTimer = null;
+    }
   }
+
+  // 2. AI 봇 spawn (aiSlotCount > 0 && botAvailable)
+  if (room.aiSlotCount > 0 && game.botAvailable) {
+    console.log(`[launcher] AI채우기 봇 ${room.aiSlotCount}개 spawn: ${room.gameId}`);
+    for (let i = 0; i < room.aiSlotCount; i++) {
+      spawnBotForAiFill(room.gameId);
+    }
+  }
+
+  // 3. REDIRECT broadcast
+  const redirectPath = `/${room.gameId}/`;
+  const playerCount = totalCount;
+
+  for (const ws of room.clients.keys()) {
+    sendJson(ws, {
+      type: 'REDIRECT',
+      gameId: room.gameId,
+      path: redirectPath,
+      mode: 'human',
+      playerCount,
+    });
+  }
+
+  // 4. 대기실 정리
+  rooms.delete(room.gameId);
+  console.log(`[launcher] REDIRECT → gameId=${room.gameId}, path=${redirectPath}, mode=human, playerCount=${playerCount}`);
 }
 
 /**
- * AI 모드 시 해당 게임의 bot.js를 child_process로 spawn 한다.
- * bot.js가 없으면 경고만 출력하고 정상 흐름은 유지한다.
- * 단일 포트(3000) 통합 라우터이므로 봇 WS URL은 `ws://localhost:{PORT}/{gameId}/ws`.
- *
- * @param {string} gameId games.json의 id
+ * 클라이언트 퇴장 처리 (나가기/disconnect/킥 공통).
+ * @param {import('ws').WebSocket} ws 퇴장 클라이언트
+ * @param {RoomState} room 대기실
  */
-function spawnBot(gameId) {
-  const botPath = path.join(MINIGAMES_ROOT, gameId, 'bot.js');
-  if (!fs.existsSync(botPath)) {
-    console.warn(`[launcher] bot.js 없음, AI 봇 생략: ${gameId} (경로: ${botPath})`);
+function cleanupClient(ws, room) {
+  const meta = room.clients.get(ws);
+  if (!meta) return;
+
+  // 킥 타이머 취소
+  if (meta.kickTimer) {
+    clearTimeout(meta.kickTimer);
+    meta.kickTimer = null;
+  }
+
+  room.clients.delete(ws);
+  console.log(`[launcher] 퇴장: ${meta.id} (${meta.name || '?'}), 방=${room.gameId}, 잔여=${room.clients.size}`);
+
+  // 빈 방 제거
+  if (room.clients.size === 0) {
+    rooms.delete(room.gameId);
+    console.log(`[launcher] 빈 방 제거: ${room.gameId}`);
     return;
   }
-  const url = `ws://localhost:${PORT}/${gameId}/ws`;
-  try {
-    const child = spawn(process.execPath, [botPath, '--url', url], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.on('error', (err) => {
-      console.error(`[launcher] 봇 spawn 에러 (${gameId}):`, err.message);
-    });
-    child.unref(); // launcher 종료 시에도 봇 프로세스를 같이 죽이지 않음 (게임 서버에서 자연 종료 유도)
-    console.log(`[launcher] 봇 기동: ${gameId} --url ${url} (pid=${child.pid})`);
-  } catch (err) {
-    console.error(`[launcher] 봇 spawn 예외 (${gameId}):`, err.message);
-  }
+
+  // 남은 플레이어가 있으면 AI 슬롯 리셋 (호스트가 바뀔 수 있으므로)
+  // 호스트 재판정은 Map 순서 첫 번째가 자동으로 호스트 (broadcastRoomState에서 반영)
+  // AI 슬롯은 유지 (퇴장으로 인한 자동 리셋은 하지 않음)
+  broadcastRoomState(room);
 }
 
 /**
  * AI 채우기용 봇을 spawn한다.
- * 기존 spawnBot()과 달리 mode=bot 쿼리를 URL에 부착한다.
+ * mode=bot 쿼리를 URL에 부착한다.
  * @param {string} gameId games.json의 id
  */
 function spawnBotForAiFill(gameId) {
@@ -595,179 +624,160 @@ function spawnBotForAiFill(gameId) {
  * 클라이언트 메시지 처리 라우터.
  * @param {import('ws').WebSocket} ws
  * @param {object} msg 파싱된 JSON 메시지
+ * @param {RoomState} room 대기실
  */
-function handleMessage(ws, msg) {
-  const meta = clients.get(ws);
+function handleMessage(ws, msg, room) {
+  const meta = room.clients.get(ws);
   if (!meta) return;
+
+  const game = gamesMap.get(room.gameId);
+  if (!game) return;
 
   switch (msg.type) {
     case 'JOIN': {
-      // 닉네임 게이트 통과 후 최초 송신. name 누락 시 '(알 수 없음)' 폴백(후방호환).
+      // 닉네임 게이트 통과 후 최초 송신. name 누락 시 '(알 수 없음)' 폴백.
       const raw = typeof msg.name === 'string' ? msg.name.trim().slice(0, 12) : '';
       meta.name = raw || '(알 수 없음)';
-      console.log(`[launcher] JOIN: ${meta.id} (${meta.role}) → "${meta.name}"`);
-      // 자신을 제외한 기존 접속자에게 PLAYER_JOINED broadcast (입장 토스트용)
-      for (const otherWs of clients.keys()) {
-        if (otherWs !== ws) {
-          sendJson(otherWs, { type: 'PLAYER_JOINED', name: meta.name, role: meta.role });
-        }
-      }
-      // 전체에 LOBBY_STATE 재broadcast (players 배열에 확정된 name 반영)
-      broadcastLobbyState();
+      console.log(`[launcher] JOIN: ${meta.id} → "${meta.name}" (방=${room.gameId})`);
+      broadcastRoomState(room);
       break;
     }
 
-    case 'SET_TARGET': {
-      // 호스트만 목표 인원 수를 설정할 수 있다
-      if (meta.role !== 'host') return;
-      const t = Number(msg.target);
-      if (!Number.isInteger(t) || t < 2 || t > 5) {
-        sendJson(ws, { type: 'ERROR', message: `목표 인원은 2~5 사이 정수여야 합니다 (received: ${msg.target})` });
-        return;
+    case 'READY': {
+      // 준비 토글
+      meta.ready = !meta.ready;
+      console.log(`[launcher] READY: ${meta.id} → ready=${meta.ready} (방=${room.gameId})`);
+
+      if (meta.ready) {
+        // 킥 타이머 취소
+        if (meta.kickTimer) {
+          clearTimeout(meta.kickTimer);
+          meta.kickTimer = null;
+        }
+      } else {
+        // 준비 취소 시 킥 타이머 재시작
+        if (meta.kickTimer) clearTimeout(meta.kickTimer);
+        meta.kickTimer = setTimeout(() => {
+          console.log(`[launcher] 타임아웃 킥: ${meta.id} (${meta.name || '?'}) (방=${room.gameId})`);
+          sendJson(ws, { type: 'KICKED', reason: 'timeout' });
+          try { ws.close(1000, 'KICKED'); } catch (_) { /* noop */ }
+          cleanupClient(ws, room);
+        }, READY_TIMEOUT_MS);
       }
-      // 현재 접속 인원이 목표보다 많으면 거부
-      if (clients.size > t) {
-        sendJson(ws, { type: 'ERROR', message: `현재 접속 인원(${clients.size})이 목표(${t})보다 많아 변경할 수 없습니다` });
-        return;
+
+      // 게임 시작 조건 평가
+      checkReady(room, game);
+
+      // REDIRECT로 방이 삭제되지 않았으면 상태 브로드캐스트
+      if (rooms.has(room.gameId)) {
+        broadcastRoomState(room);
       }
-      targetPlayers = t;
-      // 목표 인원 변경 시 AI 슬롯 리셋 (정원 불일치 방지)
-      if (aiSlotCount > 0) {
-        aiSlotCount = 0;
-        console.log(`[launcher] SET_TARGET → aiSlotCount 리셋 (목표 인원 변경)`);
-      }
-      console.log(`[launcher] SET_TARGET: ${meta.id} → targetPlayers=${targetPlayers}`);
-      broadcastLobbyState();
       break;
     }
 
-    case 'PICK_GAME': {
-      if (meta.role !== 'host') return;
-      // 목표 인원 미달 시 게임 시작 불가.
-      // targetPlayers=2(기본값)일 때는 1인도 허용 (AI 봇과 시작 가능, 하위 호환).
-      // targetPlayers>=3이면 실제 인원 + AI 슬롯이 정원을 채워야만 시작 가능.
-      const effectiveCount = clients.size + aiSlotCount;
-      if (targetPlayers > 2 && effectiveCount < targetPlayers) {
-        console.log(`[launcher] PICK_GAME 무시: 현재 ${effectiveCount}/${targetPlayers} (목표 미달, AI=${aiSlotCount})`);
-        return;
-      }
-      const gameId = String(msg.gameId || '');
-      const game = gamesMap.get(gameId);
-      if (!game) {
-        console.warn(`[launcher] PICK_GAME 알 수 없는 gameId: ${gameId}`);
-        return;
-      }
-      // 모드 결정: targetPlayers=2이고 1인 단독이면 AI 모드 (기존 2인 AI 흐름 하위 호환).
-      // targetPlayers>=3이거나 2인 이상 입장이면 human 모드 (다인 실제 대전).
-      const isAiMode = targetPlayers <= 2 && clients.size === 1 && game.botAvailable;
-      currentMode = isAiMode ? 'ai' : 'human';
-      // AI 채우기 봇 spawn (aiSlotCount > 0이고 해당 게임이 봇 지원할 때)
-      if (aiSlotCount > 0 && game.botAvailable) {
-        console.log(`[launcher] AI채우기 봇 ${aiSlotCount}개 spawn 시작: ${gameId}`);
-        for (let i = 0; i < aiSlotCount; i++) {
-          spawnBotForAiFill(gameId);
-        }
-      }
-      // REDIRECT 후 AI 슬롯 리셋 (게임 이동 후 로비 상태 정리)
-      const spawnedAiCount = aiSlotCount;
-      aiSlotCount = 0;
-      // 통합 라우터: 같은 포트(3000) 내 `/{gameId}/`로 이동한다.
-      const redirectPath = `/${gameId}/`;
-      // playerCount에 AI 슬롯 포함하여 게임 서버에 전달
-      const totalPlayerCount = clients.size + spawnedAiCount;
-      console.log(`[launcher] PICK_GAME → gameId=${gameId}, path=${redirectPath}, mode=${currentMode}, playerCount=${totalPlayerCount} (human=${clients.size}, ai=${spawnedAiCount})`);
-      broadcast({
-        type: 'REDIRECT',
-        gameId,
-        path: redirectPath,
-        mode: currentMode,
-        playerCount: totalPlayerCount, // 다인용 확장: 실제 인원 + AI 봇 수
-      });
+    case 'LEAVE_ROOM': {
+      cleanupClient(ws, room);
+      try { ws.close(1000, 'LEAVE_ROOM'); } catch (_) { /* noop */ }
       break;
     }
 
     case 'FILL_WITH_AI': {
-      // 호스트만 AI 채우기 가능
-      if (meta.role !== 'host') return;
-      // 3인 이상 설정에서만 가능
-      if (targetPlayers <= 2) {
-        sendJson(ws, { type: 'ERROR', message: 'AI 채우기는 3인 이상 설정에서만 가능합니다' });
+      // 호스트만 AI 채우기 가능 (Map 첫 번째 항목)
+      const firstEntry = room.clients.entries().next().value;
+      if (!firstEntry || firstEntry[0] !== ws) {
+        sendJson(ws, { type: 'ERROR', message: '호스트만 AI 채우기를 할 수 있습니다.' });
         return;
       }
-      // 이미 정원이 채워져 있으면 무시
-      const emptySlots = targetPlayers - clients.size - aiSlotCount;
+
+      // botAvailable 검증
+      if (!game.botAvailable) {
+        sendJson(ws, { type: 'ERROR', message: '이 게임은 AI 봇을 지원하지 않습니다.' });
+        return;
+      }
+
+      // 빈 슬롯 전체를 AI로 채움
+      const emptySlots = game.maxPlayers - room.clients.size - room.aiSlotCount;
       if (emptySlots <= 0) {
-        sendJson(ws, { type: 'ERROR', message: '이미 정원이 채워져 있습니다' });
+        sendJson(ws, { type: 'ERROR', message: '이미 정원이 채워져 있습니다.' });
         return;
       }
-      // 빈 슬롯 전체를 AI로 채움 (부분 채우기 미지원)
-      aiSlotCount = targetPlayers - clients.size;
-      console.log(`[launcher] FILL_WITH_AI: ${meta.id} → aiSlotCount=${aiSlotCount} (target=${targetPlayers}, clients=${clients.size})`);
-      broadcastLobbyState();
-      break;
-    }
 
-    case 'CANCEL_AI_FILL': {
-      // 호스트만 AI 취소 가능
-      if (meta.role !== 'host') return;
-      aiSlotCount = 0;
-      console.log(`[launcher] CANCEL_AI_FILL: ${meta.id} → aiSlotCount=0`);
-      broadcastLobbyState();
-      break;
-    }
+      room.aiSlotCount = game.maxPlayers - room.clients.size;
+      console.log(`[launcher] FILL_WITH_AI: ${meta.id} → aiSlotCount=${room.aiSlotCount} (방=${room.gameId})`);
 
-    case 'VOTE_GAME': {
-      const gameId = String(msg.gameId || '');
-      if (!gamesMap.has(gameId)) return;
-      if (!votes.has(gameId)) votes.set(gameId, new Set());
-      const voterSet = votes.get(gameId);
-      // toggle: 이미 투표했으면 취소, 아니면 추가
-      if (voterSet.has(meta.id)) {
-        voterSet.delete(meta.id);
-      } else {
-        voterSet.add(meta.id);
+      // 게임 시작 조건 즉시 평가
+      checkReady(room, game);
+
+      // REDIRECT로 방이 삭제되지 않았으면 상태 브로드캐스트
+      if (rooms.has(room.gameId)) {
+        broadcastRoomState(room);
       }
-      console.log(`[launcher] VOTE_GAME: ${meta.id} → ${gameId}, count=${voterSet.size}`);
-      broadcastLobbyState();
       break;
     }
 
     default:
-      // 미정의 메시지 무시 (START 등 하위 호환)
+      // 미정의 메시지 무시
       break;
   }
 }
 
 /**
- * 신규 WS 연결 처리.
+ * 신규 WS 연결 처리 (대기실 입장).
+ * URL 쿼리의 gameId를 기반으로 방에 배정한다.
  */
-lobbyWss.on('connection', (ws) => {
-  // 정원 초과: AI 슬롯 포함하여 판정
-  if (clients.size + aiSlotCount >= targetPlayers) {
-    // AI 슬롯이 있으면 실제 플레이어를 위해 AI 슬롯 1개 양보
-    if (aiSlotCount > 0) {
-      aiSlotCount -= 1;
-      console.log(`[launcher] 실제 플레이어 입장 → AI 슬롯 1개 양보, aiSlotCount=${aiSlotCount}`);
-    } else {
-      sendJson(ws, { type: 'FULL', message: '현재 게임이 진행 중입니다. 잠시 후 다시 시도하세요.', target: targetPlayers });
-      setTimeout(() => {
-        try { ws.close(1000, 'FULL'); } catch (_) { /* noop */ }
-      }, 50);
-      console.log(`[launcher] FULL 거절 (정원 초과, 현재 ${clients.size}/${targetPlayers})`);
-      return;
-    }
+roomWss.on('connection', (ws, req) => {
+  // URL에서 gameId 추출
+  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const gameId = url.searchParams.get('gameId') || '';
+
+  const game = gamesMap.get(gameId);
+  if (!game) {
+    console.warn(`[launcher] 대기실 연결 거부: 알 수 없는 gameId="${gameId}"`);
+    try { ws.close(1008, 'INVALID_GAME'); } catch (_) { /* noop */ }
+    return;
   }
 
-  // 역할 부여: 첫 번째 접속자 = 호스트
-  const role = clients.size === 0 ? 'host' : 'guest';
-  const id = `p${nextIdSeq}`;
-  nextIdSeq += 1;
-  // name은 JOIN 수신 전까지 null (닉네임 게이트 통과 후 확정)
-  clients.set(ws, { id, role, name: null });
-  console.log(`[launcher] 접속: ${id} (${role}), 현재 ${clients.size}/${targetPlayers} (ai=${aiSlotCount})`);
+  const room = getOrCreateRoom(gameId);
+  if (!room) {
+    try { ws.close(1008, 'INVALID_GAME'); } catch (_) { /* noop */ }
+    return;
+  }
 
-  // 전체에 갱신 상태 broadcast (각자 role이 다름)
-  broadcastLobbyState();
+  // 정원 검사: 실인원 + AI 슬롯 >= maxPlayers
+  if (room.clients.size + room.aiSlotCount >= game.maxPlayers) {
+    sendJson(ws, { type: 'ROOM_FULL', gameId, maxPlayers: game.maxPlayers });
+    setTimeout(() => {
+      try { ws.close(1000, 'ROOM_FULL'); } catch (_) { /* noop */ }
+    }, 50);
+    console.log(`[launcher] ROOM_FULL: ${gameId} (${room.clients.size}+${room.aiSlotCount}/${game.maxPlayers})`);
+    return;
+  }
+
+  // 플레이어 등록
+  const id = `p${room.nextIdSeq}`;
+  room.nextIdSeq += 1;
+
+  /** @type {PlayerMeta} */
+  const meta = {
+    id,
+    name: null,
+    ready: false,
+    kickTimer: null,
+  };
+
+  room.clients.set(ws, meta);
+  console.log(`[launcher] 대기실 입장: ${id} (방=${gameId}), 현재 ${room.clients.size}/${game.maxPlayers} (ai=${room.aiSlotCount})`);
+
+  // 60초 킥 타이머 시작
+  meta.kickTimer = setTimeout(() => {
+    console.log(`[launcher] 타임아웃 킥: ${meta.id} (${meta.name || '?'}) (방=${room.gameId})`);
+    sendJson(ws, { type: 'KICKED', reason: 'timeout' });
+    try { ws.close(1000, 'KICKED'); } catch (_) { /* noop */ }
+    cleanupClient(ws, room);
+  }, READY_TIMEOUT_MS);
+
+  // 전체에 상태 브로드캐스트
+  broadcastRoomState(room);
 
   // 메시지 수신
   ws.on('message', (data) => {
@@ -778,39 +788,11 @@ lobbyWss.on('connection', (ws) => {
       console.warn('[launcher] 잘못된 JSON 무시:', err.message);
       return;
     }
-    handleMessage(ws, msg);
+    handleMessage(ws, msg, room);
   });
 
   ws.on('close', () => {
-    const departed = clients.get(ws);
-    if (!departed) return;
-    clients.delete(ws);
-    console.log(`[launcher] 퇴장: ${departed.id} (${departed.role}), 잔여 ${clients.size}/${targetPlayers}`);
-
-    // 잔여 접속자에게 퇴장 토스트용 PLAYER_LEFT broadcast (name 없으면 폴백)
-    broadcast({ type: 'PLAYER_LEFT', name: departed.name || '(알 수 없음)' });
-
-    if (clients.size === 0) {
-      // 모두 나감 → 상태 리셋 (targetPlayers도 기본값 2로 복원)
-      currentMode = null;
-      nextIdSeq = 1;
-      targetPlayers = 2;
-      aiSlotCount = 0;
-      votes.clear();
-      return;
-    }
-
-    // 호스트가 떠난 경우: 게스트에게 RESET 후 호스트로 승격
-    if (departed.role === 'host') {
-      // 남아있는 게스트 모두에게 RESET 전송 (UI를 로비로)
-      broadcast({ type: 'RESET' });
-      currentMode = null;
-      aiSlotCount = 0;
-      votes.clear();
-      reassignHost();
-    }
-    // 게스트가 떠난 경우: 호스트는 그대로, 단지 count만 갱신
-    broadcastLobbyState();
+    cleanupClient(ws, room);
   });
 
   ws.on('error', (err) => {
@@ -829,10 +811,10 @@ server.on('upgrade', (req, socket, head) => {
     return;
   }
 
-  // /ws → 런처 로비 WSS
-  if (urlPath === '/ws') {
-    lobbyWss.handleUpgrade(req, socket, head, (ws) => {
-      lobbyWss.emit('connection', ws, req);
+  // /lobby/ws → 게임별 대기실 WSS (쿼리에서 gameId 추출)
+  if (segments.length === 2 && segments[0] === 'lobby' && segments[1] === 'ws') {
+    roomWss.handleUpgrade(req, socket, head, (ws) => {
+      roomWss.emit('connection', ws, req);
     });
     return;
   }

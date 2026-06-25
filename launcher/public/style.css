@@ -1,10 +1,10 @@
-/**
- * @fileoverview 미니게임 천국 런처 스타일.
+/*
+ * 미니게임 천국 런처 스타일.
  *   1280x800 데스크톱 고정 레이아웃, 한국 레트로 보드게임 톤.
  *   - 어두운 우드/네이비 배경 + 황금/크림 액센트
  *   - CSS Grid 5열 카드 그리드
  *   - hover 시 부드러운 스케일/그림자 강조
- *   - 단일 로비 화면 (인원 정보 + 게임 카드 즉시 표시)
+ *   - 포탈 뷰 (게임 카드 그리드) + 대기실 뷰 (READY 대기)
  */
 
 /* ── 리셋 & 베이스 ─────────────────────────────────────────── */
@@ -212,177 +212,25 @@ body {
   display: none !important;
 }
 
-/* ── 로비 화면 (단일 뷰) ─────────────────────────────────── */
-.lobby-view {
+/* ── 포탈 뷰 ───────────────────────────────────────────── */
+#portal-view {
   align-items: stretch;
   min-height: calc(100vh - 80px);
 }
 
-/* ── 로비 메타 (인원/역할/힌트) ──────────────────────────── */
-.lobby-meta {
+/* ── 포탈 메타 (닉네임 인사말) ──────────────────────────── */
+.portal-meta {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
-  padding: 24px 24px 16px;
+  padding: 18px 24px 8px;
 }
 
-.player-count {
-  font-size: 72px;
-  font-weight: 900;
-  color: #ffd97a;
-  line-height: 1;
-  text-shadow:
-    0 4px 0 rgba(0, 0, 0, 0.32),
-    0 8px 24px rgba(255, 200, 60, 0.28);
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-
-.player-role {
-  font-size: 22px;
+.portal-meta span {
+  font-size: 18px;
   font-weight: 700;
   color: rgba(245, 233, 201, 0.78);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 4px 16px;
-  border: 1px solid rgba(245, 233, 201, 0.22);
-  border-radius: 999px;
-  background: rgba(245, 233, 201, 0.04);
-}
-
-.lobby-hint {
-  font-size: 16px;
-  color: rgba(245, 233, 201, 0.66);
-  margin: 0;
-  text-align: center;
-  max-width: 560px;
-}
-
-.guest-waiting {
-  font-size: 15px;
-  color: rgba(245, 233, 201, 0.5);
-  margin: 4px 0 0;
-  text-align: center;
-  font-style: italic;
-}
-
-.lobby-status {
-  margin: 0;
-  font-size: 13px;
-  color: rgba(245, 233, 201, 0.4);
-  text-align: center;
-  min-height: 18px;
-}
-
-/* ── 인원 선택 UI (호스트 전용) ────────────────────────── */
-.player-count-selector[hidden] { display: none !important; }
-.player-count-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: rgba(245, 233, 201, 0.04);
-  border: 1px solid rgba(245, 233, 201, 0.14);
-  border-radius: 12px;
-}
-
-.pcs-label {
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(245, 233, 201, 0.66);
-  margin-right: 4px;
-  letter-spacing: 0.04em;
-}
-
-.pcs-btn {
-  padding: 7px 16px;
-  border: 1px solid rgba(245, 233, 201, 0.22);
-  border-radius: 8px;
-  background: rgba(245, 233, 201, 0.06);
-  color: rgba(245, 233, 201, 0.72);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
-  font-family: inherit;
-}
-
-.pcs-btn:hover {
-  background: rgba(245, 233, 201, 0.14);
-  border-color: rgba(245, 233, 201, 0.4);
-}
-
-.pcs-btn.active {
-  background: rgba(255, 217, 122, 0.2);
-  border-color: rgba(255, 217, 122, 0.6);
-  color: #ffd97a;
-}
-
-/* ── AI 채우기 컨트롤 ─────────────────────────────────── */
-.ai-fill-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.ai-fill-controls[hidden] { display: none !important; }
-
-.ai-fill-btn {
-  padding: 8px 20px;
-  border: 1px solid rgba(100, 220, 150, 0.5);
-  border-radius: 8px;
-  background: rgba(100, 220, 150, 0.12);
-  color: rgba(180, 255, 200, 0.9);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 150ms ease-out, border-color 150ms ease-out;
-  font-family: inherit;
-}
-
-.ai-fill-btn:hover {
-  background: rgba(100, 220, 150, 0.22);
-  border-color: rgba(100, 220, 150, 0.8);
-}
-
-.ai-fill-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.ai-fill-cancel-btn {
-  padding: 7px 14px;
-  border: 1px solid rgba(245, 233, 201, 0.22);
-  border-radius: 8px;
-  background: rgba(245, 233, 201, 0.06);
-  color: rgba(245, 233, 201, 0.6);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 150ms ease-out;
-  font-family: inherit;
-}
-
-.ai-fill-cancel-btn[hidden] { display: none !important; }
-
-.ai-fill-cancel-btn:hover {
-  background: rgba(245, 233, 201, 0.14);
-}
-
-.ai-fill-hint {
-  font-size: 13px;
-  color: rgba(180, 255, 200, 0.72);
-  font-weight: 600;
-}
-
-/* AI 슬롯 presence 항목 */
-.presence-item.ai-slot {
-  border-color: rgba(100, 220, 150, 0.3);
-  color: rgba(180, 255, 200, 0.82);
-  font-style: italic;
+  letter-spacing: 0.02em;
 }
 
 /* ── 게임 카드 비활성 (인원 범위 초과/미달) ──────────────── */
@@ -395,92 +243,6 @@ body {
 
 .game-card.player-disabled::after {
   content: attr(data-disable-reason);
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #1a1106;
-  background: #ffd97a;
-  border-radius: 999px;
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* ── 게스트 모드: 카드 비활성 + 오버레이 ─────────────────── */
-.game-grid.guest-mode .game-card {
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.game-grid.guest-mode .game-card::after {
-  content: '호스트가 선택 중...';
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: rgba(255, 233, 180, 0.92);
-  background: rgba(11, 19, 34, 0.62);
-  border-radius: 14px;
-  backdrop-filter: blur(2px);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.game-grid.guest-mode .game-card:hover {
-  transform: none;
-  border-color: rgba(245, 233, 201, 0.1);
-}
-
-/* ── 투표 버튼 ───────────────────────────────────────────── */
-.game-card-vote {
-  margin-top: 8px;
-  padding: 6px 12px;
-  border: 1px solid rgba(245, 233, 201, 0.25);
-  border-radius: 999px;
-  background: rgba(245, 233, 201, 0.06);
-  color: rgba(245, 233, 201, 0.72);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 150ms ease-out, border-color 150ms ease-out;
-  font-family: inherit;
-  pointer-events: all; /* guest-mode에서도 항상 클릭 가능 */
-}
-
-.game-card-vote:hover {
-  background: rgba(245, 233, 201, 0.14);
-  border-color: rgba(245, 233, 201, 0.5);
-}
-
-/* 게스트 모드에서도 투표 버튼만은 클릭 가능하게 z-index 및 pointer-events 재정의 */
-.game-grid.guest-mode .game-card .game-card-vote {
-  position: relative;
-  z-index: 3;
-  pointer-events: all;
-  cursor: pointer;
-}
-
-.vote-count {
-  font-weight: 700;
-  color: #ffd97a;
-}
-
-/* ── 봇 미지원 카드 (AI 모드에서만 적용) ───────────────── */
-.game-grid.ai-mode .game-card.no-bot {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-  filter: grayscale(0.6);
-}
-
-.game-grid.ai-mode .game-card.no-bot::after {
-  content: 'AI 봇 미지원';
   position: absolute;
   top: 10px;
   right: 10px;
@@ -617,50 +379,7 @@ body {
   color: #ff7e7e;
 }
 
-/* ── 접속자 목록 (presence) ──────────────────────────────── */
-.presence-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 12px;
-  min-height: 24px;
-  margin-top: 2px;
-}
-
-.presence-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(245, 233, 201, 0.88);
-  background: rgba(245, 233, 201, 0.06);
-  border: 1px solid rgba(245, 233, 201, 0.16);
-  border-radius: 999px;
-}
-
-.presence-item.offline {
-  color: rgba(245, 233, 201, 0.42);
-  opacity: 0.7;
-}
-
-/* 본인 항목 강조 — '(나)' 표시 */
-.presence-item.self {
-  font-weight: 800;
-  border-color: rgba(255, 217, 122, 0.4);
-}
-
-.presence-dot {
-  font-size: 10px;
-  line-height: 1;
-}
-
-.presence-name {
-  letter-spacing: 0.01em;
-}
-
-/* ── 로비 토스트 (입장/퇴장 알림) ─────────────────────────── */
+/* ── 로비 토스트 (입장/퇴장/안내 알림) ─────────────────────── */
 .lobby-toast {
   position: fixed;
   left: 50%;
@@ -682,4 +401,202 @@ body {
 .lobby-toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* ── 대기실 뷰 ────────────────────────────────────────────── */
+#waiting-room-view {
+  align-items: center;
+  min-height: calc(100vh - 80px);
+  padding: 40px 24px;
+}
+
+/* 대기실 헤더 (게임명 + 나가기 버튼) */
+.waiting-room-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.waiting-room-header h2 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffd97a;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.waiting-room-header #btn-leave-room {
+  padding: 8px 20px;
+  border: 1px solid rgba(245, 233, 201, 0.3);
+  border-radius: 8px;
+  background: rgba(245, 233, 201, 0.06);
+  color: rgba(245, 233, 201, 0.8);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 150ms ease-out, border-color 150ms ease-out;
+}
+
+.waiting-room-header #btn-leave-room:hover {
+  background: rgba(245, 233, 201, 0.14);
+  border-color: rgba(245, 233, 201, 0.5);
+}
+
+/* 대기실 플레이어 목록 */
+.waiting-room-players {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  min-height: 80px;
+  margin-bottom: 28px;
+  width: 100%;
+  max-width: 640px;
+}
+
+/* 대기실 플레이어 카드 */
+.player-ready-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 28px;
+  min-width: 120px;
+  background: linear-gradient(180deg, #1f2c47 0%, #1a2541 100%);
+  border: 2px solid rgba(245, 233, 201, 0.15);
+  border-radius: 14px;
+  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.player-ready-card .prc-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(245, 233, 201, 0.9);
+  letter-spacing: 0.02em;
+}
+
+.player-ready-card .prc-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.06em;
+}
+
+/* 준비 안됨 상태 뱃지 */
+.player-ready-card .prc-badge.not-ready {
+  background: rgba(245, 233, 201, 0.08);
+  color: rgba(245, 233, 201, 0.5);
+  border: 1px solid rgba(245, 233, 201, 0.15);
+}
+
+/* 준비 완료 상태 뱃지 */
+.player-ready-card .prc-badge.is-ready {
+  background: rgba(100, 220, 150, 0.18);
+  color: rgba(180, 255, 200, 0.95);
+  border: 1px solid rgba(100, 220, 150, 0.4);
+}
+
+/* 준비 완료 카드 테두리 강조 */
+.player-ready-card.ready {
+  border-color: rgba(100, 220, 150, 0.5);
+  box-shadow: 0 0 16px rgba(100, 220, 150, 0.12);
+}
+
+/* 호스트 표시 */
+.player-ready-card .prc-host {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd97a;
+  letter-spacing: 0.06em;
+}
+
+/* 본인 카드 강조 */
+.player-ready-card.self {
+  border-color: rgba(255, 217, 122, 0.4);
+}
+
+/* AI 슬롯 카드 */
+.player-ready-card.ai-slot {
+  border-color: rgba(100, 220, 150, 0.3);
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.player-ready-card.ai-slot .prc-name {
+  color: rgba(180, 255, 200, 0.82);
+}
+
+/* 대기실 액션 버튼 영역 */
+.waiting-room-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* 준비 버튼 */
+#btn-ready {
+  padding: 14px 40px;
+  border: 2px solid rgba(245, 233, 201, 0.3);
+  border-radius: 12px;
+  background: rgba(245, 233, 201, 0.06);
+  color: rgba(245, 233, 201, 0.9);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+#btn-ready:hover {
+  background: rgba(245, 233, 201, 0.12);
+  border-color: rgba(245, 233, 201, 0.5);
+}
+
+/* 준비 완료 상태 — 초록 강조 */
+#btn-ready.ready {
+  background: rgba(100, 220, 150, 0.2);
+  border-color: rgba(100, 220, 150, 0.6);
+  color: rgba(180, 255, 200, 0.95);
+  box-shadow: 0 0 20px rgba(100, 220, 150, 0.15);
+}
+
+#btn-ready.ready:hover {
+  background: rgba(100, 220, 150, 0.3);
+  border-color: rgba(100, 220, 150, 0.8);
+}
+
+/* AI 채우기 버튼 (대기실) */
+#btn-wr-fill-ai {
+  padding: 10px 22px;
+  border: 1px solid rgba(100, 220, 150, 0.5);
+  border-radius: 8px;
+  background: rgba(100, 220, 150, 0.12);
+  color: rgba(180, 255, 200, 0.9);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 150ms ease-out, border-color 150ms ease-out;
+}
+
+#btn-wr-fill-ai:hover {
+  background: rgba(100, 220, 150, 0.22);
+  border-color: rgba(100, 220, 150, 0.8);
+}
+
+#btn-wr-fill-ai[hidden] { display: none !important; }
+
+/* 대기실 상태 텍스트 */
+.waiting-room-status {
+  font-size: 15px;
+  color: rgba(245, 233, 201, 0.6);
+  text-align: center;
+  min-height: 20px;
+  margin-bottom: 12px;
 }
