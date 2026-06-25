@@ -377,6 +377,8 @@ let placeTimer = null;       // 다음 피스 배치 타이머
 let botGrid = createEmptyGrid();
 let botBag = createBag();
 let botCombo = -1;           // ⚠️ 초기값 -1 (서버 콤보 로직과 일치). 첫 클리어 시 ++ → 0.
+let isFrozenByItem = false;  // 얼음 아이템 효과로 조작 불가 상태
+let freezeItemTimer = null;  // 얼음 아이템 해제 타이머
 
 // ── 봇 메인 루프 ──────────────────────────────────────────────────
 /**
@@ -385,6 +387,8 @@ let botCombo = -1;           // ⚠️ 초기값 -1 (서버 콤보 로직과 일
  */
 function scheduleNextPiece() {
   if (!isRunning) return;
+  // 얼음 아이템 효과 중이면 배치를 건너뛰고 효과 해제 후 재개
+  if (isFrozenByItem) return;
   const type = botBag.next();
   const delay = BOT_PLACE_INTERVAL_MIN + Math.floor(Math.random() * BOT_PLACE_INTERVAL_RANGE);
   placeTimer = setTimeout(() => {
@@ -508,12 +512,26 @@ ws.on('message', (data) => {
       break;
 
     case 'ITEM_EFFECT':
-      // 가비지 폭탄만 봇 보드에 반영, 나머지(dark/freeze)는 무시 (의도적 비대칭).
       if (msg.itemId === 'garbage_bomb') {
+        // 가비지 폭탄: 봇 보드에 가비지 줄 추가
         pendingGarbage += GARBAGE_BOMB_LINES;
         console.log(`[tetris-bot] ITEM_EFFECT garbage_bomb → 가비지 +${GARBAGE_BOMB_LINES}줄`);
+      } else if (msg.itemId === 'freeze') {
+        // 얼음: 조작 불가 상태 돌입. 진행 중인 배치 타이머 취소 후 duration 후 재개.
+        isFrozenByItem = true;
+        if (placeTimer) { clearTimeout(placeTimer); placeTimer = null; }
+        if (freezeItemTimer) clearTimeout(freezeItemTimer);
+        const freezeDuration = msg.duration || 3000;
+        console.log(`[tetris-bot] ITEM_EFFECT freeze → ${freezeDuration}ms 동안 배치 중단`);
+        freezeItemTimer = setTimeout(() => {
+          isFrozenByItem = false;
+          freezeItemTimer = null;
+          console.log('[tetris-bot] freeze 해제 → 배치 재개');
+          scheduleNextPiece();
+        }, freezeDuration);
       } else {
-        console.log(`[tetris-bot] ITEM_EFFECT ${msg.itemId} 무시`);
+        // dark 등 나머지: 봇에게 시각 효과는 무의미하므로 무시
+        console.log(`[tetris-bot] ITEM_EFFECT ${msg.itemId} 무시 (봇에 해당 없음)`);
       }
       break;
 
@@ -521,6 +539,8 @@ ws.on('message', (data) => {
       console.log(`[tetris-bot] GAME_RESULT winner=${msg.winner}, reason=${msg.reason}`);
       isRunning = false;
       if (placeTimer) { clearTimeout(placeTimer); placeTimer = null; }
+      if (freezeItemTimer) { clearTimeout(freezeItemTimer); freezeItemTimer = null; }
+      isFrozenByItem = false;
       scheduleRematch();
       break;
 
