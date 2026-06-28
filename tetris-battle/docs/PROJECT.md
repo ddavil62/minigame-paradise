@@ -1,6 +1,6 @@
 # Tetris Battle 기획서
 
-> 최종 업데이트: 2026-06-21 — AI 봇 추가 (회귀 344 PASS + bot-smoke 8/8, Q7b 기존 결함 1건 제외). 이전: 2026-05-25 Phase 1~5 완료
+> 최종 업데이트: 2026-06-28 — 봇 버그 2건 수정(#12 start desync: START 핸들러 `(countdown+1)*1000`ms 지연 / #13 AI채우기 재진입 "Room is full": 사람 close 시 좀비 봇 슬롯 동기 제거 + connection 진입부 죽은 슬롯 선제 sweep). bot-smoke 11/11 PASS. 이전: 2026-06-21 AI 봇 추가 (회귀 344 PASS + bot-smoke 8/8, Q7b 기존 결함 1건 제외). 2026-05-25 Phase 1~5 완료
 
 ## 프로젝트 개요
 

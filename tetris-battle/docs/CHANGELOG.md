@@ -4,6 +4,29 @@
 
 ---
 
+## [2026-06-28] 봇 버그 2건 수정 — start desync(#12) · 좀비 봇 "Room is full"(#13)
+
+### 수정
+- **#12 봇 start desync (`bot.js`)** — START 핸들러가 `msg.countdown` 값을 무시하고 즉시 `scheduleNextPiece()`를 호출해 봇이 사람보다 ~4초 먼저 게임을 시작하던 버그. `resetBot()`(보드/봉투/콤보 초기화)은 즉시 실행하고, `isRunning=true`+`scheduleNextPiece()`는 `(countdown+1)*1000`ms(countdown 3 → 4000ms) 지연으로 변경. 사람 `main.js`의 `runCountdown(3)`이 t=4000ms에 `game.start()`하는 시점과 동기화. `countdown` 값이 바뀌어도 공식으로 자동 추종. 라이브: 봇 첫 액션 START 후 +5168ms(4000ms 대기 + ~1168ms 첫 피스 간격).
+- **#13 AI채우기 재진입 "Room is full" (`server.js`)** — 사람 disconnect 시 `killBotChild()`의 SIGTERM이 비동기라 봇 WS 슬롯이 `players` 배열에 좀비로 잔존 → 사람 재연결 시 정원 판정에 좀비가 포함되어 봇 미생성(대기 고착) 또는 "Room is full" 발생. 두 가지로 수정:
+  - (1) 사람 ws close 시(`!isBot`): 짝 봇 슬롯을 `players`에서 동기 제거 + `botSlot.ws.terminate()`로 즉시 TCP 종료(`killBotChild()` 병행). `terminate()`로 발화되는 봇 close 핸들러의 `players.filter`는 이미 제거된 상태라 no-op.
+  - (2) 사람 connection 진입부: 정원 판정 직전 `ws.readyState !== OPEN`인 죽은(좀비) 슬롯만 선제 `terminate()`+제거(안전망). **살아있는 봇은 보존** — AI채우기는 봇이 먼저 접속하므로 전체 sweep 금지.
+  - `import { WebSocket }` 추가(`readyState` 상수 비교용).
+  - 라이브: 로비 → 테트리스 → AI채우기 → 준비 → 시작 시 "Room is full" 없이 P2 정상 입장, 상대(봇) 입장 완료.
+
+### 회귀
+- bot-smoke **11/11 PASS**, phase4-launcher PASS, phase1-ws PASS.
+- phase3-4-qa-edge: **Q7b 1건만 FAIL** — 기존 baseline 결함(printBanner 정규식 비탐욕 취약성, 본 수정과 무관, 회귀 게이트 비차단).
+
+### 파이프라인
+- `visual_change: none`(#12/#13 모두 백엔드/봇 로직) → AD3 생략. QA PASS.
+
+### 참고
+- 스펙: `C:\LazySlimeStudio\minigames\.claude\specs\2026-06-28-minigames-bugfix-3-spec.md`
+- 리포트: `C:\LazySlimeStudio\minigames\.claude\specs\2026-06-28-minigames-bugfix-3-report.md`
+
+---
+
 ## [2026-06-21] AI 봇 추가 — 독자 엔진 1인 대전
 
 ### 배경

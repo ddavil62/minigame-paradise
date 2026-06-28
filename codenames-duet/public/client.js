@@ -205,6 +205,9 @@
         reviewData = null;
         lastGameEndContext = null;
         hideReviewBanner();
+        // 이전 게임의 복기 아티팩트(.review-cell/.review-grid/.was-revealed 등)를 보드에서 제거한다.
+        // (renderState 재호출 없이 cleanup만 — 곧 새 게임 STATE가 서버에서 도착한다)
+        clearReviewArtifacts();
         hideModal();
         turnEl.textContent = '게임 시작!';
         break;
@@ -558,23 +561,35 @@
   }
 
   /**
-   * 복기 모드를 종료하고 결과 모달을 다시 표시한다 (새 게임은 시작하지 않음).
+   * 복기 모드에서 보드 25칸에 주입했던 복기 아티팩트를 모두 제거한다.
+   * (.review-cell/.was-revealed 클래스, .review-grid 서브요소, .my-indicator 인라인 display)
+   * 복기 아티팩트가 없으면 each 호출이 no-op이라 안전하다.
+   * 주의: renderState()는 호출하지 않는다 — 이전 게임 화면 복원은 closeReviewBackToModal() 고유 기능이며,
+   *       GAME_START 경로에서는 곧 새 게임 STATE가 서버에서 도착하므로 재렌더가 불필요하다.
+   * @returns {void}
    */
-  function closeReviewBackToModal() {
-    if (!lastGameEndContext) return;
-    reviewData = null;
-    hideReviewBanner();
-    // 보드에 주입했던 review-grid는 그대로 둬도 무방하지만, 다음 STATE/GAME_START가 오면
-    // renderState()가 .review-cell/.was-revealed/review-dot 클래스를 청소하지 못한다.
-    // 따라서 명시적으로 정리한 뒤, 가장 최근 STATE 스냅샷이 있으면 그것으로 다시 그려둔다.
+  function clearReviewArtifacts() {
     for (let i = 0; i < 25; i++) {
       const card = cardEls[i];
+      if (!card) continue;
       card.classList.remove('review-cell', 'was-revealed');
       const grid = card.querySelector('.review-grid');
       if (grid) grid.remove();
       const myInd = card.querySelector('.my-indicator');
       if (myInd) myInd.style.display = '';
     }
+  }
+
+  /**
+   * 복기 모드를 종료하고 결과 모달을 다시 표시한다 (새 게임은 시작하지 않음).
+   */
+  function closeReviewBackToModal() {
+    if (!lastGameEndContext) return;
+    reviewData = null;
+    hideReviewBanner();
+    // 보드에 주입했던 복기 아티팩트(.review-cell/.was-revealed/.review-grid/.my-indicator)를
+    // 정리한 뒤, 가장 최근 STATE 스냅샷이 있으면 그것으로 이전 게임 화면을 다시 그려둔다.
+    clearReviewArtifacts();
     if (lastState) renderState(lastState);
     // 결과 모달 재오픈
     if (lastGameEndContext.outcome === 'won') {

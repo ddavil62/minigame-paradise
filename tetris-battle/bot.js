@@ -499,12 +499,21 @@ ws.on('message', (data) => {
       send({ type: 'READY' });
       break;
 
-    case 'START':
-      console.log(`[tetris-bot] START (countdown=${msg.countdown}) → 게임 루프 시작`);
-      resetBot();
-      isRunning = true;
-      scheduleNextPiece();
+    case 'START': {
+      // 사람 클라이언트 runCountdown(seconds)은 setInterval 1000ms로 진행한다:
+      //   t=0ms "3" → 1000ms "2" → 2000ms "1" → 3000ms "GO!" → 4000ms onComplete()→game.start()
+      // 즉 countdown=3이면 (3+1)*1000=4000ms 후 실제 게임이 시작된다.
+      // 봇도 동일 딜레이를 적용해 ±오차 내 동시 출발시킨다(이전엔 즉시 시작해 ~4초 선행 desync).
+      const cd = typeof msg.countdown === 'number' ? msg.countdown : 3;
+      const startDelay = (cd + 1) * 1000;
+      console.log(`[tetris-bot] START (countdown=${cd}) → ${startDelay}ms 후 게임 루프 시작`);
+      resetBot(); // 보드/봉투/콤보 즉시 초기화 (게임 루프 시작만 지연)
+      setTimeout(() => {
+        isRunning = true;
+        scheduleNextPiece();
+      }, startDelay);
       break;
+    }
 
     case 'GARBAGE_RECV':
       pendingGarbage += Math.max(0, msg.lines || 0);

@@ -1,6 +1,7 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-06-25 — 런처 로비 아키텍처 전면 개편. 공유 로비(단일 LOBBY 룸, WS 상시 연결) → 게임 포탈(WS 없음) + 게임별 독립 대기실(`rooms: Map<gameId, RoomState>`) 전환. READY 시스템(전원 준비 AND 인원 >= minPlayers), 타임아웃 킥(60초), WS 경로 `/ws` → `/lobby/ws?gameId={gameId}`, `POST /lobby/return` 삭제. QA 38/38 PASS.
+> 최종 업데이트: 2026-06-28 — 재현 확정 버그 3건 수정. codenames-duet #10(새 게임 시 이전 복기 점/배경 잔존 → `clearReviewArtifacts()` 헬퍼로 GAME_START·복기 닫기 양쪽 정리), tetris-battle #12(봇 start desync → `(countdown+1)*1000`ms 지연), #13(AI채우기 재진입 "Room is full" → 좀비 봇 슬롯 동기 제거 + 죽은 슬롯 선제 sweep). 회귀 무회귀 확인(review-smoke 27/27, bot-smoke 11/11), #8/#9는 재현 불가로 제외.
+> 이전 갱신: 2026-06-25 — 런처 로비 아키텍처 전면 개편. 공유 로비(단일 LOBBY 룸, WS 상시 연결) → 게임 포탈(WS 없음) + 게임별 독립 대기실(`rooms: Map<gameId, RoomState>`) 전환. READY 시스템(전원 준비 AND 인원 >= minPlayers), 타임아웃 킥(60초), WS 경로 `/ws` → `/lobby/ws?gameId={gameId}`, `POST /lobby/return` 삭제. QA 38/38 PASS.
 > 이전 갱신: 2026-06-25 — READY 게이트 노후화 테스트 현행화 완료.
 > 이전 갱신: 2026-06-23 — Phase 1-B 윷놀이 N인 확장 완료.
 > 이전 갱신: 2026-06-23 — Phase 1-A 런처 로비 다인용 지원 + Lobby Entry UX 개선.

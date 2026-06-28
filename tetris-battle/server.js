@@ -8,7 +8,7 @@
 
 import express from 'express';
 import http from 'http';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
@@ -240,6 +240,19 @@ wss.on('connection', (ws, req) => {
   const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
   const isBot = wsMode === 'bot';
 
+  // 사람(비봇)이 새로 연결될 때, 정원 판정 직전에 "죽은/닫히는" 슬롯만 선제 정리한다 (#13 안전망).
+  // 주의: 살아있는(OPEN) 봇은 보존한다. AI채우기 플로우는 런처가 봇을 먼저 spawn·접속시킨 뒤
+  // 사람이 접속하므로, 모든 봇을 sweep하면 방금 매칭된 정상 봇까지 죽여 상대가 사라진다.
+  // 따라서 ws.readyState가 OPEN이 아닌(좀비) 슬롯만 축출해 누적된 죽은 연결만 정리한다.
+  if (!isBot) {
+    const zombies = players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
+    if (zombies.length > 0) {
+      console.log(`[server] 죽은(좀비) 슬롯 ${zombies.length}개 선제 제거`);
+      for (const z of zombies) z.ws.terminate();
+      players = players.filter((p) => p.ws.readyState === WebSocket.OPEN);
+    }
+  }
+
   // 룸 정원 초과 시 즉시 거절
   if (players.length >= 2) {
     ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
@@ -437,8 +450,17 @@ wss.on('connection', (ws, req) => {
     console.log(`[server] ${player.id} 연결 해제`);
     const leaverName = player.name || '(알 수 없음)';
     players = players.filter((p) => p.id !== player.id);
-    // 사람(비봇)이 끊긴 경우 봇 자식 프로세스도 종료 (자원 누수 방지).
+    // 사람(비봇)이 끊긴 경우 봇 슬롯을 동기적으로 정리한다 (#13 좀비 봇 차단).
     if (!isBot) {
+      // killBotChild()의 SIGTERM은 비동기라 봇 WS가 실제 close될 때까지 players에 좀비로 남는다.
+      // 따라서 짝 봇 슬롯을 players에서 즉시 제거하고 ws.terminate()로 TCP를 강제 종료한다.
+      // (terminate 후 봇 close 핸들러가 연달아 발화돼도 이미 제거된 상태라 filter는 no-op)
+      const botSlot = players.find((p) => p.mode === 'bot');
+      if (botSlot) {
+        players = players.filter((p) => p.mode !== 'bot');
+        botSlot.ws.terminate();
+      }
+      // 봇 자식 프로세스도 종료 (프로세스 자원 정리 병행).
       killBotChild();
     }
     // 상대가 있으면 이탈 배너 + disconnect 결과 알림
