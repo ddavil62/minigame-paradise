@@ -16,7 +16,7 @@
 
 import express from 'express';
 import http from 'http';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
@@ -883,6 +883,18 @@ wss.on('connection', (ws, req) => {
   const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
   const isBot = wsMode === 'bot';
 
+  // 사람(비봇) 진입 시 죽은(좀비) 슬롯만 선제 정리 (살아있는 봇 보존).
+  // 사람이 끊길 때 짝 봇 ws가 SIGTERM 비동기로 잔존하면 players에 OPEN이 아닌 좀비가 남아
+  // 정원(roomMaxPlayers)을 부당하게 채워 'Room is full'이 발생한다. 정원 판정 직전에 제거한다.
+  if (!isBot) {
+    const dead = players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
+    if (dead.length > 0) {
+      for (const z of dead) { try { z.ws.terminate(); } catch (e) {} }
+      players = players.filter((p) => p.ws.readyState === WebSocket.OPEN);
+      console.log(`[yutnori] 죽은(좀비) 슬롯 ${dead.length}개 선제 제거`);
+    }
+  }
+
   // N인 정원: 첫 번째 접속자의 쿼리(?players=N)로 룸 정원을 설정한다.
   // 이후 접속자의 쿼리는 무시(첫 접속자가 정원 결정). N=2가 기본(하위 호환).
   if (players.length === 0) {
@@ -913,6 +925,8 @@ wss.on('connection', (ws, req) => {
     pieces: [createPiece(), createPiece(), createPiece(), createPiece()],
     ready: false,
     rematchReady: false,
+    // 봇 슬롯 식별용(좀비 정리/이탈 시 봇 슬롯 동기 제거). 봇 접속은 mode='bot'.
+    mode: wsMode,
     ws,
   };
   players.push(player);
@@ -1283,6 +1297,16 @@ wss.on('connection', (ws, req) => {
     }
     const leaverName = player.name || '(알 수 없음)';
     players = players.filter((p) => p.id !== player.id);
+    // 사람 이탈 시 모든 봇 슬롯을 동기 제거 + terminate.
+    // N인 AI채우기로 봇이 여럿일 수 있고, killBotChild()의 SIGTERM은 비동기라
+    // ws가 곧장 닫히지 않아 좀비로 잔존한다 → 정원 초과 방지를 위해 즉시 제거.
+    if (!isBot) {
+      const botSlots = players.filter((p) => p.mode === 'bot');
+      if (botSlots.length > 0) {
+        players = players.filter((p) => p.mode !== 'bot');
+        for (const b of botSlots) { try { b.ws.terminate(); } catch (e) {} }
+      }
+    }
     if (players.length > 0) {
       // 상대 이탈 배너용 OPPONENT_LEFT 메시지 전송
       broadcastAll({ type: 'OPPONENT_LEFT', name: leaverName });

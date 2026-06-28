@@ -24,7 +24,7 @@ import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { createGame, placeStone, applyResign, snapshot } from './game.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
@@ -269,12 +269,19 @@ export function createApp(opts = {}) {
     ws._mode = wsMode;
     ws._isBot = isBot;
 
-    // 정원 초과 직전, 좀비 슬롯(끊겼지만 close 미발화) 청소 시도.
-    if (players.length >= 2) {
-      const before = players.length;
-      players = players.filter((p) => p.ws.readyState <= 1);
-      if (players.length < before) {
-        console.log(`[omok] 좀비 슬롯 ${before - players.length}개 청소`);
+    // 사람(비봇)이 새로 연결될 때, 정원 판정 직전에 "죽은/닫히는" 슬롯만 선제 정리한다 (#13 안전망).
+    // 살아있는(OPEN) 봇은 보존한다 — AI채우기 플로우는 봇이 먼저 접속하므로 전체 sweep 금지.
+    // readyState가 OPEN이 아닌(좀비) 슬롯만 축출해 누적된 죽은 연결만 정리한다.
+    if (!isBot) {
+      const dead = players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
+      if (dead.length > 0) {
+        for (const z of dead) {
+          try {
+            z.ws.terminate();
+          } catch (e) {}
+        }
+        players = players.filter((p) => p.ws.readyState === WebSocket.OPEN);
+        console.log(`[omok] 죽은(좀비) 슬롯 ${dead.length}개 선제 제거`);
         if (players.length === 0) game = null;
       }
     }
@@ -469,6 +476,15 @@ export function createApp(opts = {}) {
       readySet.delete(player.id);
       // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
       if (!ws._isBot) {
+        // 짝 봇 슬롯을 동기 제거 + terminate (#13 좀비 봇 차단).
+        // killBotChild()의 SIGTERM은 비동기라 봇 WS가 실제 close될 때까지 players에 좀비로 남는다.
+        const botSlot = players.find((p) => p.ws._isBot);
+        if (botSlot) {
+          players = players.filter((p) => !p.ws._isBot);
+          try {
+            botSlot.ws.terminate();
+          } catch (e) {}
+        }
         killBotChild();
       }
       if (players.length === 0) {

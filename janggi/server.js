@@ -17,7 +17,7 @@ import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import {
   createGameSession, applySetupChoice, applyMove,
   applyResign, applyDrawOffer, tickTimer, serializeState,
@@ -303,12 +303,13 @@ export function createApp(opts = {}) {
     ws._mode = wsMode;
     ws._isBot = isBot;
 
-    // 정원 초과 직전, 좀비 슬롯 즉시 청소 시도
-    if (players.length >= 2) {
-      const before = players.length;
-      players = players.filter((p) => p.ws.readyState <= 1);
-      if (players.length < before) {
-        console.log(`[janggi] 좀비 슬롯 ${before - players.length}개 청소`);
+    // 사람(비봇) 진입 시 죽은(좀비) 슬롯만 선제 정리 (살아있는 봇은 보존)
+    if (!isBot) {
+      const dead = players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
+      if (dead.length > 0) {
+        for (const z of dead) { try { z.ws.terminate(); } catch (e) {} }
+        players = players.filter((p) => p.ws.readyState === WebSocket.OPEN);
+        console.log(`[janggi] 죽은(좀비) 슬롯 ${dead.length}개 선제 제거`);
         if (players.length === 0) {
           game = null;
           stopTickTimer();
@@ -582,6 +583,12 @@ export function createApp(opts = {}) {
       // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
       // 새 사용자가 다시 들어오면 새 봇이 spawn된다.
       if (!ws._isBot) {
+        // 봇 슬롯을 players에서 동기 제거 + ws.terminate() (SIGTERM 비동기 지연으로 OPEN 좀비 잔존 방지)
+        const botSlot = players.find((p) => p.ws._isBot);
+        if (botSlot) {
+          players = players.filter((p) => !p.ws._isBot);
+          try { botSlot.ws.terminate(); } catch (e) {}
+        }
         killBotChild();
       }
       if (players.length === 0) {
