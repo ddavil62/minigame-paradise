@@ -34,6 +34,7 @@ import { createApp as createHanabiApp }   from '../hanabi/server.js';
 import { createApp as createYahtzeeApp }  from '../yahtzee/server.js';
 import { createApp as createRummikubApp } from '../rummikub/server.js';
 import { createApp as createOmokApp }     from '../omok/server.js';
+import { createApp as createCodenamesClassicApp } from '../codenames/server.js';
 
 // ── 경로 및 인자 파싱 ──────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -101,6 +102,9 @@ const GAME_APPS = {
   'omok':           createOmokApp({
     getBotUrl: () => `ws://localhost:${PORT}/omok/ws?mode=bot`,
   }),
+  // 코드네임 클래식 — 봇 미지원(4인 2:2 팀 대전, 2026-06-28 추가). getBotUrl 옵션 불필요.
+  // 팀/역할 배정은 게임 서버 자체 role_select 단계에서 처리(런처는 4인 라우팅만).
+  'codenames':      createCodenamesClassicApp(),
 };
 
 /**
@@ -895,7 +899,7 @@ function printBanner(port, lanIps) {
     console.log(ANSI.cyan + line(`    ${ANSI.dim}(LAN IP 미감지 — ipconfig로 확인)${ANSI.reset}`) + ANSI.reset);
   }
   console.log(ANSI.cyan + empty + ANSI.reset);
-  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/ /hanabi/ /yahtzee/ /rummikub/ /omok/${ANSI.reset}`) + ANSI.reset);
+  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/ /hanabi/ /yahtzee/ /rummikub/ /omok/ /codenames/${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + line(`  ${ANSI.dim}종료: Ctrl+C${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + top + ANSI.reset);
   console.log('');

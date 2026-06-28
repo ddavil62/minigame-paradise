@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>코드네임 - LAN 2:2 팀 대전</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── 상단바 (항상 표시) ──────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="title">CODENAMES</span>
+      <span class="you-tag" id="you-tag">접속 중...</span>
+    </div>
+    <div class="topbar-right">
+      <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+    </div>
+  </header>
+
+  <!-- ── 대기/역할선택 화면 ──────────────────────────────────────── -->
+  <section id="screen-waiting" class="screen-waiting">
+    <div class="waiting-card">
+      <div class="waiting-logo">🕵️</div>
+      <div class="waiting-title" id="waiting-title">접속 중...</div>
+
+      <!-- 직접 진입(닉네임 미전달) 시 인라인 닉네임 게이트 -->
+      <div id="name-gate-inline" class="name-gate-inline hidden">
+        <p class="name-gate-msg">닉네임을 입력하고 입장하세요</p>
+        <input id="inline-name-input" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button id="btn-inline-enter" class="btn-inline-enter" type="button">입장</button>
+      </div>
+
+      <!-- role_select 대기실: 팀/역할 4슬롯 선택 -->
+      <div id="role-room" class="role-room hidden">
+        <p class="role-room-hint">팀과 역할을 선택하세요. 4자리가 모두 채워지면 호스트가 시작합니다.</p>
+
+        <div class="slot-grid">
+          <!-- 레드 팀 컬럼 -->
+          <div class="team-col team-red">
+            <div class="team-col-head">레드 팀</div>
+            <button class="slot" data-team="red" data-role="spymaster" type="button">
+              <span class="slot-role">스파이마스터</span>
+              <span class="slot-name" data-slot="red-spymaster">비어있음</span>
+            </button>
+            <button class="slot" data-team="red" data-role="operative" type="button">
+              <span class="slot-role">요원</span>
+              <span class="slot-name" data-slot="red-operative">비어있음</span>
+            </button>
+          </div>
+          <!-- 블루 팀 컬럼 -->
+          <div class="team-col team-blue">
+            <div class="team-col-head">블루 팀</div>
+            <button class="slot" data-team="blue" data-role="spymaster" type="button">
+              <span class="slot-role">스파이마스터</span>
+              <span class="slot-name" data-slot="blue-spymaster">비어있음</span>
+            </button>
+            <button class="slot" data-team="blue" data-role="operative" type="button">
+              <span class="slot-role">요원</span>
+              <span class="slot-name" data-slot="blue-operative">비어있음</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="role-actions">
+          <button id="btn-start-game" class="btn-start-game" type="button" disabled>게임 시작</button>
+          <p id="start-hint" class="start-hint">호스트가 시작하기를 기다리는 중...</p>
+        </div>
+      </div>
+
+      <!-- 규칙 요약 -->
+      <div class="rules-summary">
+        <h3>코드네임 규칙 요약</h3>
+        <ul>
+          <li>레드/블루 두 팀이 <strong>자기 팀 단어 카드</strong>를 먼저 모두 찾으면 승리.</li>
+          <li><strong>스파이마스터</strong>는 키 카드를 보고 단서(단어+숫자)를 준다.</li>
+          <li><strong>요원</strong>은 단서를 듣고 카드를 추측한다. 숫자+1번까지 추측 가능.</li>
+          <li>중립·상대팀 카드를 누르면 턴이 넘어가고, <strong>암살자</strong>를 누르면 즉시 패배.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 복기 배너 (게임 종료 후 복기 모드) ──────────────────────── -->
+  <div id="review-banner" class="review-banner hidden">
+    <div class="review-banner-left">
+      <span class="review-tag">복기 모드</span>
+      <span id="review-summary" class="review-summary"></span>
+    </div>
+    <div class="review-banner-right">
+      <button id="btn-review-close" type="button" title="결과 화면으로 돌아가기">결과 다시 보기</button>
+    </div>
+  </div>
+
+  <!-- ── 게임 화면 ───────────────────────────────────────────────── -->
+  <main id="screen-game" class="screen-game hidden">
+    <!-- 정보바 -->
+    <div class="info-bar">
+      <div class="score-box">
+        <div class="score-team score-red">
+          <span class="score-label">레드</span>
+          <span class="score-value" id="score-red">9</span>
+        </div>
+        <span class="score-dash">–</span>
+        <div class="score-team score-blue">
+          <span class="score-label">블루</span>
+          <span class="score-value" id="score-blue">8</span>
+        </div>
+        <span class="first-team-tag" id="first-team-tag"></span>
+      </div>
+      <div class="turn-box">
+        <span class="turn-status" id="turn-status">대기 중</span>
+        <span class="clue-current" id="clue-current"></span>
+      </div>
+      <div class="role-box">
+        <span class="my-role-tag" id="my-role-tag"></span>
+      </div>
+    </div>
+
+    <!-- 5×5 보드 -->
+    <div class="board-wrap">
+      <div id="board" class="board"></div>
+    </div>
+
+    <!-- 역할별 컨트롤 -->
+    <section class="control-panel">
+      <!-- 스파이마스터: 단서 입력 -->
+      <div id="clue-control" class="clue-control hidden">
+        <div class="control-status" id="clue-status">단서를 입력하세요</div>
+        <div class="clue-input">
+          <input type="text" id="clue-word" placeholder="단서 단어" maxlength="20" />
+          <input type="number" id="clue-number" min="1" max="9" value="2" />
+          <button id="btn-clue" type="button">단서 전송</button>
+        </div>
+      </div>
+
+      <!-- 요원: 추측 + 패스 -->
+      <div id="guess-control" class="guess-control hidden">
+        <div class="control-status" id="guess-status">단서를 기다리는 중...</div>
+        <div class="guess-actions">
+          <span class="guesses-left" id="guesses-left"></span>
+          <button id="btn-pass" type="button">패스 (턴 넘기기)</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── 결과 모달 ───────────────────────────────────────────────── -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-inner">
+      <h2 id="modal-title">결과</h2>
+      <p id="modal-message"></p>
+      <button id="btn-review" class="btn-review" type="button">🔍 복기 보기</button>
+      <button id="btn-rematch" type="button">🔄 한 판 더</button>
+      <p id="rematch-wait" class="rematch-wait hidden"></p>
+      <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
+    </div>
+  </div>
+
+  <!-- ── 상대 이탈 배너 ──────────────────────────────────────────── -->
+  <div id="opponent-left-banner" class="opponent-left-banner hidden" role="alert">
+    <span id="opponent-left-msg" class="opponent-left-msg"></span>
+    <button id="btn-banner-return-lobby" class="btn-banner-return-lobby" type="button">로비로 돌아가기</button>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="client.js"></script>
+</body>
+</html>

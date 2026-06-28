@@ -1,0 +1,26 @@
+{
+  "name": "codenames",
+  "version": "0.1.0",
+  "description": "LAN 2:2 정통 코드네임 클래식 (Codenames Classic)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "codenames",
+    "classic",
+    "lan",
+    "team",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

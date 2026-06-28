@@ -128,5 +128,18 @@
     "botAvailable": true,
     "minPlayers": 2,
     "maxPlayers": 2
+  },
+  {
+    "id": "codenames",
+    "name": "코드네임",
+    "description": "스파이마스터의 힌트로 팀원을 이끌어라! 2:2 팀 대전 워드 게임",
+    "port": 3014,
+    "httpPath": "/codenames/",
+    "wsPath": "/codenames/ws",
+    "color": "#B22222",
+    "emoji": "🕵️",
+    "botAvailable": false,
+    "minPlayers": 4,
+    "maxPlayers": 4
   }
 ]

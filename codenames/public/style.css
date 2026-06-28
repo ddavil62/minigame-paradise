@@ -1,0 +1,473 @@
+/**
+ * 코드네임 클래식(2:2 팀 대전) 클라이언트 스타일.
+ * 다크 베이스(#1a1a2e) + 레드/블루 2팀 경쟁 정체성. 카드는 베이지, 공개 시 팀 색.
+ * 외부 이미지 에셋 0 — 색/텍스트만 사용. 데스크톱 기준.
+ */
+
+* { box-sizing: border-box; }
+
+:root {
+  /* 팀 색 — 레드/블루 명확히 분리 */
+  --red:        #c0392b;
+  --red-bright: #e74c3c;
+  --red-deep:   #7c1f16;
+  --blue:        #2563c9;
+  --blue-bright: #3a8be0;
+  --blue-deep:   #16356b;
+  --neutral:  #c9b896;
+  --assassin: #15151c;
+  --beige:    #f0e0c0;
+  --beige-shadow: #c8b285;
+  --bg:       #1a1a2e;
+  --panel:    #16162a;
+  --border:   #2a2a4a;
+  --text:     #e6e6f0;
+  --muted:    #a0a0c0;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hidden { display: none !important; }
+
+/* ── 상단바 ─────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: var(--panel);
+  border-bottom: 2px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  background: linear-gradient(90deg, var(--red-bright), var(--blue-bright));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.you-tag {
+  padding: 4px 12px;
+  background: var(--border);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.btn-back-to-lobby {
+  background: transparent;
+  color: rgba(230, 230, 240, 0.55);
+  border: 1px solid rgba(230, 230, 240, 0.2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+.btn-back-to-lobby:hover {
+  background: rgba(230, 230, 240, 0.08);
+  color: rgba(230, 230, 240, 0.9);
+}
+
+/* ── 대기/역할선택 화면 ─────────────────────────────────────────── */
+.screen-waiting {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.waiting-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 32px;
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+}
+.waiting-logo { font-size: 40px; margin-bottom: 8px; }
+.waiting-title { font-size: 21px; font-weight: 700; margin-bottom: 18px; color: var(--text); }
+
+/* 인라인 닉네임 게이트 */
+.name-gate-inline { margin: 8px 0 18px; }
+.name-gate-msg { font-size: 0.9rem; color: var(--muted); margin: 0 0 10px; }
+.name-gate-inline input {
+  width: 70%; max-width: 240px; padding: 10px 12px;
+  border: 2px solid var(--border); border-radius: 8px;
+  font-size: 0.95rem; background: var(--bg); color: var(--text);
+}
+.btn-inline-enter {
+  /* 팀 선택 이전 단계라 블루 팀 색 대신 중립 파랑(duet 통일) — AD3 WARN */
+  margin-top: 10px; background: #3a7bd5; color: #fff;
+  border: none; border-radius: 8px; padding: 10px 22px;
+  font-size: 0.95rem; cursor: pointer;
+}
+.btn-inline-enter:hover { filter: brightness(1.1); }
+
+/* role_select 대기실 */
+.role-room-hint { font-size: 0.92rem; color: var(--muted); margin: 0 0 16px; }
+.slot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.team-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+}
+.team-col.team-red  { background: rgba(192, 57, 43, 0.12);  border: 1.5px solid rgba(231, 76, 60, 0.45); }
+.team-col.team-blue { background: rgba(37, 99, 201, 0.12);  border: 1.5px solid rgba(58, 139, 224, 0.45); }
+.team-col-head {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 2px 0 6px;
+}
+.team-red  .team-col-head { color: var(--red-bright); }
+.team-blue .team-col-head { color: var(--blue-bright); }
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 120ms ease-out, border-color 120ms ease-out, transform 80ms;
+}
+.slot:hover { background: rgba(255, 255, 255, 0.06); transform: translateY(-1px); }
+.slot.filled { opacity: 0.92; }
+.slot.mine { border-color: #ffd166; box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.35); }
+.slot-role { font-size: 0.8rem; color: var(--muted); letter-spacing: 0.5px; }
+.slot-name { font-size: 1rem; font-weight: 700; }
+
+/* 시작 버튼 영역 */
+.role-actions { margin-top: 4px; }
+.btn-start-game {
+  background: linear-gradient(90deg, var(--red), var(--blue));
+  color: #fff; border: none; border-radius: 10px;
+  padding: 13px 36px; font-size: 1.05rem; font-weight: 800;
+  letter-spacing: 1px; cursor: pointer;
+}
+.btn-start-game:hover:not(:disabled) { filter: brightness(1.12); }
+.btn-start-game:disabled { opacity: 0.4; cursor: not-allowed; }
+.start-hint { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; }
+
+/* 규칙 요약 */
+.rules-summary {
+  border-top: 1px solid var(--border);
+  margin-top: 20px; padding-top: 14px; text-align: left;
+}
+.rules-summary h3 { font-size: 0.95rem; color: var(--muted); margin: 0 0 8px; }
+.rules-summary ul { margin: 0; padding-left: 18px; }
+.rules-summary li { font-size: 0.85rem; color: #c0c0d0; margin-bottom: 5px; }
+
+/* ── 게임 화면 ──────────────────────────────────────────────────── */
+.screen-game {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 정보바 */
+.info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  background: var(--panel);
+  border-bottom: 2px solid var(--border);
+  flex-wrap: wrap;
+}
+.score-box { display: flex; align-items: center; gap: 12px; }
+.score-team {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 64px; padding: 4px 12px; border-radius: 10px;
+}
+.score-team.score-red  { background: rgba(192, 57, 43, 0.18); }
+.score-team.score-blue { background: rgba(37, 99, 201, 0.18); }
+.score-label { font-size: 11px; letter-spacing: 1px; }
+.score-red  .score-label { color: var(--red-bright); }
+.score-blue .score-label { color: var(--blue-bright); }
+.score-value { font-size: 26px; font-weight: 800; line-height: 1.1; }
+.score-red  .score-value { color: var(--red-bright); }
+.score-blue .score-value { color: var(--blue-bright); }
+.score-dash { font-size: 22px; color: var(--muted); }
+.first-team-tag {
+  margin-left: 6px; font-size: 12px; color: var(--muted);
+  padding: 3px 10px; border: 1px solid var(--border); border-radius: 10px;
+}
+
+.turn-box {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  flex: 1; min-width: 200px;
+}
+.turn-status { font-size: 16px; font-weight: 700; }
+.turn-status.turn-red  { color: var(--red-bright); }
+.turn-status.turn-blue { color: var(--blue-bright); }
+.clue-current { font-size: 14px; color: #ffd166; min-height: 18px; }
+
+.role-box { display: flex; align-items: center; }
+.my-role-tag {
+  font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 12px;
+  background: var(--border); color: var(--text);
+}
+.my-role-tag.tag-red  { background: rgba(192, 57, 43, 0.3);  color: #ffd2cc; }
+.my-role-tag.tag-blue { background: rgba(37, 99, 201, 0.3);  color: #cfe2ff; }
+
+/* 보드 */
+.board-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 10px;
+  max-width: 1000px;
+  width: 100%;
+  aspect-ratio: 5 / 3.2;
+}
+
+.card {
+  background: var(--beige);
+  color: #222;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(14px, 1.6vw, 22px);
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+  position: relative;
+  border: 3px solid transparent;
+  transition: transform 0.08s, box-shadow 0.15s;
+  box-shadow: 0 2px 0 var(--beige-shadow);
+  text-align: center;
+  padding: 6px;
+  overflow: hidden;
+}
+.card-label { position: relative; z-index: 1; }
+
+/* 추측 가능(요원 본인 턴) 카드 강조 */
+.card.guessable {
+  cursor: pointer;
+  border-color: #ffd166;
+  animation: glow 1.8s ease-in-out infinite;
+}
+.card.guessable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 2px 0 var(--beige-shadow), 0 0 0 0 rgba(255, 209, 102, 0.4); }
+  50%      { box-shadow: 0 2px 0 var(--beige-shadow), 0 0 0 6px rgba(255, 209, 102, 0); }
+}
+
+/* 스파이마스터 키 오버레이(미공개 카드) — 옅은 배경 + 팀 색 테두리. 요원 화면엔 표시되지 않음 */
+.card.key.key-red {
+  background: #f3c9c2;
+  border-color: var(--red);
+}
+.card.key.key-blue {
+  background: #c6d8f3;
+  border-color: var(--blue);
+}
+.card.key.key-neutral {
+  background: #e8dcc2;
+  /* 적록색맹 보조: key-red(실선 테두리)와 색 비의존 구분 위해 점선 + 더 어두운 톤 (스파이마스터 전용 시야) */
+  border-color: #8a7a4a;
+  border-style: dashed;
+}
+.card.key.key-assassin {
+  background: #4a4a52;
+  color: #f0f0f0;
+  border-color: #000;
+}
+
+/* 공개된 카드 색 */
+.card.revealed { cursor: default; }
+.card.revealed.c-red {
+  background: var(--red); color: #fff; box-shadow: 0 2px 0 var(--red-deep);
+}
+.card.revealed.c-blue {
+  background: var(--blue); color: #fff; box-shadow: 0 2px 0 var(--blue-deep);
+}
+.card.revealed.c-neutral {
+  background: var(--neutral); color: #4a4030; box-shadow: 0 2px 0 #9a8c6a;
+}
+.card.revealed.c-assassin {
+  background: var(--assassin); color: #ff6b6b; box-shadow: 0 2px 0 #000;
+  border-color: #ff3838;
+}
+
+/* ── 컨트롤 패널 ────────────────────────────────────────────────── */
+.control-panel {
+  background: var(--panel);
+  border-top: 2px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  justify-content: center;
+}
+.clue-control, .guess-control {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: 100%; max-width: 620px;
+}
+.control-status { font-size: 15px; color: #ffd166; text-align: center; min-height: 20px; }
+
+.clue-input { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.clue-input input[type="text"] {
+  background: var(--border); border: 1.5px solid #3a3a5a; color: #fff;
+  padding: 10px 14px; border-radius: 6px; font-size: 16px; min-width: 240px;
+}
+.clue-input input[type="number"] {
+  background: var(--border); border: 1.5px solid #3a3a5a; color: #fff;
+  padding: 10px 12px; border-radius: 6px; font-size: 16px; width: 70px; text-align: center;
+}
+.clue-input button {
+  background: #4caf50; color: #fff; border: none;
+  padding: 10px 22px; border-radius: 6px; font-size: 15px; font-weight: bold;
+  cursor: pointer; letter-spacing: 1px; transition: background 0.15s;
+}
+.clue-input button:hover:not(:disabled) { background: #5dbf60; }
+.clue-input button:disabled,
+.clue-input input:disabled { background: #333; color: #888; cursor: not-allowed; }
+
+.guess-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.guesses-left { font-size: 15px; font-weight: 700; color: var(--text); }
+#btn-pass {
+  background: #b08040; color: #fff; border: none;
+  padding: 10px 22px; border-radius: 6px; font-size: 15px; font-weight: bold;
+  cursor: pointer; letter-spacing: 1px;
+}
+#btn-pass:hover:not(:disabled) { background: #c89050; }
+#btn-pass:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+/* ── 결과 모달 ──────────────────────────────────────────────────── */
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+.modal-inner {
+  background: #2a2a4a;
+  padding: 36px 48px;
+  border-radius: 14px;
+  text-align: center;
+  border: 2px solid var(--border);
+  min-width: 360px;
+}
+.modal-inner h2 { margin: 0 0 12px; font-size: 30px; }
+.modal.win-red  .modal-inner { border-color: var(--red-bright); }
+.modal.win-blue .modal-inner { border-color: var(--blue-bright); }
+.modal.win-red  h2 { color: var(--red-bright); }
+.modal.win-blue h2 { color: var(--blue-bright); }
+.modal-inner p { margin: 0 0 22px; font-size: 16px; color: var(--text); }
+.modal-inner button {
+  display: block; width: 100%;
+  background: #4caf50; color: #fff; border: none;
+  padding: 12px 32px; border-radius: 6px; font-size: 16px; font-weight: bold;
+  cursor: pointer; margin-bottom: 10px;
+}
+/* 마지막 버튼 하단 여백 제거 → 상/하 패딩 균형(AD3 WARN: 상 36px vs 하 46px 불균형 해소) */
+.modal-inner button:last-child { margin-bottom: 0; }
+.modal-inner button:hover:not(:disabled) { filter: brightness(1.1); }
+.modal-inner button:disabled { opacity: 0.55; cursor: default; }
+.modal-inner .btn-review { background: #b08040; }
+#btn-rematch { background: #4caf50; }
+.rematch-wait { font-size: 13px; color: #ffd166; margin: 0 0 10px; }
+.return-lobby-btn {
+  background: transparent !important;
+  border: 1px solid rgba(245, 233, 201, 0.3);
+  color: rgba(245, 233, 201, 0.8);
+  font-size: 14px; font-weight: 600;
+}
+.return-lobby-btn:hover { background: rgba(245, 233, 201, 0.1) !important; }
+
+/* ── 복기 모드 ──────────────────────────────────────────────────── */
+.review-banner {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; gap: 12px; flex-wrap: wrap;
+  background: linear-gradient(90deg, #2e1f3a 0%, #1a1a2e 100%);
+  border-bottom: 2px solid #b08040;
+}
+.review-banner.hidden { display: none; }
+.review-banner-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.review-tag {
+  background: #b08040; color: #fff; padding: 4px 12px; border-radius: 12px;
+  font-size: 13px; font-weight: bold; letter-spacing: 1px;
+}
+.review-summary { color: #ffd166; font-size: 14px; font-weight: 600; }
+.review-banner-right button {
+  background: #3a3a5a; color: var(--text); border: none;
+  padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+}
+.review-banner-right button:hover { background: #4a4a6a; }
+
+/* 복기 카드: 실제 키 색 전체 공개 + 게임 중 공개됐던 칸 강조 */
+.card.review-cell { cursor: default; border-width: 3px; }
+.card.review-cell.c-red    { background: var(--red);    color: #fff; }
+.card.review-cell.c-blue   { background: var(--blue);   color: #fff; }
+.card.review-cell.c-neutral{ background: var(--neutral); color: #4a4030; }
+.card.review-cell.c-assassin{ background: var(--assassin); color: #ff6b6b; }
+.card.review-cell.was-revealed { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.55); }
+
+/* ── 상대 이탈 배너 ─────────────────────────────────────────────── */
+.opponent-left-banner {
+  position: fixed; top: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, #7c2d2d, #4a1a1a);
+  color: #fbbf24; display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 14px 18px; z-index: 8000;
+  font-size: 1rem; font-weight: 600;
+}
+.opponent-left-banner.hidden { display: none; }
+.btn-banner-return-lobby {
+  background: #fbbf24; color: #1a1a1a; border: none; border-radius: 8px;
+  padding: 8px 18px; font-weight: 700; cursor: pointer;
+}
+
+/* ── 토스트 ─────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 100px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85); color: #fff;
+  padding: 12px 24px; border-radius: 8px; font-size: 15px;
+  border: 1px solid #ff6b6b; z-index: 50;
+  transition: opacity 0.3s;
+}
+.toast.hidden { opacity: 0; pointer-events: none; }
