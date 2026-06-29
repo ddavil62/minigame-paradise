@@ -219,7 +219,10 @@ export function createApp(options = {}) {
    * @returns {Player|null}
    */
   function getHost() {
-    return players.find((p) => p.isHost) || players[0] || null;
+    // 사람 호스트 우선 → 사람이면 누구든 → (사람 없으면) null. 봇은 호스트로 보지 않는다.
+    return players.find((p) => p.isHost && p.mode !== 'bot')
+      || players.find((p) => p.mode !== 'bot')
+      || null;
   }
 
   /**
@@ -431,7 +434,10 @@ export function createApp(options = {}) {
       team: null,
       role: null,
       joined: false,
-      isHost: players.length === 0, // 첫 입장자가 호스트
+      // 호스트는 항상 사람이어야 한다(봇은 START_GAME을 보내지 않음). 봇은 호스트 불가,
+      // 사람은 기존 사람 호스트가 없을 때만 호스트가 된다(런처 AI채우기에서 봇이 먼저
+      // 연결돼도 사람이 호스트가 되도록 — 봇 호스트 데드락 방지).
+      isHost: !isBot && !players.some((p) => p.isHost && p.mode !== 'bot'),
       mode: wsMode,
       ws,
     };
@@ -601,9 +607,10 @@ export function createApp(options = {}) {
         killAllBots();
       }
 
-      // 호스트가 나가면 다음 입장자에게 승계.
-      if (player.isHost && players.length > 0) {
-        players[0].isHost = true;
+      // 호스트가 나가면 남은 사람 중 첫 번째에게 승계(봇은 호스트 불가).
+      if (player.isHost) {
+        const newHost = players.find((p) => p.mode !== 'bot');
+        if (newHost) newHost.isHost = true;
       }
       if (players.length === 0) {
         resetRoom();
