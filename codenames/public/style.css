@@ -23,6 +23,9 @@
   --border:   #2a2a4a;
   --text:     #e6e6f0;
   --muted:    #a0a0c0;
+  /* AI 봇 식별 그라데이션 (뱃지·AI채우기 버튼 공통) */
+  --ai-purple: #6c63ff;
+  --ai-blue:   #4a90d9;
 }
 
 body {
@@ -158,13 +161,54 @@ body {
   cursor: pointer;
   font-family: inherit;
   text-align: left;
+  position: relative; /* AI 뱃지 절대배치 기준 */
   transition: background 120ms ease-out, border-color 120ms ease-out, transform 80ms;
 }
 .slot:hover { background: rgba(255, 255, 255, 0.06); transform: translateY(-1px); }
 .slot.filled { opacity: 0.92; }
 .slot.mine { border-color: #ffd166; box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.35); }
+/* 봇 점유 슬롯: 사람이 빼앗을 수 없으므로 hover 강조 억제(클릭 불가 신호) + AI 식별 미세 틴트. */
+.slot.bot-slot {
+  cursor: not-allowed;
+  background: rgba(108, 99, 255, 0.08);
+  border-color: rgba(108, 99, 255, 0.35);
+}
+.slot.bot-slot:hover { background: rgba(108, 99, 255, 0.08); transform: none; }
 .slot-role { font-size: 0.8rem; color: var(--muted); letter-spacing: 0.5px; }
 .slot-name { font-size: 1rem; font-weight: 700; }
+
+/* AI 뱃지: 봇 점유 슬롯 우상단 표시 */
+.ai-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, var(--ai-purple), var(--ai-blue));
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* 호스트 전용 "AI로 빈자리 채우기" 버튼 */
+.btn-fill-ai {
+  display: block;
+  margin: 0 auto 10px;
+  background: linear-gradient(135deg, var(--ai-purple), var(--ai-blue));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 28px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: filter 120ms ease-out;
+}
+.btn-fill-ai:hover:not(:disabled) { filter: brightness(1.12); }
+.btn-fill-ai:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* 시작 버튼 영역 */
 .role-actions { margin-top: 4px; }

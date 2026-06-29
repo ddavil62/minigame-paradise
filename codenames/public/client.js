@@ -22,6 +22,7 @@ const inlineNameInput = document.getElementById('inline-name-input');
 const btnInlineEnter  = document.getElementById('btn-inline-enter');
 const roleRoom        = document.getElementById('role-room');
 const slotButtons     = Array.from(document.querySelectorAll('.slot'));
+const btnFillAi       = document.getElementById('btn-fill-ai');
 const btnStartGame    = document.getElementById('btn-start-game');
 const startHintEl     = document.getElementById('start-hint');
 
@@ -290,28 +291,50 @@ function renderRoleState(msg) {
   for (const p of msg.players) {
     if (p.team && p.role) occupant[`${p.team}-${p.role}`] = p;
   }
+  let hasEmptySlot = false;
   for (const slot of slotButtons) {
     const key = `${slot.dataset.team}-${slot.dataset.role}`;
     const nameSpan = slot.querySelector('.slot-name');
+    const aiBadge = slot.querySelector('.ai-badge');
     const p = occupant[key];
+    const isBotSlot = !!(p && p.isBot);
     slot.classList.toggle('filled', !!p);
     slot.classList.toggle('mine', !!(p && p.id === me));
+    // 봇 점유 슬롯: AI 뱃지 표시 + 클릭 가드용 .bot-slot 클래스.
+    slot.classList.toggle('bot-slot', isBotSlot);
+    if (aiBadge) aiBadge.classList.toggle('hidden', !isBotSlot);
     if (p) {
       nameSpan.textContent = p.name + (p.id === me ? ' (나)' : '') + (p.isHost ? ' 👑' : '');
     } else {
       nameSpan.textContent = '비어있음';
+      hasEmptySlot = true;
     }
   }
+
+  // 호스트가 본인 자리(팀+역할)를 골랐는지 — AI 채우기 활성 조건.
+  const hostPicked = !!(myTeam && myRole);
 
   // 호스트 시작 버튼 가드.
   if (isHost) {
     btnStartGame.classList.remove('hidden');
     btnStartGame.disabled = !msg.canStart;
-    startHintEl.textContent = msg.canStart
-      ? '모든 자리가 채워졌습니다. 시작하세요!'
-      : '4자리가 모두 채워지면 시작할 수 있습니다.';
+    // AI 채우기 버튼: 빈 슬롯이 남아 있고(=시작 불가) 호스트가 자기 자리를 고른 경우에만 노출.
+    if (hasEmptySlot) {
+      btnFillAi.classList.remove('hidden');
+      btnFillAi.disabled = !hostPicked;
+    } else {
+      btnFillAi.classList.add('hidden');
+    }
+    if (msg.canStart) {
+      startHintEl.textContent = '모든 자리가 채워졌습니다. 시작하세요!';
+    } else if (!hostPicked) {
+      startHintEl.textContent = '먼저 본인 팀과 역할을 선택하세요. 그 후 AI로 빈자리를 채울 수 있습니다.';
+    } else {
+      startHintEl.textContent = '빈자리는 AI로 채우거나, 다른 플레이어를 기다리세요.';
+    }
   } else {
     btnStartGame.classList.add('hidden');
+    btnFillAi.classList.add('hidden');
     startHintEl.textContent = msg.canStart
       ? '호스트가 시작하기를 기다리는 중...'
       : '나머지 플레이어의 팀/역할 선택을 기다리는 중...';
@@ -487,6 +510,11 @@ btnPass.addEventListener('click', () => {
 for (const slot of slotButtons) {
   slot.addEventListener('click', () => {
     if (!ws || ws.readyState !== 1) return;
+    // 봇이 점유한 슬롯은 빼앗을 수 없다(서버도 거부하지만 사전 차단).
+    if (slot.classList.contains('bot-slot')) {
+      showToast('AI가 차지한 자리입니다.');
+      return;
+    }
     ws.send(JSON.stringify({
       type: 'PICK_ROLE',
       team: slot.dataset.team,
@@ -494,6 +522,13 @@ for (const slot of slotButtons) {
     }));
   });
 }
+
+// 호스트 전용 "AI로 빈자리 채우기" — 빈 (팀,역할) 슬롯을 봇으로 채운다.
+btnFillAi.addEventListener('click', () => {
+  if (!ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: 'FILL_WITH_AI' }));
+  btnFillAi.disabled = true; // 봇 spawn 중복 요청 방지(다음 ROLE_STATE에서 재평가).
+});
 
 // 호스트 시작 버튼.
 btnStartGame.addEventListener('click', () => {

@@ -138,7 +138,7 @@
     "wsPath": "/codenames/ws",
     "color": "#B22222",
     "emoji": "🕵️",
-    "botAvailable": false,
+    "botAvailable": true,
     "minPlayers": 4,
     "maxPlayers": 4
   }

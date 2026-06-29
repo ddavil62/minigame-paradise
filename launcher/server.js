@@ -102,9 +102,12 @@ const GAME_APPS = {
   'omok':           createOmokApp({
     getBotUrl: () => `ws://localhost:${PORT}/omok/ws?mode=bot`,
   }),
-  // 코드네임 클래식 — 봇 미지원(4인 2:2 팀 대전, 2026-06-28 추가). getBotUrl 옵션 불필요.
-  // 팀/역할 배정은 게임 서버 자체 role_select 단계에서 처리(런처는 4인 라우팅만).
-  'codenames':      createCodenamesClassicApp(),
+  // 코드네임 클래식 — 봇 지원 (2026-06-28 P-C 추가). role_select 단계에서 호스트가
+  // FILL_WITH_AI(또는 mode=ai)로 빈 (팀,역할) 슬롯을 봇으로 채운다. 게임 서버의
+  // spawnBotForSlot이 이 URL에 &team=&role=을 덧붙여 슬롯별 봇을 spawn 한다.
+  'codenames':      createCodenamesClassicApp({
+    getBotUrl: () => `ws://localhost:${PORT}/codenames/ws?mode=bot`,
+  }),
 };
 
 /**

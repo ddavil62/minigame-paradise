@@ -25,7 +25,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import { WebSocketServer } from 'ws';
+import { spawn } from 'child_process';
+import { WebSocketServer, WebSocket } from 'ws';
 import {
   createGame, giveClue, guessCard, endTurnByPass, snapshotForPlayer,
 } from './game.js';
@@ -62,13 +63,17 @@ const SLOTS = [
  * 모든 룸 상태(players/game/phase)는 closure로 격리되어 다른 게임과 공유되지 않는다.
  *
  * @param {Object} [options]
- * @param {() => (string|null)} [options.getBotUrl] - 향후 봇 슬롯 자동 채우기용 훅 (이번 미구현).
- *   TODO: 빈 슬롯을 봇 WS로 채울 때 이 URL로 봇을 spawn → mode=bot 재접속해 Player.ws 점유.
+ * @param {() => (string|null)} [options.getBotUrl] - 빈 슬롯을 채울 봇 WS URL 공급 함수.
+ *   AI채우기(mode=ai 또는 FILL_WITH_AI) 시 빈 (팀,역할) 슬롯마다 봇을 spawn → mode=bot
+ *   재접속해 Player.ws 점유. null/미공급이면 봇 spawn은 발생하지 않는다(휴먼 전용 보호).
  * @returns {{ handleHttp: Function, handleUpgrade: Function }}
  */
 export function createApp(options = {}) {
-  // 봇 확장용 훅 자리 예약 (이번 작업에서는 호출하지 않음).
-  // const getBotUrl = options.getBotUrl || (() => null);
+  // AI채우기 시 봇이 접속할 WS URL을 공급하는 함수(통합 라우터/단독 실행이 주입).
+  // 미공급(휴먼 전용)이면 항상 null → spawnBots*는 아무 것도 하지 않는다.
+  const getBotUrl = typeof options.getBotUrl === 'function' ? options.getBotUrl : (() => null);
+  /** bot.js 파일 경로 (자식 프로세스로 spawn 대상). */
+  const botPath = path.join(__dirname, 'bot.js');
 
   // ── 룸 상태 (closure 격리, 4인 1룸 고정) ─────────────────────────
   /**
@@ -79,13 +84,104 @@ export function createApp(options = {}) {
    * @property {'spymaster'|'operative'|null} role    - 선택한 역할
    * @property {boolean} joined                       - JOIN 수신 여부
    * @property {boolean} isHost                        - 첫 입장자(호스트)
+   * @property {'human'|'ai'|'bot'} mode               - WS 접속 모드
    * @property {import('ws').WebSocket} ws
    *
-   * NOTE: ws 자리에 봇 WS를 삽입할 수 있도록 구조를 설계했다(getBotUrl 훅 예약).
+   * NOTE: ws 자리에 봇 WS를 삽입해 휴먼과 동일 경로로 동작한다(getBotUrl 훅).
    */
 
   /** @type {Player[]} */
   let players = [];
+
+  // ── 봇 자식 프로세스 관리 (AI채우기 시 빈 슬롯마다 1개씩 spawn) ──
+  /**
+   * 슬롯키(`${team}-${role}`) → 봇 자식 프로세스.
+   * 최대 3개(4인 중 사람 1명 가정). 휴먼 전용 게임에서는 항상 비어 있다.
+   * @type {Map<string, import('child_process').ChildProcess>}
+   */
+  const botChildren = new Map();
+  /** spawn 예약 중(setTimeout 대기)인 슬롯키 집합 — 중복 spawn 방지. */
+  const botSpawnPending = new Set();
+
+  /**
+   * 특정 (팀,역할) 슬롯에 봇 1개를 spawn 한다.
+   * 호출 시점에 이미 점유/봇 존재면 취소한다(레이스 방어).
+   * @param {'red'|'blue'} team
+   * @param {'spymaster'|'operative'} role
+   */
+  function spawnBotForSlot(team, role) {
+    const slotKey = `${team}-${role}`;
+    botSpawnPending.delete(slotKey);
+    // 그새 사람이 자리를 선택했거나 봇이 이미 있으면 취소.
+    const occupied = players.some((p) => p.team === team && p.role === role);
+    if (occupied || botChildren.has(slotKey)) return;
+    const url = getBotUrl();
+    if (!url) return;
+    if (!fs.existsSync(botPath)) {
+      console.warn('[codenames] bot.js 없음 — 봇 spawn 스킵');
+      return;
+    }
+    // getBotUrl은 `...?mode=bot`을 포함하므로 &team=&role=만 덧붙인다.
+    const botUrl = `${url}&team=${team}&role=${role}`;
+    console.log(`[codenames] 봇 spawn: ${slotKey}`);
+    const child = spawn(process.execPath, [botPath, '--url', botUrl], {
+      detached: false,
+      stdio: 'ignore',
+    });
+    botChildren.set(slotKey, child);
+    child.on('exit', (code) => {
+      console.log(`[codenames] 봇 종료: ${slotKey} (code=${code})`);
+      botChildren.delete(slotKey);
+    });
+  }
+
+  /**
+   * 비어 있는 (팀,역할) 슬롯에 봇을 채운다.
+   * 물리 정원(4) 여유 안에서만 spawn 하며(사람 좌석 보존), 슬롯 간 150ms 간격으로
+   * 띄워 playerId 충돌을 피한다. 이미 점유/봇/pending 슬롯은 건너뛴다.
+   */
+  function spawnBotsForEmptySlots() {
+    const url = getBotUrl();
+    if (!url) return; // 휴먼 전용 보호: URL 미공급이면 절대 spawn 안 함.
+    // 아무도 점유하지 않은 빈 논리 슬롯 열거.
+    const emptySlots = SLOTS.filter((slot) => {
+      const slotKey = `${slot.team}-${slot.role}`;
+      const occupied = players.some((p) => p.team === slot.team && p.role === slot.role);
+      return !occupied && !botChildren.has(slotKey) && !botSpawnPending.has(slotKey);
+    });
+    // 물리 정원 여유 = 4 - (현재 인원 + 이미 예약된 봇). 사람 좌석을 침범하지 않는다.
+    let capacityLeft = ROOM_CAPACITY - players.length - botSpawnPending.size;
+    let i = 0;
+    for (const slot of emptySlots) {
+      if (capacityLeft <= 0) break;
+      const slotKey = `${slot.team}-${slot.role}`;
+      botSpawnPending.add(slotKey);
+      capacityLeft -= 1;
+      // 슬롯 간 150ms 간격 spawn (playerId 충돌 방지).
+      setTimeout(() => spawnBotForSlot(slot.team, slot.role), i * 150);
+      i += 1;
+    }
+  }
+
+  /**
+   * 특정 슬롯의 봇 프로세스를 종료한다.
+   * @param {string} slotKey `${team}-${role}`
+   */
+  function killBot(slotKey) {
+    const child = botChildren.get(slotKey);
+    if (child && child.exitCode === null) child.kill();
+    botChildren.delete(slotKey);
+    botSpawnPending.delete(slotKey);
+  }
+
+  /** 모든 봇 프로세스를 종료하고 관리 상태를 비운다. */
+  function killAllBots() {
+    for (const child of botChildren.values()) {
+      if (child && child.exitCode === null) child.kill();
+    }
+    botChildren.clear();
+    botSpawnPending.clear();
+  }
   /** @type {import('./game.js').GameState|null} */
   let game = null;
   /** @type {'role_select'|'playing'|'over'} */
@@ -140,6 +236,32 @@ export function createApp(options = {}) {
   }
 
   /**
+   * team/role을 명시하지 않은 봇(런처 로비 제너릭 ?mode=bot spawn)을 다음 빈 슬롯에
+   * 자동 배정한다(GAP-1). SLOTS 순서(red-spymaster→red-operative→blue-spymaster→
+   * blue-operative)로 비어 있는 첫 슬롯을 차지한다. 배정 후 ROLE_STATE를 브로드캐스트해
+   * 해당 봇이 자기 (팀,역할)을 ROLE_STATE에서 조회·채택하도록 한다.
+   *
+   * 동시 JOIN 레이스는 setTimeout 콜백이 Node 단일 스레드에서 순차 실행되므로,
+   * 실행 시점에 players를 다시 검사해 "빈 슬롯"을 산정하면 슬롯 중복배정이 발생하지 않는다.
+   * @param {Player} player 자동배정 대상 봇
+   */
+  function autoAssignBotSlot(player) {
+    if (phase !== 'role_select') return;
+    if (player.team && player.role) return; // 이미 슬롯 보유(명시 PICK_ROLE 등) → 침범 안 함
+    for (const slot of SLOTS) {
+      const taken = players.some((p) => p.team === slot.team && p.role === slot.role);
+      if (!taken) {
+        player.team = slot.team;
+        player.role = slot.role;
+        console.log(`[codenames] ${player.id} 봇 자동배정 → ${slot.team}/${slot.role}`);
+        broadcastRoleState();
+        return;
+      }
+    }
+    console.warn(`[codenames] ${player.id} 봇 자동배정 실패(빈 슬롯 없음)`);
+  }
+
+  /**
    * role_select 단계 현황을 모든 플레이어에게 브로드캐스트한다.
    */
   function broadcastRoleState() {
@@ -153,6 +275,7 @@ export function createApp(options = {}) {
         team: p.team,
         role: p.role,
         isHost: !!(host && p.id === host.id),
+        isBot: p.mode === 'bot', // 클라이언트 AI 뱃지 표시용(P-C)
       })),
       canStart,
     };
@@ -265,13 +388,20 @@ export function createApp(options = {}) {
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
-  wss.on('connection', (ws) => {
-    // 정원 초과 직전, 좀비 슬롯(끊겼지만 close 미발화) 청소 시도.
-    if (players.length >= ROOM_CAPACITY) {
-      const before = players.length;
-      players = players.filter((p) => p.ws && p.ws.readyState <= 1);
-      if (players.length < before) {
-        console.log(`[codenames] 좀비 슬롯 ${before - players.length}개 청소`);
+  wss.on('connection', (ws, req) => {
+    // URL 쿼리에서 mode 파싱 (network/launcher가 mode=ai|bot|human 전달).
+    const reqUrlObj = new URL(req && req.url ? req.url : '/', 'http://localhost');
+    const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
+    const isBot = wsMode === 'bot';
+
+    // 사람(비봇)이 새로 연결될 때, 죽은(좀비) 슬롯만 선제 제거한다 (#13 패턴).
+    // 살아있는(OPEN) 봇은 보존한다 — AI채우기 플로우에서 방금 매칭된 봇을 죽이지 않기 위함.
+    if (!isBot) {
+      const zombies = players.filter((p) => !p.ws || p.ws.readyState !== WebSocket.OPEN);
+      if (zombies.length > 0) {
+        console.log(`[codenames] 죽은(좀비) 슬롯 ${zombies.length}개 선제 제거`);
+        for (const z of zombies) { try { z.ws.terminate(); } catch { /* 이미 닫힘 */ } }
+        players = players.filter((p) => p.ws && p.ws.readyState === WebSocket.OPEN);
         if (players.length === 0) resetRoom();
       }
     }
@@ -302,10 +432,11 @@ export function createApp(options = {}) {
       role: null,
       joined: false,
       isHost: players.length === 0, // 첫 입장자가 호스트
+      mode: wsMode,
       ws,
     };
     players.push(player);
-    console.log(`[codenames] ${playerId} 연결됨 (${players.length}/${ROOM_CAPACITY})`);
+    console.log(`[codenames] ${playerId} 연결됨 (${players.length}/${ROOM_CAPACITY}, mode=${wsMode})`);
 
     // ── 메시지 라우터 ──
     ws.on('message', (data) => {
@@ -323,6 +454,35 @@ export function createApp(options = {}) {
           player.joined = true;
           sendTo(player, { type: 'JOINED', playerId: player.id, isHost: player.isHost });
           broadcastRoleState();
+          // mode=ai 사람이 입장하면 빈 슬롯을 봇으로 채운다(봇 자신 JOIN은 트리거 아님).
+          // role_select 단계에서만, 200ms 지연(사람 단독 등록 보장).
+          if (wsMode === 'ai' && !isBot && phase === 'role_select') {
+            setTimeout(() => {
+              if (phase === 'role_select') spawnBotsForEmptySlots();
+            }, 200);
+          }
+          // GAP-1: 봇이 team/role을 명시하지 않으면(런처 로비 제너릭 spawn) 자동 배정한다.
+          // 게임 내 FILL_WITH_AI 봇은 곧 PICK_ROLE(200ms)을 보내므로, 그보다 늦은 400ms 후
+          // 여전히 슬롯이 비어 있는(=제너릭) 봇만 빈 슬롯에 자동 배정한다.
+          if (isBot && phase === 'role_select') {
+            setTimeout(() => {
+              if (phase === 'role_select'
+                  && player.ws && player.ws.readyState === WebSocket.OPEN
+                  && !player.team && !player.role) {
+                autoAssignBotSlot(player);
+              }
+            }, 400);
+          }
+          break;
+        }
+
+        // FILL_WITH_AI: 호스트가 빈 슬롯을 즉시 AI로 채운다(role_select 단계 한정).
+        case 'FILL_WITH_AI': {
+          if (phase !== 'role_select') {
+            sendTo(player, { type: 'ERROR', message: '지금은 AI를 채울 수 없다' });
+            break;
+          }
+          spawnBotsForEmptySlots();
           break;
         }
 
@@ -422,9 +582,25 @@ export function createApp(options = {}) {
 
     // ── 연결 해제 ──
     ws.on('close', () => {
-      console.log(`[codenames] ${player.id} 연결 해제`);
+      console.log(`[codenames] ${player.id} 연결 해제 (mode=${player.mode})`);
       players = players.filter((p) => p.id !== player.id);
       rematchPending.delete(player.id);
+
+      if (isBot) {
+        // 봇이 끊기면 해당 슬롯 프로세스 정리(team/role을 선택했었다면).
+        if (player.team && player.role) killBot(`${player.team}-${player.role}`);
+      } else {
+        // 사람이 끊기면 봇 슬롯을 동기적으로 정리한다 (#13 좀비 봇 차단).
+        // kill()의 SIGTERM은 비동기라 봇 WS가 close될 때까지 players에 좀비로 남으므로,
+        // 봇 슬롯을 players에서 즉시 제거하고 ws.terminate()로 TCP를 강제 종료한다.
+        const botSlots = players.filter((p) => p.mode === 'bot');
+        if (botSlots.length > 0) {
+          players = players.filter((p) => p.mode !== 'bot');
+          for (const b of botSlots) { try { b.ws.terminate(); } catch { /* 이미 닫힘 */ } }
+        }
+        killAllBots();
+      }
+
       // 호스트가 나가면 다음 입장자에게 승계.
       if (player.isHost && players.length > 0) {
         players[0].isHost = true;
@@ -456,6 +632,7 @@ export function createApp(options = {}) {
     game = null;
     phase = 'role_select';
     rematchPending = new Set();
+    killAllBots(); // 전원 퇴장 시 잔여 봇 프로세스 정리.
   }
 
   // ── Heartbeat: 30초마다 ping, 응답 없는 좀비 강제 종료 ────────
@@ -542,7 +719,13 @@ if (isDirectExecution()) {
     ? parseInt(argv[portFlagIndex + 1], 10)
     : 3014;
 
-  const app = createApp();
+  // 단독 실행 시 봇 WS URL을 listen 콜백에서 확정된 포트로 동적 구성(단독 봇 테스트 지원).
+  let listeningPort = 0;
+  const app = createApp({
+    getBotUrl: () => (listeningPort > 0
+      ? `ws://localhost:${listeningPort}/ws?mode=bot`
+      : null),
+  });
 
   // ── 호스트 IP 자동 감지 ──────────────────────────────────────────
   const VIRTUAL_IF_PATTERNS = [
@@ -629,6 +812,7 @@ if (isDirectExecution()) {
     // LAN 접속을 허용하기 위해 0.0.0.0에 바인딩.
     server.listen(port, '0.0.0.0', () => {
       server.removeListener('error', onError);
+      listeningPort = port; // 봇 spawn URL 구성용(getBotUrl)
       const lanIps = getLanAddresses();
       printBanner(port, lanIps, REQUESTED_PORT);
       console.log(`${ANSI.dim} Tip: 방화벽 팝업이 뜨면 "개인 네트워크" 체크 후 액세스 허용.${ANSI.reset}`);

@@ -40,10 +40,12 @@
           <div class="team-col team-red">
             <div class="team-col-head">레드 팀</div>
             <button class="slot" data-team="red" data-role="spymaster" type="button">
+              <span class="ai-badge hidden">AI</span>
               <span class="slot-role">스파이마스터</span>
               <span class="slot-name" data-slot="red-spymaster">비어있음</span>
             </button>
             <button class="slot" data-team="red" data-role="operative" type="button">
+              <span class="ai-badge hidden">AI</span>
               <span class="slot-role">요원</span>
               <span class="slot-name" data-slot="red-operative">비어있음</span>
             </button>
@@ -52,10 +54,12 @@
           <div class="team-col team-blue">
             <div class="team-col-head">블루 팀</div>
             <button class="slot" data-team="blue" data-role="spymaster" type="button">
+              <span class="ai-badge hidden">AI</span>
               <span class="slot-role">스파이마스터</span>
               <span class="slot-name" data-slot="blue-spymaster">비어있음</span>
             </button>
             <button class="slot" data-team="blue" data-role="operative" type="button">
+              <span class="ai-badge hidden">AI</span>
               <span class="slot-role">요원</span>
               <span class="slot-name" data-slot="blue-operative">비어있음</span>
             </button>
@@ -63,6 +67,8 @@
         </div>
 
         <div class="role-actions">
+          <!-- 호스트 전용: 본인 자리 선택 후 빈 슬롯을 AI로 채운다(FILL_WITH_AI). -->
+          <button id="btn-fill-ai" class="btn-fill-ai hidden" type="button">🤖 AI로 빈자리 채우기</button>
           <button id="btn-start-game" class="btn-start-game" type="button" disabled>게임 시작</button>
           <p id="start-hint" class="start-hint">호스트가 시작하기를 기다리는 중...</p>
         </div>
