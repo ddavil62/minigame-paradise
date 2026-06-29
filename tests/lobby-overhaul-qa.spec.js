@@ -547,9 +547,10 @@ test.describe('AI 봇 채우기', () => {
   });
 
   test('AC-A-02: botAvailable=true 게임에서 AI 채우기 후 호스트 준비 시 ROOM_STATE에 AI 슬롯 표시', async ({ page }) => {
-    // yutnori: botAvailable=true, maxPlayers=4, minPlayers=2
+    // matgo: botAvailable=true, maxPlayers=2, minPlayers=2 (botMaxPlayers 캡 없음 → 정상 채움)
+    // 주의: yutnori는 botMaxPlayers=2 < maxPlayers=4 라 AI채우기가 안내 ERROR로 막힌다(AC-A-03 참조).
     await gotoPortal(page);
-    await enterRoom(page, 'yutnori');
+    await enterRoom(page, 'matgo');
     await page.waitForSelector('.player-ready-card', { timeout: 5000 });
 
     // AI 채우기 버튼 클릭
@@ -564,7 +565,41 @@ test.describe('AI 봇 채우기', () => {
     const aiCards = await page.locator('.player-ready-card.ai-slot').count();
     expect(aiCards).toBeGreaterThanOrEqual(1);
 
-    await page.screenshot({ path: 'tests/screenshots/ai-slots-yutnori.png' });
+    await page.screenshot({ path: 'tests/screenshots/ai-slots-matgo.png' });
+  });
+
+  test('AC-A-03 (코드 검증): botMaxPlayers < maxPlayers 게임(yutnori 4인)에서 FILL_WITH_AI → 안내 ERROR', async ({ page }) => {
+    // yutnori: botAvailable=true, maxPlayers=4, botMaxPlayers=2
+    // → 4인 AI채우기는 봇 미지원이므로 게임 진입 전 런처에서 안내 메시지로 막아야 한다.
+    // testWs가 방의 첫(=호스트) 클라이언트가 되도록 enterRoom 없이 단독 연결한다.
+    // (enterRoom을 먼저 하면 page의 app.js가 호스트를 점유해 "호스트만" 에러가 먼저 온다.)
+    await gotoPortal(page);
+
+    // 호스트 WS로 FILL_WITH_AI를 보내 안내 ERROR 응답을 직접 확인
+    const errorMsg = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        const testWs = new WebSocket(`ws://localhost:3111/lobby/ws?gameId=yutnori`);
+        testWs.onopen = () => {
+          testWs.send(JSON.stringify({ type: 'JOIN', name: 'attacker' }));
+          testWs.send(JSON.stringify({ type: 'FILL_WITH_AI' }));
+        };
+        testWs.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'ERROR') {
+            resolve(msg.message);
+            testWs.close();
+          }
+        };
+        setTimeout(() => {
+          resolve(null);
+          testWs.close();
+        }, 3000);
+      });
+    });
+
+    // 안내 메시지가 반환되어야 하고, "2인 AI 대전" 안내 문구를 포함해야 함
+    expect(errorMsg).not.toBeNull();
+    expect(errorMsg).toContain('2인 AI 대전');
   });
 });
 

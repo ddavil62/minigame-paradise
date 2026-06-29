@@ -702,6 +702,19 @@ function handleMessage(ws, msg, room) {
         return;
       }
 
+      // botMaxPlayers 검증: AI 봇이 지원하는 최대 인원보다 방 정원이 크면 AI 채우기 불가.
+      // (예: 윷놀이는 maxPlayers=4지만 봇은 2인 대전만 지원 → 4인 AI채우기 시 게임 서버가
+      //  봇 spawn을 스킵해 방이 채워지지 않고 멈춘다. 게임 진입 전에 안내로 막는다.)
+      // AI 채우기는 빈 슬롯을 전부 채워 항상 maxPlayers명으로 시작하므로 maxPlayers 기준으로 판정.
+      if (typeof game.botMaxPlayers === 'number' && game.maxPlayers > game.botMaxPlayers) {
+        sendJson(ws, {
+          type: 'ERROR',
+          message: `${game.name} ${game.maxPlayers}인 AI 대전은 지원하지 않습니다. ${game.botMaxPlayers}인 AI 대전만 가능합니다.`,
+        });
+        console.log(`[launcher] FILL_WITH_AI 거부: ${room.gameId} (maxPlayers=${game.maxPlayers} > botMaxPlayers=${game.botMaxPlayers})`);
+        return;
+      }
+
       // 빈 슬롯 전체를 AI로 채움
       const emptySlots = game.maxPlayers - room.clients.size - room.aiSlotCount;
       if (emptySlots <= 0) {

@@ -48,6 +48,7 @@
     "color": "#D4A017",
     "emoji": "🎲",
     "botAvailable": true,
+    "botMaxPlayers": 2,
     "minPlayers": 2,
     "maxPlayers": 4
   },

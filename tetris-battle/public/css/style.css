@@ -235,6 +235,15 @@ body {
   gap: 40px;
   padding: 24px;
   min-height: 0;
+  /* ── 반응형 보드 높이 (2026-06-29 "화면 안 찼는데 졌다" 버그 수정) ──
+     보드 캔버스는 내부 해상도 300×600 고정이라, CSS 크기를 지정하지 않으면 항상 600 CSS px로
+     표시된다. 작은 화면/브라우저 줌에서 보드(600px)가 가용 높이를 넘으면 body{overflow:hidden}
+     + game-main{align-items:center}로 인해 상·하단이 동시에 잘리고, 상단(가시 0~2행=천장)이 가려져
+     스택이 천장에 닿는 게 안 보인 채 탑아웃된다.
+     --board-h를 vh 기반으로 잡아 헤더/푸터/패딩(약 160px)을 제외한 가용 높이에 보드를 맞추되,
+     기본 해상도(600px)를 상한으로 둔다. 종횡비는 각 캔버스 selector에서 유지한다.
+     vh 기반이라 줌 시에도 뷰포트 비율로 함께 줄어 클리핑이 해소된다. */
+  --board-h: min(600px, calc(100vh - 160px));
 }
 
 .player-area {
@@ -294,6 +303,19 @@ body {
   margin: 0 auto;
   background: var(--bg);
   border-radius: 2px;
+}
+
+/* HOLD/NEXT 미리보기도 보드와 같은 배율로 축소해 작은 화면에서 패널이 함께 줄어들게 한다.
+   내부 해상도: HOLD 72×72(1:1, 0.12×), NEXT 72×216(1:3, 0.36×). width:auto로 폭 자동 계산. */
+#hold-canvas {
+  height: calc(var(--board-h) * 0.12);
+  width: auto;
+  aspect-ratio: 1 / 1;
+}
+#next-canvas {
+  height: calc(var(--board-h) * 0.36);
+  width: auto;
+  aspect-ratio: 1 / 3;
 }
 
 /* ── 스탯 (점수/레벨/라인) ──────────────────────────────────────── */
@@ -467,12 +489,21 @@ body {
   display: block;
   background: var(--bg);
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.6);
+  /* 반응형: 가용 높이에 맞춰 1:2 종횡비 유지하며 축소. 내부 해상도(300×600)와 게임 로직은 불변,
+     CSS 표시 크기만 조정한다. width:auto + aspect-ratio로 height만 줘도 폭이 자동 계산된다. */
+  height: var(--board-h);
+  width: auto;
+  aspect-ratio: 1 / 2;
 }
 
 .minimap #opponent-canvas {
   display: block;
   background: var(--bg);
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+  /* 상대 미니맵도 보드와 같은 비율(0.4×)로 함께 축소 → 작은 화면에서 정렬·비례 유지. (내부 해상도 120×240) */
+  height: calc(var(--board-h) * 0.4);
+  width: auto;
+  aspect-ratio: 1 / 2;
 }
 
 /* 콤보 인디케이터 */
