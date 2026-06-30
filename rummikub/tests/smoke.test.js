@@ -1215,6 +1215,78 @@ await (async () => {
   }
 })();
 
+// ── RUMMI-038: 첫 등판 전 기존 보드 세트에 레이오프 차단 (endTurn 방어선) ──────────
+// 설계 원칙: moveTile 자체는 hand→기존세트 허용, endTurn 시 computeInitialMeldScore
+// #2-2 방어선(기존 보드 타일 섞인 세트 → 점수 0)으로 initial_meld_short 반환.
+section('RUMMI-038: 첫 등판 전 기존 보드 세트 레이오프 → endTurn에서 차단');
+{
+  const g = createGame();
+  // 상대(p2)가 이미 등판해 보드에 세트를 가지고 있는 상황 시뮬레이션
+  const existingTiles = {
+    e1: { id: 'e1', kind: 'num', color: 'red', number: 10 },
+    e2: { id: 'e2', kind: 'num', color: 'red', number: 11 },
+    e3: { id: 'e3', kind: 'num', color: 'red', number: 12 },
+  };
+  Object.assign(g.tiles, existingTiles);
+  g.board = [{ id: 'existing-set-1', tiles: ['e1', 'e2', 'e3'] }];
+  g.played.p2 = true;
+  g.played.p1 = false; // p1은 미등판 상태
+
+  // p1 손에 타일 주입
+  const handTile = { id: 'h1', kind: 'num', color: 'red', number: 9 };
+  g.tiles.h1 = handTile;
+  g.hands.p1 = ['h1'];
+  // turnSnapshot에 기존 보드 세트가 존재
+  g.turnSnapshot = {
+    board: [{ id: 'existing-set-1', tiles: ['e1', 'e2', 'e3'] }],
+    hands: { p1: ['h1'], p2: g.hands.p2.slice() },
+    nextSetSeq: g.nextSetSeq,
+  };
+
+  // moveTile 자체는 hand→기존세트 허용 (차단은 endTurn에서 일어난다)
+  const res = moveTile(g, 'p1', { kind: 'hand', tileId: 'h1' }, { kind: 'set', setId: 'existing-set-1', index: 0 });
+  assertEq(res.ok, true, '첫 등판 전 기존 세트 레이오프 거부');
+  // endTurn 시 #2-2 방어선: 기존 보드 타일 섞인 세트 → 점수 0 → initial_meld_short
+  const et = endTurn(g, 'p1');
+  assertEq(et.reason, 'initial_meld_short', '에러 메시지에 "기존 보드" 포함');
+  // 롤백 후 상태 복원
+  // g는 이미 rollback 완료 (turnSnapshot 상태로 되돌아간 상태)
+}
+
+{
+  // 별도 게임: 새 세트에는 추가 가능해야 함
+  const g2 = createGame();
+  const existingTiles2 = {
+    e1: { id: 'e1', kind: 'num', color: 'red', number: 10 },
+    e2: { id: 'e2', kind: 'num', color: 'red', number: 11 },
+    e3: { id: 'e3', kind: 'num', color: 'red', number: 12 },
+  };
+  Object.assign(g2.tiles, existingTiles2);
+  g2.board = [{ id: 'existing-set-1', tiles: ['e1', 'e2', 'e3'] }];
+  g2.played.p2 = true;
+  g2.played.p1 = false;
+  const handTile2 = { id: 'h1', kind: 'num', color: 'red', number: 9 };
+  g2.tiles.h1 = handTile2;
+  g2.hands.p1 = ['h1'];
+  g2.turnSnapshot = {
+    board: [{ id: 'existing-set-1', tiles: ['e1', 'e2', 'e3'] }],
+    hands: { p1: ['h1'], p2: g2.hands.p2.slice() },
+    nextSetSeq: g2.nextSetSeq,
+  };
+  const ns = addNewSet(g2, 'p1');
+  const res2 = moveTile(g2, 'p1', { kind: 'hand', tileId: 'h1' }, { kind: 'set', setId: ns.setId, index: 0 });
+  assertEq(res2.ok, true, '첫 등판 전 새 세트에 추가는 허용');
+
+  // 등판 후에는 기존 세트에도 추가 가능해야 함
+  g2.played.p1 = true; // 등판 완료
+  // h1을 손으로 되돌리기
+  const boardSet2 = g2.board.find(s => s.id === ns.setId);
+  if (boardSet2) boardSet2.tiles = [];
+  g2.hands.p1 = ['h1'];
+  const res3 = moveTile(g2, 'p1', { kind: 'hand', tileId: 'h1' }, { kind: 'set', setId: 'existing-set-1', index: 0 });
+  assertEq(res3.ok, true, '등판 후 기존 세트 레이오프 허용');
+}
+
 // ── 요약 ────────────────────────────────────────────────────
 console.log('\n────────────────────────────────────────');
 console.log(`총 ${passed + failed}건, PASS=${passed}, FAIL=${failed}`);

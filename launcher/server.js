@@ -36,6 +36,16 @@ import { createApp as createRummikubApp } from '../rummikub/server.js';
 import { createApp as createOmokApp }     from '../omok/server.js';
 import { createApp as createCodenamesClassicApp } from '../codenames/server.js';
 
+// ── P0-A 안전망: WS 핸들러에서 빠져나온 예외가 런처 프로세스를 종료시키지 않게 한다.
+// 각 게임 server.js의 null guard(1차 방어)로 정상 경로는 차단되며,
+// 이 핸들러는 예상치 못한 예외만 최후 방어한다.
+// 주의: 모든 예외를 삼키면 디버깅이 어려워지므로 에러 정보를 반드시 stderr에 출력한다.
+process.on('uncaughtException', (err, origin) => {
+  console.error(`[launcher] uncaughtException (origin=${origin}):`, err);
+  // 프로세스를 종료하지 않고 계속 실행한다.
+  // 게임 서버별 WS 핸들러 내부의 예외만 이 경로로 유입됨을 기대한다.
+});
+
 // ── 경로 및 인자 파싱 ──────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

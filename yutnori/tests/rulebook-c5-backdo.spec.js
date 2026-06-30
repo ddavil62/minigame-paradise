@@ -168,3 +168,46 @@ test('YR-C5-013: cell 2~18 backdo → 여전히 cell-1 (범용 후퇴 무영향)
   expect(computeNextCell(9, -1).toCell).toBe(8);
   expect(computeNextCell(18, -1).toCell).toBe(17);
 });
+
+// ── 백도 큐 잔류 영구 데드락 방지 (결함 4 검증) ──────────────────
+
+test('YR-C5-014: 유일한 출전 말 완주 후 잔류 백도 자동 폐기 → passTurn (§9-2)', async () => {
+  // 데드락 시나리오: 말 1개만 출전(cell 19), 나머지 HOME. pendingResults=['do','backdo'].
+  // MOVE_PIECE(do)로 출전 말 완주 → pendingResults=['backdo'], 백도 대상 없음 →
+  // autoDiscardUnusableBackdos가 backdo를 제거하고 passTurn → currentTurn이 p2.
+  const app = createApp({});
+  const { server, port } = await startServer(app);
+  const { p1, p2 } = await setupGame(port);
+  try {
+    // inject: p1 턴, piece[0]이 cell 19(도 1칸이면 GOAL 완주), 나머지 HOME
+    await inject(port, {
+      started: true,
+      currentTurn: 'p1',
+      pendingResults: ['do', 'backdo'],
+      pendingThrows: 0,
+      capturedBonus: false,
+      pieces: {
+        p1: [
+          { cell: 19, stack: 1, done: false },
+          { cell: HOME, stack: 1, done: false },
+          { cell: HOME, stack: 1, done: false },
+          { cell: HOME, stack: 1, done: false },
+        ],
+      },
+    });
+    await p1.next('STATE');
+    await p2.next('STATE');
+
+    // MOVE_PIECE: piece[0]을 'do'로 이동 → cell 19 + 1 = GOAL(완주)
+    p1.send({ type: 'MOVE_PIECE', pieceIndex: 0, useResult: 'do' });
+    // 완주 후 pendingResults에 'backdo'만 남지만, 출전 말이 없으므로
+    // autoDiscardUnusableBackdos가 backdo를 제거 + passTurn
+    const st = await p1.next('STATE');
+    // 턴이 p2로 넘어가야 함 (데드락 아님)
+    expect(st.currentTurn).toBe('p2');
+    expect(st.pendingResults).toEqual([]);
+  } finally {
+    p1.close(); p2.close();
+    await stopServer(server);
+  }
+});

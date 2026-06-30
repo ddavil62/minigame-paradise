@@ -405,14 +405,14 @@ test.describe('스냅샷 (snapshotForPlayer)', () => {
     expect(snap.yourUnplacedJoker).toBeNull();
   });
 
-  test('G-40: oppHand에 isJoker 필드 포함', () => {
+  test('G-40: oppHand 미공개 카드의 isJoker는 false로 마스킹', () => {
     const g = createGame();
     placeJoker(g, 'p1', 0);
     placeJoker(g, 'p2', 0);
     const snap = snapshotForPlayer(g, 'p1');
-    // 상대 손에 isJoker가 있는 카드가 있어야 함
+    // 미공개 상대 카드의 isJoker는 false여야 함 (정보 누출 방지)
     const jokerInOpp = snap.oppHand.some(c => c.isJoker);
-    expect(jokerInOpp).toBe(true);
+    expect(jokerInOpp).toBe(false);
   });
 
   test('G-41: 상대 미공개 카드 value 가림 (null)', () => {

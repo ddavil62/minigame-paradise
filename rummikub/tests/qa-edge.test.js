@@ -991,7 +991,9 @@ section('STATIC-019: 보드 → 같은 보드 세트 이동 (순서 변경)');
   // 한 칸 밀리는 off-by-one 버그 동작이었음 (오른쪽 이동 시 index-1 보정 추가됨).
   const r = moveTile(g, 'p1', { kind: 'set', setId: 'set_a', tileId: 'a' }, { kind: 'set', setId: 'set_a', index: 2 });
   assertEq(r.ok, true, '같은 세트 내 이동 ok');
-  assertEq(g.board[0].tiles, ['b', 'a', 'c'], '순서 [b, a, c] (슬롯 의미 보정)');
+  // P2-R4: 2026-06-12 normalizeSetTiles 도입으로 valid 그룹은 COLOR_ORDER(red→blue→black→orange) 정렬됨.
+  // 슬롯 이동 후 정규화가 적용되어 [a(red5), b(blue5), c(black5)]가 정렬 결과.
+  assertEq(g.board[0].tiles, ['a', 'b', 'c'], '정규화 정렬: [a(red), b(blue), c(black)]');
 }
 
 // ── STATIC-020: createApp HTTP 경로 traversal 방어 ────────────────

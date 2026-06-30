@@ -184,7 +184,9 @@ export function createApp(opts = {}) {
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
 
-    const playerId = players.length === 0 ? 'p1' : 'p2';
+    // 비어있는 슬롯 ID에 할당 — players.length 기반은 재접속 시 ID 충돌 발생 (P0-B fix)
+    const usedIds = new Set(players.map((p) => p.id));
+    const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
     /** @type {Player} */
     const player = { id: playerId, name: playerId, joined: false, rematchReady: false, ws };
     players.push(player);
@@ -197,6 +199,15 @@ export function createApp(opts = {}) {
         msg = JSON.parse(data.toString());
       } catch (e) {
         console.warn('[hanabi] JSON 파싱 실패:', data.toString());
+        return;
+      }
+
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
         return;
       }
 
@@ -315,6 +326,8 @@ export function createApp(opts = {}) {
           message: `${leftName}님이 나갔습니다.`,
         });
         game = null; // 1명 남으면 게임 무효화 -> 두 번째 접속 시 새 게임 시작.
+        // P2-5C: 남은 플레이어의 rematchReady 리셋 — 신규 접속자가 REMATCH만으로 게임 시작하는 것 차단
+        for (const p of players) p.rematchReady = false;
       }
     });
 

@@ -48,7 +48,14 @@ async function run() {
     new Promise((res) => p2.once('open', res)),
   ]);
 
-  // 두 명 모두 입장 + 게임 시작까지 대기
+  // P2-R1: 현행 JOIN → READY 프로토콜에 맞게 갱신 (구 auto-JOIN 폐기)
+  p1.send(JSON.stringify({ type: 'JOIN', name: 'smoke-p1' }));
+  p2.send(JSON.stringify({ type: 'JOIN', name: 'smoke-p2' }));
+  await new Promise((r) => setTimeout(r, 200));
+  p1.send(JSON.stringify({ type: 'READY' }));
+  p2.send(JSON.stringify({ type: 'READY' }));
+
+  // 두 명 모두 입장 + READY → GAME_START + STATE 수신까지 대기
   await new Promise((r) => setTimeout(r, 400));
 
   console.log('  [debug] p1States types:', p1States.map((m) => m.type).join(','));

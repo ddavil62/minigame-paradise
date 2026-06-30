@@ -176,7 +176,9 @@ export function createApp() {
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
 
-    const playerId = players.length === 0 ? 'p1' : 'p2';
+    // 비어있는 슬롯 ID에 할당 — players.length 기반은 재접속 시 ID 충돌 발생 (P0-B fix)
+    const usedIds = new Set(players.map((p) => p.id));
+    const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
     /** @type {Player} */
     const player = { id: playerId, name: '(알 수 없음)', joined: false, ws };
     players.push(player);
@@ -191,6 +193,15 @@ export function createApp() {
         msg = JSON.parse(data.toString());
       } catch (e) {
         console.warn('[codenames] JSON 파싱 실패:', data.toString());
+        return;
+      }
+
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
         return;
       }
 

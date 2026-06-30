@@ -440,6 +440,8 @@ export function moveTile(state, by, from, to) {
     const hand = state.hands[by];
     fromHandIdx = hand.indexOf(tileId);
     if (fromHandIdx < 0) return { ok: false, error: '본인 손에 해당 타일이 없습니다.' };
+    // hand→기존세트: moveTile 자체는 허용. 첫 등판 전 레이오프는 endTurn 시
+    // computeInitialMeldScore의 #2-2 방어선(기존 보드 타일 섞인 세트 → 점수 0)으로 차단된다.
   } else if (from.kind === 'set') {
     fromSet = state.board.find((s) => s.id === from.setId);
     if (!fromSet) return { ok: false, error: `세트 ${from.setId} 없음` };

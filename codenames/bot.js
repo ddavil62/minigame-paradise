@@ -255,7 +255,8 @@ function stateKey(s) {
     // DEFECT-1: redFound/blueFound만으로는 요원이 중립 카드만 공개한 턴엔 키가 직전과 같아
     // 단서를 영영 못 주는 데드락이 생긴다. revealedCount(공개 카드 수)를 포함해
     // 보드가 바뀌면(중립 공개 포함) 같은 단서턴이라도 재행동 가능하게 한다(요원 키와 동일 패턴).
-    return `sm|${s.currentTeam}|${s.turnPhase}|${s.redFound}|${s.blueFound}|${revealedCount}`;
+    // [P1-FIX-5] turnCount 추가 — 0-공개 패스 연속 시 currentTeam이 돌아와도 키가 달라짐
+    return `sm|${s.currentTeam}|${s.turnPhase}|${s.redFound}|${s.blueFound}|${revealedCount}|${s.turnCount ?? 0}`;
   }
   return `op|${s.currentTeam}|${s.turnPhase}|${s.guessesLeft}|${revealedCount}`;
 }

@@ -169,6 +169,8 @@ test.describe('QA-RF2 FIX-2 모서리 분기', () => {
     // p2도 MOVE_PIECE broadcast(BRANCH_REQUEST + STATE)를 받았으므로 큐를 비운다.
     await p2.next('BRANCH_REQUEST');
     p2.drain('STATE');
+    // P2-R3: JOIN/READY 핸드셰이크에서 broadcast된 stale READY_STATE도 드레인 — leaked=true 오탐 방지
+    p2.drain('READY_STATE');
 
     // p2(상대)가 CHOOSE_PATH → 서버 game.currentTurn !== p2.id 이므로 무시(응답 없음)
     p2.send({ type: 'CHOOSE_PATH', pathChoice: 'shortcut' });

@@ -405,6 +405,15 @@ export function createApp(opts = {}) {
       }
       console.log(`[matgo:RECV] ${player.id}(isBot=${ws._mode === 'bot'}) ${JSON.stringify(msg)} (phase=${game?.phase} turn=${game?.turn} stepInProgress=${stepInProgress})`);
 
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
+        return;
+      }
+
       switch (msg.type) {
         case 'JOIN': {
           // 닉네임 전달. name 누락 시 '(알 수 없음)' 폴백(후방호환 — JOIN 미수신 smoke 무영향).

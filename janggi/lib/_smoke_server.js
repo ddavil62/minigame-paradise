@@ -75,8 +75,11 @@ async function main() {
   await new Promise((resolve) => ws1.on('open', resolve));
   assert(true, 'WS p1 연결 성공');
 
+  // P2-R2: 현행 READY 게이트 프로토콜에 맞게 JOIN 전송
+  ws1.send(JSON.stringify({ type: 'JOIN', playerName: 'smoke-han' }));
+  await sleep(200);
+
   // p1 JOINED 대기
-  await sleep(300);
   assert(p1Msgs.length >= 1, 'p1 메시지 수신');
   const p1Joined = p1Msgs.find(m => m.type === 'JOINED');
   assert(p1Joined && p1Joined.side === 'han', 'p1 JOINED side=han');
@@ -90,12 +93,19 @@ async function main() {
   await new Promise((resolve) => ws2.on('open', resolve));
   assert(true, 'WS p2 연결 성공');
 
-  await sleep(300);
+  // P2-R2: 현행 READY 게이트 프로토콜에 맞게 JOIN + READY 전송
+  ws2.send(JSON.stringify({ type: 'JOIN', playerName: 'smoke-cho' }));
+  await sleep(200);
 
   // p2 JOINED
   const p2Joined = p2Msgs.find(m => m.type === 'JOINED');
   assert(p2Joined && p2Joined.side === 'cho', 'p2 JOINED side=cho');
   assert(p2Joined && p2Joined.waiting === false, 'p2 JOINED waiting=false');
+
+  // P2-R2: 양쪽 READY 전송 → 게임 시작
+  ws1.send(JSON.stringify({ type: 'READY' }));
+  ws2.send(JSON.stringify({ type: 'READY' }));
+  await sleep(400);
 
   // GAME_START 수신
   const p1GameStart = p1Msgs.find(m => m.type === 'GAME_START');

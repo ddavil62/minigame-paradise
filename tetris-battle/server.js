@@ -261,8 +261,9 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
-  // 새 플레이어 등록 (p1 → p2 순서)
-  const playerId = players.length === 0 ? 'p1' : 'p2';
+  // 비어있는 슬롯 ID에 할당 — players.length 기반은 재접속 시 ID 충돌 발생 (P0-B fix)
+  const usedIds = new Set(players.map((p) => p.id));
+  const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
   /** @type {Player} */
   const player = {
     id: playerId,
@@ -288,6 +289,15 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+    // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+      try {
+        sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+      } catch (e) { /* 송신 실패는 무시 */ }
+      return;
+    }
+
     switch (msg.type) {
       case 'JOIN':
         player.name = msg.playerName || playerId;
@@ -309,6 +319,8 @@ wss.on('connection', (ws, req) => {
         break;
 
       case 'READY':
+        // P2-5A: 게임 진행 중 중복 READY 차단 — START 재브로드캐스트 방지
+        if (isRoomPlaying()) break;
         player.ready = true;
         console.log(`[server] ${player.id} READY`);
         broadcastReadyState();
@@ -409,6 +421,19 @@ wss.on('connection', (ws, req) => {
           break;
         }
         player.gameOver = true;
+
+        // P2-1: 상대가 이미 topout한 경우 → 무승부(double topout). 1회만 브로드캐스트.
+        const alreadyOut = players.find((p) => p.id !== player.id && p.gameOver);
+        if (alreadyOut) {
+          console.log(`[server] GAME_OVER: 양쪽 동시 topout → 무승부`);
+          broadcastAll({
+            type: 'GAME_RESULT',
+            winner: null,
+            reason: 'double_topout',
+          });
+          break;
+        }
+
         // 자신의 패배 선언 → 상대가 승리
         const winnerId = players.find((p) => p.id !== player.id)?.id || null;
         console.log(`[server] GAME_OVER: ${player.id} 패배, ${winnerId} 승리`);

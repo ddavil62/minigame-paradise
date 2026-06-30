@@ -58,6 +58,10 @@ let pendingActTimer = null;
 let rematchTimer = null;
 /** 자동 READY 예약 타이머 (리매치 JOINED 재전송 대비 재예약 방어). */
 let readyTimer = null;
+/** 금수로 거절된 칸 집합 (`${row},${col}` 형식). 새 STATE 도착 시 초기화. [P1-FIX-6] */
+const bannedCells = new Set();
+/** 직전 시도한 착수 좌표. ERROR 수신 시 banned에 추가하는 데 사용. [P1-FIX-6] */
+let lastAttemptedMove = null;
 
 const ws = new WebSocket(URL);
 
@@ -122,12 +126,25 @@ ws.on('message', (data) => {
         console.error('[omok-bot] 방이 가득 찼다. 봇은 빠진다.');
         ws.close();
       } else {
-        console.warn('[omok-bot] 서버 에러:', msg.message);
-        // 직전 착수가 거절됐으므로 다음 STATE에 재행동할 수 있게 키 리셋.
+        console.warn('[omok-bot] 착수 거절 (금수 등):', msg.message);
+        // [P1-FIX-6] 거절된 칸을 banned에 기록 — 동일 칸 무한 재시도 방지
+        if (lastAttemptedMove) {
+          bannedCells.add(`${lastAttemptedMove.row},${lastAttemptedMove.col}`);
+        }
         lastActedFor = null;
         if (pendingActTimer) {
           clearTimeout(pendingActTimer);
           pendingActTimer = null;
+        }
+        // [P1-FIX-6] 새 STATE 없이 즉시 재시도 — 금수가 아닌 다른 칸 선택
+        if (lastState) {
+          const delay = 200 + Math.floor(Math.random() * 200);
+          pendingActTimer = setTimeout(() => {
+            pendingActTimer = null;
+            const cur = lastState;
+            if (!cur || cur.phase !== 'playing' || cur.currentTurn !== myColor) return;
+            act(cur);
+          }, delay);
         }
       }
       break;
@@ -174,6 +191,7 @@ function scheduleRematch() {
  */
 function handleState(s) {
   lastState = s;
+  bannedCells.clear(); // [P1-FIX-6] 보드 상태 변경 → 금수 제외 목록 초기화
   if (!myColor) return;
   if (s.phase !== 'playing') return;
   if (s.currentTurn !== myColor) {
@@ -209,22 +227,25 @@ function handleState(s) {
  * @param {object} s
  */
 function act(s) {
-  const move = chooseMove(s);
+  // [P1-FIX-6] banned 칸을 제외하여 최선수 선택
+  const move = chooseMoveExcluding(s, bannedCells);
   if (!move) {
     // 빈 칸이 없으면(이론상 무승부 직전) 행동하지 않음.
-    console.log('[omok-bot] 둘 곳 없음 — 패스');
+    console.log('[omok-bot] 둘 곳 없음 (금수 제외 후) — 패스');
     return;
   }
+  lastAttemptedMove = { row: move.row, col: move.col }; // [P1-FIX-6] 시도 좌표 기록
   console.log(`[omok-bot] PLACE (${move.row},${move.col})`);
   send({ type: 'PLACE', row: move.row, col: move.col });
 }
 
 /**
- * 빈 교차점을 전수 평가하여 최고 점수 칸을 고른다.
+ * 빈 교차점을 전수 평가하여 최고 점수 칸을 고른다 (banned 제외).
  * @param {object} s STATE 페이로드
+ * @param {Set<string>} banned 제외할 칸 집합 (`${row},${col}`)
  * @returns {{row:number, col:number}|null}
  */
-function chooseMove(s) {
+function chooseMoveExcluding(s, banned) {
   const board = s.board;
   const opColor = myColor === 'black' ? 'white' : 'black';
   let bestScore = -Infinity;
@@ -233,12 +254,13 @@ function chooseMove(s) {
   // 첫 수(빈 보드)는 중앙(천원)에 둔다 — 전수 평가 시 전부 동점이라 자연스러운 시작점 확보.
   if (s.moveCount === 0) {
     const center = Math.floor(BOARD_SIZE / 2);
-    return { row: center, col: center };
+    if (!banned.has(`${center},${center}`)) return { row: center, col: center };
   }
 
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE; col++) {
       if (board[row * BOARD_SIZE + col] !== null) continue;
+      if (banned.has(`${row},${col}`)) continue; // [P1-FIX-6] 금수 거절 칸 제외
       const score = evaluate(board, row, col, myColor, opColor);
       if (score > bestScore) {
         bestScore = score;
@@ -247,6 +269,15 @@ function chooseMove(s) {
     }
   }
   return bestMove;
+}
+
+/**
+ * banned 없이 전수 평가 (하위 호환용).
+ * @param {object} s STATE 페이로드
+ * @returns {{row:number, col:number}|null}
+ */
+function chooseMove(s) {
+  return chooseMoveExcluding(s, new Set());
 }
 
 /**

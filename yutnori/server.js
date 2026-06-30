@@ -664,13 +664,17 @@ function broadcastAll(payload) {
 function broadcastReadyState() {
   for (const me of players) {
     if (me.ws.readyState !== 1) continue;
-    // 2인 기본: 상대 1명의 ready
+    // 2인 기본: 상대 1명의 ready (하위 호환 유지)
     const opp = players.find((p) => p.id !== me.id);
     const payload = {
       type: 'READY_STATE',
       myReady: me.ready,
       opponentReady: opp ? opp.ready : false,
     };
+    // P2-9: 3~4인 방에서 전체 상대 ready 상태를 playersReady 배열로 추가 전달
+    if (players.length > 2) {
+      payload.playersReady = players.map((p) => ({ id: p.id, ready: p.ready }));
+    }
     me.ws.send(JSON.stringify(payload));
   }
 }
@@ -716,6 +720,24 @@ function passTurn() {
   game.awaitingBranchType = null; // FIX-2: 턴 종료 시 분기 유형 초기화
   // 버그 C: 윷·모 보너스 던지기 적립도 턴 종료 시 0으로 (다음 턴 누수 방지).
   game.pendingThrows = 0;
+}
+
+/**
+ * 현재 플레이어 말 배열을 검사해, 백도를 사용할 수 있는 출전 말이
+ * 존재하지 않으면 pendingResults에서 backdo를 모두 제거한다.
+ * 제거 후 큐가 비고 보너스도 없으면 passTurn()을 호출한다.
+ * @param {Array} pieces — 현재 플레이어의 말 배열
+ */
+function autoDiscardUnusableBackdos(pieces) {
+  const hasValidTarget = pieces.some(p => !p.done && p.cell !== HOME);
+  if (hasValidTarget) return;  // 출전 말 있음 — 폐기 불필요
+  const before = game.pendingResults.length;
+  game.pendingResults = game.pendingResults.filter(r => r !== 'backdo');
+  if (game.pendingResults.length < before) {
+    console.log('[server] 백도 자동 폐기 (출전 말 없음 — 사용 불가)');
+  }
+  // 턴 종료 판정은 호출처(MOVE_PIECE / CHOOSE_PATH)의 기존 hasBonus 체크에 맡긴다.
+  // 이 함수가 직접 passTurn()을 호출하면 호출처 체크와 중복되어 passTurn이 2회 실행된다.
 }
 
 /**
@@ -953,6 +975,15 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+    // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+      try {
+        sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+      } catch (e) { /* 송신 실패는 무시 */ }
+      return;
+    }
+
     switch (msg.type) {
       case 'JOIN': {
         player.name = (msg.playerName || '(알 수 없음)').toString().slice(0, 32);
@@ -1125,6 +1156,8 @@ wss.on('connection', (ws, req) => {
         // (이전 D 수정의 bonusFromConsumed는 소진 순서에 보너스를 연동시켜 이중 리필을 유발했음.)
         // 결과 큐에서 차감
         game.pendingResults.splice(queueIdx, 1);
+        // [신규] 백도 자동 폐기 체크 — 이동으로 말이 완주/잡혀 출전 말이 0이면 잔류 백도 제거
+        autoDiscardUnusableBackdos(player.pieces);
 
         // §6-1 / §13-12: 윷·모로 잡으면 잡기 보너스와 윷/모 자체 보너스(추가 던지기)는
         // 중복되지 않는다 (한 행위 최대 1회). 윷/모를 던진 것 자체가 이미 추가 던지기 권리를
@@ -1234,6 +1267,8 @@ wss.on('connection', (ws, req) => {
         // 결과 큐 차감
         const queueIdx = game.pendingResults.indexOf(useResult);
         if (queueIdx >= 0) game.pendingResults.splice(queueIdx, 1);
+        // [신규] 백도 자동 폐기 체크 — 분기 이동으로 출전 말이 0이면 잔류 백도 제거
+        autoDiscardUnusableBackdos(player.pieces);
 
         // §6-1 / §13-12: 윷·모로 잡으면 잡기 보너스와 윷/모 자체 보너스는 중복 불가.
         // useResult는 분기 대기 시점에 game.awaitingBranchResult로 확정된 값(L1011).

@@ -147,7 +147,7 @@ export function submitClue(state, playerId, word, number) {
   if (state.phase !== 'playing') return { ok: false, error: '게임이 종료되었다' };
   if (state.turn !== playerId) return { ok: false, error: '당신의 단서 차례가 아니다' };
   if (state.currentClue) return { ok: false, error: '이미 단서가 활성화되어 있다' };
-  if (!word || typeof word !== 'string') return { ok: false, error: '단서 단어가 비어있다' };
+  if (!word || typeof word !== 'string' || !word.trim()) return { ok: false, error: '단서 단어가 비어있다' };
   const n = Number(number);
   if (!Number.isInteger(n) || n < 1 || n > 9) return { ok: false, error: '단서 숫자는 1~9' };
 
@@ -189,12 +189,13 @@ export function guessCard(state, playerId, index) {
     return { ok: true, result: 'assassin', lose: true };
   }
 
-  // 카드 공개 시 양쪽 시점의 green을 각각 카운트한다 (공식 듀엣 룰).
-  // 즉 카드가 한쪽 시점에선 neutral이고 반대쪽 시점에선 green인 경우,
-  // 반대쪽 플레이어의 진척으로 인정된다.
-  const guesserId = playerId;
-  if (state.keyCard[index].left === 'green')  state.greenFound.p1 = countSideGreen(state, 'left');
-  if (state.keyCard[index].right === 'green') state.greenFound.p2 = countSideGreen(state, 'right');
+  // 정통 듀엣 룰: result='green'(단서자 키 기준)일 때만 해당 면의 green을 적립한다.
+  // 중립·암살자로 공개된 카드의 반대면 green은 영구 소실.
+  const result = color;
+  if (result === 'green') {
+    if (state.keyCard[index].left === 'green')  state.greenFound.p1++;
+    if (state.keyCard[index].right === 'green') state.greenFound.p2++;
+  }
 
   if (color === 'green') {
     state.guessesLeft -= 1;
@@ -212,16 +213,16 @@ export function guessCard(state, playerId, index) {
 
   // neutral
   // 듀엣 규칙: 중립 카드를 누르면 추측 턴이 즉시 종료되며 미션 토큰 1개 소비.
-  // (단, 그 카드가 받는 쪽 시점에서 green이었다면 위에서 이미 그쪽 카운트에 반영됨.)
+  // 반대면이 green이더라도 중립으로 공개된 카드의 green은 영구 소실.
   state.guessesLeft = 0;
   endTurn(state, true);
-  if (state.phase === 'lost') {
-    return { ok: true, result: 'neutral', lose: true };
-  }
-  // 승리 조건도 다시 검사 (받는 쪽 green 9개 도달 + 단서 쪽도 이미 9개였던 경계 케이스)
+  // 승리 우선 검사: 정통 듀엣 룰에서 토큰 소진과 동시에 양쪽 9 도달 시 승리가 패배보다 우선 (P2-2 fix)
   if (state.greenFound.p1 >= GREEN_PER_SIDE && state.greenFound.p2 >= GREEN_PER_SIDE) {
     state.phase = 'won';
     return { ok: true, result: 'neutral', win: true };
+  }
+  if (state.phase === 'lost') {
+    return { ok: true, result: 'neutral', lose: true };
   }
   return { ok: true, result: 'neutral' };
 }

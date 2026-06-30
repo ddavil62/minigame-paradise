@@ -275,8 +275,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       ui.setStatus(`재대결 대기: 나 ${myReady ? '완료' : '대기'} / 상대 ${othersReady}/${othersTotal} 준비`);
     },
-    onReadyState: ({ myReady: mr, opponentReady: or }) => {
-      updateReadyUI(mr, or);
+    onReadyState: ({ myReady: mr, opponentReady: or, playersReady }) => {
+      // P2-9: 3~4인 방에서는 playersReady 배열로 전체 상대 ready 상태 반영
+      let oppReady = or;
+      if (playersReady && playersReady.length > 2) {
+        const myId = net.getMyId();
+        const others = playersReady.filter((p) => p.id !== myId);
+        oppReady = others.length > 0 && others.every((p) => p.ready);
+      }
+      updateReadyUI(mr, oppReady);
       // 상대 입장 표시 갱신 (READY_STATE는 상대가 있을 때만 수신)
       updateWaitingTitle(true);
       if (els.waitingSolo) els.waitingSolo.classList.add('hidden');

@@ -298,7 +298,9 @@ export function createApp(opts = {}) {
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
 
-    const playerId = players.length === 0 ? 'p1' : 'p2';
+    // 비어있는 슬롯 ID에 할당 — players.length 기반은 재접속 시 ID 충돌 발생 (P0-B fix)
+    const usedIds = new Set(players.map((p) => p.id));
+    const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
     const color = playerId === 'p1' ? 'black' : 'white';
     /** @type {Player} */
     // 봇은 JOIN 메시지를 보내지 않으므로 서버가 즉시 name='AI'를 부여한다.
@@ -348,6 +350,15 @@ export function createApp(opts = {}) {
         msg = JSON.parse(data.toString());
       } catch (e) {
         console.warn('[omok] JSON 파싱 실패:', data.toString());
+        return;
+      }
+
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
         return;
       }
 
@@ -499,6 +510,9 @@ export function createApp(opts = {}) {
           message: '상대방이 나갔어요.',
         });
         game = null; // 1명 남으면 게임 무효화 → 두 번째 접속 시 새 게임.
+        // P2-5E: lastGameResult/rematchPending도 리셋 — stale 결과로 신규 합류자 REMATCH_START 방지
+        lastGameResult = null;
+        rematchPending = new Set();
         // 남은 사람은 다시 1인 대기 → 본인 READY도 무효화(상대 합류 후 다시 READY).
         readySet = new Set();
         broadcastReadyState();

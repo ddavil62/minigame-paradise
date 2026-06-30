@@ -314,6 +314,15 @@ export function createApp(opts = {}) {
         return;
       }
 
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
+        return;
+      }
+
       switch (msg.type) {
         case 'JOIN': {
           // 닉네임 전달. name 누락 시 '(알 수 없음)' 폴백(후방호환 — JOIN 미수신 smoke 무영향).
@@ -432,6 +441,11 @@ export function createApp(opts = {}) {
         }
 
         case 'REMATCH': {
+          // P2-5B: 게임 종료 상태가 아니면 REMATCH 차단 — 진행 중 REMATCH로 게임 리셋 방지
+          if (!game || game.phase !== 'ended') {
+            sendTo(player, { type: 'ERROR', message: '게임 종료 후에만 리매치 가능합니다.' });
+            break;
+          }
           if (players.length < roomMaxPlayers) {
             sendTo(player, { type: 'ERROR', message: '인원이 부족하여 새 게임을 시작할 수 없습니다.' });
             break;
@@ -480,8 +494,9 @@ export function createApp(opts = {}) {
           message: '상대방이 나갔어요.',
         });
         game = null; // 정원 미달 시 게임 무효화 → 전원 재접속 + READY 시 새 게임.
-        // 남은 사람의 READY도 초기화(상대 합류 후 다시 READY).
-        for (const p of players) p.ready = false;
+        // 남은 사람의 READY + rematchReady 초기화(상대 합류 후 다시 READY).
+        // P2-5D: rematchReady도 리셋 — stale rematchReady + 신규 합류자 단일 REMATCH로 게임 시작 방지
+        for (const p of players) { p.ready = false; p.rematchReady = false; }
         broadcastReadyState();
       }
     });

@@ -292,6 +292,15 @@ export function applyMove(state, side, fromFile, fromRank, toFile, toRank) {
     }
   }
 
+  // P2-8: 스테일메이트 감지 — 비장군 + 합법수 0이면 못 두는 쪽 패
+  if (!check) {
+    const oppMoves = getAllLegalMoves(state.board, opponent);
+    if (oppMoves.length === 0) {
+      endGame(state, side, 'stalemate');
+      return { ok: true, captured, check: false, checkmate: false, gameOver: true };
+    }
+  }
+
   // 초읽기 리셋: 수를 두면 초읽기 타이머 초기화
   resetByoyomiForTurn(state, side);
 
@@ -331,6 +340,10 @@ export function applyDrawOffer(state, side, action) {
   }
 
   if (action === 'offer') {
+    // P2-7: 자기 차례에만 무승부 제안 가능 (룰북 §8-7)
+    if (state.turn !== side) {
+      return { ok: false, error: '상대 차례에는 무승부 제안 불가' };
+    }
     state.drawOfferedBy = side;
     return { ok: true, ended: false };
   }

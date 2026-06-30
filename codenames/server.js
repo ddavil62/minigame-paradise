@@ -230,9 +230,11 @@ export function createApp(options = {}) {
    * @returns {boolean}
    */
   function isAllSlotsFilled() {
-    if (players.length < ROOM_CAPACITY) return false;
+    // P2-10: joined 플레이어만 카운트 — JOIN 미수신 연결이 슬롯 점유하는 것 차단
+    const joined = players.filter((p) => p.joined);
+    if (joined.length < ROOM_CAPACITY) return false;
     for (const slot of SLOTS) {
-      const count = players.filter((p) => p.team === slot.team && p.role === slot.role).length;
+      const count = joined.filter((p) => p.team === slot.team && p.role === slot.role).length;
       if (count !== 1) return false;
     }
     return true;
@@ -454,6 +456,15 @@ export function createApp(options = {}) {
         return;
       }
 
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
+        return;
+      }
+
       switch (msg.type) {
         case 'JOIN': {
           player.name = (msg.name || '(알 수 없음)').toString().slice(0, 32);
@@ -497,6 +508,11 @@ export function createApp(options = {}) {
         case 'SELECT_ROLE': {
           if (phase !== 'role_select') {
             sendTo(player, { type: 'ERROR', message: '지금은 역할을 변경할 수 없다' });
+            break;
+          }
+          // P2-10: JOIN 미수신 연결의 역할 선택 차단
+          if (!player.joined) {
+            sendTo(player, { type: 'ERROR', message: '입장(JOIN) 후 역할 선택 가능합니다.' });
             break;
           }
           const team = msg.team;

@@ -135,6 +135,8 @@ export function createNetwork(handlers) {
           handlers.onReadyState({
             myReady: !!msg.myReady,
             opponentReady: !!msg.opponentReady,
+            // P2-9: 3~4인 방 전체 ready 상태 배열 (서버가 보내는 경우에만 존재)
+            playersReady: msg.playersReady || null,
           });
         }
         break;

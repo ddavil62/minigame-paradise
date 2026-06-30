@@ -130,6 +130,7 @@ export function createGame(startTeam) {
     gamePhase: 'playing',
     winner: null,
     winReason: '',
+    turnCount: 0, // [P1-FIX-5] 0-공개 패스 후 stateKey 충돌 방지용 턴 카운터
   };
 }
 
@@ -301,6 +302,8 @@ function endTurn(state, team) {
   state.turnPhase = 'clue';
   state.currentClue = null;
   state.guessesLeft = 0;
+  // [P1-FIX-5] turnCount 증가 — 0-공개 패스 연속 시 stateKey 중복 방지
+  state.turnCount = (state.turnCount || 0) + 1;
 }
 
 /**
@@ -340,5 +343,6 @@ export function snapshotForPlayer(state, role, playerId) {
     winReason: state.winReason,
     you: playerId,
     yourRole: role,
+    turnCount: state.turnCount ?? 0, // [P1-FIX-5] 봇 stateKey 중복 방지용
   };
 }

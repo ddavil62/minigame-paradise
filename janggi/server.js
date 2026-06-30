@@ -75,6 +75,8 @@ export function createApp(opts = {}) {
    * @type {Set<string>}
    */
   let readySet = new Set();
+  /** @type {NodeJS.Timeout|null} P2-3: 재접속 대기 타이머 (30초) */
+  let reconnectTimer = null;
 
   // ── 브로드캐스트 유틸 ───────────────────────────────────────────
 
@@ -334,6 +336,14 @@ export function createApp(opts = {}) {
         players.push(player);
         console.log(`[janggi] ${playerId}(${missingSide}) 재접속 (${players.length}/2)`);
 
+        // P2-3: 재접속 대기 타이머 해제 + _waitingReconnect 클리어 + 시간 타이머 재개
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        if (game._waitingReconnect) {
+          game._waitingReconnect = false;
+          startTickTimer(); // 시간 타이머 재개
+          console.log('[janggi] 재접속 성공 → 게임 재개');
+        }
+
         sendTo(player, { type: 'JOINED', playerId, side: missingSide, waiting: false });
         // 현재 게임 상태 즉시 전송 (재접속 복구)
         const snapshot = serializeState(game);
@@ -355,7 +365,9 @@ export function createApp(opts = {}) {
     ws.on('pong', () => { ws.isAlive = true; });
 
     // 진영 배정: p1=한, p2=초 (기본). 쿼리로 명시 가능
-    const playerId = players.length === 0 ? 'p1' : 'p2';
+    // 비어있는 슬롯 ID에 할당 — players.length 기반은 재접속 시 ID 충돌 발생 (P0-B fix)
+    const usedIds = new Set(players.map((p) => p.id));
+    const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
     let side;
     if (querySide === 'han' || querySide === 'cho') {
       // 요청한 진영이 이미 점유되었으면 반대편으로
@@ -424,6 +436,15 @@ export function createApp(opts = {}) {
         return;
       }
 
+      // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
+      // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        try {
+          sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
+        } catch (e) { /* 송신 실패는 무시 */ }
+        return;
+      }
+
       switch (msg.type) {
         case 'JOIN': {
           // 닉네임 전달. name 누락 시 '(알 수 없음)' 폴백(후방호환 — JOIN 미수신 smoke 무영향).
@@ -480,6 +501,14 @@ export function createApp(opts = {}) {
         case 'MOVE': {
           if (!game) break;
           const { fromFile, fromRank, toFile, toRank } = msg;
+          // 좌표가 정수인지 검증 — 분수/문자열/undefined 시 서버 크래시 방어 (P0-C fix)
+          if (
+            !Number.isInteger(fromFile) || !Number.isInteger(fromRank) ||
+            !Number.isInteger(toFile)   || !Number.isInteger(toRank)
+          ) {
+            sendTo(player, { type: 'ERROR', message: '잘못된 좌표 형식입니다.' });
+            break;
+          }
           const result = applyMove(game, player.side, fromFile, fromRank, toFile, toRank);
           if (!result.ok) {
             sendTo(player, { type: 'ERROR', message: result.error });
@@ -526,6 +555,11 @@ export function createApp(opts = {}) {
 
         case 'DRAW_OFFER': {
           if (!game) break;
+          // P2-7: 서버 레벨 턴 가드 — 상대 차례에 무승부 제안 차단 (룰북 §8-7)
+          if (game.turn !== player.side) {
+            sendTo(player, { type: 'ERROR', message: '자기 차례에만 무승부 제안 가능합니다.' });
+            break;
+          }
           const result = applyDrawOffer(game, player.side, 'offer');
           if (!result.ok) {
             sendTo(player, { type: 'ERROR', message: result.error });
@@ -595,7 +629,27 @@ export function createApp(opts = {}) {
         game = null;
         stopTickTimer();
         clearSetupTimer();
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      } else if (game && game.phase === 'playing' && !ws._isBot) {
+        // P2-3: 진행 중 사람 disconnect → 30초 재접속 대기 (봇 대전 경로 제외)
+        broadcastAll({
+          type: 'OPPONENT_LEFT',
+          name: disconnectedName,
+          message: `${disconnectedName}님이 나갔습니다. 30초 내 재접속을 기다립니다.`,
+        });
+        game._waitingReconnect = true;
+        stopTickTimer(); // 재접속 대기 중 시간 일시 중지
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          if (game && game._waitingReconnect) {
+            console.log('[janggi] 재접속 타임아웃 (30초) → 게임 파기');
+            game = null;
+            clearSetupTimer();
+          }
+        }, 30000);
       } else {
+        // 게임 미진행 또는 봇 대전 — 즉시 파기 (기존 동작)
         broadcastAll({
           type: 'OPPONENT_LEFT',
           name: disconnectedName,

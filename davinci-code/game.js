@@ -490,7 +490,7 @@ export function snapshotForPlayer(state, playerId) {
     color: c.color,
     value: c.revealed ? c.value : null,  // 미공개면 가림
     revealed: c.revealed,
-    isJoker: c.isJoker,
+    isJoker: c.revealed ? c.isJoker : false,  // 미공개 카드의 isJoker는 마스킹
   }));
 
   let pendingDrawn = null;
@@ -503,11 +503,11 @@ export function snapshotForPlayer(state, playerId) {
         isJoker: state.pendingDrawn.isJoker,
       };
     } else {
-      // 상대가 뽑은 카드는 색깔만
+      // 상대가 뽑은 카드는 색깔만 (isJoker도 마스킹)
       pendingDrawn = {
         color: state.pendingDrawn.color,
         value: null,
-        isJoker: state.pendingDrawn.isJoker,
+        isJoker: false,
       };
     }
   }

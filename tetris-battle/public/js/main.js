@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let net = null;
   let input = null;
   let items = null;
+  let resultShown = false; // P2-1: 결과 화면 중복 표시 방지 가드
 
   const game = createGame({
     renderBoard: ui.renderBoard,
@@ -166,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 게임 화면으로 전환
       showScreen('game');
       ui.hideResult();
+      resultShown = false; // P2-1: 결과 표시 가드 리셋
       els.rematchBtn.classList.add('hidden');
       ui.setStatus('');
       els.opponentStatus.textContent = '대전 중';
@@ -186,15 +188,26 @@ document.addEventListener('DOMContentLoaded', () => {
       ui.renderOpponent(state);
     },
     onResult: (winner, reason) => {
+      // P2-1: 중복 GAME_RESULT 수신 시 결과 화면 플리커 방지
+      if (resultShown) return;
+      resultShown = true;
+
       const myId = net.getMyId();
-      const won = winner === myId;
-      let msg;
-      if (reason === 'disconnect') {
+      let msg, cssClass;
+      if (winner === null) {
+        // P2-1: 무승부 (double topout 등)
+        msg = '무승부!';
+        cssClass = '';
+      } else if (reason === 'disconnect') {
+        const won = winner === myId;
         msg = won ? '상대방 연결 끊김. 승리!' : '연결이 끊겼습니다.';
+        cssClass = won ? 'win' : 'lose';
       } else {
+        const won = winner === myId;
         msg = won ? '승리!' : '패배...';
+        cssClass = won ? 'win' : 'lose';
       }
-      ui.showResult(msg, won ? 'win' : 'lose');
+      ui.showResult(msg, cssClass);
       game.stop();
       if (input) input.disable();
       // Phase 3 LOW-3: 결과 화면 표시 시 잔존 아이템 효과/슬롯/타이머를 정리한다.

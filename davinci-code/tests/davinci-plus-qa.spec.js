@@ -460,9 +460,9 @@ test.describe('상대 카드 렌더링', () => {
     await p2.locator('#joker-slot-buttons .btn-slot-place').first().click();
     await p1.waitForTimeout(500);
 
-    // 상대 카드 중 조커 클래스가 있는 카드가 1개 있어야 함
+    // 미공개 상대 카드의 isJoker가 마스킹되므로 joker 클래스 0개
     const jokerCards = p1.locator('#opp-cards .card.joker');
-    expect(await jokerCards.count()).toBe(1);
+    expect(await jokerCards.count()).toBe(0);
 
     await cleanup(ctx1, ctx2);
   });

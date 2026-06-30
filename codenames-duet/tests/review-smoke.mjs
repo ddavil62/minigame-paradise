@@ -15,7 +15,7 @@
 import http from 'http';
 import { WebSocket } from 'ws';
 import { createApp } from '../server.js';
-import { createGame, snapshotForPlayer } from '../game.js';
+import { createGame, snapshotForPlayer, guessCard, submitClue } from '../game.js';
 
 const PORT = 3098;
 
@@ -194,6 +194,51 @@ function waitFor(messages, predicate, timeoutMs = 3000) {
   a.ws.close();
   b.ws.close();
   await new Promise((res) => setTimeout(res, 100));
+}
+
+// ── 단위: 중립 클릭 시 greenFound 미증가 (결함 2 검증) ────────────
+{
+  console.log('\n[REVIEW-005] 중립 클릭 시 반대면 green이어도 greenFound 미증가');
+  const g = createGame('p1');
+  // keyCard에서 left='neutral', right='green' (또는 반대)인 카드를 찾는다
+  let neutralIdx = -1;
+  for (let i = 0; i < g.keyCard.length; i++) {
+    const k = g.keyCard[i];
+    if (k.left === 'neutral' && k.right === 'green') { neutralIdx = i; break; }
+    if (k.left === 'green' && k.right === 'neutral') { neutralIdx = i; break; }
+  }
+  if (neutralIdx === -1) {
+    // 해당 카드 조합이 없으면 수동 세팅
+    g.keyCard[0] = { left: 'neutral', right: 'green' };
+    neutralIdx = 0;
+  }
+
+  // p1이 단서를 내고 추측 phase로 전환 (phase는 'playing'이어야 guessCard가 동작함)
+  g.phase = 'playing';
+  g.currentClue = { from: 'p1', word: 'test', number: 2 };
+  g.guessingPlayer = 'p2'; // p1 단서자 → p2가 추측자
+  g.guessesLeft = 3;
+  const beforeP1 = g.greenFound.p1;
+  const beforeP2 = g.greenFound.p2;
+
+  // p1이 단서자이므로 side='left'. neutralIdx가 left='neutral'이면 result='neutral'
+  const side = g.keyCard[neutralIdx].left;
+  if (side === 'neutral') {
+    const res = guessCard(g, 'p2', neutralIdx);
+    assert(res.result === 'neutral', '중립 카드 클릭 → result=neutral');
+    assert(g.greenFound.p1 === beforeP1, '중립 클릭 후 greenFound.p1 미변경');
+    assert(g.greenFound.p2 === beforeP2, '중립 클릭 후 greenFound.p2 미변경 (반대면 green이어도)');
+  } else {
+    // left='green', right='neutral' → p2가 단서자일 때 테스트
+    g.currentClue = { from: 'p2', word: 'test', number: 2 };
+    g.guessingPlayer = 'p1'; // p2 단서자 → p1이 추측자
+    g.phase = 'playing';
+    g.guessesLeft = 3;
+    const res = guessCard(g, 'p1', neutralIdx);
+    assert(res.result === 'neutral', '중립 카드 클릭 → result=neutral');
+    assert(g.greenFound.p1 === beforeP1, '중립 클릭 후 greenFound.p1 미변경 (반대면 green이어도)');
+    assert(g.greenFound.p2 === beforeP2, '중립 클릭 후 greenFound.p2 미변경');
+  }
 }
 
 // ── 종료 ────────────────────────────────────────────────────
