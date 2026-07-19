@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js --port 3016",
-    "test": "node --test tests/simulation.spec.js tests/network.spec.js",
+    "atlas:build": "python scripts/build_sprite_atlas.py",
+    "atlas:verify": "python scripts/build_sprite_atlas.py",
+    "test": "node --test tests/simulation.spec.js tests/network.spec.js tests/assets.spec.js",
+    "test:assets": "npm run atlas:verify && node --test tests/assets.spec.js",
     "test:e2e": "playwright test -c playwright.config.js"
   },
   "dependencies": { "ws": "^8.18.0" },

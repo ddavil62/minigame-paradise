@@ -1,0 +1,587 @@
+{
+  "version": 1,
+  "images": {
+    "items": "./moonlight-items.webp",
+    "stations": "./moonlight-stations.webp",
+    "crew": "./moonlight-crew.webp"
+  },
+  "frames": {
+    "item.moon_mushroom.RAW": {
+      "image": "items",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.sunset_pepper.RAW": {
+      "image": "items",
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.silver_dough.RAW": {
+      "image": "items",
+      "x": 256,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.lantern_leaf.RAW": {
+      "image": "items",
+      "x": 384,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.comet_radish.RAW": {
+      "image": "items",
+      "x": 512,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.star_noodle.RAW": {
+      "image": "items",
+      "x": 640,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.moon_mushroom.PREPPED": {
+      "image": "items",
+      "x": 768,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.sunset_pepper.PREPPED": {
+      "image": "items",
+      "x": 0,
+      "y": 128,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.silver_dough.PREPPED": {
+      "image": "items",
+      "x": 128,
+      "y": 128,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.lantern_leaf.PREPPED": {
+      "image": "items",
+      "x": 256,
+      "y": 128,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.comet_radish.PREPPED": {
+      "image": "items",
+      "x": 384,
+      "y": 128,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.star_noodle.PREPPED": {
+      "image": "items",
+      "x": 512,
+      "y": 128,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.moon_mushroom.COOKED": {
+      "image": "items",
+      "x": 640,
+      "y": 128,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.sunset_pepper.COOKED": {
+      "image": "items",
+      "x": 768,
+      "y": 128,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.silver_dough.COOKED": {
+      "image": "items",
+      "x": 0,
+      "y": 256,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.lantern_leaf.COOKED": {
+      "image": "items",
+      "x": 128,
+      "y": 256,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.comet_radish.COOKED": {
+      "image": "items",
+      "x": 256,
+      "y": 256,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.star_noodle.COOKED": {
+      "image": "items",
+      "x": 384,
+      "y": 256,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.moon_mushroom.BURNT": {
+      "image": "items",
+      "x": 512,
+      "y": 256,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.sunset_pepper.BURNT": {
+      "image": "items",
+      "x": 640,
+      "y": 256,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.silver_dough.BURNT": {
+      "image": "items",
+      "x": 768,
+      "y": 256,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.lantern_leaf.BURNT": {
+      "image": "items",
+      "x": 0,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.comet_radish.BURNT": {
+      "image": "items",
+      "x": 128,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.star_noodle.BURNT": {
+      "image": "items",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "item.plate.RAW": {
+      "image": "items",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 34,
+      "drawH": 34
+    },
+    "dish.mushroom_skewer": {
+      "image": "items",
+      "x": 512,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 42,
+      "drawH": 42
+    },
+    "dish.lantern_dumpling": {
+      "image": "items",
+      "x": 640,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 42,
+      "drawH": 42
+    },
+    "dish.comet_noodle": {
+      "image": "items",
+      "x": 768,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.58,
+      "drawW": 42,
+      "drawH": 42
+    },
+    "station.crate": {
+      "image": "stations",
+      "x": 0,
+      "y": 0,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.board": {
+      "image": "stations",
+      "x": 192,
+      "y": 0,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.dough": {
+      "image": "stations",
+      "x": 384,
+      "y": 0,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.plate_shelf": {
+      "image": "stations",
+      "x": 576,
+      "y": 0,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.cooling_pump": {
+      "image": "stations",
+      "x": 0,
+      "y": 128,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.brazier": {
+      "image": "stations",
+      "x": 192,
+      "y": 128,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.steamer": {
+      "image": "stations",
+      "x": 384,
+      "y": 128,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.pot": {
+      "image": "stations",
+      "x": 576,
+      "y": 128,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.noodle_supply": {
+      "image": "stations",
+      "x": 0,
+      "y": 256,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.plating": {
+      "image": "stations",
+      "x": 192,
+      "y": 256,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.service": {
+      "image": "stations",
+      "x": 384,
+      "y": 256,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.trash": {
+      "image": "stations",
+      "x": 576,
+      "y": 256,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "station.exhaust_valve": {
+      "image": "stations",
+      "x": 0,
+      "y": 384,
+      "w": 192,
+      "h": 128,
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "drawW": 96,
+      "drawH": 64
+    },
+    "crew.p1.down": {
+      "image": "crew",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    },
+    "crew.p1.left": {
+      "image": "crew",
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    },
+    "crew.p1.up": {
+      "image": "crew",
+      "x": 256,
+      "y": 0,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    },
+    "crew.p1.right": {
+      "image": "crew",
+      "x": 384,
+      "y": 0,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    },
+    "crew.p2.down": {
+      "image": "crew",
+      "x": 0,
+      "y": 160,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    },
+    "crew.p2.left": {
+      "image": "crew",
+      "x": 128,
+      "y": 160,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    },
+    "crew.p2.up": {
+      "image": "crew",
+      "x": 256,
+      "y": 160,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    },
+    "crew.p2.right": {
+      "image": "crew",
+      "x": 384,
+      "y": 160,
+      "w": 128,
+      "h": 160,
+      "anchorX": 0.5,
+      "anchorY": 0.82,
+      "drawW": 54,
+      "drawH": 62
+    }
+  },
+  "fallbacks": {
+    "PREPPING": "RAW",
+    "COOKING": "PREPPED"
+  },
+  "palette": [
+    "#090D1F",
+    "#111A36",
+    "#202348",
+    "#1B2A45",
+    "#50637A",
+    "#F5E9C9",
+    "#F4A64A",
+    "#FFD97A",
+    "#49C9BE",
+    "#B8ECE5",
+    "#D977A8",
+    "#64DC96",
+    "#FFD166",
+    "#FF6F6F",
+    "#79513F"
+  ],
+  "quality": {
+    "items": {
+      "paletteAverageDistance": 0.0,
+      "paletteWithin15Ratio": 1.0,
+      "minimumMarginPx": 13
+    },
+    "stations": {
+      "paletteAverageDistance": 0.0,
+      "paletteWithin15Ratio": 1.0,
+      "minimumMarginPx": 13
+    },
+    "crew": {
+      "paletteAverageDistance": 0.0,
+      "paletteWithin15Ratio": 1.0,
+      "minimumMarginPx": 13
+    }
+  }
+}
