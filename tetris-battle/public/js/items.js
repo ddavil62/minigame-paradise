@@ -213,16 +213,11 @@ export function createItems(deps) {
 
   /**
    * 슬롯 사용 (Z/X/C 또는 클릭).
-   * Phase 3 LOW-4: 프리즈 효과 중에는 키 입력과 마찬가지로 마우스 클릭도 차단한다
-   * (input.js의 frozen 차단과 일관성). isFrozen() 헬퍼를 deps.input에서 조회.
+   * 프리즈는 블록 조작만 차단하므로 키보드와 슬롯 클릭 모두 아이템 사용을 허용한다.
    * @param {number} slotIndex 0~2
    */
   function useItem(slotIndex) {
     if (slotIndex < 0 || slotIndex >= SLOT_COUNT) return;
-    // Phase 3 LOW-4: 프리즈 중에는 슬롯 사용 차단 (키와 동일한 정책)
-    if (deps.input && typeof deps.input.isFrozen === 'function' && deps.input.isFrozen()) {
-      return;
-    }
     const itemId = itemSlots[slotIndex];
     if (!itemId) return;
     const def = ITEMS[itemId];
@@ -317,6 +312,9 @@ export function createItems(deps) {
     if (darkTimer) { clearTimeout(darkTimer); darkTimer = 0; }
     if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = 0; }
     if (shieldFeedbackTimer) { clearTimeout(shieldFeedbackTimer); shieldFeedbackTimer = 0; }
+    // 라운드 종료가 프리즈 타이머보다 먼저 와도 다음 재대결에 잠금이 남지 않게 한다.
+    deps.input.setFrozen(false);
+    deps.game.setFrozenByItem(false);
     deps.ui.setDarkOverlay(false);
     deps.ui.setFreezeFeedback(false);
     deps.ui.flashShield(false);

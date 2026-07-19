@@ -8,7 +8,7 @@
  *  - Z (Phase 2 대비) / Ctrl: 반시계방향 회전
  *  - Space: 하드 드롭
  *  - Shift / C: 홀드
- *  - Z, X, C: Phase 2 아이템 사용 슬롯 (Phase 1은 회전/홀드와 공유, Phase 2 활성화 시 분리 예정)
+ *  - Z, X, C: 아이템 사용 슬롯 (프리즈 중에도 사용 가능)
  */
 
 // ── DAS/ARR 상수 (스펙 그대로) ───────────────────────────────────
@@ -34,7 +34,7 @@ export function createInput(actions) {
   /** @type {Map<string, { dasTimer: number, arrTimer: number, direction: -1 | 1 }>} */
   const heldKeys = new Map(); // 수평 이동 키만 추적
   let softDropHeld = false;
-  let frozen = false; // Phase 2 프리즈 아이템 시 입력 차단
+  let frozen = false; // 프리즈 아이템 시 블록 조작만 차단
 
   // Phase 2 활성화 토글 — Z=슬롯0, X=슬롯1, C=슬롯2로 분리
   // (반시계 회전은 Control 키만 유지, 홀드는 Shift 키만 유지)
@@ -93,7 +93,29 @@ export function createInput(actions) {
   }
 
   // ── keydown ──
+  /**
+   * 아이템 단축키에 대응하는 슬롯 번호를 반환한다.
+   * @param {string} key 키보드 이벤트 키
+   * @returns {number} 슬롯 번호. 아이템 키가 아니면 -1
+   */
+  function getItemSlot(key) {
+    const normalized = typeof key === 'string' ? key.toLowerCase() : '';
+    return normalized === 'z' ? 0 : normalized === 'x' ? 1 : normalized === 'c' ? 2 : -1;
+  }
+
+  /**
+   * 키 입력을 아이템과 블록 조작으로 분리해 처리한다.
+   * 프리즈 중에도 아이템 키는 허용하되 OS 반복 입력은 소비만 하고 무시한다.
+   * @param {KeyboardEvent} e 키보드 이벤트
+   */
   function onKeyDown(e) {
+    const itemSlot = ITEMS_ENABLED ? getItemSlot(e.key) : -1;
+    if (itemSlot >= 0) {
+      if (!e.repeat) actions.useItem?.(itemSlot);
+      e.preventDefault();
+      return;
+    }
+
     if (frozen) {
       e.preventDefault();
       return;
@@ -107,7 +129,7 @@ export function createInput(actions) {
     if (e.repeat) {
       // OS 자동 반복은 무시 (DAS/ARR을 직접 처리)
       return ['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' ',
-              'Shift', 'z', 'Z', 'x', 'X', 'c', 'C'].includes(e.key);
+              'Spacebar', 'Shift', 'Control', 'z', 'Z', 'x', 'X', 'c', 'C'].includes(e.key);
     }
     switch (e.key) {
       case 'ArrowLeft':
@@ -205,18 +227,20 @@ export function createInput(actions) {
     },
     /** 이벤트 리스너 제거. */
     disable() {
-      if (!attached) return;
       clearAll();
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-      attached = false;
+      frozen = false;
+      if (attached) {
+        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keyup', onKeyUp);
+        attached = false;
+      }
     },
     /** 프리즈 효과 토글 (Phase 2 사용). */
     setFrozen(v) {
       frozen = v;
       if (v) clearAll();
     },
-    /** Phase 3 LOW-4: 외부에서 프리즈 상태 조회 (items.js 슬롯 클릭 차단용). */
+    /** 테스트와 라운드 상태 동기화를 위한 프리즈 상태 조회. */
     isFrozen() { return frozen; },
     /** 게임 루프에서 폴링: 소프트 드롭 키가 눌려 있는가? */
     isSoftDropHeld,

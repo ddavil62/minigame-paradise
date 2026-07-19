@@ -1,6 +1,6 @@
 # Tetris Battle — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한게임 테트리스 스타일 대전. Node.js + 바닐라 JS. Phase 1~5 완료 + AI 봇(2026-06-21). 회귀 344 PASS + bot-smoke 8/8.
+> LAN 1:1 한게임 테트리스 스타일 대전. Node.js + 바닐라 JS. Phase 1~5 완료 + AI 봇(2026-06-21). 2026-07-20 프리즈·재대결 입력 회귀 수정 및 QA PASS.
 
 ## 정체성
 
@@ -51,6 +51,9 @@ tetris-battle/
     ├── phase3-4-qa-edge.test.js   # QA 영구 회귀 차단 슈트
     ├── phase5-vanish-zone.test.js # Phase 5 Vanish Zone 회귀
     ├── phase5-qa-edge.test.js     # QA 영구 회귀 차단 슈트 (Vanish Zone 엣지)
+    ├── input-freeze-rematch.test.js # 프리즈·재대결 입력 상태 회귀
+    ├── input-freeze-rematch-independent-qa.test.js # 양쪽 5회 재대결 독립 QA
+    ├── input-freeze-rematch.browser.spec.js # 실제 Chromium 입력 회귀
     ├── bot-smoke.test.js          # AI 봇 smoke (ad-hoc 러너, 포트 3110, 2026-06-21)
     └── ai-mode-e2e.spec.js        # JOIN 레이스 회귀 E2E (Playwright, self-host 포트 3111, 2026-06-21)
 ```
@@ -70,6 +73,9 @@ node --test tests/phase4-launcher.test.js -- --port 3055
 node --test tests/phase3-4-qa-edge.test.js -- --port 3055
 node --test tests/phase5-vanish-zone.test.js
 node --test tests/phase5-qa-edge.test.js
+node tests/input-freeze-rematch.test.js
+node tests/input-freeze-rematch-independent-qa.test.js
+npx playwright test tests/input-freeze-rematch.browser.spec.js --config=playwright.config.js
 node tests/bot-smoke.test.js              # AI 봇 smoke (ad-hoc 러너, 포트 3110, --test 미사용)
 npx playwright test tests/ai-mode-e2e.spec.js --config=playwright.config.js  # JOIN 레이스 회귀 E2E (self-host 포트 3111)
 ```
@@ -114,7 +120,8 @@ npx playwright test tests/ai-mode-e2e.spec.js --config=playwright.config.js  # J
 | 콤보 시작값 | `combo = -1`. 첫 클리어 = 0 (보너스 0), 두 번째 연속 = 1 (보너스 +1). 변경 시 `phase1-unit` 가비지 보너스 회귀 실패 |
 | 가비지 hole 위치 | 한 공격 배치(2~4줄)는 **모든 줄이 같은 칸** 비어있어야 함. 줄마다 다른 hole이면 의도와 다름 |
 | 다크/프리즈 setTimeout | `items.reset()`에서 반드시 clearTimeout — 안 그러면 게임오버 후 잔존 |
-| 슬롯 클릭 차단 | 프리즈 중에는 `useItem()` 진입부에서 `deps.input.isFrozen()` 검사 필요 |
+| 프리즈 입력 정책 | 프리즈는 블록 조작만 차단한다. `Z`/`X`/`C`와 슬롯 클릭 아이템 사용은 허용해야 하므로 `useItem()`에 `deps.input.isFrozen()` 조기 반환을 다시 추가하지 않는다. |
+| 프리즈 라운드 경계 | `items.reset()`은 타이머/UI뿐 아니라 `input.setFrozen(false)`와 `game.setFrozenByItem(false)`를 함께 멱등 해제한다. `input.disable()`도 attached 여부와 무관하게 held/DAS/ARR/soft-drop/frozen 상태를 정리해야 한다. |
 | 카운트다운 펄스 | `runCountdown()` + `triggerCountdownPulse()` 분리. 펄스 클래스는 animationend에서 cleanup |
 | `start.bat` 인코딩 | ASCII-only로 유지. 한글 포함 시 cmd 949 코드페이지에서 깨짐. `chcp 65001`은 콘솔만 UTF-8로 전환 |
 | `stop.bat` 포트 범위 | server.js `MAX_PORT_FALLBACK = 10`과 `for %%P in (3000 ... 3010)` 범위 일치 유지 |

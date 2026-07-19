@@ -1,6 +1,6 @@
 # Tetris Battle 기획서
 
-> 최종 업데이트: 2026-06-28 — 봇 버그 2건 수정(#12 start desync: START 핸들러 `(countdown+1)*1000`ms 지연 / #13 AI채우기 재진입 "Room is full": 사람 close 시 좀비 봇 슬롯 동기 제거 + connection 진입부 죽은 슬롯 선제 sweep). bot-smoke 11/11 PASS. 이전: 2026-06-21 AI 봇 추가 (회귀 344 PASS + bot-smoke 8/8, Q7b 기존 결함 1건 제외). 2026-05-25 Phase 1~5 완료
+> 최종 업데이트: 2026-07-20 — 프리즈 중에는 블록 조작만 차단하고 아이템 키·슬롯 클릭은 허용. 라운드 종료·재대결 시작 시 프리즈 및 held 입력 상태를 완전히 초기화해 간헐적인 키보드 잠금을 수정. QA PASS(제품 결함 0건). 이전: 2026-06-28 봇 버그 2건 수정
 
 ## 프로젝트 개요
 
@@ -13,7 +13,7 @@ LAN 환경에서 두 PC가 IP 접속으로 1:1 대결을 펼치는 한게임 테
 | 서버 | Node.js 18+ (ES Modules), Express 4, ws 8 |
 | 클라이언트 | 바닐라 JavaScript (프레임워크 미사용), HTML5 Canvas |
 | 네트워크 | WebSocket (단일 포트 HTTP+WS 공유) |
-| 테스트 | Node 내장 `node --test` 기반 자체 슈트 (Playwright 미사용) |
+| 테스트 | Node 기반 자체 슈트 + Playwright Chromium 회귀 테스트 |
 | 런처 | Windows 배치 파일 (`start.bat` / `stop.bat`) |
 | 외부 에셋 | 없음 — 모든 보드/HUD/아이템은 CSS 도형 + 색상으로 렌더 |
 
@@ -53,7 +53,7 @@ tetris-battle/
 │       ├── network.js         # WebSocket 클라이언트
 │       ├── items.js           # 5종 아이템 슬롯/효과
 │       └── ui.js              # Canvas 렌더, HUD, 오버레이
-└── tests/                     # 7 슈트, 207 assertion
+└── tests/                     # 단계별 회귀·봇 smoke·브라우저 입력 테스트
 ```
 
 ### 핵심 모듈
@@ -65,8 +65,8 @@ tetris-battle/
 | 게임 루프 | `public/js/game.js` | rAF 기반 중력/Lock Delay/콤보, 상태 머신 (WAITING→COUNTDOWN→PLAYING→GAME_OVER) |
 | 보드 | `public/js/board.js` | 10×22 그리드 (visible 20 + hidden 2 vanish zone), 충돌·라인 제거·가비지(동일 hole)·고스트 |
 | 피스 | `public/js/tetromino.js` | I/O/T/S/Z/J/L 7종 + 4회전 행렬 + 7-bag (Fisher-Yates) |
-| 입력 | `public/js/input.js` | DAS 167ms + ARR 33ms, 프리즈 차단 플래그 |
-| 아이템 | `public/js/items.js` | 슬롯 3개, 5종 효과 적용, 다크/프리즈 setTimeout 해제 |
+| 입력 | `public/js/input.js` | DAS 167ms + ARR 33ms, 프리즈 시 블록 조작만 차단하고 아이템 키는 허용 |
+| 아이템 | `public/js/items.js` | 슬롯 3개, 5종 효과 적용, 다크/프리즈 setTimeout 및 라운드 경계 상태 해제 |
 | 네트워크 | `public/js/network.js` | WS 송수신, hostUrl 라우팅, 3초 후 1회 재연결 |
 | UI | `public/js/ui.js` | Canvas 보드/NEXT/HOLD, HUD, 다크 오버레이, 초대 패널, 토스트 |
 
@@ -80,7 +80,7 @@ tetris-battle/
 | 가비지 공격 | 변환표(0/1/2/4) + 콤보 +0.5/콤보, 동일 hole 칸 | 완료 (Phase 1) |
 | LAN 1:1 | WebSocket 중계, JOIN→READY→START(3초 카운트다운) | 완료 (Phase 1) |
 | 상대 미니맵 | 컬럼별 높이 막대 (가비지 회색) | 완료 (Phase 1) |
-| 게임오버/재대결 | 토프아웃 판정, 결과 오버레이, 양쪽 REMATCH → 재시작 | 완료 (Phase 1) |
+| 게임오버/재대결 | 토프아웃 판정, 결과 오버레이, 양쪽 REMATCH → 재시작. 종료·시작 양쪽에서 프리즈/held 입력 초기화 | 완료 (2026-07-20 보정) |
 | 5종 아이템 | 가비지 폭탄 / 시야 가림(5초) / 프리즈(3초) / 라인 클리어 / 방어막 | 완료 (Phase 2) |
 | 아이템 지급 | 라인 클리어당 50% 확률, 최대 슬롯 3개 (서버 권위) | 완료 (Phase 2) |
 | 방어막 권위 | 서버가 shieldActive 추적, 공격 수신 시 차단 결정 후 양쪽 SHIELD_BLOCK | 완료 (Phase 2) |
@@ -121,7 +121,7 @@ T-spin / Perfect Clear 보너스는 현재 미감지 (향후 확장 후보).
 |---|---|---|---|---|
 | `garbage_bomb` | 가비지 폭탄 | 공격 | 상대 보드 하단 2줄 즉시 추가 | 즉시 |
 | `dark` | 시야 가림 | 공격 | 상대 보드 위 검은 오버레이 (opacity 0.82, 페이드 350ms) | 5초 |
-| `freeze` | 프리즈 | 공격 | 상대 입력 차단 (중력은 유지) | 3초 |
+| `freeze` | 프리즈 | 공격 | 상대 블록 조작 차단, 아이템 키·슬롯 클릭은 허용 (중력은 유지) | 3초 |
 | `line_clear` | 라인 클리어 | 방어 | 자기 보드 하단 2줄 즉시 제거 | 즉시 |
 | `shield` | 방어막 | 방어 | 서버 권위로 다음 공격 1회 차단, 양쪽에 SHIELD_BLOCK | 다음 공격까지 |
 

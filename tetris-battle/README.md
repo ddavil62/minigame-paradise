@@ -2,7 +2,7 @@
 
 LAN 환경에서 친구와 즉시 즐길 수 있는 1:1 대전 테트리스. 한게임 테트리스 아이템전 스타일.
 
-> Phase 1 + 2 + 3 + 4 + 5 완료 (코어 게임 + LAN 연결 + 5종 아이템 + 폴리시 + 더블클릭 런처 + Vanish Zone 버그 수정). **337/337 테스트 PASS**.
+> Phase 1~5 완료. 코어 게임, LAN 연결, 5종 아이템, 폴리시, 더블클릭 런처, Vanish Zone 및 재대결 입력 복구까지 구현. **2026-07-20 QA PASS**.
 
 ## TL;DR — 친구가 오면
 
@@ -131,6 +131,8 @@ ipconfig
 | C | 슬롯 2 아이템 사용 |
 | 슬롯 클릭 | 해당 슬롯 아이템 사용 (마우스) |
 
+프리즈에 걸리면 이동·회전·드롭·홀드 같은 블록 조작만 3초간 멈춥니다. 보유한 아이템은 프리즈 중에도 `Z`/`X`/`C` 또는 슬롯 클릭으로 사용할 수 있습니다.
+
 ---
 
 ## 게임 규칙
@@ -175,6 +177,8 @@ ipconfig
 | `shield` | 방어막 | 방어 | 다음 공격 1회 무효화 (시각 피드백) | 다음 공격까지 |
 
 방어막은 서버가 권위적으로 관리합니다. 공격을 받는 측이 방어막을 발동해 두면, 다음 공격 아이템이 서버 단에서 차단되어 양쪽 플레이어에게 `SHIELD_BLOCK` 메시지가 전달됩니다.
+
+게임 종료와 다음 재대결 시작 시에는 프리즈 타이머, 입력 잠금, DAS/ARR 홀드 상태를 모두 초기화합니다. 따라서 프리즈 도중 라운드가 끝나도 다음 경기의 키보드 입력에는 영향을 주지 않습니다.
 
 ---
 
@@ -245,9 +249,12 @@ node --test tests/phase4-launcher.test.js -- --port 3055
 node --test tests/phase3-4-qa-edge.test.js -- --port 3055
 node --test tests/phase5-vanish-zone.test.js
 node --test tests/phase5-qa-edge.test.js
+node tests/input-freeze-rematch.test.js
+node tests/input-freeze-rematch-independent-qa.test.js
+npx playwright test tests/input-freeze-rematch.browser.spec.js --config=playwright.config.js
 ```
 
-9개 슈트 전부 실행 시 **337/337 PASS**. WS 슈트는 동일 포트(3055)에서 순차 실행하며 각 시나리오 종료 시점에 클라이언트 소켓을 정리한다. Phase 5 슈트는 순수 단위 테스트로 포트 인자 불필요.
+핵심 회귀 슈트와 프리즈·재대결 전용 Node/Chromium 테스트가 통과했다. WS 슈트는 동일 포트(3055)에서 순차 실행하며 각 시나리오 종료 시점에 클라이언트 소켓을 정리한다. Phase 5 슈트는 순수 단위 테스트로 포트 인자 불필요.
 
 ---
 
