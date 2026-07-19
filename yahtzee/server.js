@@ -265,6 +265,17 @@ export function createApp(opts = {}) {
       }
     }
 
+    // 게임이 종료됐지만 플레이어가 결과 화면에 방치된 상태 — 새 접속자 수용을 위해 룸 초기화.
+    // tetris-battle #12와 동일한 패턴: 살아있지만 게임오버 상태의 좀비 방을 치운다.
+    if (!isBot && game && game.phase === 'ended') {
+      console.log('[yahtzee] 게임 종료 방치 상태 — 룸 초기화 후 새 접속 수용');
+      for (const p of players) { try { p.ws.close(); } catch { /* 무시 */ } }
+      killBotChild();
+      players = [];
+      game = null;
+      roomMaxPlayers = 2;
+    }
+
     // 룸 정원 초과 시 즉시 거절.
     if (players.length >= roomMaxPlayers) {
       ws.send(JSON.stringify({ type: 'ERROR', message: `방이 가득 찼다 (${roomMaxPlayers}/${roomMaxPlayers})` }));

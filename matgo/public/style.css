@@ -64,7 +64,7 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: 6.5fr 3.5fr 270px;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr) minmax(210px, 1fr);
   gap: 8px;
   padding: 8px 12px;
 }

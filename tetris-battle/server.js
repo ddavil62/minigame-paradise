@@ -130,8 +130,8 @@ const ITEM_DURATIONS = {
   line_clear: 0,
   shield: 0,
 };
-/** 라인 클리어 1회당 아이템 지급 확률 (0~1). */
-const ITEM_GRANT_PROB = 0.5;
+/** 라인 클리어 시 아이템 지급 확률. */
+const ITEM_GRANT_PROB = 0.8;
 const MAX_ITEM_SLOTS = 3;
 
 /**
@@ -215,8 +215,8 @@ function broadcastReadyState() {
 }
 
 /**
- * 라인 클리어 시 50% 확률로 아이템을 지급한다 (Phase 2).
- * 슬롯이 가득 차 있으면 무시한다.
+ * 라인 클리어 시 확률(ITEM_GRANT_PROB)로 아이템을 지급한다.
+ * 슬롯이 가득 차 있거나 확률 실패 시 무시한다.
  * @param {Player} player 수혜자
  */
 function tryGrantItem(player) {
@@ -250,6 +250,18 @@ wss.on('connection', (ws, req) => {
       console.log(`[server] 죽은(좀비) 슬롯 ${zombies.length}개 선제 제거`);
       for (const z of zombies) z.ws.terminate();
       players = players.filter((p) => p.ws.readyState === WebSocket.OPEN);
+    }
+
+    // #14 fix: 연결은 살아있지만 게임이 이미 끝난 플레이어들이 결과창에서 아무것도
+    // 안 눌렀을 때 새 접속자가 "Room is full"로 막히는 문제 해소.
+    // 승자(gameOver=false)의 구 WS가 아직 OPEN일 때 every() 체크가 실패하는 문제 수정:
+    // 누구 하나라도 gameOver이면 게임이 끝난 것이므로 some()으로 완화한다.
+    if (players.length > 0 && players.some((p) => p.gameOver)) {
+      console.log('[server] 게임 종료 방치 상태 — 룸 초기화 후 새 접속 수용');
+      for (const p of players) {
+        try { p.ws.close(); } catch { /* 무시 */ }
+      }
+      players = [];
     }
   }
 
@@ -353,7 +365,7 @@ wss.on('connection', (ws, req) => {
             combo: safeCombo,
           });
         }
-        // Phase 2: 라인 클리어 1회당 50% 확률로 아이템 지급 (송신자에게)
+        // 라인 클리어 시 확률로 아이템 지급 (송신자에게)
         tryGrantItem(player);
         break;
       }

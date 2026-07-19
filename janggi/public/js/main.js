@@ -368,7 +368,9 @@ function handleJoined(msg) {
   }
 
   // 닉네임이 없으면(직접 진입) 인라인 게이트 노출
-  if (!msg.hasName) {
+  // msg.hasName은 서버가 WS 연결 시점(JOIN 수신 전)에 판단하므로 URL ?name= 포함 시에도 false가 된다.
+  // 클라이언트 sessionStorage 기준으로 판단한다(ws.onopen에서 URL→storage 저장 후 JOIN 전송).
+  if (!sessionStorage.getItem('janggi:name')) {
     if (nameGateInlineEl) nameGateInlineEl.classList.remove('hidden');
     if (waitingSoloEl) waitingSoloEl.classList.add('hidden');
     if (readyPanelEl) readyPanelEl.classList.add('hidden');

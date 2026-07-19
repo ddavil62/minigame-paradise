@@ -183,6 +183,10 @@ document.addEventListener('DOMContentLoaded', () => {
     onStart: (countdown) => {
       // 게임 화면으로 전환
       showScreen('game');
+      // game-main이 hidden → display:none 상태에서 createUI 초기화 시 resizeBoard()가
+      // board-area를 0×0으로 측정해 캔버스가 120px로 고정될 수 있다.
+      // showScreen('game') 직후 레이아웃이 확정되면 재산정한다.
+      requestAnimationFrame(() => ui.resizeBoard());
       ui.hideResult();
       els.rematchBtnEl.classList.add('hidden');
       ui.setStatus('');

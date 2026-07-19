@@ -225,17 +225,20 @@ export function createItems(deps) {
 
     if (def.type === 'attack') {
       // 공격형: 서버 경유로 상대에게 전달 (방어막 처리는 서버가 권위)
-      deps.net.sendItemUse(itemId, slotIndex);
     } else {
-      // 방어형: 로컬 즉시 적용 + 서버에는 알림만 (slot 동기화는 불필요)
+      // 방어형: 로컬 즉시 적용
       if (itemId === 'line_clear') {
         applyLocalLineClear();
       } else if (itemId === 'shield') {
         triggerShield();
-        // 서버에도 shield 활성을 알림 (서버가 권위적으로 다음 공격 차단)
-        deps.net.sendItemUse(itemId, slotIndex);
       }
     }
+
+    // 슬롯 사용을 항상 서버에 통보 — 서버 slotCount 차감 동기화.
+    // 공격형은 상대에게 ITEM_EFFECT 중계, 방어형(shield/line_clear)은 slotCount만 차감.
+    // line_clear가 sendItemUse를 생략하던 버그: slotCount가 차감되지 않아
+    // MAX_ITEM_SLOTS 도달 후 아이템이 더 이상 지급되지 않는 문제를 유발했음.
+    deps.net.sendItemUse(itemId, slotIndex);
 
     // 슬롯 비우기
     itemSlots[slotIndex] = null;
