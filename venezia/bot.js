@@ -39,6 +39,8 @@ let rematchTimer = null;
 const botItemSlots = [null, null, null];
 /** 마지막 아이템 사용 시각 (과도한 연발 방지). */
 let lastItemUsedAt = 0;
+/** 슬롯 동기화 응답을 기다리는 동안 중복 사용을 막는다. */
+let itemUsePending = false;
 
 const ws = new WebSocket(URL);
 
@@ -72,6 +74,7 @@ ws.on('message', (data) => {
       clearAllTimers();
       botItemSlots.fill(null);
       lastItemUsedAt = 0;
+      itemUsePending = false;
       break;
 
     case 'WORD_ADDED':
@@ -105,10 +108,16 @@ ws.on('message', (data) => {
       break;
 
     case 'ITEM_GRANTED':
-      if (typeof msg.slotIndex === 'number' && msg.slotIndex >= 0 && msg.slotIndex < 3) {
-        botItemSlots[msg.slotIndex] = msg.itemId;
-        scheduleItemUse();
-      }
+      // 레거시 연출 이벤트이며 슬롯 배열은 ITEM_SLOTS_SYNC만 신뢰한다.
+      break;
+
+    case 'ITEM_SLOTS_SYNC':
+      botItemSlots.fill(null);
+      (msg.slots || []).slice(0, 3).forEach((item, index) => {
+        botItemSlots[index] = item.itemId;
+      });
+      itemUsePending = false;
+      scheduleItemUse();
       break;
 
     case 'ITEM_EFFECT_START':
@@ -122,6 +131,7 @@ ws.on('message', (data) => {
       clearAllTimers();
       botItemSlots.fill(null);
       lastItemUsedAt = 0;
+      itemUsePending = false;
       break;
 
     case 'OPPONENT_LEFT':
@@ -200,12 +210,12 @@ function scheduleItemUse() {
   const delay = 2000 + Math.random() * 2000;
   setTimeout(() => {
     const now = Date.now();
-    if (now - lastItemUsedAt < 3000) return; // 연발 방지 3초 쿨다운
+    if (itemUsePending || now - lastItemUsedAt < 3000) return; // 연발 방지 3초 쿨다운
     const idx = botItemSlots.findIndex((s) => s !== null);
     if (idx === -1) return;
     if (ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'ITEM_USED', slotIndex: idx }));
-    botItemSlots[idx] = null;
+    itemUsePending = true;
     lastItemUsedAt = now;
   }, delay);
 }

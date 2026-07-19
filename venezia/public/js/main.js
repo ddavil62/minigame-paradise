@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const oppCanvas = document.getElementById('opp-canvas');
   const inputWord = document.getElementById('input-word');
   const btnSubmit = document.getElementById('btn-submit');
+  const btnBackToLobby = document.getElementById('btn-back-to-lobby');
+  const itemGuide = document.getElementById('item-guide');
 
   // 결과 화면
   const resultTitle = document.getElementById('result-title');
@@ -57,8 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let opponentName = '';
   let gameStartedAt = 0;
   let timerInterval = null;
+  let itemUsePending = false;
 
-  /** 로컬 아이템 슬롯 배열 (ITEM_GRANTED/ITEM_USED에 맞춰 갱신). */
+  /** 서버의 ITEM_SLOTS_SYNC로만 교체하는 권위 아이템 슬롯 배열. */
   const itemSlots = [null, null, null];
   const effectOverlay = document.getElementById('effect-overlay');
   const fastFallOverlayMy = document.getElementById('fast-fall-overlay-my');
@@ -73,6 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const net = createNetwork({
     onOpen() {
       console.log('[main] WS 연결됨');
+    },
+
+    onClose() {
+      itemUsePending = false;
     },
 
     onJoined(msg) {
@@ -103,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateHp(100, 100);
       // 아이템 슬롯 초기화
       itemSlots.fill(null);
+      itemUsePending = false;
       renderItemSlots();
       effectOverlay.classList.add('hidden');
       effectOverlay.classList.remove('dark-active');
@@ -201,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateHp(100, 100);
       // 아이템 슬롯 초기화
       itemSlots.fill(null);
+      itemUsePending = false;
       renderItemSlots();
       // effect overlay 초기화
       effectOverlay.classList.add('hidden');
@@ -220,9 +229,31 @@ document.addEventListener('DOMContentLoaded', () => {
       btnRematch.classList.add('hidden');
     },
 
+    onReturnToLobby() {
+      returnToLobby(false);
+    },
+
     onItemGranted(msg) {
-      itemSlots[msg.slotIndex] = { itemId: msg.itemId, emoji: msg.emoji, name: msg.name };
+      // 레거시 획득 메시지는 연출 호환용이며 슬롯 상태는 전체 동기화만 신뢰한다.
+      const presentation = getItemPresentation(msg.itemId);
+      showToast(`${presentation.emoji} ${presentation.name}`);
+    },
+
+    onItemSlotsSync(slots) {
+      itemSlots.fill(null);
+      slots.slice(0, 3).forEach((item, index) => {
+        itemSlots[index] = item;
+      });
+      itemUsePending = false;
       renderItemSlots();
+    },
+
+    onHit() {
+      // HP 수치는 직후 STATE만 신뢰하고, 여기서는 피격 영역 연출만 실행한다.
+      screenGame.classList.remove('hit-shake');
+      void screenGame.offsetWidth;
+      screenGame.classList.add('hit-shake');
+      setTimeout(() => screenGame.classList.remove('hit-shake'), 260);
     },
 
     onItemEffectStart(msg) {
@@ -416,7 +447,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnLobby.addEventListener('click', () => {
-    location.href = '/';
+    returnToLobby(true);
+  });
+
+  btnBackToLobby.addEventListener('click', () => {
+    if (!window.confirm(t('backConfirm'))) return;
+    returnToLobby(true);
   });
 
   // Enter 키로 대기화면에서 입장
@@ -472,10 +508,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const idx = getItemSlotIndex(e);
     if (idx === null) return;
     e.preventDefault();
-    if (itemSlots[idx] === null) return;
-    net.sendItemUsed(idx);
-    // 낙관적 UI: 즉시 슬롯 제거
-    itemSlots[idx] = null;
-    renderItemSlots();
+    if (itemUsePending || itemSlots[idx] === null) return;
+    itemUsePending = net.sendItemUsed(idx);
+  });
+
+  /**
+   * 재연결을 중단한 뒤 로비 반환을 알리고 통합 게임 선택 화면으로 이동한다.
+   * @param {boolean} notifyServer 로비 반환 요청을 보낼지 여부
+   */
+  function returnToLobby(notifyServer) {
+    net.disconnect();
+    const rootSegment = location.pathname.split('/').filter(Boolean)[0];
+    const lobbyReturnUrl = rootSegment ? `/${rootSegment}/lobby/return` : '/lobby/return';
+    const request = notifyServer
+      ? fetch(lobbyReturnUrl, { method: 'POST', keepalive: true }).catch(() => null)
+      : Promise.resolve();
+    Promise.race([
+      request,
+      new Promise((resolve) => setTimeout(resolve, 150)),
+    ]).finally(() => {
+      location.href = '/';
+    });
+  }
+
+  btnBackToLobby.textContent = t('backToMenu');
+  itemGuide.textContent = t('itemGuide');
+  document.querySelectorAll('[data-i18n="mediumDropGuide"]').forEach((element) => {
+    element.textContent = t('mediumDropGuide');
   });
 });

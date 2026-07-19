@@ -28,8 +28,11 @@ import {
   createGame, spawnWord, submitWord,
   applyResign, snapshot, countActiveWords, expireWords,
   MAX_ACTIVE_WORDS,
+  WORD_MISS_DAMAGE,
   rollItemDrop,
   applyItemEffect,
+  applyDamage,
+  checkGameOver,
   resetCombo,
   setFallSpeed,
 } from './game.js';
@@ -64,11 +67,15 @@ const WORD_SPAWN_INTERVAL = 1500;
  * @param {object} [opts]
  * @param {string} [opts.hostUrl] LAN 접속 URL
  * @param {() => string} [opts.getBotUrl] 봇 접속 WS URL 반환 함수
+ * @param {(combo:number) => object} [opts.rollItemDrop] 테스트용 아이템 추첨 함수
+ * @param {(playerId:string) => boolean} [opts.shouldSpawnWord] 테스트용 스폰 대상 필터
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
   let HOST_URL = typeof opts.hostUrl === 'string' ? opts.hostUrl : '';
   const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
+  const itemDropRoller = typeof opts.rollItemDrop === 'function' ? opts.rollItemDrop : rollItemDrop;
+  const shouldSpawnWord = typeof opts.shouldSpawnWord === 'function' ? opts.shouldSpawnWord : (() => true);
 
   // ── 룸 상태 (closure 격리, 2인 1룸 고정) ─────────────────
   /**
@@ -129,6 +136,20 @@ export function createApp(opts = {}) {
     }
   }
 
+  /**
+   * 서버가 보유한 아이템 슬롯 전체를 해당 플레이어에게 동기화한다.
+   * @param {string} playerId 동기화 대상 ID
+   */
+  function syncItemSlots(playerId) {
+    if (!game || !game.players[playerId]) return;
+    const player = players.find((entry) => entry.id === playerId);
+    if (!player) return;
+    sendJson(player.ws, {
+      type: 'ITEM_SLOTS_SYNC',
+      slots: game.players[playerId].itemSlots.map((item) => ({ ...item })),
+    });
+  }
+
   // ── 단어 스폰 루프 ────────────────────────────────────────
 
   /**
@@ -140,6 +161,7 @@ export function createApp(opts = {}) {
       const elapsed = (Date.now() - game.startedAt) / 1000;
 
       for (const p of players) {
+        if (!shouldSpawnWord(p.id)) continue;
         if (countActiveWords(game, p.id) < MAX_ACTIVE_WORDS) {
           const { text, difficulty } = pickWordByTime(elapsed);
           const word = spawnWord(game, p.id, text, difficulty);
@@ -159,17 +181,33 @@ export function createApp(opts = {}) {
       const nowRelative = Date.now() - game.startedAt;
       const expired = expireWords(game, nowRelative);
       if (expired.length > 0) {
+        const damageByOwner = new Map();
+        for (const word of expired) {
+          damageByOwner.set(word.ownerId, (damageByOwner.get(word.ownerId) || 0) + WORD_MISS_DAMAGE);
+        }
+        for (const [ownerId, requestedDamage] of damageByOwner) {
+          const damage = applyDamage(game, ownerId, requestedDamage);
+          resetCombo(game, ownerId);
+          const victim = players.find((p) => p.id === ownerId);
+          if (victim) {
+            sendJson(victim.ws, {
+              type: 'HIT',
+              damage,
+              source: 'word_missed',
+              wordIds: expired.filter((word) => word.ownerId === ownerId).map((word) => word.id),
+            });
+          }
+        }
         // 만료된 단어를 플레이어별로 분류하여 각각에게 전송.
         // myIds: 본인 단어 만료, oppIds: 상대 단어 만료 (상대 화면에서 제거).
         for (const p of players) {
           const myIds  = expired.filter((w) => w.ownerId === p.id).map((w) => w.id);
           const oppIds = expired.filter((w) => w.ownerId !== p.id).map((w) => w.id);
           sendJson(p.ws, { type: 'WORDS_EXPIRED', wordIds: myIds, oppWordIds: oppIds });
-          // 본인 단어가 만료되면 콤보 초기화
-          if (myIds.length > 0) {
-            resetCombo(game, p.id);
-          }
         }
+        broadcastState();
+        const gameOver = checkGameOver(game);
+        if (gameOver.ended) handleGameEnd();
       }
     }, 50);
   }
@@ -200,6 +238,8 @@ export function createApp(opts = {}) {
     console.log('[venezia] 게임 시작');
     broadcastAll({ type: 'GAME_START', phase: 'playing' });
     broadcastState();
+    syncItemSlots('p1');
+    syncItemSlots('p2');
     startWordSpawn();
   }
 
@@ -370,19 +410,33 @@ export function createApp(opts = {}) {
           sendJson(ws, {
             type: 'WORD_CLEARED',
             wordId,
+            attackDamage: result.damage,
           });
           // 상대에게 내 단어 클리어 알림 — 상대 화면에서 해당 단어 제거.
           const otherPlayer = players.find((p) => p.id !== player.id);
           if (otherPlayer && otherPlayer.ws.readyState === WebSocket.OPEN) {
             sendJson(otherPlayer.ws, { type: 'OPP_WORD_CLEARED', wordId });
+            sendJson(otherPlayer.ws, {
+              type: 'HIT',
+              damage: result.damage,
+              source: 'word_clear',
+              attackerId: player.id,
+              wordId,
+            });
           }
 
           // STATE 브로드캐스트
           broadcastState();
 
+          const gameOver = checkGameOver(game);
+          if (gameOver.ended) {
+            handleGameEnd();
+            break;
+          }
+
           // ── 아이템 드랍 판정 ──
           const combo = result.combo;
-          const drop = rollItemDrop(combo);
+          const drop = itemDropRoller(combo);
           if (drop.dropped) {
             const playerState = game.players[player.id];
             if (playerState.itemSlots.length < 3) {
@@ -395,6 +449,7 @@ export function createApp(opts = {}) {
                 name: drop.name,
                 slotIndex,
               });
+              syncItemSlots(player.id);
             }
             // 슬롯 3개 이상이면 폐기 (메시지 없음)
           }
@@ -411,11 +466,18 @@ export function createApp(opts = {}) {
         }
 
         case 'ITEM_USED': {
-          if (!game || game.phase !== 'playing') break;
+          if (!game || game.phase !== 'playing') {
+            if (game) syncItemSlots(player.id);
+            break;
+          }
           const { slotIndex: usedSlotIndex } = msg;
-          if (typeof usedSlotIndex !== 'number' || usedSlotIndex < 0 || usedSlotIndex > 2) break;
+          if (typeof usedSlotIndex !== 'number' || usedSlotIndex < 0 || usedSlotIndex > 2) {
+            syncItemSlots(player.id);
+            break;
+          }
 
           const itemResult = applyItemEffect(game, player.id, usedSlotIndex);
+          syncItemSlots(player.id);
           if (!itemResult.ok) break;
 
           // 방어막으로 차단된 경우
@@ -615,6 +677,12 @@ export function createApp(opts = {}) {
   function handleHttp(req, res) {
     const reqUrl = req.url || '/';
     const reqPath = reqUrl.split('?')[0] || '/';
+    if (req.method === 'POST' && (reqPath === '/lobby/return' || reqPath === '/venezia/lobby/return')) {
+      broadcastAll({ type: 'RETURN_TO_LOBBY' });
+      res.writeHead(204, { 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
     const urlPath = (reqPath === '/' || reqPath === '') ? '/index.html' : reqPath;
     const safePath = path.normalize(urlPath).replace(/^([\\/])+/, '');
     const fullPath = path.join(PUBLIC_DIR, safePath);

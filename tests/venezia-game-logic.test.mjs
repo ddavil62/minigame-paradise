@@ -1,5 +1,5 @@
 /**
- * @fileoverview 베네치아 급류 낙하 시계와 정답 무피해 규칙 단위 테스트.
+ * @fileoverview 베네치아 급류 낙하 시계와 정답·만료 피해 규칙 단위 테스트.
  */
 
 import test from 'node:test';
@@ -12,6 +12,10 @@ import {
   submitWord,
   applyItemEffect,
   WORD_LIFETIME_MS,
+  WORD_CLEAR_DAMAGE,
+  WORD_MISS_DAMAGE,
+  applyDamage,
+  checkGameOver,
 } from '../venezia/game.js';
 import { getItemSlotIndex } from '../venezia/public/js/item-controls.js';
 
@@ -69,15 +73,27 @@ test('기존 단어와 급류 중 신규 단어가 같은 누적 시계에서 �
   assert.deepEqual(expireWords(game, 6000).map((word) => word.id), ['new']);
 });
 
-test('일반 정답은 단어와 콤보만 바꾸고 상대 HP나 공격 필드를 만들지 않는다', () => {
+test('일반 정답은 상대 HP를 정확히 2 감소시키고 공격 정보를 반환한다', () => {
   const game = createGame();
   game.words.w1 = { id: 'w1', text: '달빛', ownerId: 'p1', difficulty: 'hard', spawnedAt: 0, spawnedAtFallClock: 0 };
   const result = submitWord(game, 'p1', 'w1', '달빛');
   assert.equal(result.ok, true);
-  assert.equal(game.players.p2.hp, 100);
+  assert.equal(game.players.p2.hp, 98);
   assert.equal(game.players.p1.combo, 1);
-  assert.equal('damage' in result, false);
-  assert.equal('targetId' in result, false);
+  assert.equal(result.damage, WORD_CLEAR_DAMAGE);
+  assert.equal(result.targetId, 'p2');
+});
+
+test('만료 단어는 소유자에게 개당 2 피해를 주고 HP 0에서 종료한다', () => {
+  const game = createGame();
+  game.players.p1.hp = 3;
+  game.words.a = { id: 'a', text: '하나', ownerId: 'p1', spawnedAt: 0, spawnedAtFallClock: 0 };
+  game.words.b = { id: 'b', text: '둘', ownerId: 'p1', spawnedAt: 0, spawnedAtFallClock: 0 };
+  const expired = expireWords(game, WORD_LIFETIME_MS);
+  assert.deepEqual(expired.map((word) => word.id), ['a', 'b']);
+  assert.equal(applyDamage(game, 'p1', expired.length * WORD_MISS_DAMAGE), 3);
+  assert.equal(game.players.p1.hp, 0);
+  assert.deepEqual(checkGameOver(game), { ended: true, winner: 'p2', reason: 'hp_zero' });
 });
 
 test('방어막은 급류를 한 번 차단하고 낙하 배율을 바꾸지 않는다', () => {

@@ -209,6 +209,36 @@ body {
   position: relative;
 }
 
+.game-topbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 6px;
+}
+
+.btn-back-to-lobby {
+  min-width: 112px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--accent-gold);
+  border-radius: 8px;
+  color: var(--text-dim);
+  background: rgba(20, 40, 70, 0.72);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-back-to-lobby:hover,
+.btn-back-to-lobby:active {
+  color: var(--text-primary);
+  background: rgba(26, 82, 118, 0.45);
+}
+
+.btn-back-to-lobby:focus-visible {
+  outline: 3px solid var(--accent-gold-light);
+  outline-offset: 2px;
+}
+
 .board-label {
   font-size: 0.8rem;
   font-weight: 700;
@@ -316,6 +346,14 @@ body {
 }
 
 /* 입력 영역 */
+.item-guide {
+  margin: 0 0 6px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .input-area {
   display: flex;
   gap: 8px;
@@ -476,6 +514,19 @@ body {
   pointer-events: none;
 }
 
+/* 피격 시 게임판과 HP 영역만 짧게 흔들어 입력창의 타이핑 안정성을 유지한다. */
+.hit-shake .hp-area,
+.hit-shake .boards-row {
+  animation: hit-shake 240ms ease-out;
+}
+
+@keyframes hit-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
 /* ── 토스트 ──────────────────────────────────────────────────── */
 .toast {
   position: fixed;
@@ -541,13 +592,33 @@ body {
     font-size: 0.9rem;
   }
 
+  .btn-back-to-lobby {
+    min-width: 108px;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
   /* 공통 버그 신고 FAB가 하단 단어 제출 버튼을 가리지 않도록 한 줄 위로 올린다. */
   #bw-fab {
-    bottom: 148px;
+    top: 8px;
+    right: 16px;
+    bottom: auto;
     width: 44px;
     height: 44px;
     min-width: 44px;
     min-height: 44px;
+  }
+}
+
+/* 1280×720 데스크톱에서는 입력 자동 포커스 스크롤과 무관하게 왼쪽 여백에 유지한다. */
+@media (min-width: 1200px) {
+  .game-topbar {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 100;
+    margin: 0;
   }
 }
 

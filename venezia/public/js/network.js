@@ -2,7 +2,7 @@
  * @fileoverview 베네치아 타이핑 배틀 WebSocket 클라이언트.
  *
  * 서버 권위 모델. 메시지 프로토콜:
- *  C->S: JOIN { playerName } / WORD_SUBMIT { wordId, text } / RESIGN {} / REMATCH {}
+ *  C->S: JOIN { playerName } / WORD_SUBMIT { wordId, text } / RESIGN {} / REMATCH {} / ITEM_USED {}
  *  S->C: JOINED / GAME_START / STATE / WORD_ADDED / WORD_CLEARED /
  *         GAME_OVER / REMATCH_WAITING / REMATCH_START / OPPONENT_LEFT / ERROR / WORDS_EXPIRED
  */
@@ -16,11 +16,13 @@ export function createNetwork(handlers) {
   /** @type {WebSocket|null} */
   let ws = null;
   let reconnectAttempted = false;
+  let reconnectEnabled = true;
 
   /**
    * WS 서버에 연결한다.
    */
   function connect() {
+    reconnectEnabled = true;
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     // 통합 라우터: /venezia/ 하위에서 호스팅 → /venezia/ws
     // 단독 실행: pathname '/' → /ws
@@ -54,7 +56,8 @@ export function createNetwork(handlers) {
 
     ws.addEventListener('close', () => {
       console.log('[venezia-net] 연결 종료');
-      if (!reconnectAttempted) {
+      if (typeof handlers.onClose === 'function') handlers.onClose();
+      if (reconnectEnabled && !reconnectAttempted) {
         reconnectAttempted = true;
         setTimeout(() => { console.log('[venezia-net] 재연결 시도'); connect(); }, 3000);
       }
@@ -108,8 +111,17 @@ export function createNetwork(handlers) {
       case 'OPPONENT_LEFT':
         handlers.onOpponentLeft && handlers.onOpponentLeft();
         break;
+      case 'RETURN_TO_LOBBY':
+        handlers.onReturnToLobby && handlers.onReturnToLobby();
+        break;
       case 'ITEM_GRANTED':
         handlers.onItemGranted && handlers.onItemGranted(msg);
+        break;
+      case 'ITEM_SLOTS_SYNC':
+        handlers.onItemSlotsSync && handlers.onItemSlotsSync(msg.slots || []);
+        break;
+      case 'HIT':
+        handlers.onHit && handlers.onHit(msg);
         break;
       case 'ITEM_EFFECT_START':
         handlers.onItemEffectStart && handlers.onItemEffectStart(msg);
@@ -130,8 +142,21 @@ export function createNetwork(handlers) {
    * @param {object} payload
    */
   function send(payload) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
     ws.send(JSON.stringify(payload));
+    return true;
+  }
+
+  /**
+   * 자동 재연결을 막고 현재 WebSocket 연결을 닫는다.
+   */
+  function disconnect() {
+    reconnectEnabled = false;
+    reconnectAttempted = true;
+    if (ws) {
+      ws.close(1000, 'return_to_lobby');
+      ws = null;
+    }
   }
 
   return {
@@ -140,6 +165,7 @@ export function createNetwork(handlers) {
     sendWordSubmit(wordId, text) { send({ type: 'WORD_SUBMIT', wordId, text }); },
     sendResign() { send({ type: 'RESIGN' }); },
     sendRematch() { send({ type: 'REMATCH' }); },
-    sendItemUsed(slotIndex) { send({ type: 'ITEM_USED', slotIndex }); },
+    sendItemUsed(slotIndex) { return send({ type: 'ITEM_USED', slotIndex }); },
+    disconnect,
   };
 }

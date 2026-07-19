@@ -1,15 +1,17 @@
 /**
- * @fileoverview 베네치아 숫자키·급류 UI·정답 무피해 규칙의 현재 E2E 회귀 테스트.
+ * @fileoverview 베네치아 숫자키·급류 UI·서버 권위 피해 규칙의 현재 E2E 회귀 테스트.
  */
 
 import { test, expect } from '@playwright/test';
+
+const GAME_URL = process.env.VENEZIA_URL || 'http://localhost:3000/venezia/?mode=ai';
 
 /**
  * AI 대전을 시작한다.
  * @param {import('@playwright/test').Page} page 테스트 페이지
  */
 async function startAiGame(page) {
-  await page.goto('http://localhost:3000/venezia/?mode=ai');
+  await page.goto(GAME_URL);
   await page.fill('#input-name', 'CurrentQA');
   await page.click('#btn-ai');
   await page.waitForSelector('#screen-game.active', { timeout: 15000 });
@@ -67,7 +69,9 @@ test.describe.serial('베네치아 현재 아이템 조작', () => {
     await expect(page.locator('#input-word')).toBeEnabled();
 
     await page.waitForTimeout(5000);
-    await expect(page.locator('#my-hp-value')).toHaveText('100');
+    const myHp = Number(await page.locator('#my-hp-value').textContent());
+    expect(myHp).toBeLessThanOrEqual(100);
+    expect(myHp).toBeGreaterThanOrEqual(0);
     await expect(page.locator('#opp-hp-value')).toHaveText('100');
     await expect(page.locator('.shaking')).toHaveCount(0);
 

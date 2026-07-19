@@ -34,6 +34,7 @@
         <h3>게임 규칙</h3>
         <ul>
           <li>화면에 떨어지는 단어를 정확히 입력해 지우고 콤보를 쌓으세요.</li>
+          <li data-i18n="mediumDropGuide">단어 색은 난이도를 나타내며, 아이템은 연속 정답 콤보에서 확률적으로 획득합니다.</li>
           <li>아이템은 입력창에 커서가 있어도 숫자 1·2·3으로 즉시 사용합니다.</li>
           <li>🌊 급류는 4초 동안 상대 단어를 2배 빠르게 떨어뜨립니다.</li>
           <li>시간이 지날수록 어려운 단어가 나옵니다.</li>
@@ -45,6 +46,9 @@
   <!-- 게임 화면 -->
   <section id="screen-game" class="screen">
     <div class="game-container">
+      <div class="game-topbar">
+        <button id="btn-back-to-lobby" class="btn-back-to-lobby" type="button">← 게임 선택</button>
+      </div>
       <!-- HP 바 영역 -->
       <div class="hp-area">
         <div class="hp-row my-hp">
@@ -90,6 +94,7 @@
       </div>
 
       <!-- 아이템 슬롯 (입력창 위) -->
+      <p id="item-guide" class="item-guide">연속 정답 시 아이템 획득 확률 증가 · 숫자 1·2·3으로 사용</p>
       <div class="item-slots" id="item-slots">
         <div class="item-slot" id="item-slot-0" data-index="0" aria-label="1, 비어 있음">
           <span class="item-slot-key">1</span>

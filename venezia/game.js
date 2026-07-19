@@ -16,6 +16,10 @@ export const DIFFICULTY_MULTIPLIER = { easy: 1.0, medium: 1.5, hard: 2.0 };
 export const MAX_ACTIVE_WORDS = 5;
 /** 단어 낙하 시간(ms). 이 시간이 지나면 소멸. */
 export const WORD_LIFETIME_MS = 8000;
+/** 단어를 정확히 지웠을 때 상대에게 주는 피해. */
+export const WORD_CLEAR_DAMAGE = 2;
+/** 단어가 바닥에 닿았을 때 소유자가 받는 피해. */
+export const WORD_MISS_DAMAGE = 2;
 
 /**
  * @typedef {Object} VeneziaWord
@@ -168,7 +172,7 @@ export function spawnWord(state, playerId, text, difficulty) {
  * 만료된 단어(수명 초과)를 제거한다.
  * @param {VeneziaState} state
  * @param {number} nowRelative 현재 시각(게임 시작 기준 ms)
- * @returns {string[]} 제거된 단어 ID 배열
+ * @returns {Array<{id:string, ownerId:string}>} 제거된 단어와 소유자 배열
  */
 export function expireWords(state, nowRelative) {
   /** @type {Array<{id: string, ownerId: string}>} */
@@ -196,7 +200,7 @@ export function expireWords(state, nowRelative) {
  * @param {string} playerId 제출한 플레이어 ID
  * @param {string} wordId 제출 대상 단어 ID
  * @param {string} text 플레이어가 입력한 텍스트
- * @returns {{ ok: boolean, error?: string, word?: VeneziaWord, combo?: number }}
+ * @returns {{ ok: boolean, error?: string, word?: VeneziaWord, combo?: number, targetId?: string, damage?: number }}
  */
 export function submitWord(state, playerId, wordId, text) {
   if (state.phase !== 'playing') {
@@ -224,10 +228,33 @@ export function submitWord(state, playerId, wordId, text) {
   // 콤보 증가
   state.players[playerId].combo++;
 
-  return { ok: true, word, combo: state.players[playerId].combo };
+  const targetId = playerId === 'p1' ? 'p2' : 'p1';
+  applyDamage(state, targetId, WORD_CLEAR_DAMAGE);
+  return {
+    ok: true,
+    word,
+    combo: state.players[playerId].combo,
+    targetId,
+    damage: WORD_CLEAR_DAMAGE,
+  };
 }
 
 // ── HP 적용 및 게임 종료 ─────────────────────────────────────────
+
+/**
+ * 지정 플레이어에게 피해를 적용하고 HP를 0 이상으로 고정한다.
+ * @param {VeneziaState} state 게임 상태
+ * @param {string} playerId 피해 대상 ID
+ * @param {number} damage 피해량
+ * @returns {number} 실제 적용된 피해량
+ */
+export function applyDamage(state, playerId, damage) {
+  const player = state.players[playerId];
+  if (!player || !Number.isFinite(damage) || damage <= 0) return 0;
+  const before = player.hp;
+  player.hp = Math.max(0, before - damage);
+  return before - player.hp;
+}
 
 /**
  * 게임 종료 여부를 확인한다.
