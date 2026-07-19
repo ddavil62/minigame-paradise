@@ -35,6 +35,7 @@ import { createApp as createYahtzeeApp }  from '../yahtzee/server.js';
 import { createApp as createRummikubApp } from '../rummikub/server.js';
 import { createApp as createOmokApp }     from '../omok/server.js';
 import { createApp as createCodenamesClassicApp } from '../codenames/server.js';
+import { createApp as createStarlightMailTowerApp } from '../starlight-mail-tower/server.js';
 
 // ── P0-A 안전망: WS 핸들러에서 빠져나온 예외가 런처 프로세스를 종료시키지 않게 한다.
 // 각 게임 server.js의 null guard(1차 방어)로 정상 경로는 차단되며,
@@ -118,6 +119,7 @@ const GAME_APPS = {
   'codenames':      createCodenamesClassicApp({
     getBotUrl: () => `ws://localhost:${PORT}/codenames/ws?mode=bot`,
   }),
+  'starlight-mail-tower': createStarlightMailTowerApp(),
 };
 
 /**
@@ -564,13 +566,15 @@ function checkReady(room, game) {
   const redirectPath = `/${room.gameId}/`;
   const playerCount = totalCount;
 
-  for (const ws of room.clients.keys()) {
+  for (const [ws, meta] of room.clients) {
     sendJson(ws, {
       type: 'REDIRECT',
       gameId: room.gameId,
       path: redirectPath,
       mode: 'human',
       playerCount,
+      role: meta.id === 'p1' ? 'p1' : 'p2',
+      transitionMs: 300,
     });
   }
 
@@ -682,13 +686,9 @@ function handleMessage(ws, msg, room) {
         }, READY_TIMEOUT_MS);
       }
 
-      // 게임 시작 조건 평가
+      // 최종 READY 상태를 먼저 보여 준 뒤 게임 시작 전환을 전달한다.
+      broadcastRoomState(room);
       checkReady(room, game);
-
-      // REDIRECT로 방이 삭제되지 않았으면 상태 브로드캐스트
-      if (rooms.has(room.gameId)) {
-        broadcastRoomState(room);
-      }
       break;
     }
 
@@ -925,7 +925,7 @@ function printBanner(port, lanIps) {
     console.log(ANSI.cyan + line(`    ${ANSI.dim}(LAN IP 미감지 — ipconfig로 확인)${ANSI.reset}`) + ANSI.reset);
   }
   console.log(ANSI.cyan + empty + ANSI.reset);
-  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임: /matgo/ /yutnori/ /tetris-battle/ /codenames-duet/ /davinci-code/ /janggi/ /hanabi/ /yahtzee/ /rummikub/ /omok/ /codenames/${ANSI.reset}`) + ANSI.reset);
+  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임 12종: /starlight-mail-tower/ 포함${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + line(`  ${ANSI.dim}종료: Ctrl+C${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + top + ANSI.reset);
   console.log('');

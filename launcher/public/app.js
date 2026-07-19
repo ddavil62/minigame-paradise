@@ -17,6 +17,21 @@ const GRID_EL_ID = 'game-grid';
 /** localStorage 닉네임 키 (오목 방의 omok:name과 충돌 방지). */
 const NICKNAME_KEY = 'minigames:nickname';
 
+/** @returns {'ko'|'en'} 별빛 우편탑과 공유하는 런처 표시 언어 */
+function getLauncherLocale() { return localStorage.getItem('starlight-locale') === 'en' ? 'en' : 'ko'; }
+
+/** @param {string} key 문구 키 @param {Record<string,string|number>} [values] 치환 값 @returns {string} 현재 런처 언어 문구 */
+function launcherText(key, values = {}) {
+  const copy = {
+    ko: { enter: '입장', ready: '준비', cancelReady: '준비 ✓', waiting: '대기 중', me: '나', connecting: '서버에 연결 중...', joined: '대기실에 입장했습니다.', disconnected: '연결이 끊겼습니다.', starting: '게임을 시작합니다...', needPlayers: '{min}명 이상 필요 (현재 {count}/{max})', notReady: '{count}명이 아직 준비하지 않았습니다.', allReady: '모두 준비 완료!', moving: '{game}로 이동 중...', empty: '친구를 기다리는 중', leave: '나가기' },
+    en: { enter: 'Enter', ready: 'READY', cancelReady: 'READY ✓', waiting: 'Waiting', me: 'Me', connecting: 'Connecting to server...', joined: 'Joined the waiting room.', disconnected: 'Connection lost.', starting: 'Starting game...', needPlayers: 'Need {min} players ({count}/{max})', notReady: '{count} player(s) are not ready.', allReady: 'Everyone is ready!', moving: 'Moving to {game}...', empty: 'Waiting for a friend', leave: 'Leave' },
+  };
+  return Object.entries(values).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), copy[getLauncherLocale()][key] || key);
+}
+
+/** @param {object} game 게임 메타 @param {string} field 지역화 필드명 @returns {string} */
+function localizedGameField(game, field) { const suffix = getLauncherLocale() === 'en' ? 'En' : 'Ko'; return game[`${field}${suffix}`] || game[field] || ''; }
+
 // ── 모듈 수준 상태 ─────────────────────────────────────────────
 /** @type {WebSocket | null} 대기실 WS 연결 (포탈 뷰에서는 null) */
 let ws = null;
@@ -76,7 +91,9 @@ function createCard(game) {
   card.className = 'game-card';
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
-  card.setAttribute('aria-label', `${game.name} 선택`);
+  const localizedName = localizedGameField(game, 'name');
+  const localizedDescription = localizedGameField(game, 'description');
+  card.setAttribute('aria-label', getLauncherLocale() === 'en' ? `Select ${localizedName}. ${localizedDescription}` : `${localizedName} 선택. ${localizedDescription}`);
   card.dataset.gameId = game.id;
   card.dataset.botAvailable = game.botAvailable ? 'true' : 'false';
   card.style.setProperty('--game-color', game.color);
@@ -90,21 +107,26 @@ function createCard(game) {
   const body = document.createElement('div');
   body.className = 'game-card-body';
 
-  const emoji = document.createElement('div');
-  emoji.className = 'game-card-emoji';
-  emoji.textContent = game.emoji || '';
-  emoji.setAttribute('aria-hidden', 'true');
-  body.appendChild(emoji);
+  if (game.keyArt) {
+    const keyArt = document.createElement('img'); keyArt.className = 'game-card-keyart'; keyArt.src = game.keyArt; keyArt.width = 160; keyArt.height = 96; keyArt.alt = ''; keyArt.setAttribute('aria-hidden', 'true'); body.appendChild(keyArt);
+  } else {
+    const emoji = document.createElement('div'); emoji.className = 'game-card-emoji'; emoji.textContent = game.emoji || ''; emoji.setAttribute('aria-hidden', 'true'); body.appendChild(emoji);
+  }
 
   const title = document.createElement('h2');
   title.className = 'game-card-title';
-  title.textContent = game.name;
+  title.textContent = localizedName;
   body.appendChild(title);
 
   const desc = document.createElement('p');
   desc.className = 'game-card-desc';
-  desc.textContent = game.description;
+  desc.textContent = localizedDescription;
   body.appendChild(desc);
+
+  if (game.playersLabelKo || game.botLabelKo) {
+    const meta = document.createElement('div'); meta.className = 'game-card-meta';
+    const suffix = getLauncherLocale() === 'en' ? 'En' : 'Ko'; meta.textContent = `${game[`playersLabel${suffix}`]} · ${game[`botLabel${suffix}`]}`; body.appendChild(meta);
+  }
 
   // 단일 포트 통합 라우터에서는 path(`/matgo/` 등)를 표시한다.
   const port = document.createElement('div');
@@ -115,7 +137,7 @@ function createCard(game) {
   const btn = document.createElement('button');
   btn.className = 'game-card-play';
   btn.type = 'button';
-  btn.textContent = '입장';
+  btn.textContent = launcherText('enter');
   body.appendChild(btn);
 
   card.appendChild(body);
@@ -212,19 +234,23 @@ function enterWaitingRoom(gameId) {
   if (currentGameId && ws) return;
 
   currentGameId = gameId;
+  document.getElementById('waiting-room-view').dataset.gameId = gameId;
   lastRoomState = null;
 
   // 게임 이름 표시
   const game = gamesCache.find(g => g.id === gameId);
   const gameNameEl = document.getElementById('wr-game-name');
-  if (gameNameEl) gameNameEl.textContent = game ? game.name : gameId;
+  if (gameNameEl) gameNameEl.textContent = game ? localizedGameField(game, 'name') : gameId;
 
   // 준비 버튼 초기화
   const readyBtn = document.getElementById('btn-ready');
   if (readyBtn) {
     readyBtn.classList.remove('ready');
-    readyBtn.textContent = '준비';
+    readyBtn.textContent = launcherText('ready');
   }
+
+  const leaveBtn = document.getElementById('btn-leave-room');
+  if (leaveBtn) leaveBtn.textContent = launcherText('leave');
 
   // AI 채우기 버튼 숨김
   const fillAiBtn = document.getElementById('btn-wr-fill-ai');
@@ -236,7 +262,7 @@ function enterWaitingRoom(gameId) {
 
   // 상태 텍스트 초기화
   const statusEl = document.getElementById('wr-status');
-  if (statusEl) statusEl.textContent = '서버에 연결 중...';
+  if (statusEl) statusEl.textContent = launcherText('connecting');
 
   // 뷰 전환
   showView('waiting-room-view');
@@ -249,7 +275,7 @@ function enterWaitingRoom(gameId) {
 
   ws.addEventListener('open', () => {
     const statusEl = document.getElementById('wr-status');
-    if (statusEl) statusEl.textContent = '대기실에 입장했습니다.';
+    if (statusEl) statusEl.textContent = launcherText('joined');
     // 닉네임 전송
     if (myName) {
       ws.send(JSON.stringify({ type: 'JOIN', name: myName }));
@@ -262,7 +288,7 @@ function enterWaitingRoom(gameId) {
     // REDIRECT/LEAVE_ROOM/ROOM_FULL/KICKED 에 의한 정상 종료가 아닌 경우
     if (currentGameId) {
       // 예외적 연결 종료 — 포탈 뷰로 복귀
-      showToast('연결이 끊겼습니다.');
+      showToast(launcherText('disconnected'));
       leaveWaitingRoom(true);
     }
   });
@@ -352,11 +378,18 @@ function updateWaitingRoomUI(msg) {
     playersEl.innerHTML = '';
 
     // 실제 플레이어 카드
-    for (const p of msg.players) {
+    for (const [playerIndex, p] of msg.players.entries()) {
       const card = document.createElement('div');
-      card.className = 'player-ready-card';
+      const role = playerIndex === 0 ? 'a' : 'b';
+      card.className = `player-ready-card role-${role}`;
       if (p.ready) card.classList.add('ready');
       if (p.id === msg.myId) card.classList.add('self');
+
+      const roleMark = document.createElement('span');
+      roleMark.className = 'prc-role';
+      roleMark.textContent = role === 'a' ? '△' : '○';
+      roleMark.setAttribute('aria-label', `Role ${role.toUpperCase()}`);
+      card.appendChild(roleMark);
 
       // 호스트 표시
       if (p.isHost) {
@@ -369,15 +402,30 @@ function updateWaitingRoomUI(msg) {
       // 이름
       const nameEl = document.createElement('div');
       nameEl.className = 'prc-name';
-      nameEl.textContent = p.name + (p.id === msg.myId ? ' (나)' : '');
+      nameEl.textContent = p.name + (p.id === msg.myId ? ` (${launcherText('me')})` : '');
       card.appendChild(nameEl);
 
       // 준비 상태 뱃지
       const badge = document.createElement('div');
       badge.className = 'prc-badge ' + (p.ready ? 'is-ready' : 'not-ready');
-      badge.textContent = p.ready ? 'READY' : '대기 중';
+      badge.textContent = p.ready ? 'READY' : launcherText('waiting');
       card.appendChild(badge);
 
+      const stateIcon = document.createElement('span');
+      stateIcon.className = 'prc-state-icon';
+      stateIcon.setAttribute('aria-hidden', 'true');
+      stateIcon.innerHTML = '<i></i>';
+      card.appendChild(stateIcon);
+
+      playersEl.appendChild(card);
+    }
+
+    // 서버가 정한 좌우 역할 위치를 유지하고 빈 슬롯도 명확하게 보여 준다.
+    for (let slotIndex = msg.players.length; slotIndex < msg.maxPlayers; slotIndex += 1) {
+      const role = slotIndex === 0 ? 'a' : 'b';
+      const card = document.createElement('div');
+      card.className = `player-ready-card role-${role} empty-slot`;
+      card.innerHTML = `<span class="prc-role" aria-label="Role ${role.toUpperCase()}">${role === 'a' ? '△' : '○'}</span><div class="prc-name">${launcherText('empty')}</div><div class="prc-badge not-ready">${launcherText('waiting')}</div><span class="prc-state-icon" aria-hidden="true"><i></i></span>`;
       playersEl.appendChild(card);
     }
 
@@ -398,6 +446,7 @@ function updateWaitingRoomUI(msg) {
 
       playersEl.appendChild(card);
     }
+    playersEl.classList.toggle('both-ready', msg.players.length === msg.maxPlayers && msg.players.every((player) => player.ready));
   }
 
   // ── 준비 버튼 상태 ──
@@ -405,10 +454,10 @@ function updateWaitingRoomUI(msg) {
   if (readyBtn) {
     if (msg.myReady) {
       readyBtn.classList.add('ready');
-      readyBtn.textContent = '준비 완료 (취소)';
+      readyBtn.textContent = launcherText('cancelReady');
     } else {
       readyBtn.classList.remove('ready');
-      readyBtn.textContent = '준비';
+      readyBtn.textContent = launcherText('ready');
     }
   }
 
@@ -429,15 +478,15 @@ function updateWaitingRoomUI(msg) {
   const statusEl = document.getElementById('wr-status');
   if (statusEl) {
     if (msg.canStart) {
-      statusEl.textContent = '게임을 시작합니다...';
+      statusEl.textContent = launcherText('starting');
     } else if (msg.totalCount < msg.minPlayers) {
-      statusEl.textContent = `${msg.minPlayers}명 이상 필요 (현재 ${msg.totalCount}/${msg.maxPlayers})`;
+      statusEl.textContent = launcherText('needPlayers', { min: msg.minPlayers, count: msg.totalCount, max: msg.maxPlayers });
     } else {
       const notReadyCount = msg.players.filter(p => !p.ready).length;
       if (notReadyCount > 0) {
-        statusEl.textContent = `${notReadyCount}명이 아직 준비하지 않았습니다.`;
+        statusEl.textContent = launcherText('notReady', { count: notReadyCount });
       } else {
-        statusEl.textContent = '모두 준비 완료!';
+        statusEl.textContent = launcherText('allReady');
       }
     }
   }
@@ -461,7 +510,7 @@ function handleFillWithAi() {
 
 /**
  * REDIRECT 수신: 해당 게임 페이지로 이동.
- * @param {{path?:string, gameId:string, mode:string, playerCount?:number}} msg
+ * @param {{path?:string, gameId:string, mode:string, playerCount?:number,role?:string,transitionMs?:number}} msg
  */
 function handleRedirect(msg) {
   // REDIRECT 수신 후에는 close 이벤트에서 재진입하지 않도록 상태 정리
@@ -474,11 +523,11 @@ function handleRedirect(msg) {
   const basePath = msg.path || `/${msg.gameId}/`;
   const sep = basePath.includes('?') ? '&' : '?';
   const playerCount = msg.playerCount || 2;
-  const targetPath = `${basePath}${sep}mode=${encodeURIComponent(msg.mode || 'human')}&name=${encodeURIComponent(myName || '')}&players=${playerCount}`;
+  const targetPath = `${basePath}${sep}mode=${encodeURIComponent(msg.mode || 'human')}&name=${encodeURIComponent(myName || '')}&players=${playerCount}&role=${encodeURIComponent(msg.role || '')}&lobbyReady=1&fresh=1`;
 
   // 약간의 시각 피드백
   const statusEl = document.getElementById('wr-status');
-  if (statusEl) statusEl.textContent = `${msg.gameId} 로 이동 중...`;
+  if (statusEl) statusEl.textContent = launcherText('moving', { game: msg.gameId });
 
   // WS 닫기
   try { if (oldWs) oldWs.close(); } catch (_) { /* noop */ }
@@ -486,7 +535,7 @@ function handleRedirect(msg) {
   // 즉시 이동
   setTimeout(() => {
     location.href = targetPath;
-  }, 80);
+  }, Math.min(600, Math.max(80, msg.transitionMs || 80)));
 }
 
 // ── 닉네임 게이트 ──────────────────────────────────────────────

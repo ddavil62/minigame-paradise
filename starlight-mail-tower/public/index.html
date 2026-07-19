@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="game.title">별빛 우편탑</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <main id="game-shell" aria-label="별빛 우편탑 협동 등반 게임" data-i18n-aria-label="aria.game">
+    <div id="viewport-frame">
+      <canvas id="game-canvas" width="1280" height="720" aria-label="별빛 우편탑 분류 데크" data-i18n-aria-label="aria.canvas"></canvas>
+      <section id="hud" aria-live="polite">
+        <div class="hud-panel section-panel">
+          <strong id="section-name" data-i18n="section.name">분류 데크</strong>
+          <span id="progress-label">1 / 3</span>
+        </div>
+        <time id="elapsed-time" class="hud-panel timer">00:00.0</time>
+        <div class="hud-panel connection-panel">
+          <span class="role-mark role-a">△ A</span>
+          <span id="connection-symbol" class="connection-symbol" aria-hidden="true"><i></i><b><em></em><u></u></b></span>
+          <span id="connection-label" data-i18n="connection.connecting">연결 중</span>
+          <span class="role-mark role-b">○ B</span>
+        </div>
+        <div id="self-status" class="hud-panel player-status left-status">△ <span data-i18n="status.moving">이동</span></div>
+        <div id="partner-status" class="hud-panel player-status right-status">○ <span data-i18n="status.waiting">대기</span></div>
+        <div id="action-hint" class="hud-panel action-hint"><span id="finish-clock" class="finish-clock" hidden aria-hidden="true"><b></b><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="action-hint-text" data-i18n="hint.anchor">단자에서 E를 길게 눌러 고정하세요</span></div>
+      </section>
+      <div id="toast" role="status" aria-live="assertive"></div>
+      <section id="ready-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="ready-title">
+        <div class="overlay-card ready-card">
+          <p class="eyebrow" data-i18n="game.subtitle">두 정비 로봇의 야간 우편 작전</p>
+          <h1 id="ready-title" data-i18n="game.title">별빛 우편탑</h1>
+          <section class="level-picker" aria-labelledby="level-picker-title">
+            <div class="level-picker-heading"><strong id="level-picker-title" data-i18n="menu.choose">코스 선택</strong><span id="level-host-note" data-i18n="menu.hostOnly">호스트가 선택합니다</span></div>
+            <div id="level-list" class="level-list" role="listbox" data-i18n-aria-label="aria.levelList"></div>
+          </section>
+          <div class="crew-row">
+            <div id="p1-crew" class="crew-card cyan" data-i18n-aria-label="aria.roleA"><span>△</span><strong id="p1-name" data-i18n="waiting.short">대기 중</strong><i aria-hidden="true"></i></div>
+            <div id="p2-crew" class="crew-card coral" data-i18n-aria-label="aria.roleB"><span>○ ••</span><strong id="p2-name" data-i18n="waiting.short">대기 중</strong><i aria-hidden="true"></i></div>
+          </div>
+          <p class="controls" data-i18n="controls">A/D 또는 ←/→ 이동 · Space 점프 · E/Enter 상호작용</p>
+          <button id="ready-button" type="button" data-i18n="ready">준비</button>
+          <p id="ready-note" data-i18n="waiting.partner">파트너 접속을 기다리는 중...</p>
+        </div>
+      </section>
+      <section id="reconnect-overlay" class="overlay session-overlay" role="dialog" aria-modal="true" aria-labelledby="reconnect-title" tabindex="-1" hidden>
+        <div class="session-card reconnect-card">
+          <svg class="orbit-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 24a16 16 0 0 1 28-10M40 24a16 16 0 0 1-28 10"/><circle cx="8" cy="24" r="3"/><circle cx="40" cy="24" r="3"/><path class="recovery-role" d="M17 28l5-9 5 9z"/><circle class="recovery-role" cx="33" cy="23" r="5"/><circle class="recovery-role role-dot" cx="31" cy="23" r="1"/><circle class="recovery-role role-dot" cx="35" cy="23" r="1"/></svg>
+          <h2 id="reconnect-title" data-i18n="reconnect.title">파트너 재접속 대기</h2>
+          <p data-i18n="reconnect.message">진행을 안전하게 멈추고 파트너를 기다립니다.</p>
+          <div class="reconnect-meter"><strong id="reconnect-seconds">15</strong><div id="reconnect-ticks" class="reconnect-ticks" aria-hidden="true"></div></div>
+          <p id="reconnect-status" role="status" aria-live="polite" data-i18n="reconnect.paused">입력이 일시 정지되었습니다.</p>
+        </div>
+      </section>
+      <section id="session-ended-overlay" class="overlay session-overlay" role="alertdialog" aria-modal="true" aria-labelledby="session-ended-title" hidden>
+        <div class="session-card ended-card">
+          <svg class="orbit-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M7 19a18 18 0 0 1 10-11M41 29a18 18 0 0 1-10 11M17 17l14 14M31 17 17 31"/></svg>
+          <h2 id="session-ended-title" data-i18n="session.title">작전이 안전하게 종료되었습니다</h2>
+          <p id="session-ended-message" data-i18n="session.expired">재접속 유예 시간이 끝났습니다.</p>
+          <button id="session-lobby-button" type="button" data-i18n="result.lobby">로비 복귀</button>
+        </div>
+      </section>
+      <section id="lobby-confirm-overlay" class="overlay session-overlay" role="dialog" aria-modal="true" aria-labelledby="lobby-confirm-title" hidden>
+        <div class="session-card confirm-card">
+          <h2 id="lobby-confirm-title" data-i18n="lobbyConfirm.title">게임 선택으로 돌아갈까요?</h2>
+          <p data-i18n="lobbyConfirm.message">현재 협동 작전을 종료하고 파트너에게도 안내합니다.</p>
+          <div class="confirm-actions">
+            <button id="continue-button" type="button" data-i18n="lobbyConfirm.continue">게임 계속</button>
+            <button id="confirm-lobby-button" type="button" class="secondary"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M7 3h8v12H7M10 9H2m0 0 3-3M2 9l3 3"/></svg><span data-i18n="result.lobby">로비 복귀</span></button>
+          </div>
+        </div>
+      </section>
+      <div id="respawn-overlay" class="respawn-overlay" hidden>
+        <strong data-i18n="respawn">별빛 체크포인트로 함께 복귀 중</strong>
+      </div>
+      <section id="result-overlay" class="overlay result-overlay" hidden aria-live="polite">
+        <div class="result-card">
+          <div class="completion-seal" aria-hidden="true"></div>
+          <h2 data-i18n="result.title">함께 배달 완료</h2>
+          <p data-i18n="result.message">별빛 우편이 밤하늘에 도착했습니다.</p>
+          <strong id="result-level-name" class="result-level-name"></strong>
+          <div class="result-stats">
+            <div><strong id="result-time">00:00.0</strong><span data-i18n="result.current">이번 기록</span></div>
+            <div class="result-best-stat"><span id="new-best-badge" class="new-best-badge" hidden data-i18n="result.newBest">신기록</span><strong id="result-best">00:00.0</strong><span data-i18n="result.best">최고 기록</span></div>
+            <div><strong id="result-falls">0</strong><span data-i18n="result.falls">추락</span></div>
+            <div><strong id="result-swaps">0</strong><span data-i18n="result.swaps">역할 교대</span></div>
+          </div>
+          <div id="team-row" class="team-row" aria-hidden="true"><span class="role-a">△</span><i></i><span class="role-b">○ ••</span></div>
+          <div class="result-actions">
+            <button id="rematch-button" data-result-action="RETRY" type="button"><span class="lock-mark" aria-hidden="true"></span><span class="button-label" data-i18n="result.retry">재도전</span><span class="processing-dots" aria-hidden="true">•••</span></button>
+            <button id="next-level-button" data-result-action="NEXT" type="button" class="secondary" data-i18n="result.next">다음 레벨</button>
+            <button id="lobby-button" data-result-action="SELECT" type="button" class="secondary" data-i18n="result.select">레벨 선택</button>
+          </div>
+          <p id="rematch-status" data-i18n="result.waiting">파트너의 준비를 기다립니다.</p>
+        </div>
+      </section>
+      <div class="toolbar" role="toolbar" data-i18n-aria-label="aria.toolbar">
+        <button id="locale-button" type="button" aria-label="언어 전환" aria-pressed="false" data-i18n-aria-label="aria.locale">KO / EN</button>
+        <button id="mute-button" type="button" aria-label="음소거" aria-pressed="false" data-i18n-aria-label="aria.mute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12-1a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/><path class="mute-slash" d="M3 3l18 18"/></svg></button>
+        <button id="toolbar-lobby-button" type="button" data-i18n-aria-label="aria.lobby"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M7 3h8v12H7M10 9H2m0 0 3-3M2 9l3 3"/></svg><span data-i18n="toolbar.lobby">게임 선택</span></button>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="./js/client.js"></script>
+</body>
+</html>

@@ -142,5 +142,27 @@
     "botAvailable": true,
     "minPlayers": 4,
     "maxPlayers": 4
+  },
+  {
+    "id": "starlight-mail-tower",
+    "name": "별빛 우편탑",
+    "nameKo": "별빛 우편탑",
+    "nameEn": "Starlight Mail Tower",
+    "description": "두 정비 로봇이 역할을 바꾸며 별빛 우편을 발사하는 2인 협동 등반",
+    "descriptionKo": "두 정비 로봇이 역할을 바꾸며 별빛 우편을 발사하는 2인 협동 등반",
+    "descriptionEn": "A two-player co-op climb where repair robots swap roles to launch starlight mail",
+    "port": 3015,
+    "httpPath": "/starlight-mail-tower/",
+    "wsPath": "/starlight-mail-tower/ws",
+    "color": "#3E91A3",
+    "emoji": "",
+    "keyArt": "/starlight-mail-tower/assets/key-art.svg",
+    "botAvailable": false,
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "playersLabelKo": "2인 전용",
+    "playersLabelEn": "2 players only",
+    "botLabelKo": "AI 미지원",
+    "botLabelEn": "No AI"
   }
 ]

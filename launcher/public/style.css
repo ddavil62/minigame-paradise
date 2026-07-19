@@ -102,7 +102,14 @@ body {
     0 12px 28px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(255, 217, 122, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  outline: none;
+}
+
+.game-card:focus-visible,
+.game-card-play:focus-visible,
+#btn-ready:focus-visible,
+#btn-leave-room:focus-visible {
+  outline: 3px solid #ffd97a;
+  outline-offset: 3px;
 }
 
 /* 상단 컬러 띠 — 각 게임 고유색 */
@@ -126,6 +133,9 @@ body {
   text-align: center;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
+
+.game-card-keyart { display: block; width: 160px; height: 96px; max-width: 100%; margin: 0 auto 14px; border-radius: 10px; object-fit: contain; }
+.game-card-meta { margin-top: 8px; color: rgba(185, 232, 231, 0.82); text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
 
 .game-card-title {
   margin: 0 0 8px;
@@ -168,16 +178,22 @@ body {
   cursor: pointer;
   transition: filter 150ms ease-out, transform 150ms ease-out;
   font-family: inherit;
+  min-height: 44px;
 }
 
 .game-card-play:hover,
 .game-card-play:focus-visible {
   filter: brightness(1.18) saturate(1.1);
-  outline: none;
 }
 
 .game-card-play:active {
   transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-card { transition: border-color 80ms ease; }
+  .game-card:hover, .game-card:focus-visible { transform: none; }
+  .waiting-room-players.both-ready::after { animation: none; transform: none; }
 }
 
 /* ── 로딩/에러 메시지 ─────────────────────────────────────── */
@@ -438,6 +454,8 @@ body {
   cursor: pointer;
   font-family: inherit;
   transition: background 150ms ease-out, border-color 150ms ease-out;
+  min-width: 104px;
+  min-height: 40px;
 }
 
 .waiting-room-header #btn-leave-room:hover {
@@ -447,6 +465,7 @@ body {
 
 /* 대기실 플레이어 목록 */
 .waiting-room-players {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -454,8 +473,10 @@ body {
   min-height: 80px;
   margin-bottom: 28px;
   width: 100%;
-  max-width: 640px;
+  max-width: 456px;
 }
+.waiting-room-players.both-ready::after { content: ""; position: absolute; z-index: 3; left: calc(50% - 12px); top: 50px; width: 24px; height: 24px; background: #64dc96; clip-path: polygon(50% 0, 62% 36%, 100% 50%, 62% 64%, 50% 100%, 38% 64%, 0 50%, 38% 36%); animation: ready-join 300ms ease-out 1; }
+@keyframes ready-join { from { opacity: .3; transform: scale(.65); } to { opacity: 1; transform: scale(1); } }
 
 /* 대기실 플레이어 카드 */
 .player-ready-card {
@@ -463,13 +484,32 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 20px 28px;
-  min-width: 120px;
+  position: relative;
+  justify-content: center;
+  padding: 16px 22px;
+  width: 220px;
+  height: 124px;
   background: linear-gradient(180deg, #1f2c47 0%, #1a2541 100%);
   border: 2px solid rgba(245, 233, 201, 0.15);
   border-radius: 14px;
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
 }
+
+.player-ready-card.role-a { border-left: 3px solid #62d6e8; }
+.player-ready-card.role-b { border-right: 3px solid #ff8d78; }
+.prc-role { position: absolute; top: 12px; width: 24px; height: 24px; display: grid; place-items: center; font-weight: 900; }
+.role-a .prc-role { left: 12px; color: #62d6e8; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: rgba(98,214,232,.18); }
+.role-b .prc-role { right: 12px; color: #ff8d78; border: 2px solid #ff8d78; border-radius: 50%; }
+.role-b .prc-role::after { content: ""; position: absolute; left: 5px; top: 9px; width: 3px; height: 3px; border-radius: 50%; background: #ff8d78; box-shadow: 7px 0 #ff8d78; }
+.prc-state-icon { position: absolute; right: 14px; bottom: 12px; width: 20px; height: 20px; }
+.role-b .prc-state-icon { right: auto; left: 14px; }
+.prc-state-icon::before { content: ""; position: absolute; left: 3px; top: 8px; width: 14px; height: 10px; border: 2px solid rgba(245,233,201,.55); border-radius: 3px; }
+.prc-state-icon::after { content: ""; position: absolute; left: 7px; top: 1px; width: 8px; height: 9px; border: 2px solid rgba(245,233,201,.55); border-bottom: 0; border-radius: 8px 8px 0 0; transform: rotate(-28deg); transform-origin: right bottom; }
+.player-ready-card.ready .prc-state-icon::before, .player-ready-card.ready .prc-state-icon::after { border-color: #64dc96; }
+.player-ready-card.ready .prc-state-icon::after { transform: none; }
+.prc-state-icon i { display: none; }
+.player-ready-card.ready .prc-state-icon i { display: block; position: absolute; z-index: 2; left: 8px; top: 8px; width: 5px; height: 9px; border: solid #64dc96; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.player-ready-card.empty-slot { border-style: dashed; opacity: .72; }
 
 .player-ready-card .prc-name {
   font-size: 16px;
@@ -540,7 +580,7 @@ body {
 
 /* 준비 버튼 */
 #btn-ready {
-  padding: 14px 40px;
+  padding: 0 12px;
   border: 2px solid rgba(245, 233, 201, 0.3);
   border-radius: 12px;
   background: rgba(245, 233, 201, 0.06);
@@ -551,6 +591,15 @@ body {
   cursor: pointer;
   font-family: inherit;
   transition: background 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out;
+  width: 180px;
+  height: 52px;
+  min-height: 52px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .game-grid { grid-template-columns: repeat(4, minmax(188px, 1fr)); }
+  .game-card-keyart { width: 136px; height: 82px; }
 }
 
 #btn-ready:hover {
@@ -599,4 +648,8 @@ body {
   text-align: center;
   min-height: 20px;
   margin-bottom: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting-room-players.both-ready::after { animation: none; transform: none; }
 }
