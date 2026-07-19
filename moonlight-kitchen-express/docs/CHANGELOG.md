@@ -4,6 +4,18 @@
 
 ## 2026-07-19
 
+### 4페이지 플레이 가이드
+
+- 첫 로비 스냅샷 뒤 한 번 자동 노출되고, 확인 상태를 `moonlightKitchenGuideSeen:v1`에 저장해 새로고침 시 반복 노출하지 않는 플레이 가이드를 추가했다.
+- 로비 전용 버튼과 운행 HUD의 `? 플레이 방법` 버튼으로 언제든 다시 열 수 있게 했다. 연결·결과·종료 확인 오버레이가 보일 때는 가이드가 열리지 않도록 우선순위를 유지했다.
+- 1페이지는 주문 확인부터 정차 중 배식까지의 5단계, 2페이지는 달버섯 꼬치·등불잎 만두·혜성무 국수의 실제 설비 조합, 3페이지는 열도 85 이상 P1/P2 동시 냉각, 4페이지는 WASD/방향키·`E`/`Enter`·`Space`·`Q` 조작을 안내한다.
+- 제목·본문·버튼·접근성 레이블을 한국어와 영어로 제공하고, 언어를 바꿔도 현재 페이지 의미가 유지되도록 했다.
+- 가이드가 열릴 때 눌린 입력을 즉시 중립화하고 이동·상호작용·작업·버리기를 차단했다. 닫힌 뒤에는 새 키 입력부터 정상 처리해 닫기에 사용한 키가 게임 행동으로 이어지지 않게 했다.
+- dialog 의미 구조, Tab/Shift+Tab 포커스 트랩, Escape 닫기, 로비 opener·운행 Canvas 초점 복원, `aria-live` 페이지 알림, reduced-motion, 44px 조작 대상을 적용했다.
+- 1280×720, 1024×768, 390×844의 한국어·영어 화면에서 dialog 경계, 내부 스크롤, 도움말·런처·연결 상태·HUD 간 교차 면적 0을 검증했다.
+- 최종 검증 결과: Node/WebSocket 31/31 PASS, Playwright 15/15 PASS.
+- 참고: 스펙 `.Codex/specs/2026-07-19-moonlight-kitchen-guide.md`, 구현 리포트 `.Codex/specs/2026-07-19-moonlight-kitchen-guide-report.md`, QA `.Codex/specs/2026-07-19-moonlight-kitchen-guide-qa.md`.
+
 ### GPT Image 에셋 통합
 
 - GPT Image로 생성한 재료, 설비·요리, P1/P2 캐릭터 원본 시트 3장을 `public/assets/gpt-image-sources/`에 추가했다.

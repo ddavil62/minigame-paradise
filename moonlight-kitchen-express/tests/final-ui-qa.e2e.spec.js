@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 
 test('ko/en 두 브라우저에서 내부 ID 노출·콘솔 오류·레이아웃 교차 없이 포커스가 유지된다', async ({ browser }) => {
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
+  await Promise.all(contexts.map(context => context.addInitScript(() => localStorage.setItem('moonlightKitchenGuideSeen:v1', '1'))));
   const pages = await Promise.all(contexts.map(context => context.newPage()));
   const errors = [[], []]; pages.forEach((page, index) => { page.on('pageerror', error => errors[index].push(error.message)); page.on('console', message => { if (message.type() === 'error') errors[index].push(message.text()); }); });
   await pages[0].goto('/?name=한국검수&role=p1&locale=ko'); await pages[1].goto('/?name=EnglishQA&role=p2&locale=en');

@@ -10,12 +10,12 @@
       <div id="mobile-timeline" aria-label="운행 타임라인"></div>
     </section>
     <section class="stage" aria-label="달빛 주방열차 플레이 화면"><canvas id="game" width="1280" height="720" tabindex="0"></canvas><div id="warning" aria-live="assertive" hidden><span id="warning-text"></span><span id="warning-badges" role="group"></span></div></section>
-    <div id="game-tools"><span id="connection-mark" aria-hidden="true"></span><button id="launcher-button" type="button" data-i18n="launcher">런처로</button></div>
+    <div id="game-tools"><span id="connection-mark" aria-hidden="true"></span><button id="help-button" type="button" data-i18n="guide.help">? 플레이 방법</button><button id="launcher-button" type="button" data-i18n="launcher">런처로</button></div>
     <section id="mobile-status" aria-label="플레이어 상태">
       <div><strong data-i18n="hud.hand">내 손</strong><span id="mobile-hand">빈손</span></div><div><strong data-i18n="hud.partner">파트너</strong><span id="mobile-partner">대기</span></div><p id="mobile-action">E · 가까운 대상 집기</p>
     </section>
     <section id="lobby" class="overlay manifest" aria-labelledby="lobby-title">
-      <div class="overlay-tools"><label><span data-i18n="language">언어</span><select id="language"><option value="ko">한국어</option><option value="en">English</option></select></label><button id="mute" type="button" aria-pressed="false" data-i18n="mute">음소거</button></div>
+      <div class="overlay-tools"><button id="lobby-help-button" type="button" data-i18n="guide.help">? 플레이 방법</button><label><span data-i18n="language">언어</span><select id="language"><option value="ko">한국어</option><option value="en">English</option></select></label><button id="mute" type="button" aria-pressed="false" data-i18n="mute">음소거</button></div>
       <p class="eyebrow" data-i18n="departureManifest">MOONLIGHT DEPARTURE MANIFEST</p><h1 id="lobby-title" data-i18n="lobbyTitle">승무원 운행표</h1><p data-i18n="lobbyHelp">두 승무원이 준비하면 300초 운행을 시작합니다.</p>
       <div id="crew-slots"><article class="crew-slot p1"><b>☾ P1</b><strong id="p1-name">—</strong><span id="p1-state" data-i18n="notReady">준비 전</span><small>WASD · E · SPACE · Q</small></article><article class="crew-slot p2"><b>★ P2</b><strong id="p2-name">—</strong><span id="p2-state" data-i18n="notReady">준비 전</span><small>WASD · E · SPACE · Q</small></article></div>
       <p id="role-status">역할 배정 중…</p><p id="ready-state" aria-live="polite"></p><div class="lobby-actions"><button id="ready" type="button" data-i18n="ready">준비</button><button id="leave" type="button" data-i18n="leave">나가기</button></div>
@@ -35,6 +35,11 @@
     <section id="exit-confirm" class="confirm-overlay hidden" aria-labelledby="exit-title" aria-modal="true" role="dialog">
       <h2 id="exit-title" data-i18n="exitTitle">운행을 중단할까요?</h2><p data-i18n="exitDescription">동료의 세션도 종료됩니다.</p>
       <div><button id="keep-playing" type="button" data-i18n="keepPlaying">계속 운행</button><button id="confirm-exit" type="button" data-i18n="exitLauncher">런처로 나가기</button></div>
+    </section>
+    <section id="play-guide" class="guide-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title" aria-describedby="guide-description">
+      <header class="guide-header"><div><p class="eyebrow" data-i18n="guide.eyebrow">CREW TRAINING CARD</p><h2 id="guide-title"></h2><p id="guide-description"></p></div><button id="guide-close" type="button" data-i18n-aria-label="guide.close" aria-label="가이드 닫기">×</button></header>
+      <div id="guide-page" class="guide-page"></div>
+      <footer class="guide-footer"><button id="guide-prev" type="button" data-i18n="guide.prev">이전</button><span id="guide-progress" aria-hidden="true">1 / 4</span><span id="guide-live" class="sr-only" aria-live="polite"></span><button id="guide-next" type="button" data-i18n="guide.next">다음</button></footer>
     </section>
     <div id="resumed-banner" class="hidden" role="status" data-i18n="partnerReturned">동료가 돌아왔습니다</div><div id="connection" role="status">연결 중</div><div id="live-log" class="sr-only" aria-live="polite"></div>
   </main>

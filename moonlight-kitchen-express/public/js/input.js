@@ -2,9 +2,16 @@
 const state = { up:false,down:false,left:false,right:false,interact:false,work:false,drop:false };
 const mapping = Object.freeze({ KeyW:'up',ArrowUp:'up',KeyS:'down',ArrowDown:'down',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',KeyE:'interact',Enter:'interact',Space:'work',KeyQ:'drop' });
 let seq = 0;
+let enabled = true;
+
+/** 모든 조작 상태를 중립으로 되돌린다. @returns {void} */
+function resetState() { for (const action of Object.keys(state)) state[action] = false; }
+
+/** 게임 입력 허용 여부를 바꾸며, 차단 시 눌린 키 상태도 즉시 해제한다. @param {boolean} next 허용 여부 @returns {void} */
+export function setInputEnabled(next) { enabled = Boolean(next); if (!enabled) resetState(); }
 
 /** @param {KeyboardEvent} event 키 이벤트 @returns {boolean} 게임 키 처리 여부 */
-function updateKey(event) { if (event.target instanceof HTMLButtonElement || event.target instanceof HTMLInputElement) return false; const action = mapping[event.code]; if (!action) return false; state[action] = event.type === 'keydown'; event.preventDefault(); return true; }
+function updateKey(event) { if (!enabled || event.target instanceof HTMLButtonElement || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return false; const action = mapping[event.code]; if (!action) return false; state[action] = event.type === 'keydown'; event.preventDefault(); return true; }
 
 /**
  * 입력 수집기를 시작한다.
