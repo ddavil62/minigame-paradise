@@ -1,0 +1,22 @@
+/** @fileoverview WebSocket 프로토콜, 두 역할, READY와 토큰 재접속을 검증한다. */
+import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';import { WebSocket } from 'ws';import { createApp } from '../server.js';import { validateClientMessage } from '../shared/protocol.js';
+
+/** @param {WebSocket} ws 소켓 @param {(message:object)=>boolean} predicate 조건 @returns {Promise<object>} 다음 조건 메시지 */
+function waitMessage(ws,predicate){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('message timeout')),2000);/** @param {Buffer} raw 원시 메시지 @returns {void} */const listener=(raw)=>{const message=JSON.parse(raw.toString());if(predicate(message)){clearTimeout(timer);ws.off('message',listener);resolve(message);}};ws.on('message',listener);});}
+
+/** @param {number} port 포트 @param {object} join 참가 메시지 @returns {Promise<{ws:WebSocket,welcome:object}>} 연결 */
+async function connectClient(port,join){const ws=new WebSocket(`ws://127.0.0.1:${port}`);const received=[];ws.on('message',raw=>received.push(JSON.parse(raw.toString())));await new Promise((resolve,reject)=>{ws.once('open',resolve);ws.once('error',reject);});const welcomePromise=waitMessage(ws,message=>message.type==='WELCOME');ws.send(JSON.stringify(join));return{ws,welcome:await welcomePromise,received};}
+
+/** @param {{reconnectGraceMs?:number}} [options] 앱 옵션 @returns {Promise<{app:object,server:http.Server,port:number}>} 서버 */
+async function startServer(options={}){const app=createApp(options);const server=http.createServer(app.handleHttp);server.on('upgrade',app.handleUpgrade);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));return{app,server,port:server.address().port};}
+
+/** @param {{app:object,server:http.Server}} fixture 서버 픽스처 @returns {Promise<void>} 정리 */
+async function stopServer(fixture){fixture.app.close();await new Promise(resolve=>fixture.server.close(resolve));}
+
+test('프로토콜은 좌표·점수 주입과 잘못된 boolean을 거부한다',()=>{assert.equal(validateClientMessage({type:'INPUT',seq:1,up:false,down:false,left:false,right:false,interact:false,work:false,drop:false,x:999,score:999}).ok,true);assert.equal(validateClientMessage({type:'INPUT',seq:2,up:1,down:false,left:false,right:false,interact:false,work:false,drop:false}).ok,false);});
+
+test('두 연결은 p1/p2를 받고 READY 뒤 동일 라운드를 시작한다',async()=>{const fixture=await startServer();try{const a=await connectClient(fixture.port,{type:'JOIN',name:'A',locale:'ko',readyFromLobby:false});const b=await connectClient(fixture.port,{type:'JOIN',name:'B',locale:'en',readyFromLobby:false});assert.equal(a.welcome.playerId,'p1');assert.equal(b.welcome.playerId,'p2');const startA=waitMessage(a.ws,message=>message.type==='START');const startB=waitMessage(b.ws,message=>message.type==='START');a.ws.send(JSON.stringify({type:'READY'}));b.ws.send(JSON.stringify({type:'READY'}));assert.equal((await startA).durationMs,300000);assert.equal((await startB).seed,(await Promise.resolve(fixture.app.getSimulation().seed)));a.ws.close();b.ws.close();}finally{await stopServer(fixture);}});
+
+test('15초 유예 안 같은 토큰은 역할과 전체 상태를 복구한다',async()=>{const fixture=await startServer({reconnectGraceMs:500});try{const a=await connectClient(fixture.port,{type:'JOIN',name:'A',locale:'ko',readyFromLobby:false});const b=await connectClient(fixture.port,{type:'JOIN',name:'B',locale:'ko',readyFromLobby:false});const paused=waitMessage(b.ws,message=>message.type==='PAUSED');a.ws.close();await paused;const resumed=await connectClient(fixture.port,{type:'JOIN',name:'A',locale:'ko',sessionToken:a.welcome.resumeToken,readyFromLobby:false});assert.equal(resumed.welcome.playerId,'p1');assert.equal(resumed.welcome.resumed,true);await new Promise(resolve=>setTimeout(resolve,20));const snapshot=resumed.received.find(message=>message.type==='SNAPSHOT');assert.equal(snapshot.phase,'waiting');assert.ok(Array.isArray(snapshot.items));resumed.ws.close();b.ws.close();}finally{await stopServer(fixture);}});
+
+test('재접속 유예 만료 시 남은 플레이어가 종료 사유를 받는다',async()=>{const fixture=await startServer({reconnectGraceMs:80});try{const a=await connectClient(fixture.port,{type:'JOIN',name:'A',locale:'ko',readyFromLobby:false});const b=await connectClient(fixture.port,{type:'JOIN',name:'B',locale:'ko',readyFromLobby:false});const ended=waitMessage(b.ws,message=>message.type==='SESSION_ENDED');a.ws.close();assert.equal((await ended).reason,'reconnect_expired');b.ws.close();}finally{await stopServer(fixture);}});

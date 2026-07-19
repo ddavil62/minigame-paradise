@@ -1,0 +1,14 @@
+{
+  "name": "moonlight-kitchen-express",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js --port 3016",
+    "test": "node --test tests/simulation.spec.js tests/network.spec.js",
+    "test:e2e": "playwright test -c playwright.config.js"
+  },
+  "dependencies": { "ws": "^8.18.0" },
+  "devDependencies": { "@playwright/test": "^1.60.0" },
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>달빛 주방열차</title><link rel="stylesheet" href="./css/style.css"></head>
+<body>
+  <main id="app">
+    <section id="mobile-hud" aria-label="운행 현황">
+      <div class="mobile-score"><span id="mobile-score-value">00000</span><span id="mobile-combo">×1.00</span></div>
+      <div class="mobile-time"><span id="mobile-time-value">05:00</span><span id="mobile-heat">열도 0</span></div>
+      <div id="mobile-orders" aria-label="활성 주문"></div>
+      <div id="mobile-timeline" aria-label="운행 타임라인"></div>
+    </section>
+    <section class="stage" aria-label="달빛 주방열차 플레이 화면"><canvas id="game" width="1280" height="720" tabindex="0"></canvas><div id="warning" aria-live="assertive" hidden><span id="warning-text"></span><span id="warning-badges" role="group"></span></div></section>
+    <div id="game-tools"><span id="connection-mark" aria-hidden="true"></span><button id="launcher-button" type="button" data-i18n="launcher">런처로</button></div>
+    <section id="mobile-status" aria-label="플레이어 상태">
+      <div><strong data-i18n="hud.hand">내 손</strong><span id="mobile-hand">빈손</span></div><div><strong data-i18n="hud.partner">파트너</strong><span id="mobile-partner">대기</span></div><p id="mobile-action">E · 가까운 대상 집기</p>
+    </section>
+    <section id="lobby" class="overlay manifest" aria-labelledby="lobby-title">
+      <div class="overlay-tools"><label><span data-i18n="language">언어</span><select id="language"><option value="ko">한국어</option><option value="en">English</option></select></label><button id="mute" type="button" aria-pressed="false" data-i18n="mute">음소거</button></div>
+      <p class="eyebrow" data-i18n="departureManifest">MOONLIGHT DEPARTURE MANIFEST</p><h1 id="lobby-title" data-i18n="lobbyTitle">승무원 운행표</h1><p data-i18n="lobbyHelp">두 승무원이 준비하면 300초 운행을 시작합니다.</p>
+      <div id="crew-slots"><article class="crew-slot p1"><b>☾ P1</b><strong id="p1-name">—</strong><span id="p1-state" data-i18n="notReady">준비 전</span><small>WASD · E · SPACE · Q</small></article><article class="crew-slot p2"><b>★ P2</b><strong id="p2-name">—</strong><span id="p2-state" data-i18n="notReady">준비 전</span><small>WASD · E · SPACE · Q</small></article></div>
+      <p id="role-status">역할 배정 중…</p><p id="ready-state" aria-live="polite"></p><div class="lobby-actions"><button id="ready" type="button" data-i18n="ready">준비</button><button id="leave" type="button" data-i18n="leave">나가기</button></div>
+    </section>
+    <section id="result" class="overlay result hidden" aria-labelledby="result-title">
+      <p id="result-mark" aria-hidden="true">◇</p><h2 id="result-title">운행 결과</h2><p id="result-summary" aria-live="polite"></p><div class="requirements"><span id="served-goal">0 / 6</span><span id="score-goal">00000 / 650</span></div>
+      <div class="result-stats"><article><b id="result-served">0</b><span data-i18n="result.served">성공 주문</span></article><article><b id="result-expired">0</b><span data-i18n="result.expired">만료 주문</span></article><article><b id="result-combo">×1.00</b><span data-i18n="result.combo">최고 콤보</span></article><article><b id="result-accidents">0</b><span data-i18n="result.accidents">과열 사고</span></article></div>
+      <table><thead><tr><th data-i18n="result.crew">승무원</th><th data-i18n="result.carry">운반</th><th data-i18n="result.prep">가공</th><th data-i18n="result.cook">조리</th><th data-i18n="result.serve">서빙</th></tr></thead><tbody id="contribution-body"></tbody></table>
+      <p id="vote-state" aria-live="polite"></p><div class="result-actions"><button id="retry" type="button" data-i18n="retry">재도전</button><button id="to-lobby" type="button" data-i18n="toLauncher">런처로</button></div><p id="vote-timer">00:30</p><button id="force-launcher" class="quiet-launcher" type="button" data-i18n="forceLauncher">투표 없이 런처로 나가기</button>
+    </section>
+    <section id="network-overlay" class="network-overlay hidden" aria-labelledby="network-title" aria-modal="true" role="dialog">
+      <div id="network-icon" class="network-icon" aria-hidden="true">⌁</div><h2 id="network-title" data-i18n="reconnecting">연결 복구 중</h2>
+      <div id="reconnect-countdown" aria-hidden="true">--</div><div id="reconnect-rail" aria-label="재접속 남은 시간"><i></i></div>
+      <p id="network-description" data-i18n="pausedDescription">운행과 주문 시간은 멈춰있습니다</p><p id="network-code"></p>
+      <button id="network-exit" type="button" data-i18n="exitLauncher">런처로 나가기</button>
+    </section>
+    <section id="exit-confirm" class="confirm-overlay hidden" aria-labelledby="exit-title" aria-modal="true" role="dialog">
+      <h2 id="exit-title" data-i18n="exitTitle">운행을 중단할까요?</h2><p data-i18n="exitDescription">동료의 세션도 종료됩니다.</p>
+      <div><button id="keep-playing" type="button" data-i18n="keepPlaying">계속 운행</button><button id="confirm-exit" type="button" data-i18n="exitLauncher">런처로 나가기</button></div>
+    </section>
+    <div id="resumed-banner" class="hidden" role="status" data-i18n="partnerReturned">동료가 돌아왔습니다</div><div id="connection" role="status">연결 중</div><div id="live-log" class="sr-only" aria-live="polite"></div>
+  </main>
+  <script type="module" src="./js/client.js"></script>
+</body>
+</html>

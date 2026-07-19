@@ -36,6 +36,7 @@ import { createApp as createRummikubApp } from '../rummikub/server.js';
 import { createApp as createOmokApp }     from '../omok/server.js';
 import { createApp as createCodenamesClassicApp } from '../codenames/server.js';
 import { createApp as createStarlightMailTowerApp } from '../starlight-mail-tower/server.js';
+import { createApp as createMoonlightKitchenExpressApp } from '../moonlight-kitchen-express/server.js';
 
 // ── P0-A 안전망: WS 핸들러에서 빠져나온 예외가 런처 프로세스를 종료시키지 않게 한다.
 // 각 게임 server.js의 null guard(1차 방어)로 정상 경로는 차단되며,
@@ -120,6 +121,7 @@ const GAME_APPS = {
     getBotUrl: () => `ws://localhost:${PORT}/codenames/ws?mode=bot`,
   }),
   'starlight-mail-tower': createStarlightMailTowerApp(),
+  'moonlight-kitchen-express': createMoonlightKitchenExpressApp({ testing: process.env.KITCHEN_E2E === '1' }),
 };
 
 /**
@@ -925,7 +927,7 @@ function printBanner(port, lanIps) {
     console.log(ANSI.cyan + line(`    ${ANSI.dim}(LAN IP 미감지 — ipconfig로 확인)${ANSI.reset}`) + ANSI.reset);
   }
   console.log(ANSI.cyan + empty + ANSI.reset);
-  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임 12종: /starlight-mail-tower/ 포함${ANSI.reset}`) + ANSI.reset);
+  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임 13종: /moonlight-kitchen-express/ 포함${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + line(`  ${ANSI.dim}종료: Ctrl+C${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + top + ANSI.reset);
   console.log('');

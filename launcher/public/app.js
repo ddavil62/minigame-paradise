@@ -387,7 +387,8 @@ function updateWaitingRoomUI(msg) {
 
       const roleMark = document.createElement('span');
       roleMark.className = 'prc-role';
-      roleMark.textContent = role === 'a' ? '△' : '○';
+      const isMoonlightKitchen = msg.gameId === 'moonlight-kitchen-express';
+      roleMark.textContent = isMoonlightKitchen ? (role === 'a' ? '☾' : '★') : (role === 'a' ? '△' : '○');
       roleMark.setAttribute('aria-label', `Role ${role.toUpperCase()}`);
       card.appendChild(roleMark);
 
@@ -425,7 +426,8 @@ function updateWaitingRoomUI(msg) {
       const role = slotIndex === 0 ? 'a' : 'b';
       const card = document.createElement('div');
       card.className = `player-ready-card role-${role} empty-slot`;
-      card.innerHTML = `<span class="prc-role" aria-label="Role ${role.toUpperCase()}">${role === 'a' ? '△' : '○'}</span><div class="prc-name">${launcherText('empty')}</div><div class="prc-badge not-ready">${launcherText('waiting')}</div><span class="prc-state-icon" aria-hidden="true"><i></i></span>`;
+      const emptyRoleMark = msg.gameId === 'moonlight-kitchen-express' ? (role === 'a' ? '☾' : '★') : (role === 'a' ? '△' : '○');
+      card.innerHTML = `<span class="prc-role" aria-label="Role ${role.toUpperCase()}">${emptyRoleMark}</span><div class="prc-name">${launcherText('empty')}</div><div class="prc-badge not-ready">${launcherText('waiting')}</div><span class="prc-state-icon" aria-hidden="true"><i></i></span>`;
       playersEl.appendChild(card);
     }
 

@@ -195,6 +195,7 @@ body {
   .game-card:hover, .game-card:focus-visible { transform: none; }
   .waiting-room-players.both-ready::after { animation: none; transform: none; }
 }
+@media(max-width:600px){html,body{width:100%;min-width:0;overflow-x:hidden}.hero{height:116px;padding:24px 16px 16px}.hero-title{font-size:34px}.hero-sub{font-size:15px}.portal-meta{height:40px;padding:8px 16px}.container{width:100%;padding:0 16px 24px}.game-grid{grid-template-columns:minmax(0,1fr);gap:16px}.game-card{width:100%;min-height:350px}.game-card-body{padding:16px}.game-card-keyart{width:160px;height:96px}.game-card-desc{font-size:14px;min-height:63px}.game-card-meta{font-size:12px}.game-card-play{height:48px}}
 
 /* ── 로딩/에러 메시지 ─────────────────────────────────────── */
 .grid-message {
@@ -497,6 +498,7 @@ body {
 
 .player-ready-card.role-a { border-left: 3px solid #62d6e8; }
 .player-ready-card.role-b { border-right: 3px solid #ff8d78; }
+#waiting-room-view[data-game-id="moonlight-kitchen-express"] .player-ready-card.role-a{border-left-color:#49C9BE}#waiting-room-view[data-game-id="moonlight-kitchen-express"] .player-ready-card.role-b{border-right-color:#D977A8}#waiting-room-view[data-game-id="moonlight-kitchen-express"] .role-a .prc-role{color:#49C9BE;background:rgba(73,201,190,.18);clip-path:none}#waiting-room-view[data-game-id="moonlight-kitchen-express"] .role-b .prc-role{color:#D977A8;border:0;border-radius:0}#waiting-room-view[data-game-id="moonlight-kitchen-express"] .role-b .prc-role::after{display:none}
 .prc-role { position: absolute; top: 12px; width: 24px; height: 24px; display: grid; place-items: center; font-weight: 900; }
 .role-a .prc-role { left: 12px; color: #62d6e8; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: rgba(98,214,232,.18); }
 .role-b .prc-role { right: 12px; color: #ff8d78; border: 2px solid #ff8d78; border-radius: 50%; }
@@ -653,3 +655,4 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .waiting-room-players.both-ready::after { animation: none; transform: none; }
 }
+@media(max-width:600px){html,body{width:100%;min-width:0;overflow-x:hidden}.container{width:100%;padding-left:16px;padding-right:16px}.game-grid{grid-template-columns:minmax(0,1fr);gap:16px}.game-card{width:100%;min-width:0}}

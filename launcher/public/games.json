@@ -164,5 +164,27 @@
     "playersLabelEn": "2 players only",
     "botLabelKo": "AI 미지원",
     "botLabelEn": "No AI"
+  },
+  {
+    "id": "moonlight-kitchen-express",
+    "name": "달빛 주방열차",
+    "nameKo": "달빛 주방열차",
+    "nameEn": "Moonlight Kitchen Express",
+    "description": "움직이는 야시장 열차에서 요리와 서빙을 분담하는 2인 협동 요리",
+    "descriptionKo": "움직이는 야시장 열차에서 요리와 서빙을 분담하는 2인 협동 요리",
+    "descriptionEn": "Two crew share prep, cooking, and service aboard a moving night-market train",
+    "port": 3016,
+    "httpPath": "/moonlight-kitchen-express/",
+    "wsPath": "/moonlight-kitchen-express/ws",
+    "color": "#49C9BE",
+    "emoji": "",
+    "keyArt": "/moonlight-kitchen-express/assets/key-art.svg",
+    "botAvailable": false,
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "playersLabelKo": "2인 전용",
+    "playersLabelEn": "2 players only",
+    "botLabelKo": "AI 미지원",
+    "botLabelEn": "No AI"
   }
 ]
