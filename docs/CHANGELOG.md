@@ -1,5 +1,68 @@
 # Changelog
 
+## [2026-07-19] - 베네치아 숫자키·급류·정답 무피해 전환
+
+### 변경
+
+- 아이템 사용키를 `Alt+1/2/3`에서 단독 `Digit1/2/3`·`Numpad1/2/3`으로 변경했다. IME 조합, `Process`, keyCode 229, 수정키 조합과 일반 편집 요소는 보호한다.
+- `item_freeze` 프로토콜 ID는 호환 유지하고 사용자 표시를 `🌊 급류`로 변경했다. 급류는 입력을 막지 않고 4초간 상대 단어 낙하·서버 만료를 2배 가속한다.
+- 플레이어별 누적 낙하 시계와 단어별 생성 시계로 서버·Canvas·AI 봇의 낙하 진행을 통일했다. 재사용은 2배를 중첩하지 않고 종료 시각만 갱신하며 방어막은 1회를 차단한다.
+- 일반 정답의 상대 HP 감소, `attackDamage`, `HIT`, 피격 shake와 정답 직후 `hp_zero` 검사를 제거했다. HP·회복·기존 종료 구조는 프로토콜 호환을 위해 유지한다.
+- 현재 정상 플레이에는 HP를 0으로 만드는 경로와 신규 종료 규칙이 없어 경기가 자동 종료되지 않을 수 있다. 시작 HP가 이미 최대치이고 피해원이 없어 회복 아이템도 실질 효과가 없으며, 두 사항을 기획서의 알려진 제약으로 기록했다.
+
+### 검증
+
+- JS 구문 검사 8/8, Node 순수 로직 6/6, 실제 2인 WS 정답 무피해 1/1, 실제 서버 급류 재사용·타이머 1/1 PASS.
+- Playwright 현재 규칙 1/1, 기존 아이템 회귀 7/7, 독립 QA 2/2 PASS. 숫자열·숫자패드, IME/수정키/편집 요소 보호, HP 유지, 1280×720·1024×768·390×844 화면과 모바일 FAB 비겹침을 검증했다.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-19-venice-item-controls.md`
+- 구현 리포트: `.Codex/specs/2026-07-19-venice-item-controls-report.md`
+- UI 검수: `.Codex/specs/2026-07-19-venice-item-controls-ui-review.md` (`APPROVED`)
+- QA: `.Codex/specs/2026-07-19-venice-item-controls-qa.md` (`PASS`)
+
+---
+
+## [2026-07-19] - 베네치아 타이핑 배틀 아이템 시스템 추가
+
+### 추가
+
+- 아이템 5종 구현: 단어 폭탄(즉시 단어 1개 제거), 빙결(상대 입력 4초 차단), 암흑(상대 화면 5초 가림), 방어막(다음 피격 1회 무효화), 회복(HP+15).
+- 콤보 기반 확률 드랍 시스템(`rollItemDrop`): 연속 타이핑 성공 시 콤보 누적, 콤보 3~4=10%, 5~6=20%, 7~9=35%, 10~14=50%, 15+=70% 확률로 아이템 획득.
+- 아이템 슬롯 UI 3개(FIFO): 입력창 위 배치, Alt+1/2/3 키로 사용. IME 가드 포함으로 한글 입력 중 키 충돌 없음.
+- AI 봇 아이템 처리: `ITEM_GRANTED` 수신 시 2~4초 랜덤 딜레이 후 자동 사용(`scheduleItemUse`).
+- WS 프로토콜 확장: `ITEM_USED`(C->S), `ITEM_GRANTED`/`ITEM_EFFECT_START`/`ITEM_EFFECT_END`(S->C) 메시지 추가.
+- `VeneziaPlayer` 상태에 `combo`, `itemSlots`, `freeze`, `dark`, `shield` 필드 추가.
+- CSS 추가: `.item-slots`, `.item-slot`, `.dark-overlay`, `.freeze-active`, `.toast` 스타일.
+
+### 수정
+
+- 리매치 버그 수정: 상대가 먼저 리매치 요청 시 버튼이 잠기던(`disabled` 상태 유지) 문제 해소.
+- `resetCombo`: 오입력 또는 시간 초과 시 콤보를 0으로 초기화.
+
+### 변경 파일
+
+- `venezia/game.js` — `rollItemDrop`, `applyItemEffect`, `resetCombo` 함수 추가. `VeneziaPlayer`에 아이템 관련 필드 확장.
+- `venezia/server.js` — `ITEM_USED` WS 핸들러, `itemTimers` 관리, 봇 아이템 스폰 로직.
+- `venezia/bot.js` — `scheduleItemUse`, `ITEM_GRANTED` 처리.
+- `venezia/public/index.html` — 아이템 슬롯 3개 마크업, `effect-overlay` div.
+- `venezia/public/js/network.js` — `ITEM_GRANTED`/`ITEM_EFFECT_START`/`ITEM_EFFECT_END` 라우트, `sendItemUsed` 함수.
+- `venezia/public/js/main.js` — 아이템 핸들러, `renderItemSlots`, `showToast`, Alt+1/2/3 키바인딩, 리매치 버그 수정.
+- `venezia/public/css/style.css` — 아이템 슬롯/효과 오버레이/토스트 스타일.
+
+### 검증
+
+- QA PASS (아이템 드랍/사용/효과 적용/봇 AI/리매치 수정 포함).
+
+### 참고
+
+- 스펙: `.claude/specs/2026-07-19-venezia-plan.md`
+- 구현 리포트: `.claude/specs/2026-07-19-venezia-coder-report.md`
+- QA: `.claude/specs/2026-07-19-venezia-qa-report.md`
+
+---
+
 ## [2026-07-19] - 달빛 주방열차 2인 협동 요리 추가
 
 ### 추가

@@ -1,0 +1,557 @@
+/**
+ * @fileoverview 베네치아 타이핑 배틀 CSS — 이탈리아 운하 테마.
+ */
+
+:root {
+  /* 베네치아 테마 — 이탈리아 운하 계열 */
+  --bg-deep: #0D2137;
+  --bg-card: #132A44;
+  --accent-gold: #D4AC0D;
+  --accent-gold-light: #F9E27A;
+  --water-blue: #1A5276;
+  --water-teal: #117A8B;
+  --hp-green: #27AE60;
+  --hp-red: #C0392B;
+  --word-easy: #85C1E9;
+  --word-medium: #F39C12;
+  --word-hard: #E74C3C;
+  --word-target: #F9E27A;
+  --text-primary: #ECF0F1;
+  --text-dim: #85929E;
+  /* 아이템 슬롯 */
+  --item-empty: #1A2E40;
+  --item-filled: #1E4D6B;
+  --item-border: #2E7DA8;
+  --item-border-filled: var(--accent-gold);
+}
+
+/* ── 리셋 & 기본 ───────────────────────���──────────────────── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  background: linear-gradient(180deg, var(--bg-deep) 0%, #0A1628 100%);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── 화면 전환 ──────────────────────────────────────��──────── */
+.screen {
+  display: none;
+  width: 100%;
+  max-width: 540px;
+  padding: 16px;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* ── 패널 (황금 테두리) ───────────────────────────────────��── */
+.venezia-panel {
+  border: 2px solid var(--accent-gold);
+  box-shadow: 0 0 15px rgba(212, 172, 13, 0.3);
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+/* ── 대기 화면 ────────────────────────────────────���────────── */
+.game-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-gold-light);
+  margin-bottom: 8px;
+}
+
+.game-subtitle {
+  color: var(--text-dim);
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+
+.name-input-area {
+  margin-bottom: 16px;
+}
+
+.name-input-area input {
+  width: 100%;
+  max-width: 280px;
+  padding: 10px 16px;
+  border: 1px solid var(--accent-gold);
+  border-radius: 6px;
+  background: rgba(20, 40, 70, 0.8);
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+}
+
+.name-input-area input:focus {
+  border-color: var(--accent-gold-light);
+  box-shadow: 0 0 8px rgba(249, 226, 122, 0.4);
+}
+
+/* ── 버튼 ──────────────────────────────────────────────────── */
+.btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: var(--accent-gold);
+  color: #0D2137;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(212, 172, 13, 0.5);
+}
+
+.btn-secondary {
+  background: var(--water-teal);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  box-shadow: 0 4px 12px rgba(17, 122, 139, 0.5);
+}
+
+.waiting-status {
+  margin-top: 16px;
+  color: var(--text-dim);
+}
+
+.waiting-status.hidden {
+  display: none;
+}
+
+.host-url {
+  font-size: 0.85rem;
+  color: var(--water-teal);
+  word-break: break-all;
+}
+
+.rules-summary {
+  margin-top: 24px;
+  text-align: left;
+  padding: 16px;
+  background: rgba(26, 82, 118, 0.15);
+  border-radius: 8px;
+}
+
+.rules-summary h3 {
+  color: var(--accent-gold);
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.rules-summary ul {
+  list-style: disc inside;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* ── 게임 화면 ─────────────────────────────────────────────── */
+/* 2열 보드 모드에서 화면 너비를 넓혀 두 캔버스를 나란히 수용 */
+#screen-game.screen {
+  max-width: 1060px;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+/* ── 2열 보드 레이아웃 ─────────────────────────────────────── */
+.boards-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.board-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.board-col-mine,
+.board-col-opp {
+  position: relative;
+}
+
+.board-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* 상대 캔버스 — 살짝 어둡게 처리해 구분 */
+#opp-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 480 / 400;
+  margin: 0 auto;
+  background: rgba(26, 82, 118, 0.08);
+  border: 1px solid var(--water-blue);
+  border-radius: 8px;
+  opacity: 0.85;
+}
+
+/* HP 바 */
+.hp-area {
+  margin-bottom: 8px;
+}
+
+.hp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.hp-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  min-width: 60px;
+  white-space: nowrap;
+}
+
+.hp-bar-container {
+  flex: 1;
+}
+
+.hp-bar {
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--accent-gold);
+}
+
+.hp-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+/* 내 HP 바: 청록 계열 */
+.my-hp .hp-fill {
+  background: linear-gradient(to right, #1ABC9C, #16A085);
+}
+
+/* 상대 HP 바: 주황/붉은 계열 */
+.opponent-hp .hp-fill {
+  background: linear-gradient(to right, #E74C3C, #C0392B);
+}
+
+/* HP 위험 구간 (30% 이하) — 양쪽 동일 진한 빨강 */
+.hp-fill.danger {
+  background: linear-gradient(to right, var(--hp-red), #922B21);
+}
+
+.hp-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* 정보 바 */
+.info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  background: rgba(26, 82, 118, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* 게임 캔버스 */
+#game-canvas {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  aspect-ratio: 480 / 400;
+  margin: 0 auto 12px;
+  background: rgba(26, 82, 118, 0.15);
+  border: 1px solid var(--water-blue);
+  border-radius: 8px;
+}
+
+/* 입력 영역 */
+.input-area {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--accent-gold);
+  border-radius: 8px;
+  background: rgba(20, 40, 70, 0.8);
+}
+
+#input-word {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(13, 33, 55, 0.9);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  outline: none;
+}
+
+#input-word:focus {
+  box-shadow: 0 0 6px rgba(249, 226, 122, 0.3);
+}
+
+#input-word::placeholder {
+  color: var(--text-dim);
+}
+
+/* ── 입력 오류 점멸 ────────────────────────────────────────── */
+@keyframes input-error {
+  0%, 100% { border-color: var(--accent-gold); }
+  50% { border-color: var(--word-hard); }
+}
+
+.input-error {
+  animation: input-error 0.3s ease;
+}
+
+/* ── 결과 화면 ─────────────────────────────────────────────── */
+.result-panel {
+  text-align: center;
+}
+
+.result-title {
+  font-size: 1.6rem;
+  color: var(--accent-gold-light);
+  margin-bottom: 12px;
+}
+
+.result-detail {
+  color: var(--text-dim);
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+
+/* ── 아이템 슬롯 ─────────────────────────────────────────────── */
+.item-slots {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  justify-content: flex-start;
+}
+
+.item-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 64px;
+  border: 2px dashed var(--item-border);
+  border-radius: 8px;
+  background: var(--item-empty);
+  cursor: default;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+
+.item-slot.filled {
+  border-style: solid;
+  border-color: var(--item-border-filled);
+  background: var(--item-filled);
+  box-shadow: 0 0 8px rgba(212, 172, 13, 0.3);
+  animation: item-pop 0.25s ease forwards;
+}
+
+.item-slot-key {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+.item-slot-emoji {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-top: 8px;
+}
+
+.item-slot-name {
+  font-size: 0.6rem;
+  color: var(--accent-gold-light);
+  margin-top: 2px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 68px;
+}
+
+@keyframes item-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── 암흑 이펙트 오버레이 ───────────────────────────────────── */
+.effect-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.effect-overlay.hidden {
+  display: none !important;
+}
+
+.effect-overlay.dark-active {
+  background: rgba(0, 0, 0, 0.92);
+}
+
+/* ── 급류 상태 배지 ─────────────────────────────────────────── */
+.fast-fall-overlay {
+  position: absolute;
+  top: 28px;
+  right: 8px;
+  z-index: 12;
+  max-width: calc(100% - 16px);
+  padding: 5px 10px;
+  border: 1px solid var(--word-easy);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-deep) 82%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--word-easy) 35%, transparent);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ── 토스트 ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: var(--text-primary);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  z-index: 9999;
+  pointer-events: none;
+  animation: toast-fade 2s ease forwards;
+}
+
+@keyframes toast-fade {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── 반응형 (모바일 360px) ───────────────────────────────────── */
+/* 좁은 화면에서는 두 캔버스를 세로로 쌓는다 */
+@media (max-width: 680px) {
+  .boards-row {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .screen {
+    padding: 8px;
+  }
+
+  .venezia-panel {
+    padding: 20px 14px;
+  }
+
+  .game-title {
+    font-size: 1.4rem;
+  }
+
+  .hp-label {
+    font-size: 0.75rem;
+    min-width: 48px;
+  }
+
+  .hp-bar {
+    height: 16px;
+  }
+
+  #input-word {
+    font-size: 1rem;
+    padding: 8px 10px;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  /* 공통 버그 신고 FAB가 하단 단어 제출 버튼을 가리지 않도록 한 줄 위로 올린다. */
+  #bw-fab {
+    bottom: 148px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ── hidden 유틸리티 ───────────────────────────────────────── */
+.hidden {
+  display: none !important;
+}

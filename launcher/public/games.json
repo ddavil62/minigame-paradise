@@ -186,5 +186,18 @@
     "playersLabelEn": "2 players only",
     "botLabelKo": "AI 미지원",
     "botLabelEn": "No AI"
+  },
+  {
+    "id": "venezia",
+    "name": "베네치아 타이핑 배틀",
+    "description": "베네치아를 배경으로 단어를 지워 콤보를 쌓고 아이템으로 상대를 방해하는 2인 타이핑 대전",
+    "port": 3017,
+    "httpPath": "/venezia/",
+    "wsPath": "/venezia/ws",
+    "color": "#1A5276",
+    "emoji": "⌨️",
+    "botAvailable": true,
+    "minPlayers": 2,
+    "maxPlayers": 2
   }
 ]

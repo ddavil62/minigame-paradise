@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>베네치아 타이핑 배틀</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 대기 화면 -->
+  <section id="screen-waiting" class="screen active">
+    <div class="venezia-panel waiting-panel">
+      <h1 class="game-title">베네치아 타이핑 배틀</h1>
+      <p class="game-subtitle">단어를 지워 콤보를 쌓고 아이템으로 상대를 방해하세요!</p>
+
+      <div class="name-input-area">
+        <input id="input-name" type="text" maxlength="12" placeholder="닉네임 입력 (최대 12자)" autocomplete="off" />
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-join" class="btn btn-primary" type="button">입장</button>
+        <button id="btn-ai" class="btn btn-secondary" type="button">AI랑 시작</button>
+      </div>
+
+      <div id="waiting-status" class="waiting-status hidden">
+        <p>상대를 기다리는 중...</p>
+        <p id="host-url" class="host-url"></p>
+      </div>
+
+      <div class="rules-summary">
+        <h3>게임 규칙</h3>
+        <ul>
+          <li>화면에 떨어지는 단어를 정확히 입력해 지우고 콤보를 쌓으세요.</li>
+          <li>아이템은 입력창에 커서가 있어도 숫자 1·2·3으로 즉시 사용합니다.</li>
+          <li>🌊 급류는 4초 동안 상대 단어를 2배 빠르게 떨어뜨립니다.</li>
+          <li>시간이 지날수록 어려운 단어가 나옵니다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 게임 화면 -->
+  <section id="screen-game" class="screen">
+    <div class="game-container">
+      <!-- HP 바 영역 -->
+      <div class="hp-area">
+        <div class="hp-row my-hp">
+          <span class="hp-label" id="my-name-label">나</span>
+          <div class="hp-bar-container">
+            <div class="hp-bar">
+              <div id="my-hp-fill" class="hp-fill" style="width: 100%"></div>
+            </div>
+          </div>
+          <span class="hp-value" id="my-hp-value">100</span>
+        </div>
+        <div class="hp-row opponent-hp">
+          <span class="hp-label" id="opp-name-label">상대</span>
+          <div class="hp-bar-container">
+            <div class="hp-bar">
+              <div id="opp-hp-fill" class="hp-fill" style="width: 100%"></div>
+            </div>
+          </div>
+          <span class="hp-value" id="opp-hp-value">100</span>
+        </div>
+      </div>
+
+      <!-- 게임 정보 바 -->
+      <div class="info-bar">
+        <span id="timer-display">00:00</span>
+        <span id="difficulty-display">난이도: 초급</span>
+      </div>
+
+      <!-- 단어 낙하 캔버스 (2열: 내 화면 / 상대 화면) -->
+      <div class="boards-row">
+        <div class="board-col board-col-mine">
+          <p class="board-label">⌨️ 내 화면</p>
+          <canvas id="game-canvas" width="480" height="400"></canvas>
+          <!-- 암흑과 급류는 서로의 표시 상태를 지우지 않도록 별도 레이어를 쓴다. -->
+          <div class="effect-overlay hidden" id="effect-overlay"></div>
+          <div class="fast-fall-overlay hidden" id="fast-fall-overlay-my" aria-live="polite"></div>
+        </div>
+        <div class="board-col board-col-opp">
+          <p class="board-label">👁 상대 화면</p>
+          <canvas id="opp-canvas" width="480" height="400"></canvas>
+          <div class="fast-fall-overlay hidden" id="fast-fall-overlay-opp" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- 아이템 슬롯 (입력창 위) -->
+      <div class="item-slots" id="item-slots">
+        <div class="item-slot" id="item-slot-0" data-index="0" aria-label="1, 비어 있음">
+          <span class="item-slot-key">1</span>
+          <span class="item-slot-emoji"></span>
+          <span class="item-slot-name"></span>
+        </div>
+        <div class="item-slot" id="item-slot-1" data-index="1" aria-label="2, 비어 있음">
+          <span class="item-slot-key">2</span>
+          <span class="item-slot-emoji"></span>
+          <span class="item-slot-name"></span>
+        </div>
+        <div class="item-slot" id="item-slot-2" data-index="2" aria-label="3, 비어 있음">
+          <span class="item-slot-key">3</span>
+          <span class="item-slot-emoji"></span>
+          <span class="item-slot-name"></span>
+        </div>
+      </div>
+
+      <!-- 입력 영역 -->
+      <div class="input-area" id="input-area">
+        <input id="input-word" type="text" placeholder="단어를 입력하세요..." autocomplete="off" />
+        <button id="btn-submit" class="btn btn-primary" type="button">확인</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 결과 화면 -->
+  <section id="screen-result" class="screen">
+    <div class="venezia-panel result-panel">
+      <h2 id="result-title" class="result-title">게임 종료</h2>
+      <p id="result-detail" class="result-detail"></p>
+      <div class="btn-group">
+        <button id="btn-rematch" class="btn btn-primary" type="button">한 판 더</button>
+        <button id="btn-lobby" class="btn btn-secondary" type="button">로비로 돌아가기</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
