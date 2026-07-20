@@ -11,13 +11,15 @@ const STARS = Array.from({ length: 60 }, (_, index) => ({ x: (index * 211) % 128
 /**
  * Canvas 렌더러를 생성한다.
  * @param {HTMLCanvasElement} canvas 게임 Canvas
- * @returns {{setSnapshot:Function,setPlayerId:Function,start:Function}}
+ * @returns {{setSnapshot:Function,setPlayerId:Function,playCoopBoost:Function,start:Function}}
  */
 export function createRenderer(canvas) {
   const context = canvas.getContext('2d');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const motionState = new Map();
   const checkpointActivatedAt = new Map();
+  const playedBoostEvents = new Set();
+  const boostEffects = [];
   let snapshot = null;
   let playerId = 'p1';
   let cameraX = 0;
@@ -45,6 +47,54 @@ export function createRenderer(canvas) {
    * @returns {void}
    */
   function setPlayerId(value) { playerId = value; }
+
+  /**
+   * 서버가 확정한 협동 부스트 효과를 이벤트 ID당 한 번 시작한다.
+   * @param {{eventId:number,strikerId:string,receiverId:string,x:number,y:number}} payload 서버 이벤트
+   * @returns {boolean} 새 효과를 시작했는지 여부
+   */
+  function playCoopBoost(payload) {
+    if (!payload || playedBoostEvents.has(payload.eventId)) return false;
+    playedBoostEvents.add(payload.eventId);
+    boostEffects.push({ ...payload, startedAt: performance.now() });
+    canvas.dataset.boostEventId = String(payload.eventId);
+    canvas.dataset.boostStriker = payload.strikerId;
+    canvas.dataset.boostReceiver = payload.receiverId;
+    return true;
+  }
+
+  /**
+   * 역할색과 금색 별빛으로 상승 수혜자와 즉시 하강 공격자를 구분해 그린다.
+   * @param {number} elapsed requestAnimationFrame 시간
+   * @returns {void}
+   */
+  function drawCoopBoostEffects(elapsed) {
+    for (let index = boostEffects.length - 1; index >= 0; index -= 1) {
+      const effect = boostEffects[index];
+      const duration = reducedMotion ? 180 : 240;
+      const progress = (elapsed - effect.startedAt) / duration;
+      if (progress >= 1) { boostEffects.splice(index, 1); continue; }
+      if (progress < 0) continue;
+      const receiverColor = effect.receiverId === 'p1' ? COLORS.cyan : COLORS.coral;
+      context.save();
+      context.globalAlpha = Math.min(0.75, 0.75 * (1 - progress));
+      context.strokeStyle = COLORS.gold;
+      context.lineWidth = 3;
+      if (reducedMotion) {
+        context.beginPath(); context.arc(effect.x, effect.y, 34, 0, Math.PI * 2); context.stroke();
+      } else {
+        const radius = 18 + progress * 36;
+        context.beginPath(); context.arc(effect.x, effect.y, radius, 0, Math.PI * 2); context.stroke();
+        context.strokeStyle = receiverColor;
+        for (const offset of [-18, 0, 18]) { context.beginPath(); context.moveTo(effect.x + offset, effect.y - 8); context.lineTo(effect.x + offset * .55, effect.y - 22 - progress * 48); context.stroke(); }
+        context.strokeStyle = effect.strikerId === 'p1' ? COLORS.cyan : COLORS.coral;
+        context.lineWidth = 2;
+        for (const offset of [-14, 14]) { context.beginPath(); context.moveTo(effect.x + offset, effect.y + 8); context.lineTo(effect.x + offset * 1.35, effect.y + 30 + progress * 24); context.stroke(); }
+      }
+      context.restore();
+    }
+    canvas.dataset.boostEffect = boostEffects.length > 0 ? (reducedMotion ? 'reduced' : 'active') : 'idle';
+  }
 
   /**
    * L0 고정 밤하늘을 그린다.
@@ -677,6 +727,7 @@ export function createRenderer(canvas) {
     drawGeometry();
     level().modules.forEach((module, index) => { drawCheckpoint(module, index, elapsed); drawDevice(module, index); });
     drawFinale();
+    drawCoopBoostEffects(elapsed);
     snapshot?.players?.forEach((player) => drawRobot(player, elapsed));
     drawWorldFeedback(elapsed);
     context.restore();
@@ -689,5 +740,5 @@ export function createRenderer(canvas) {
    */
   function start() { requestAnimationFrame(render); }
 
-  return { setSnapshot, setPlayerId, start };
+  return { setSnapshot, setPlayerId, playCoopBoost, start };
 }

@@ -7,7 +7,7 @@ export const SERVER_MESSAGE = Object.freeze({ WELCOME: 'WELCOME', MENU_STATE: 'M
 export const ERROR_CODE = Object.freeze({ INVALID_MESSAGE: 'INVALID_MESSAGE', ROOM_FULL: 'ROOM_FULL', JOIN_REQUIRED: 'JOIN_REQUIRED', RESUME_EXPIRED: 'RESUME_EXPIRED' });
 export const TICK_RATE = 30;
 export const SNAPSHOT_RATE = 15;
-export const LEVEL_VERSION = 'world-expansion-1';
+export const LEVEL_VERSION = 'coop-boost-2';
 
 /**
  * 수신 메시지가 허용된 형태인지 검사하고 안전한 값만 반환한다.

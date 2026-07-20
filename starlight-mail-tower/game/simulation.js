@@ -12,6 +12,12 @@ const MOVE_SPEED = 250;
 const JUMP_SPEED = 650;
 const GRAVITY = 1450;
 const RESPAWN_SECONDS = 1.2;
+const BOOST_TARGET_RISE = 190;
+const STRIKER_DROP_RISE = 45;
+const MIN_STRIKER_UP_SPEED = 80;
+const MIN_CLOSING_SPEED = 120;
+const MIN_HORIZONTAL_OVERLAP = 12;
+const BOOST_CONTACT_SEPARATION = 8;
 
 /**
  * 초기 플레이어 상태를 만든다.
@@ -21,21 +27,22 @@ const RESPAWN_SECONDS = 1.2;
  * @returns {object}
  */
 function createPlayer(id, x, y) {
-  return { id, x, y, vx: 0, vy: 0, grounded: false, anchored: false, respawnTimer: 0, ackSeq: -1, input: { left: false, right: false, jump: false, interact: false } };
+  return { id, x, y, vx: 0, vy: 0, grounded: false, anchored: false, respawnTimer: 0, boostConsumed: false, ackSeq: -1, input: { left: false, right: false, jump: false, interact: false } };
 }
 
 /**
  * Phase 1 시뮬레이션 상태를 생성한다.
+ * @param {{startPlaying?:boolean}} [options] 결정론 테스트용 시작 옵션
  * @returns {object}
  */
-export function createSimulation(levelId = DEFAULT_LEVEL_ID) {
+export function createSimulation(levelId = DEFAULT_LEVEL_ID, options = {}) {
   const level = getLevel(levelId) ?? getLevel(DEFAULT_LEVEL_ID);
   return {
     levelId: level.id,
     level,
     tick: 0,
     elapsedMs: 0,
-    phase: 'waiting',
+    phase: options.startPlaying ? 'playing' : 'waiting',
     players: [createPlayer('p1', 150, level.world.spawnY), createPlayer('p2', 215, level.world.spawnY)],
     devices: createDevices(level.modules),
     dynamicPlatforms: level.platforms.map((platform) => ({ ...platform })),
@@ -45,7 +52,80 @@ export function createSimulation(levelId = DEFAULT_LEVEL_ID) {
     roleSwaps: 0,
     finishState: { phase: 'idle', leftPressedAt: null, rightPressedAt: null, launchStartedMs: null, expiredAtMs: null, expiredSide: null },
     eventCounter: 0,
+    boostContactArmed: true,
   };
+}
+
+/**
+ * 플레이어 중심 좌표를 서버 충돌 AABB로 변환한다.
+ * @param {object} player 플레이어
+ * @returns {{left:number,right:number,top:number,bottom:number,centerX:number,centerY:number}}
+ */
+export function playerBounds(player) {
+  return { left: player.x - PLAYER_WIDTH / 2, right: player.x + PLAYER_WIDTH / 2, top: player.y - PLAYER_HEIGHT / 2, bottom: player.y + PLAYER_HEIGHT / 2, centerX: player.x, centerY: player.y };
+}
+
+/**
+ * 두 AABB가 접촉 래치를 풀 만큼 완전히 분리되었는지 검사한다.
+ * @param {object} first 첫 AABB
+ * @param {object} second 둘째 AABB
+ * @returns {boolean}
+ */
+function hasBoostSeparation(first, second) {
+  const horizontalGap = Math.max(second.left - first.right, first.left - second.right, 0);
+  const verticalGap = Math.max(second.top - first.bottom, first.top - second.bottom, 0);
+  return horizontalGap >= BOOST_CONTACT_SEPARATION || verticalGap >= BOOST_CONTACT_SEPARATION;
+}
+
+/**
+ * 아래에서 위로 통과하는 단일 방향의 협동 부스트 후보를 판정한다.
+ * @param {object} striker 아래 공격자
+ * @param {object} receiver 위 수혜자
+ * @param {object} previousStriker 공격자 이전 AABB
+ * @param {object} previousReceiver 수혜자 이전 AABB
+ * @returns {boolean}
+ */
+export function isCoopBoostCandidate(striker, receiver, previousStriker, previousReceiver) {
+  if (striker.grounded || receiver.grounded || striker.anchored || receiver.anchored || striker.respawnTimer > 0 || receiver.respawnTimer > 0 || receiver.boostConsumed) return false;
+  if (striker.vy >= -MIN_STRIKER_UP_SPEED || striker.y <= receiver.y) return false;
+  if (receiver.vy - striker.vy < MIN_CLOSING_SPEED) return false;
+  const currentStriker = playerBounds(striker);
+  const currentReceiver = playerBounds(receiver);
+  const overlap = Math.min(currentStriker.right, currentReceiver.right) - Math.max(currentStriker.left, currentReceiver.left);
+  if (overlap < MIN_HORIZONTAL_OVERLAP || previousStriker.top + 0.01 < previousReceiver.bottom + 4) return false;
+  // 30Hz 한 틱에 경계를 8px보다 멀리 지나칠 수 있으므로 이전/현재 경계의 연속 통과를 함께 본다.
+  return currentStriker.top - currentReceiver.bottom <= 8;
+}
+
+/**
+ * 이동 적분 뒤 발판 착지 전에 서버 권위 협동 부스트를 원자 처리한다.
+ * @param {object} simulation 시뮬레이션
+ * @param {Map<string,object>} previousBounds 적분 전 플레이어 AABB
+ * @returns {{events:Array<{kind:string,payload:object}>,boostedIds:Set<string>}}
+ */
+function resolveCoopBoost(simulation, previousBounds) {
+  const events = [];
+  const boostedIds = new Set();
+  const [first, second] = simulation.players;
+  const currentFirst = playerBounds(first);
+  const currentSecond = playerBounds(second);
+  if (!simulation.boostContactArmed) {
+    if (hasBoostSeparation(currentFirst, currentSecond)) simulation.boostContactArmed = true;
+    else return { events, boostedIds };
+  }
+  const ordered = first.y > second.y ? [[first, second], [second, first]] : [[second, first], [first, second]];
+  for (const [striker, receiver] of ordered) {
+    if (!isCoopBoostCandidate(striker, receiver, previousBounds.get(striker.id), previousBounds.get(receiver.id))) continue;
+    const gravity = simulation.level.physics.gravity ?? GRAVITY;
+    receiver.vy = Math.min(receiver.vy, -Math.sqrt(2 * gravity * BOOST_TARGET_RISE));
+    striker.vy = Math.max(striker.vy, Math.sqrt(2 * gravity * STRIKER_DROP_RISE));
+    receiver.boostConsumed = true;
+    simulation.boostContactArmed = false;
+    boostedIds.add(receiver.id);
+    events.push({ kind: 'COOP_BOOST', payload: { strikerId: striker.id, receiverId: receiver.id, x: (striker.x + receiver.x) / 2, y: (playerBounds(striker).top + playerBounds(receiver).bottom) / 2 } });
+    break;
+  }
+  return { events, boostedIds };
 }
 
 /**
@@ -70,7 +150,7 @@ export function applyInput(simulation, playerId, input) {
  * @param {Array<object>} devices 장치 상태
  * @returns {void}
  */
-function resolvePlatforms(player, previousBottom, devices, platforms) {
+function resolvePlatforms(player, previousBottom, devices, platforms, skipBoostReset = false) {
   player.grounded = false;
   const left = player.x - PLAYER_WIDTH / 2;
   const right = player.x + PLAYER_WIDTH / 2;
@@ -84,6 +164,7 @@ function resolvePlatforms(player, previousBottom, devices, platforms) {
       player.y = platform.y - PLAYER_HEIGHT / 2;
       player.vy = 0;
       player.grounded = true;
+      if (!skipBoostReset) player.boostConsumed = false;
       return;
     }
   }
@@ -105,15 +186,11 @@ function updateDynamicPlatforms(simulation, dt) {
     const device = simulation.devices[source.deviceIndex];
     const motion = source.dynamic;
     const previous = simulation.dynamicPlatforms?.find((item) => item.id === source.id) ?? source;
-    if (device?.state === DEVICE_STATE.POWERED) {
-      if (device.type === 'rotary' && Array.isArray(motion.pivot)) {
-        const length = motion.length ?? source.width;
-        const x2 = motion.pivot[0] + Math.cos(device.angle) * length;
-        const y2 = motion.pivot[1] + Math.sin(device.angle) * length;
-        platform.x = Math.min(motion.pivot[0], x2);
-        platform.y = Math.min(motion.pivot[1], y2) - source.height / 2;
-        platform.width = Math.max(20, Math.abs(x2 - motion.pivot[0]));
-        platform.height = Math.max(source.height, Math.abs(y2 - motion.pivot[1]) + source.height);
+    if (device?.state === DEVICE_STATE.POWERED || device?.state === DEVICE_STATE.LATCHED) {
+      if (device.type === 'rotary') {
+        // 회전 장치의 각도 피드백은 유지하되 얇은 선형 충돌체 대신 안전한 원본 데크를 사용한다.
+        platform.x = source.x;
+        platform.y = source.y;
       } else {
         const phase = (simulation.elapsedMs % motion.periodMs) / motion.periodMs;
         const position = motion.from + (motion.to - motion.from) * triangleWave(phase);
@@ -151,7 +228,8 @@ function applyZoneForces(simulation, player, dt) {
     player.vx += (current.mechanics?.forceX ?? 0) * dt;
     simulation.activeZones.push({ id: current.id, type: 'wind', active: true, ...current.checkpoint, forceX: current.mechanics?.forceX ?? 0 });
   }
-  if (inZone && current.active && current.type === 'updraft') {
+  // 상호작용을 누른 플레이어는 스위치 접근을 위해 지면 고정 자세를 취한다.
+  if (inZone && current.active && current.type === 'updraft' && !player.input.interact) {
     player.vy = Math.max(-760, player.vy + (current.mechanics?.liftAcceleration ?? -1900) * dt);
     simulation.activeZones.push({ id: current.id, type: 'updraft', active: true, ...current.checkpoint, liftAcceleration: current.mechanics?.liftAcceleration ?? -1900 });
   }
@@ -171,7 +249,9 @@ function restoreCheckpoint(simulation) {
     player.vy = 0;
     player.anchored = false;
     player.respawnTimer = 0;
+    player.boostConsumed = false;
   });
+  simulation.boostContactArmed = true;
   // 현재 체크포인트 뒤의 장치 진행만 보존하고 진행 중 상태는 안전하게 초기화한다.
   simulation.devices.forEach((device, index) => {
     if (index < simulation.checkpointId) device.state = DEVICE_STATE.LATCHED;
@@ -228,8 +308,11 @@ export function stepSimulation(simulation, dt) {
   const events = [];
   simulation.activeZones = [];
   updateDynamicPlatforms(simulation, dt);
+  const previousBounds = new Map();
+  const previousBottoms = new Map();
   for (const player of simulation.players) {
     if (player.respawnTimer > 0 || player.anchored) continue;
+    previousBounds.set(player.id, playerBounds(player));
     const direction = Number(player.input.right) - Number(player.input.left);
     const physics = simulation.level.physics;
     if (Number.isFinite(physics.moveAcceleration)) {
@@ -241,12 +324,19 @@ export function stepSimulation(simulation, dt) {
     const currentDevice = simulation.devices[simulation.checkpointId];
     const gravityScale = currentDevice?.type === 'low-gravity' && currentDevice.active ? 0.42 : 1;
     if (player.input.jump && player.grounded) player.vy = -(physics.jumpSpeed ?? JUMP_SPEED);
-    const previousBottom = player.y + PLAYER_HEIGHT / 2;
+    previousBottoms.set(player.id, player.y + PLAYER_HEIGHT / 2);
+    // 적분 뒤 판정은 이전 틱의 착지 플래그가 아니라 현재 공중 상태를 사용한다.
+    player.grounded = false;
     player.vy += (physics.gravity ?? GRAVITY) * gravityScale * dt;
     applyZoneForces(simulation, player, dt);
     player.x = Math.max(PLAYER_WIDTH / 2, Math.min(simulation.level.world.width - PLAYER_WIDTH / 2, player.x + player.vx * dt));
     player.y += player.vy * dt;
-    resolvePlatforms(player, previousBottom, simulation.devices, simulation.dynamicPlatforms);
+  }
+  const boost = previousBounds.size === 2 ? resolveCoopBoost(simulation, previousBounds) : { events: [], boostedIds: new Set() };
+  events.push(...boost.events);
+  for (const player of simulation.players) {
+    if (!previousBottoms.has(player.id)) continue;
+    resolvePlatforms(player, previousBottoms.get(player.id), simulation.devices, simulation.dynamicPlatforms, boost.boostedIds.has(player.id));
   }
   const currentDevice = simulation.devices[simulation.checkpointId];
   if (currentDevice) events.push(...updateDevice(currentDevice, simulation.players, dt, simulation.elapsedMs));

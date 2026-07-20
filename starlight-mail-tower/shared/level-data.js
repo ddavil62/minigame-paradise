@@ -4,7 +4,7 @@
 
 export const WORLD = Object.freeze({ width: 1280, height: 3600, spawnY: 3490, dangerY: 3650 });
 
-export const PLATFORMS = Object.freeze([
+const BASE_PLATFORMS = [
   { id: 'floor-left', x: 0, y: 3550, width: 440, height: 50 }, { id: 'floor-right', x: 780, y: 3550, width: 500, height: 50 },
   { id: 'm1-start', x: 80, y: 3410, width: 330, height: 24 }, { id: 'm1-route', x: 500, y: 3300, width: 270, height: 24, deviceIndex: 0 }, { id: 'm1-end', x: 870, y: 3180, width: 330, height: 24, deviceIndex: 0 },
   { id: 'm2-start', x: 760, y: 3050, width: 360, height: 24 }, { id: 'm2-route', x: 380, y: 2930, width: 270, height: 24, deviceIndex: 1 }, { id: 'm2-end', x: 80, y: 2810, width: 330, height: 24, deviceIndex: 1 },
@@ -14,10 +14,10 @@ export const PLATFORMS = Object.freeze([
   { id: 'm6-start', x: 760, y: 1510, width: 360, height: 24 }, { id: 'm6-route', x: 390, y: 1390, width: 280, height: 24, deviceIndex: 5 }, { id: 'm6-end', x: 80, y: 1270, width: 350, height: 24, deviceIndex: 5 },
   { id: 'm7-start', x: 100, y: 1140, width: 350, height: 24 }, { id: 'm7-route', x: 500, y: 1020, width: 280, height: 24, deviceIndex: 6 }, { id: 'm7-end', x: 850, y: 900, width: 350, height: 24, deviceIndex: 6 },
   { id: 'm8-start', x: 760, y: 770, width: 360, height: 24 }, { id: 'm8-route', x: 390, y: 650, width: 280, height: 24, deviceIndex: 7 }, { id: 'm8-end', x: 80, y: 530, width: 350, height: 24, deviceIndex: 7 },
-  { id: 'finish-deck', x: 240, y: 380, width: 800, height: 28 },
-]);
+  { id: 'finish-deck', x: 240, y: 408, width: 800, height: 28 },
+];
 
-export const MODULES = Object.freeze([
+const BASE_MODULES = [
   { id: 'sorter-a', number: 1, type: 'sorter', section: 'sorting', requiredPlayerId: 'p1', anchor: { x: 305, y: 3382 }, switch: { x: 930, y: 3152 }, checkpoint: { x: 900, y: 3100, width: 250, height: 90 } },
   { id: 'sorter-b', number: 2, type: 'sorter', section: 'sorting', requiredPlayerId: 'p2', anchor: { x: 930, y: 3022 }, switch: { x: 180, y: 2782 }, checkpoint: { x: 110, y: 2730, width: 250, height: 90 } },
   { id: 'sorter-c', number: 3, type: 'sorter', section: 'sorting', requiredPlayerId: 'p1', anchor: { x: 260, y: 2642 }, switch: { x: 1010, y: 2402 }, checkpoint: { x: 890, y: 2350, width: 250, height: 100 } },
@@ -26,7 +26,25 @@ export const MODULES = Object.freeze([
   { id: 'wind-lift', number: 6, type: 'updraft', section: 'wind', requiredPlayerId: 'p2', anchor: { x: 930, y: 1482 }, switch: { x: 180, y: 1242 }, checkpoint: { x: 110, y: 1190, width: 250, height: 100 } },
   { id: 'star-shutter', number: 7, type: 'starlight-shutter', section: 'observatory', requiredPlayerId: 'p1', anchor: { x: 260, y: 1112 }, switch: { x: 1010, y: 872 }, checkpoint: { x: 890, y: 820, width: 250, height: 100 } },
   { id: 'merge-lift', number: 8, type: 'merge-lift', section: 'observatory', requiredPlayerId: 'p2', anchor: { x: 930, y: 742 }, switch: { x: 180, y: 502 }, checkpoint: { x: 110, y: 450, width: 250, height: 100 } },
-]);
+];
+
+/**
+ * 필수 부스트 착지 뒤 아래 플레이어가 합류할 장치 연동 중간 발판을 만든다.
+ * @param {number} index 모듈 인덱스
+ * @returns {object}
+ */
+function createReturnPlatform(index) {
+  const lower = index === 0 ? BASE_PLATFORMS[0] : BASE_PLATFORMS.find((platform) => platform.id === `m${index}-end`);
+  const upper = BASE_PLATFORMS.find((platform) => platform.id === `m${index + 1}-start`);
+  const overlapLeft = Math.max(lower.x, upper.x);
+  const overlapRight = Math.min(lower.x + lower.width, upper.x + upper.width);
+  const width = Math.min(180, overlapRight - overlapLeft);
+  return { id: `m${index + 1}-return`, x: overlapLeft + (overlapRight - overlapLeft - width) / 2, y: (lower.y + upper.y) / 2, width, height: 20, deviceIndex: index, returnPlatform: true, lowerPlatformId: lower.id, upperPlatformId: upper.id };
+}
+
+export const RETURN_PLATFORMS = Object.freeze(BASE_MODULES.map((_, index) => createReturnPlatform(index)));
+export const PLATFORMS = Object.freeze([...BASE_PLATFORMS, ...RETURN_PLATFORMS]);
+export const MODULES = Object.freeze(BASE_MODULES.map((module, index) => ({ ...module, boostRequired: true, approachPlatformId: index === 0 ? 'floor-left' : `m${index}-end`, boostLandingPlatformId: `m${index + 1}-start`, returnPlatformId: `m${index + 1}-return` })));
 
 export const CHECKPOINTS = Object.freeze([
   { id: 0, x1: 150, y1: 3490, x2: 215, y2: 3490 }, { id: 1, x1: 940, y1: 3120, x2: 1005, y2: 3120 },

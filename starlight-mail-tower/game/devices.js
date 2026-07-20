@@ -49,6 +49,7 @@ export function createDevices(modules) {
 function updateRuntime(device, players, elapsedMs) {
   const mechanics = device.mechanics ?? {};
   const powered = device.state === DEVICE_STATE.POWERED;
+  const latched = device.state === DEVICE_STATE.LATCHED;
   const runningMs = powered ? Math.max(0, elapsedMs - device.stateChangedMs) : device.phaseMs;
   device.active = powered;
   if (device.type === 'timer-gate') {
@@ -58,12 +59,13 @@ function updateRuntime(device, players, elapsedMs) {
   } else if (device.type === 'cycle-platform') {
     const cycleMs = mechanics.cycleMs ?? 3000;
     device.phaseMs = (runningMs + (mechanics.phaseOffsetMs ?? 0)) % cycleMs;
-    device.solid = powered && device.phaseMs < (mechanics.solidMs ?? 1800);
+    device.solid = latched || (powered && device.phaseMs < (mechanics.solidMs ?? 1800));
     device.warning = device.solid && device.phaseMs >= (mechanics.solidMs ?? 1800) - 240;
   } else if (device.type === 'rotary') {
     const periodMs = device.dynamic?.periodMs ?? 4200;
     device.phaseMs = runningMs % periodMs;
-    device.angle = powered ? (device.phaseMs / periodMs) * Math.PI * 2 : device.angle;
+    // 잠금 뒤에는 귀환자가 양쪽 고정 발판을 건널 수 있는 수평 위치로 정렬한다.
+    device.angle = latched ? 0 : powered ? (device.phaseMs / periodMs) * Math.PI * 2 : device.angle;
     device.targetAngle = Math.round(device.angle / (Math.PI / 2)) * (Math.PI / 2);
     device.warning = Math.abs(Math.atan2(Math.sin(device.angle - device.targetAngle), Math.cos(device.angle - device.targetAngle))) > Math.PI / 30;
   } else if (device.type === 'wind-shutter' || device.type === 'updraft') {

@@ -8,6 +8,27 @@ import { CHECKPOINTS, FINISH, MODULES, PLATFORMS, WORLD } from './level-data.js'
 function rectangle(values) { return { x: values[0], y: values[1], width: values[2], height: values[3] }; }
 
 /**
+ * 기본 지형을 보존하면서 모듈별 필수 부스트와 전력 연동 복귀 발판을 합성한다.
+ * @param {Array<object>} terrain 기본 27개 지형
+ * @param {Array<object>} modules 모듈 정의
+ * @returns {{platforms:Array<object>,modules:Array<object>}}
+ */
+function addCoopRoutes(terrain, modules) {
+  const returnPlatforms = modules.map((_, index) => {
+    const lower = index === 0 ? terrain.find((platform) => platform.id === 'floor-left') : terrain.find((platform) => platform.id === `m${index}-end`);
+    const upper = terrain.find((platform) => platform.id === `m${index + 1}-start`);
+    const overlapLeft = Math.max(lower.x, upper.x);
+    const overlapRight = Math.min(lower.x + lower.width, upper.x + upper.width);
+    const width = Math.min(180, overlapRight - overlapLeft);
+    return { id: `m${index + 1}-return`, x: overlapLeft + (overlapRight - overlapLeft - width) / 2, y: (lower.y + upper.y) / 2, width, height: 20, deviceIndex: index, returnPlatform: true, lowerPlatformId: lower.id, upperPlatformId: upper.id };
+  });
+  return {
+    platforms: [...terrain, ...returnPlatforms],
+    modules: modules.map((module, index) => ({ ...module, boostRequired: true, approachPlatformId: index === 0 ? 'floor-left' : `m${index}-end`, boostLandingPlatformId: `m${index + 1}-start`, returnPlatformId: `m${index + 1}-return` })),
+  };
+}
+
+/**
  * 완전한 행 데이터에서 독립 플랫폼과 모듈 배열을 만든다.
  * @param {object} definition 레벨 원본 정의
  * @returns {object}
@@ -18,8 +39,25 @@ function buildIndependentLevel(definition) {
     ...definition.rows.flatMap((row, index) => ['start', 'route', 'end'].map((kind, part) => ({ id: `m${index + 1}-${kind}`, ...rectangle(row.platforms[part]), ...(part === 1 ? { deviceIndex: index, dynamic: row.dynamic ?? null } : {}) }))),
     { id: 'finish-deck', ...rectangle(definition.finishDeck) },
   ];
+  for (let index = 0; index < definition.rows.length; index += 1) {
+    const start = platforms.find((platform) => platform.id === `m${index + 1}-start`);
+    const route = platforms.find((platform) => platform.id === `m${index + 1}-route`);
+    const end = platforms.find((platform) => platform.id === `m${index + 1}-end`);
+    if (!route.dynamic || definition.rows[index].type === 'rotary') {
+      const neighbors = [start, end];
+      for (const neighbor of neighbors) {
+        if (route.x > neighbor.x + neighbor.width + 120) { const extension = route.x - (neighbor.x + neighbor.width + 120); route.x -= extension; route.width += extension; }
+        else if (neighbor.x > route.x + route.width + 120) route.width += neighbor.x - (route.x + route.width + 120);
+      }
+    }
+    if ((definition.physics.gravity ?? 1450) >= 1000) {
+      route.y = Math.max(route.y, start.y - 122);
+      end.y = Math.max(end.y, route.y - 122);
+    }
+  }
   const modules = definition.rows.map((row, index) => ({ id: `${definition.id}-m${index + 1}`, number: index + 1, type: row.type, section: definition.motif, requiredPlayerId: index % 2 === 0 ? 'p1' : 'p2', anchor: { x: row.anchor[0], y: row.anchor[1] }, switch: { x: row.switch[0], y: row.switch[1] }, checkpoint: rectangle(row.zone), mechanics: row.mechanics ?? {} }));
-  return Object.freeze({ id: definition.id, nameKey: definition.nameKey, themeKey: definition.themeKey, descriptionKey: definition.descriptionKey, minutes: definition.minutes, palette: definition.palette, motif: definition.motif, world: { ...definition.world }, physics: { ...definition.physics }, platforms, checkpoints: definition.checkpoints.map((item, id) => ({ id, x1: item[0], y1: item[1], x2: item[2], y2: item[3] })), finish: { leftSwitch: { x: definition.finish[0], y: definition.finish[1] }, rightSwitch: { x: definition.finish[2], y: definition.finish[3] }, launcher: { x: definition.finish[4], y: definition.finish[5] }, windowMs: definition.finish[6], launchMs: definition.finish[7] }, modules, hazards: definition.hazards.map((item) => ({ ...item })) });
+  const coop = addCoopRoutes(platforms, modules);
+  return Object.freeze({ id: definition.id, nameKey: definition.nameKey, themeKey: definition.themeKey, descriptionKey: definition.descriptionKey, minutes: definition.minutes, palette: definition.palette, motif: definition.motif, world: { ...definition.world }, physics: { ...definition.physics }, platforms: coop.platforms, checkpoints: definition.checkpoints.map((item, id) => ({ id, x1: item[0], y1: item[1], x2: item[2], y2: item[3] })), finish: { leftSwitch: { x: definition.finish[0], y: definition.finish[1] }, rightSwitch: { x: definition.finish[2], y: definition.finish[3] }, launcher: { x: definition.finish[4], y: definition.finish[5] }, windowMs: definition.finish[6], launchMs: definition.finish[7] }, modules: coop.modules, hazards: definition.hazards.map((item) => ({ ...item })) });
 }
 
 const PALETTES = Object.freeze({
@@ -28,10 +66,10 @@ const PALETTES = Object.freeze({
 
 const cloudRows = [
   ['moving-car',[90,3050,350,24],[520,2960,260,24],[990,2840,340,24],[250,3022],[1110,2812],[1010,2760,260,100],{axis:'x',from:520,to:850,periodMs:4200,carryRiders:true}],
-  ['timer-gate',[930,2690,360,24],[520,2580,220,24],[140,2490,370,24],[1080,2662],[260,2462],[180,2410,260,100],null,{cycleMs:3600,openMs:2100,transitionMs:240}],
+  ['timer-gate',[930,2690,360,24],[520,2580,220,24],[140,2490,370,24],[1080,2662],[260,2462],[180,2410,260,100],null,{cycleMs:6000,openMs:2100,transitionMs:240}],
   ['cargo-lock',[100,2340,390,24],[610,2240,200,24],[1030,2150,320,24],[270,2312],[1160,2122],[1050,2070,260,100]],
   ['moving-car',[940,1980,360,24],[560,1880,250,24],[90,1800,390,24],[1120,1952],[220,1772],[130,1720,260,100],{axis:'y',from:1760,to:1980,periodMs:3800,carryRiders:true}],
-  ['timer-gate',[80,1630,370,24],[560,1530,220,24],[960,1450,390,24],[240,1602],[1090,1422],[1010,1370,260,100],null,{cycleMs:3600,openMs:2100,transitionMs:240}],
+  ['timer-gate',[80,1630,370,24],[560,1530,220,24],[960,1450,390,24],[240,1602],[1090,1422],[1010,1370,260,100],null,{cycleMs:6000,openMs:2100,transitionMs:240}],
   ['signal-link',[930,1280,390,24],[520,1180,240,24],[150,1100,350,24],[1110,1252],[280,1072],[190,1020,260,100]],
   ['moving-car',[110,930,370,24],[570,830,260,24],[1010,750,330,24],[250,902],[1140,722],[1040,670,260,100],{axis:'x',from:520,to:900,periodMs:3600,carryRiders:true}],
   ['merge-lift',[930,580,390,24],[610,490,220,24],[290,410,390,24],[1100,552],[430,382],[340,330,260,100],{axis:'y',from:490,to:350,periodMs:4800,carryRiders:true}],
@@ -103,7 +141,13 @@ export function validateLevel(level) {
     if(platform.dynamic){const {axis,from,to}=platform.dynamic;if(!['x','y'].includes(axis)&&!Array.isArray(platform.dynamic.pivot))errors.push(`motion-axis:${platform.id}`);if(axis==='x'&&(Math.min(from,to)<0||Math.max(from,to)+platform.width>level.world.width))errors.push(`motion-bounds:${platform.id}`);if(axis==='y'&&(Math.min(from,to)<0||Math.max(from,to)+platform.height>level.world.height))errors.push(`motion-bounds:${platform.id}`);}
   }
   if(level.modules.length!==8)errors.push('modules'); if(level.checkpoints.length!==9)errors.push('checkpoints');
-  if(level.platforms.length!==27)errors.push('platforms');
+  const terrain=level.platforms.filter((platform)=>!platform.returnPlatform); const returns=level.platforms.filter((platform)=>platform.returnPlatform);
+  if(terrain.length!==27)errors.push('platforms');
+  for(const [index,module] of level.modules.entries()){
+    const landing=level.platforms.find((platform)=>platform.id===module.boostLandingPlatformId); const returning=level.platforms.find((platform)=>platform.id===module.returnPlatformId);
+    if(module.boostRequired&&(!landing||landing.width<120))errors.push(`boost:${index}`);
+    if(!returning||returning.deviceIndex!==index||returning.width<120||!level.platforms.some((platform)=>platform.id===returning.lowerPlatformId)||!level.platforms.some((platform)=>platform.id===returning.upperPlatformId))errors.push(`return:${index}`);
+  }
   level.checkpoints.forEach((checkpoint,index)=>{if(checkpoint.x1<0||checkpoint.x2>level.world.width||checkpoint.y1<0||checkpoint.y2>level.world.height)errors.push(`checkpoint:${index}`);});
   if(level.finish.leftSwitch.x<0||level.finish.rightSwitch.x>level.world.width||level.finish.launcher.y<0)errors.push('finish');
   return {ok:errors.length===0,errors};

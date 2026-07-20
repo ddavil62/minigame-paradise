@@ -56,6 +56,7 @@ let previousFocus = null;
 let levelCatalog = [];
 let levelRecords = {};
 let selectedLevelId = 'starlight-tower';
+let hasSeenCoopBoost = false;
 
 // 런처의 신규 세션 진입에서만 이전 토큰을 비우고, 새로고침은 재접속으로 처리한다.
 if (parameters.get('fresh') === '1') {
@@ -138,7 +139,8 @@ function updateHud() {
     finishClock.querySelectorAll('i').forEach((tick, index) => tick.classList.toggle('active', index < remainingTicks));
   } else {
     finishClock.hidden = true;
-    actionHint.textContent = t(device?.state === 'POWERED' ? device.anchorPlayerId === playerId ? 'hint.checkpoint' : 'hint.switch' : device?.state === 'LATCHED' ? 'hint.checkpoint' : 'hint.anchor');
+    const showBoostHint = latestSnapshot.checkpointId === 0 && device?.state === 'IDLE' && !hasSeenCoopBoost && latestSnapshot.players.every((player) => player.boostConsumed === false);
+    actionHint.textContent = t(showBoostHint ? 'hint.boost' : device?.state === 'POWERED' ? device.anchorPlayerId === playerId ? 'hint.checkpoint' : 'hint.switch' : device?.state === 'LATCHED' ? 'hint.checkpoint' : 'hint.anchor');
   }
   respawnOverlay.hidden = !latestSnapshot.players.some((player) => player.respawnTimer > 0);
 }
@@ -159,8 +161,18 @@ function updateReadyState(players) {
   readyButton.textContent = t(mineReady ? 'ready.done' : 'ready');
 }
 
-/** @param {{kind:string}} event 서버 이벤트 @returns {void} */
-function handleEvent(event) { const keys = { DEVICE_POWERED: 'event.powered', DEVICE_LATCHED: 'event.latched', CHECKPOINT: 'event.checkpoint', FALL: 'event.fall', FINISH_STARTED: 'event.finish', FINISH_EXPIRED: 'event.expired' }; if (keys[event.kind]) showToast(t(keys[event.kind])); }
+/** @param {{kind:string,eventId?:number,payload?:object}} event 서버 이벤트 @returns {void} */
+function handleEvent(event) {
+  if (event.kind === 'COOP_BOOST') {
+    hasSeenCoopBoost = true;
+    renderer.playCoopBoost({ eventId: event.eventId, ...event.payload });
+    showToast(t('event.boost'));
+    updateHud();
+    return;
+  }
+  const keys = { DEVICE_POWERED: 'event.powered', DEVICE_LATCHED: 'event.latched', CHECKPOINT: 'event.checkpoint', FALL: 'event.fall', FINISH_STARTED: 'event.finish', FINISH_EXPIRED: 'event.expired' };
+  if (keys[event.kind]) showToast(t(keys[event.kind]));
+}
 
 /** @param {{elapsedMs:number,falls:number,roleSwaps:number}} result 결과 @returns {void} */
 function showResult(result) {
@@ -202,7 +214,7 @@ function handleServerMessage(message) {
     playerId = message.playerId; localStorage.setItem(RESUME_TOKEN_KEY, message.resumeToken); renderer.setPlayerId(playerId); connectionState = 'online'; updateConnectionLabel(); document.body.dataset.playerId = playerId; updateMenu(message);
   } else if (message.type === SERVER_MESSAGE.READY_STATE) updateReadyState(message.players);
   else if (message.type === SERVER_MESSAGE.MENU_STATE) updateMenu(message);
-  else if (message.type === 'START') { readyOverlay.hidden = true; resultOverlay.hidden = true; rematchButton.disabled = false; sessionPaused = false; }
+  else if (message.type === 'START') { readyOverlay.hidden = true; resultOverlay.hidden = true; rematchButton.disabled = false; sessionPaused = false; hasSeenCoopBoost = false; }
   else if (message.type === SERVER_MESSAGE.SNAPSHOT) {
     latestSnapshot = message; renderer.setSnapshot(message); const local = message.players.find((player) => player.id === playerId); document.body.dataset.serverTick = String(message.tick); document.body.dataset.levelId = message.levelId; document.body.dataset.checkpoint = String(message.checkpointId); document.body.dataset.finishPhase = message.finishState.phase; if (local) document.body.dataset.playerX = String(Math.round(local.x)); updateHud();
   } else if (message.type === SERVER_MESSAGE.EVENT) handleEvent(message);
