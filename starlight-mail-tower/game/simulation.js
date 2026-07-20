@@ -86,15 +86,16 @@ function hasBoostSeparation(first, second) {
  * @returns {boolean}
  */
 export function isCoopBoostCandidate(striker, receiver, previousStriker, previousReceiver) {
-  if (striker.grounded || receiver.grounded || striker.anchored || receiver.anchored || striker.respawnTimer > 0 || receiver.respawnTimer > 0 || receiver.boostConsumed) return false;
+  if ((previousReceiver.grounded && !receiver.input.jump) || striker.anchored || receiver.anchored || striker.respawnTimer > 0 || receiver.respawnTimer > 0 || receiver.boostConsumed) return false;
   if (striker.vy >= -MIN_STRIKER_UP_SPEED || striker.y <= receiver.y) return false;
   if (receiver.vy - striker.vy < MIN_CLOSING_SPEED) return false;
   const currentStriker = playerBounds(striker);
   const currentReceiver = playerBounds(receiver);
   const overlap = Math.min(currentStriker.right, currentReceiver.right) - Math.max(currentStriker.left, currentReceiver.left);
   if (overlap < MIN_HORIZONTAL_OVERLAP || previousStriker.top + 0.01 < previousReceiver.bottom + 4) return false;
-  // 30Hz 한 틱에 경계를 8px보다 멀리 지나칠 수 있으므로 이전/현재 경계의 연속 통과를 함께 본다.
-  return currentStriker.top - currentReceiver.bottom <= 8;
+  // 현재 틱은 수혜자 하단을 기준으로 명세의 ±8px 접촉 띠 안에 있어야 한다.
+  const verticalBoundaryDelta = currentStriker.top - currentReceiver.bottom;
+  return verticalBoundaryDelta >= -8 && verticalBoundaryDelta <= 8;
 }
 
 /**
@@ -187,8 +188,8 @@ function updateDynamicPlatforms(simulation, dt) {
     const motion = source.dynamic;
     const previous = simulation.dynamicPlatforms?.find((item) => item.id === source.id) ?? source;
     if (device?.state === DEVICE_STATE.POWERED || device?.state === DEVICE_STATE.LATCHED) {
-      if (device.type === 'rotary') {
-        // 회전 장치의 각도 피드백은 유지하되 얇은 선형 충돌체 대신 안전한 원본 데크를 사용한다.
+      if (device.type === 'rotary' || device.type === 'merge-lift') {
+        // 각도/승강 피드백은 유지하되 얇은 가변 충돌체 대신 안전한 원본 데크를 사용한다.
         platform.x = source.x;
         platform.y = source.y;
       } else {
@@ -312,7 +313,7 @@ export function stepSimulation(simulation, dt) {
   const previousBottoms = new Map();
   for (const player of simulation.players) {
     if (player.respawnTimer > 0 || player.anchored) continue;
-    previousBounds.set(player.id, playerBounds(player));
+    previousBounds.set(player.id, { ...playerBounds(player), grounded: player.grounded });
     const direction = Number(player.input.right) - Number(player.input.left);
     const physics = simulation.level.physics;
     if (Number.isFinite(physics.moveAcceleration)) {
@@ -322,7 +323,8 @@ export function stepSimulation(simulation, dt) {
       player.vx = Math.max(-physics.maxSpeed, Math.min(physics.maxSpeed, player.vx));
     } else player.vx = direction * (physics.moveSpeed ?? MOVE_SPEED);
     const currentDevice = simulation.devices[simulation.checkpointId];
-    const gravityScale = currentDevice?.type === 'low-gravity' && currentDevice.active ? 0.42 : 1;
+    // 저중력 전용 레벨은 기본 물리 자체가 보정되어 있으므로 장치 배율을 중복 적용하지 않는다.
+    const gravityScale = currentDevice?.type === 'low-gravity' && currentDevice.active && (physics.gravity ?? GRAVITY) >= 1000 ? 0.42 : 1;
     if (player.input.jump && player.grounded) player.vy = -(physics.jumpSpeed ?? JUMP_SPEED);
     previousBottoms.set(player.id, player.y + PLAYER_HEIGHT / 2);
     // 적분 뒤 판정은 이전 틱의 착지 플래그가 아니라 현재 공중 상태를 사용한다.
@@ -340,7 +342,9 @@ export function stepSimulation(simulation, dt) {
   }
   const currentDevice = simulation.devices[simulation.checkpointId];
   if (currentDevice) events.push(...updateDevice(currentDevice, simulation.players, dt, simulation.elapsedMs));
-  if (currentDevice?.strikeActive && currentDevice.type === 'safe-ground' && !currentDevice.shelterSafe.every(Boolean)) {
+  const inStrikeZone = (player) => player.x >= currentDevice.checkpoint.x && player.x <= currentDevice.checkpoint.x + currentDevice.checkpoint.width && player.y >= currentDevice.checkpoint.y - 120 && player.y <= currentDevice.checkpoint.y + currentDevice.checkpoint.height;
+  const exposedToStrike = currentDevice?.strikeActive && simulation.players.every(inStrikeZone) && simulation.players.some((player, index) => !currentDevice.shelterSafe[index]);
+  if (exposedToStrike && currentDevice.type === 'safe-ground') {
     simulation.falls += 1;
     restoreCheckpoint(simulation);
     events.push({ kind: 'HAZARD_HIT', payload: { deviceId: currentDevice.id, cause: 'lightning' } });

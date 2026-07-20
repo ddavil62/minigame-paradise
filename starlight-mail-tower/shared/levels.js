@@ -43,17 +43,16 @@ function buildIndependentLevel(definition) {
     const start = platforms.find((platform) => platform.id === `m${index + 1}-start`);
     const route = platforms.find((platform) => platform.id === `m${index + 1}-route`);
     const end = platforms.find((platform) => platform.id === `m${index + 1}-end`);
-    if (!route.dynamic || definition.rows[index].type === 'rotary') {
+    if (!route.dynamic || ['rotary', 'merge-lift'].includes(definition.rows[index].type)) {
       const neighbors = [start, end];
       for (const neighbor of neighbors) {
         if (route.x > neighbor.x + neighbor.width + 120) { const extension = route.x - (neighbor.x + neighbor.width + 120); route.x -= extension; route.width += extension; }
         else if (neighbor.x > route.x + route.width + 120) route.width += neighbor.x - (route.x + route.width + 120);
       }
     }
-    if ((definition.physics.gravity ?? 1450) >= 1000) {
-      route.y = Math.max(route.y, start.y - 122);
-      end.y = Math.max(end.y, route.y - 122);
-    }
+    const safeRise = (definition.physics.gravity ?? 1450) < 1000 ? 175 : 122;
+    route.y = Math.max(route.y, start.y - safeRise);
+    end.y = Math.max(end.y, route.y - safeRise);
   }
   const modules = definition.rows.map((row, index) => ({ id: `${definition.id}-m${index + 1}`, number: index + 1, type: row.type, section: definition.motif, requiredPlayerId: index % 2 === 0 ? 'p1' : 'p2', anchor: { x: row.anchor[0], y: row.anchor[1] }, switch: { x: row.switch[0], y: row.switch[1] }, checkpoint: rectangle(row.zone), mechanics: row.mechanics ?? {} }));
   const coop = addCoopRoutes(platforms, modules);
@@ -97,10 +96,10 @@ const stormRows = [
 const orbitRows = [
   ['low-gravity',[70,3990,330,24],[540,3840,190,24],[900,3680,350,24],[220,3962],[1050,3652],[950,3600,260,100]],
   ['relay',[900,3500,350,24],[500,3370,220,24],[130,3220,350,24],[1060,3472],[270,3192],[180,3140,260,100]],
-  ['docking-lock',[100,3040,370,24],[560,2910,180,24],[880,2760,370,24],[250,3012],[1050,2732],[930,2680,260,100],{axis:'x',from:520,to:760,periodMs:5200,carryRiders:true},{maxRelativeSpeed:45,maxHeightDelta:12}],
+  ['docking-lock',[100,3040,370,24],[560,2910,180,24],[880,2760,370,24],[250,3012],[1050,2732],[930,2680,260,100],{axis:'x',from:520,to:760,periodMs:5200,carryRiders:true},{maxRelativeSpeed:45,maxHeightDelta:300}],
   ['low-gravity',[900,2580,350,24],[520,2450,190,24],[100,2300,370,24],[1060,2552],[250,2272],[150,2220,260,100]],
   ['relay',[90,2120,370,24],[540,1990,250,24],[880,1840,370,24],[240,2092],[1050,1812],[930,1760,260,100]],
-  ['docking-lock',[900,1660,350,24],[520,1530,190,24],[120,1380,360,24],[1060,1632],[270,1352],[170,1300,260,100],{axis:'x',from:470,to:700,periodMs:4800,carryRiders:true},{maxRelativeSpeed:45,maxHeightDelta:12}],
+  ['docking-lock',[900,1660,350,24],[520,1530,190,24],[120,1380,360,24],[1060,1632],[270,1352],[170,1300,260,100],{axis:'x',from:470,to:700,periodMs:4800,carryRiders:true},{maxRelativeSpeed:45,maxHeightDelta:300}],
   ['signal-link',[100,1200,370,24],[550,1070,220,24],[880,920,370,24],[250,1172],[1050,892],[930,840,260,100]],
   ['merge-lift',[900,740,350,24],[560,590,200,24],[330,410,390,24],[1060,712],[470,382],[380,330,260,100],{axis:'y',from:590,to:340,periodMs:5600,carryRiders:true}],
 ];

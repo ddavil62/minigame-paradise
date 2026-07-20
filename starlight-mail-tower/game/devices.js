@@ -80,8 +80,9 @@ function updateRuntime(device, players, elapsedMs) {
     device.strikeActive = powered && device.phaseMs >= cycleMs - 120;
     const half = device.checkpoint.width / 2;
     device.shelterSafe = players.map((player, index) => {
+      if (player.anchored) return true;
       const centerX = device.checkpoint.x + (index === 0 ? half * 0.5 : half * 1.5);
-      return Math.abs(player.x - centerX) <= Math.max(48, half * 0.42) && Math.abs(player.y - (device.checkpoint.y + device.checkpoint.height / 2)) <= 72 && player.input.interact;
+      return Math.abs(player.x - centerX) <= Math.max(80, half * 0.42) && Math.abs(player.y - (device.checkpoint.y + device.checkpoint.height / 2)) <= 72 && player.input.interact;
     });
   } else if (device.type === 'low-gravity') {
     device.active = powered;

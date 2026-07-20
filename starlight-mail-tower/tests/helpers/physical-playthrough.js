@@ -80,9 +80,10 @@ export function createPhysicalDriver(levelId) {
       if (waitingForRange && Math.abs(takeoffX - actor.x) <= 12) { controls.left = false; controls.right = false; }
       if (climbing && !waitingForRange && (!support || Math.abs(takeoffX - actor.x) <= 12)) controls.jump = true;
       tick();
-      const upper = target.returnPlatform ? platform(target.upperPlatformId) : null;
+      const landedTarget = platform(platformId);
+      const upper = landedTarget.returnPlatform ? platform(landedTarget.upperPlatformId) : null;
       const passedReturn = upper && Math.abs(actor.y + PLAYER_HALF_HEIGHT - upper.y) <= 2;
-      const landed = actor.grounded && (Math.abs(actor.y + PLAYER_HALF_HEIGHT - target.y) <= 2 || passedReturn) && actor.x >= target.x + 20 && actor.x <= target.x + target.width - 20;
+      const landed = actor.grounded && (Math.abs(actor.y + PLAYER_HALF_HEIGHT - landedTarget.y) <= 2 || passedReturn) && actor.x >= landedTarget.x + 20 && actor.x <= landedTarget.x + landedTarget.width - 20;
       if (landed) { controls.left = false; controls.right = false; return; }
     }
     throw new Error(diagnostic(simulation, `reach:${playerId}:${platformId}`, events));
@@ -173,7 +174,9 @@ export function runPhysicalPlaythrough(levelId) {
     let partnerCrossed = false;
     for (let attempt = 0; attempt < 4 && !partnerCrossed; attempt += 1) {
       try {
-        reachPlatform(partnerId, module.approachPlatformId, 360);
+        const partnerActor = driver.player(partnerId);
+        const approach = driver.platform(module.approachPlatformId);
+        if (partnerActor.y + PLAYER_HALF_HEIGHT > approach.y + 2) reachPlatform(partnerId, module.approachPlatformId, 360);
         reachPlatform(partnerId, module.returnPlatformId, 360);
         reachPlatform(partnerId, module.boostLandingPlatformId, 360);
         reachPlatform(partnerId, `m${index + 1}-route`, 360, routeExitX);
@@ -190,7 +193,9 @@ export function runPhysicalPlaythrough(levelId) {
     let anchorCrossed = false;
     for (let attempt = 0; attempt < 4 && !anchorCrossed; attempt += 1) {
       try {
-        if (attempt > 0) reachPlatform(anchorId, module.approachPlatformId, 360);
+        const anchorActor = driver.player(anchorId);
+        const approach = driver.platform(module.approachPlatformId);
+        if (anchorActor.y + PLAYER_HALF_HEIGHT > approach.y + 2) reachPlatform(anchorId, module.approachPlatformId, 360);
         reachPlatform(anchorId, module.returnPlatformId, 360);
         reachPlatform(anchorId, module.boostLandingPlatformId, 360);
         reachPlatform(anchorId, `m${index + 1}-route`, 360, routeExitX);

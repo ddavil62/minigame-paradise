@@ -41,9 +41,10 @@ test('다섯 레벨 모두 8모듈 이후 피날레를 거쳐 결과 상태에 �
   }
 });
 
-test('신규 월드는 27개 독립 플랫폼과 유효한 동적 범위를 소유한다', () => {
+test('신규 월드는 27개 기본 지형과 8개 장치 연동 복귀 발판을 소유한다', () => {
   for (const level of LEVELS.slice(1)) {
-    assert.equal(level.platforms.length, 27);
+    assert.equal(level.platforms.filter((platform) => !platform.returnPlatform).length, 27);
+    assert.equal(level.platforms.filter((platform) => platform.returnPlatform).length, 8);
     assert.equal(validateLevel(level).ok, true, validateLevel(level).errors.join(','));
     assert.notEqual(level.platforms, LEVELS[0].platforms);
     assert.notEqual(level.world, LEVELS[0].world);

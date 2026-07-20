@@ -84,7 +84,7 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
 #ready-button:disabled { opacity: 0.48; cursor: default; transform: none; }
 #ready-note { min-height: 21px; margin: 7px 0 0; color: rgba(245, 233, 201, 0.72); }
 
-#toast { position: absolute; z-index: 120; left: 31.25%; bottom: 9.5%; width: 37.5%; min-height: 48px; display: grid; place-items: center; padding: 8px 18px; border: 2px solid var(--green); border-radius: 10px; background: rgba(31, 44, 71, 0.96); color: var(--green); font-weight: 700; opacity: 0; transform: translateY(10px); transition: opacity 160ms ease, transform 160ms ease; pointer-events: none; }
+#toast { position: absolute; z-index: 120; left: 31.25%; bottom: calc(2.8% + 68px); width: 37.5%; min-height: 48px; display: grid; place-items: center; padding: 8px 18px; border: 2px solid var(--green); border-radius: 10px; background: rgba(31, 44, 71, 0.96); color: var(--green); font-weight: 700; opacity: 0; transform: translateY(10px); transition: opacity 160ms ease, transform 160ms ease; pointer-events: none; }
 #toast.visible { opacity: 1; transform: translateY(0); }
 .respawn-overlay { position: absolute; z-index: 105; inset: 0; display: grid; place-items: center; background: rgba(7, 16, 29, 0.3); }
 .respawn-overlay[hidden] { display: none; }
@@ -173,6 +173,12 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
   .level-list { grid-template-columns: repeat(3, 1fr); }
   .ready-card { width: min(920px, 94%); max-height: 94%; }
   .result-level-name { top: 108px; }.result-stats { top: 144px; }.team-row { top: 278px; }.result-actions { top: 326px; }.result-actions button { width: 160px; }#rematch-status { top: 386px; }
+}
+@media (min-width: 521px) and (max-height: 576px) {
+  /* 낮은 16:9 화면에서는 코스 카드를 한 행으로 유지해 준비 CTA를 초기 뷰에 보존한다. */
+  .level-list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .level-card { min-height: 132px; }
+  .ready-card { overflow-y: hidden; }
 }
 @media (max-width: 520px) {
   body { overflow: auto; }

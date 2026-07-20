@@ -4,7 +4,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { advanceModuleForTesting, applyInput, createSimulation, stepSimulation, triggerFinishForTesting } from '../game/simulation.js';
+import { advanceModuleForTesting, applyInput, createSimulation, isCoopBoostCandidate, snapshotSimulation, stepSimulation, triggerFinishForTesting } from '../game/simulation.js';
 import { FINISH, MODULES, WORLD } from '../shared/level-data.js';
 import { validateClientMessage } from '../shared/protocol.js';
 import { getFinishCrossfadeAlpha } from '../public/js/motion.js';
@@ -161,4 +161,90 @@ test('결승 한쪽 스위치만 누르면 3초 뒤 안전하게 초기화된다
   assert.equal(simulation.finishState.expiredSide, 'left');
   assert.ok(Number.isFinite(simulation.finishState.expiredAtMs));
   assert.ok(events.some((event) => event.kind === 'FINISH_EXPIRED'));
+});
+
+/**
+ * 한 틱에 유효한 아래 충돌이 생기는 시뮬레이션을 만든다.
+ * @param {string} levelId 레벨 ID
+ * @param {number} horizontalOffset 수평 중심 차이
+ * @returns {object}
+ */
+function createBoostContact(levelId = 'starlight-tower', horizontalOffset = 0) {
+  const simulation = createSimulation(levelId); simulation.phase = 'playing';
+  Object.assign(simulation.players[0], { x: 300, y: 100, vy: 0, grounded: false, boostConsumed: false });
+  Object.assign(simulation.players[1], { x: 300 + horizontalOffset, y: 178, vy: -650, grounded: false, boostConsumed: false });
+  return simulation;
+}
+
+/**
+ * 현재 공격자 상단과 수혜자 하단의 경계 차이를 지정한 부스트 후보를 만든다.
+ * @param {number} verticalBoundaryDelta 현재 수직 경계 차이
+ * @returns {{striker:object,receiver:object,previousStriker:object,previousReceiver:object}}
+ */
+function createBoostBoundaryCandidate(verticalBoundaryDelta) {
+  const receiver = { id: 'p1', x: 300, y: 100, vy: 0, grounded: false, anchored: false, respawnTimer: 0, boostConsumed: false, input: { jump: false } };
+  const striker = { id: 'p2', x: 300, y: 156 + verticalBoundaryDelta, vy: -650, grounded: false, anchored: false, respawnTimer: 0, boostConsumed: false, input: { jump: false } };
+  const previousReceiver = { left: 280, right: 320, top: 72, bottom: 128, centerX: 300, centerY: 100 };
+  const previousStriker = { left: 280, right: 320, top: 136, bottom: 192, centerX: 300, centerY: 164 };
+  return { striker, receiver, previousStriker, previousReceiver };
+}
+
+test('아래 상승 충돌은 정확히 한 COOP_BOOST와 중력 비례 속도를 만든다', () => {
+  const simulation = createBoostContact();
+  const events = stepTicks(simulation, 1);
+  assert.equal(events.filter((event) => event.kind === 'COOP_BOOST').length, 1);
+  assert.equal(events[0].payload.strikerId, 'p2');
+  assert.equal(events[0].payload.receiverId, 'p1');
+  assert.ok(Math.abs(simulation.players[0].vy + Math.sqrt(2 * 1450 * 190)) <= 2);
+  assert.ok(simulation.players[1].vy > 0);
+  assert.equal(simulation.players[0].boostConsumed, true);
+  assert.equal(snapshotSimulation(simulation).players[0].boostConsumed, true);
+  assert.equal('boostContactArmed' in snapshotSimulation(simulation), false);
+  assert.equal(stepTicks(simulation, 3).filter((event) => event.kind === 'COOP_BOOST').length, 0);
+});
+
+test('저중력 부스트도 190px 목표 속도를 사용한다', () => {
+  const simulation = createBoostContact('orbital-post');
+  stepTicks(simulation, 1);
+  assert.ok(Math.abs(simulation.players[0].vy + Math.sqrt(2 * 720 * 190)) <= 3);
+});
+
+test('수평 교집합 11px, 지상 수혜자, 위에서 내리찍기는 부스트가 아니다', () => {
+  assert.equal(stepTicks(createBoostContact('starlight-tower', 29), 1).some((event) => event.kind === 'COOP_BOOST'), false);
+  assert.equal(stepTicks(createBoostContact('starlight-tower', 28), 1).some((event) => event.kind === 'COOP_BOOST'), true);
+  const grounded = createBoostContact(); grounded.players[0].grounded = true;
+  assert.equal(stepTicks(grounded, 1).some((event) => event.kind === 'COOP_BOOST'), false);
+  const descending = createBoostContact(); descending.players[1].vy = 180;
+  assert.equal(stepTicks(descending, 1).some((event) => event.kind === 'COOP_BOOST'), false);
+});
+
+test('상대 접근 속도 119px/s는 거부하고 120px/s는 허용한다', () => {
+  const slow = createBoostContact(); slow.players[0].vy = -81; slow.players[1].y = 166; slow.players[1].vy = -200;
+  assert.equal(stepTicks(slow, 1).some((event) => event.kind === 'COOP_BOOST'), false);
+  const boundary = createBoostContact(); boundary.players[0].vy = -80; boundary.players[1].y = 166; boundary.players[1].vy = -200;
+  assert.equal(stepTicks(boundary, 1).some((event) => event.kind === 'COOP_BOOST'), true);
+});
+
+test('현재 수직 경계는 -8px와 +8px만 포함하고 -9px와 +9px를 거부한다', () => {
+  for (const [delta, expected] of [[-9, false], [-8, true], [8, true], [9, false]]) {
+    assert.equal(isCoopBoostCandidate(...Object.values(createBoostBoundaryCandidate(delta))), expected, `${delta}px 경계`);
+  }
+});
+
+test('접촉 래치는 8px 완전 분리 전 중복 발동을 막고 착지에서 소비 상태를 초기화한다', () => {
+  const simulation = createBoostContact();
+  stepTicks(simulation, 1);
+  assert.equal(simulation.boostContactArmed, false);
+  Object.assign(simulation.players[0], { x: 200, y: 200, vy: 0 });
+  Object.assign(simulation.players[1], { x: 247, y: 200, vy: 0 });
+  stepTicks(simulation, 1);
+  assert.equal(simulation.boostContactArmed, false);
+  simulation.players[1].x = 248;
+  stepTicks(simulation, 1);
+  assert.equal(simulation.boostContactArmed, true);
+  const landing = simulation.level.platforms[0];
+  Object.assign(simulation.players[0], { x: landing.x + 80, y: landing.y - 34, vy: 240, grounded: false, boostConsumed: true });
+  stepTicks(simulation, 1);
+  assert.equal(simulation.players[0].grounded, true);
+  assert.equal(simulation.players[0].boostConsumed, false);
 });
