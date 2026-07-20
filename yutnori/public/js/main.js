@@ -70,6 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let net = null;
   let myId = null;
+  /** 자동 READY 중복 전송 방지 플래그. */
+  let readySent = false;
   // FIX-2: 현재 열린 분기 모달의 유형. 'center'(중앙) | 'corner'(모서리).
   // 분기 버튼 클릭 시 pathChoice를 결정하는 데 사용한다.
   let currentBranchType = 'center';
@@ -279,22 +281,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       ui.setStatus(`재대결 대기: 나 ${myReady ? '완료' : '대기'} / 상대 ${othersReady}/${othersTotal} 준비`);
     },
-    onReadyState: ({ myReady: mr, opponentReady: or, playersReady }) => {
-      // P2-9: 3~4인 방에서는 playersReady 배열로 전체 상대 ready 상태 반영
-      let oppReady = or;
-      if (playersReady && playersReady.length > 2) {
-        const myId = net.getMyId();
-        const others = playersReady.filter((p) => p.id !== myId);
-        oppReady = others.length > 0 && others.every((p) => p.ready);
-      }
-      updateReadyUI(mr, oppReady);
-      // 상대 입장 표시 갱신 (READY_STATE는 상대가 있을 때만 수신)
+    onReadyState: () => {
+      // 상대 입장 확인 즉시 READY 자동 전송 — 준비 버튼 불필요
       updateWaitingTitle(true);
       if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
-      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
-      if (els.btnReady && !mr) els.btnReady.hidden = false;
+      if (!readySent) {
+        readySent = true;
+        net.ready();
+      }
     },
     onOpponentLeft: ({ name }) => {
+      readySent = false;
       showOpponentLeftBanner(name);
     },
     onError: (message) => {
@@ -312,15 +309,8 @@ document.addEventListener('DOMContentLoaded', () => {
     net.throwYut();
   });
 
-  // ── 준비 버튼 ──
-  if (els.btnReady) {
-    els.btnReady.addEventListener('click', () => {
-      net.ready();
-      els.btnReady.disabled = true;
-      els.btnReady.textContent = '준비 완료 (상대 대기)';
-      // 자기 자신 준비 상태 즉시 반영
-      updateReadyUI(true, false);
-    });
+  // ── 준비 버튼 — 자동 READY로 대체, 버튼 핸들러 제거 ──
+  if (false && els.btnReady) { // 비활성화
   }
 
   // ── AI랑 시작 버튼 ──

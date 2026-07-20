@@ -81,6 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let myReady = false;
   /** 상대 READY 상태. */
   let opponentReady = false;
+  /** 자동 READY 중복 전송 방지 플래그. */
+  let readySent = false;
+  /** 상대 입장 즉시 READY 자동 전송 — 준비 버튼 불필요. */
+  function autoReady() {
+    if (readySent) return;
+    readySent = true;
+    net.sendReady();
+  }
 
   // ── 토스트 ──
   let toastTimer = null;
@@ -445,15 +453,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // 대기 카드 제목: 상대 합류(상대 이름 존재 또는 waiting=false) 시 "대전 준비 중".
       updateWaitingTitle(!!oppName || !waiting);
 
-      // READY 패널은 닉네임 확정(JOIN 송신) 이후 항상 노출.
-      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
-
       showScreen('waiting');
     },
-    onReadyState: ({ myReady: mr, opponentReady: or }) => {
-      myReady = mr;
-      opponentReady = or;
-      updateReadyUI();
+    onReadyState: () => {
+      autoReady();
     },
     onStart: () => {
       els.screenGameOver.classList.add('hidden');
@@ -479,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderGameOver(result);
     },
     onOpponentLeft: ({ name }) => {
-      // 상대 이탈 배너 표시 (자동 redirect 없음 — 사용자가 직접 이동).
+      readySent = false;
       els.screenGameOver.classList.add('hidden');
       showOpponentLeftBanner(name);
     },
@@ -510,13 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ── READY 버튼 ──
-  if (els.btnReady) {
-    els.btnReady.addEventListener('click', () => {
-      net.sendReady();
-      els.btnReady.disabled = true;
-    });
-  }
+  // ── READY 버튼 — 자동 READY로 대체, 버튼 핸들러 제거 ──
 
   // ── 상대 이탈 배너 버튼 ──
   if (els.btnBannerReturnLobby) {

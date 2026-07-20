@@ -107,6 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let myReady = false;
   /** 상대 READY 상태. */
   let opponentReady = false;
+  /** 자동 READY 중복 전송 방지 플래그. */
+  let readySent = false;
+  /** 상대 입장 즉시 READY 자동 전송 — 준비 버튼 불필요. */
+  function autoReady() {
+    if (readySent) return;
+    readySent = true;
+    net.sendReady();
+  }
   // 효과음 트리거용: 본인 상단 보너스가 0→35 순간을 감지하기 위한 직전값 캐시.
   let lastMyUpperBonus = 0;
   // 카테고리 강조 큐: CATEGORY_SCORED 도착 시 { by, category }를 push,
@@ -246,15 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // READY 패널은 닉네임 확정(JOIN 송신) 이후 항상 노출.
-      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
-
       showScreen('waiting');
     },
-    onReadyState: ({ myReady: mr, opponentReady: or }) => {
-      myReady = mr;
-      opponentReady = or;
-      updateReadyUI();
+    onReadyState: () => {
+      autoReady();
     },
     onStart: () => {
       pendingKeep = [false, false, false, false, false];
@@ -343,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     },
     onOpponentLeft: ({ name, message }) => {
-      // 자동 redirect 제거 — 사라지지 않는 배너 + "로비로 돌아가기" 버튼만 표시.
+      readySent = false;
       els.screenGameOver.classList.add('hidden');
       showOpponentLeftBanner(name);
     },
@@ -467,11 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ── 버튼 이벤트 ──────────────────────────────────────────────
-  els.btnReady.addEventListener('click', () => {
-    els.btnReady.hidden = true;
-    net.sendReady();
-  });
+  // ── 버튼 이벤트 — 자동 READY로 대체, 준비 버튼 핸들러 제거 ──
 
   // ── AI랑 시작 ─────────────────────────────────────────────
   els.btnStartAi.addEventListener('click', () => {

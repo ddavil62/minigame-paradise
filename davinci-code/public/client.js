@@ -94,6 +94,19 @@
   /** READY 상태 */
   let myReady = false;
   let opponentReady = false;
+  /** 자동 READY 전송 중복 방지 플래그. */
+  let readySent = false;
+
+  /**
+   * 상대 입장 시 READY를 자동으로 한 번만 전송한다.
+   */
+  function autoReady() {
+    if (readySent) return;
+    readySent = true;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'READY' }));
+    }
+  }
 
   // ── WebSocket 연결 ───────────────────────────────────────────
   /**
@@ -180,8 +193,10 @@
         myReady = !!msg.myReady;
         opponentReady = !!msg.opponentReady;
         updateReadyUI();
+        autoReady();
         break;
       case 'GAME_START':
+        readySent = false;
         hideModal();
         selectedSlot = null;
         resetGuessHistory();
@@ -207,6 +222,7 @@
       }
       case 'OPPONENT_LEFT':
         hideModal();
+        readySent = false;
         showOpponentLeftBanner(msg.name, msg.message || '상대방이 나갔습니다.');
         break;
       case 'ERROR':
@@ -749,13 +765,7 @@
     });
   }
 
-  // READY 버튼 핸들러
-  if (btnReady) {
-    btnReady.addEventListener('click', () => {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ type: 'READY' }));
-    });
-  }
+  // READY 버튼 핸들러 — 자동 READY로 대체하여 핸들러 미등록
 
   // 상대 이탈 배너 → 로비로 돌아가기 버튼 핸들러
   if (btnBannerReturnLobby) {

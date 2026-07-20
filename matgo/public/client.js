@@ -138,6 +138,19 @@
   let myReady = false;
   /** 상대 READY 상태. */
   let opponentReady = false;
+  /** 자동 READY 전송 중복 방지 플래그. */
+  let readySent = false;
+
+  /**
+   * 상대 입장 시 READY를 자동으로 한 번만 전송한다.
+   */
+  function autoReady() {
+    if (readySent) return;
+    readySent = true;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'READY' }));
+    }
+  }
 
   /**
    * 현재 모드(ai|human)를 URL/sessionStorage에서 읽는다.
@@ -530,6 +543,7 @@
         myReady = !!msg.myReady;
         opponentReady = !!msg.opponentReady;
         updateReadyUI();
+        autoReady();
         break;
       case 'GAME_START':
         hideRoundModal();
@@ -544,6 +558,7 @@
         // READY 상태 초기화(다음 리매치 대비).
         myReady = false;
         opponentReady = false;
+        readySent = false;
         // 대기 화면 → 게임 화면 전환
         showScreen('game');
         break;
@@ -577,6 +592,7 @@
         break;
       case 'OPPONENT_LEFT':
         hideRoundModal();
+        readySent = false;
         // 자동 redirect 제거 — 배너 + "로비로 돌아가기" 버튼만 표시(사용자가 직접 이동).
         showOpponentLeftBanner(msg.name || '상대방');
         break;
@@ -2310,15 +2326,7 @@
     });
   }
 
-  // 준비 완료(READY) 버튼
-  if (btnReadyEl) {
-    btnReadyEl.addEventListener('click', () => {
-      if (btnReadyEl) btnReadyEl.hidden = true;
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'READY' }));
-      }
-    });
-  }
+  // 준비 완료(READY) 버튼 — 자동 READY로 대체하여 핸들러 미등록
 
   // 🤖 AI랑 시작 — mode=ai로 재접속
   if (btnStartAiEl) {

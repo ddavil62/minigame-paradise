@@ -83,6 +83,19 @@
   /** READY 상태 */
   let myReady = false;
   let opponentReady = false;
+  /** 자동 READY 전송 중복 방지 플래그. */
+  let readySent = false;
+
+  /**
+   * 상대 입장 시 READY를 자동으로 한 번만 전송한다.
+   */
+  function autoReady() {
+    if (readySent) return;
+    readySent = true;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'READY' }));
+    }
+  }
 
   // ── 초기 보드 그리기 ─────────────────────────────────────────
   /**
@@ -195,8 +208,10 @@
         myReady = !!msg.myReady;
         opponentReady = !!msg.opponentReady;
         updateReadyUI();
+        autoReady();
         break;
       case 'GAME_START':
+        readySent = false;
         // 대기 화면 숨기고 게임 보드 표시
         if (screenWaiting) screenWaiting.classList.add('hidden');
         if (boardWrap) boardWrap.classList.remove('hidden');
@@ -239,6 +254,7 @@
       case 'OPPONENT_LEFT':
         showToast(msg.message || '상대방이 나갔다.');
         hideModal();
+        readySent = false;
         // 이탈 배너 표시 (사라지지 않음 — 사용자가 버튼을 눌러야 이동)
         if (opponentLeftBanner) {
           if (opponentLeftMsg) opponentLeftMsg.textContent = msg.message || '상대방이 나갔다.';
@@ -693,15 +709,7 @@
     }
   }
 
-  // READY 버튼
-  if (btnReady) {
-    btnReady.addEventListener('click', () => {
-      if (myReady) return;
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'READY' }));
-      }
-    });
-  }
+  // READY 버튼 — 자동 READY로 대체하여 핸들러 미등록
 
   // 이탈 배너 — 로비로 돌아가기 버튼
   if (btnBannerReturnLobby) {

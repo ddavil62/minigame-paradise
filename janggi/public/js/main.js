@@ -54,6 +54,14 @@ let opponentName = null;
 let myReady = false;
 /** 상대 READY 상태. */
 let opponentReady = false;
+/** 자동 READY 중복 전송 방지 플래그. */
+let readySent = false;
+/** 상대 입장 즉시 READY 자동 전송 — 준비 버튼 불필요. */
+function autoReady() {
+  if (readySent) return;
+  readySent = true;
+  send({ type: 'READY' });
+}
 
 // ── DOM 참조 ────────────────────────────────────────────────────
 const boardCanvas = document.getElementById('janggi-board');
@@ -300,9 +308,8 @@ function handleMessage(msg) {
       handleJoined(msg);
       break;
     case 'READY_STATE':
-      myReady = !!msg.myReady;
-      opponentReady = !!msg.opponentReady;
-      updateReadyUI();
+      // 상대 입장 확인 즉시 READY 자동 전송 — 준비 버튼 불필요
+      autoReady();
       break;
     case 'GAME_START':
       handleGameStart(msg);
@@ -525,8 +532,8 @@ function handleDrawOffered(msg) {
  * @param {object} msg
  */
 function handleOpponentLeft(msg) {
+  readySent = false; // 새 상대 입장 시 autoReady 재발동 보장
   hideGameOverModal();
-  // 자동 redirect 제거 — 배너 + "로비로 돌아가기" 버튼만 표시
   showOpponentLeftBanner(msg.name || '상대방');
 }
 
@@ -706,13 +713,7 @@ if (inlineNameInputEl) {
   });
 }
 
-// 준비 완료(READY) 버튼
-if (btnReadyEl) {
-  btnReadyEl.addEventListener('click', () => {
-    if (btnReadyEl) btnReadyEl.hidden = true;
-    send({ type: 'READY' });
-  });
-}
+// 준비 완료(READY) — 자동 READY로 대체, 버튼 핸들러 제거
 
 // AI랑 시작 — mode=ai로 재접속
 if (btnStartAiEl) {
