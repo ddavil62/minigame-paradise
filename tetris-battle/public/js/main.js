@@ -76,6 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
     els.waitingTitle.textContent = hasOpponent ? '대전 준비 중' : '상대방을 기다리는 중...';
   }
 
+  /** 준비 버튼 없이 상대 입장 즉시 자동으로 READY를 전송한다. */
+  let readySent = false;
+  function autoReady() {
+    if (readySent) return;
+    readySent = true;
+    net.ready();
+  }
+
   function updateReadyUI(myReadyVal, oppReadyVal) {
     if (els.myReadyMark) {
       els.myReadyMark.textContent = myReadyVal ? '✅' : '⌛';
@@ -156,10 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
       }
-      // 상대 입장 시 READY 패널/버튼 표시
+      // 상대가 이미 있는 방에 입장(P2) → 바로 READY 전송, ready 패널 불필요
       if (!waiting) {
-        if (els.readyPanel) els.readyPanel.classList.remove('hidden');
-        if (els.btnReady) els.btnReady.hidden = false;
+        updateWaitingTitle(true);
+        autoReady();
       }
       showScreen('waiting');
     },
@@ -222,14 +230,14 @@ document.addEventListener('DOMContentLoaded', () => {
         showOpponentLeftBanner();
       }
     },
-    onReadyState: ({ myReady: mr, opponentReady: or }) => {
-      updateReadyUI(mr, or);
+    onReadyState: () => {
+      // 상대 입장이 확인되면 바로 READY 전송 — 준비 버튼 불필요
       updateWaitingTitle(true);
       if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
-      if (els.readyPanel) els.readyPanel.classList.remove('hidden');
-      if (els.btnReady && !mr) els.btnReady.hidden = false;
+      autoReady();
     },
     onOpponentLeft: ({ name }) => {
+      readySent = false; // 상대가 나가면 초기화 — 새 상대 입장 시 autoReady 재발동
       showOpponentLeftBanner(name);
     },
     onRematchStatus: ({ p1Ready, p2Ready }) => {
@@ -286,15 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 초기 슬롯 렌더링 (모두 비어있음)
   items.reset();
 
-  // ── 버튼 이벤트 ──
-  if (els.btnReady) {
-    els.btnReady.addEventListener('click', () => {
-      net.ready();
-      els.btnReady.disabled = true;
-      els.btnReady.textContent = '준비 완료 (상대 대기)';
-      updateReadyUI(true, false);
-    });
-  }
+  // ── 버튼 이벤트 ── (준비 버튼 제거 — 자동 READY로 대체)
 
   // ── AI랑 시작 버튼 ──
   if (els.aiStartBtn) {
@@ -312,7 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionStorage.setItem('tetris-battle:name', name);
     if (els.nameGateInline) els.nameGateInline.classList.add('hidden');
     if (els.waitingSolo) els.waitingSolo.classList.remove('hidden');
-    if (els.readyPanel) els.readyPanel.classList.remove('hidden');
     net.join(name);
   }
   if (els.btnInlineEnter) {
