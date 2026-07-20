@@ -19,6 +19,7 @@
  * @param {(payload: {itemId: string, slotIndex: number}) => void} [handlers.onItemGrant]
  * @param {(payload: {itemId: string, duration: number}) => void} [handlers.onItemEffect]
  * @param {(payload: {itemId: string}) => void} [handlers.onShieldBlock]
+ * @param {() => void} [handlers.onShieldActive]
  * @returns {object} 네트워크 컨트롤러
  */
 export function createNetwork(handlers) {
@@ -173,6 +174,12 @@ export function createNetwork(handlers) {
       case 'SHIELD_BLOCK':
         if (handlers.onShieldBlock) {
           handlers.onShieldBlock({ itemId: msg.itemId });
+        }
+        break;
+      case 'SHIELD_ACTIVE':
+        // 상대방이 방어막을 사용했음 — 상대 보드에 배지 표시
+        if (handlers.onShieldActive) {
+          handlers.onShieldActive();
         }
         break;
       default:

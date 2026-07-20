@@ -41,6 +41,7 @@ export function createUI(els) {
   const darkOverlayEl = document.getElementById('dark-overlay');
   const freezeBadgeEl = document.getElementById('freeze-badge');
   const shieldBadgeEl = document.getElementById('shield-badge');
+  const oppShieldBadgeEl = document.getElementById('opp-shield-badge');
   // 토스트 DOM
   const toastEl = document.getElementById('toast');
 
@@ -376,6 +377,16 @@ export function createUI(els) {
   }
 
   /**
+   * 상대방 방어막 활성 배지 표시/숨김.
+   * @param {boolean} on
+   */
+  function setOppShieldBadge(on) {
+    if (!oppShieldBadgeEl) return;
+    if (on) oppShieldBadgeEl.classList.add('active');
+    else oppShieldBadgeEl.classList.remove('active');
+  }
+
+  /**
    * 방어막 발동 시 보드 외곽에 짧은 글로우 효과 (Phase 3: 알림 텍스트 동시 표시).
    * @param {boolean} on
    * @param {string} [message] 표시할 알림 텍스트 (예: "방어막 장착!")
@@ -522,6 +533,8 @@ export function createUI(els) {
     // 방어막 배지 + 차단 연출
     setShieldBadge,
     flashShieldBlock,
+    // 상대방 방어막 배지
+    setOppShieldBadge,
     // Phase 3
     showBoardNotice,
     shakeBoard,

@@ -401,7 +401,8 @@ wss.on('connection', (ws, req) => {
           // 방어막은 자기 자신에게 적용 (서버가 권위적으로 추적)
           player.shieldActive = true;
           console.log(`[server] ${player.id} 방어막 활성화`);
-          // 상대에게 전달할 필요 없음 (자기 보드 효과만)
+          // 상대에게 방어막 활성 알림 (상대 보드에 배지 표시용)
+          sendTo(opp, { type: 'SHIELD_ACTIVE' });
           break;
         }
         if (itemId === 'line_clear') {

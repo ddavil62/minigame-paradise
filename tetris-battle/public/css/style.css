@@ -506,6 +506,27 @@ body {
   opacity: 1;
 }
 
+/* ── 상대방 방어막 배지 (미니맵 위 작은 아이콘) ──────────────────── */
+.opp-shield-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 61;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(60, 50, 0, 0.88);
+  border: 1px solid var(--item-shield);
+  color: #fff5c8;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.opp-shield-badge.active {
+  opacity: 1;
+}
+
 /* ── 방어막 차단 강화 연출 (장착보다 강한 펄스) ──────────────── */
 @keyframes shield-block {
   0%   { box-shadow: 0 0 0 0   rgba(240, 208, 0, 0.0), 0 0 0   rgba(240, 208, 0, 0.0); }

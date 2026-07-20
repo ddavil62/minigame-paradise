@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const fastFallOverlayMy = document.getElementById('fast-fall-overlay-my');
   const fastFallOverlayOpp = document.getElementById('fast-fall-overlay-opp');
   const shieldIndicatorEl = document.getElementById('shield-indicator');
+  const oppShieldIndicatorEl = document.getElementById('opp-shield-indicator');
 
   // ── 렌더러 ──────────────────────────────────────────────────
   const renderer = createRenderer(gameCanvas);
@@ -118,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fastFallOverlayMy.classList.add('hidden');
       fastFallOverlayOpp.classList.add('hidden');
       shieldIndicatorEl.classList.add('hidden');
+      oppShieldIndicatorEl.classList.add('hidden');
     },
 
     onState(msg) {
@@ -220,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fastFallOverlayMy.classList.add('hidden');
       fastFallOverlayOpp.classList.add('hidden');
       shieldIndicatorEl.classList.add('hidden');
+      oppShieldIndicatorEl.classList.add('hidden');
     },
 
     onOpponentLeft() {
@@ -279,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
           break;
         case 'shield_blocked':
           if (isMe) {
-            // 방어자: 배지 제거 + 차단 연출
+            // 방어자: 내 배지 제거 + 차단 연출
             shieldIndicatorEl.classList.add('hidden');
             showToast('\u{1F6E1}\uFE0F 차단!');
             const myBoardCol = document.querySelector('.board-col-mine');
@@ -288,15 +291,24 @@ document.addEventListener('DOMContentLoaded', () => {
               setTimeout(() => myBoardCol.classList.remove('shield-blocked'), 1200);
             }
           } else {
-            // 공격자: 차단됨 알림
+            // 공격자: 상대 배지 제거 + 상대 보드 차단 연출 + 알림
+            oppShieldIndicatorEl.classList.add('hidden');
             showToast('\u{1F6E1}\uFE0F 상대 방어막에 차단!');
+            const oppBoardCol = document.querySelector('.board-col-opp');
+            if (oppBoardCol) {
+              oppBoardCol.classList.add('shield-blocked');
+              setTimeout(() => oppBoardCol.classList.remove('shield-blocked'), 1200);
+            }
           }
           break;
         case 'shield':
           if (isMe) {
-            // 방어자: 배지 지속 표시
+            // 방어자: 내 배지 지속 표시
             shieldIndicatorEl.classList.remove('hidden');
             showToast('\u{1F6E1}\uFE0F \uBC29\uC5B4\uB9C9 \uC7A5\uCC29!');
+          } else {
+            // 공격자 관점: 상대방 방어막 활성 배지 표시
+            oppShieldIndicatorEl.classList.remove('hidden');
           }
           break;
         case 'bomb':

@@ -255,6 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[main] 방어막으로 ${itemId} 차단됨`);
       if (items) items.onShieldBlocked(itemId);
     },
+    onShieldActive: () => {
+      // 상대방이 방어막 발동 — 상대 미니맵 위에 배지 표시
+      console.log('[main] 상대방 방어막 활성화');
+      if (ui) ui.setOppShieldBadge(true);
+    },
   });
 
   // Input

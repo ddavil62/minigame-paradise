@@ -313,7 +313,8 @@ export function createItems(deps) {
       deps.ui.flashShieldBlock('방어막 차단!');
       console.log(`[items] 내 방어막이 ${itemId} 차단 성공`);
     } else {
-      // 공격자: 상태 표시
+      // 공격자: 상대 배지 제거 + 상태 표시
+      deps.ui.setOppShieldBadge(false);
       deps.ui.setStatus(`상대 방어막에 차단됨 (${ITEMS[itemId]?.name || itemId})`);
       console.log(`[items] 내 ${itemId} 공격이 상대 방어막에 차단됨`);
     }
@@ -334,7 +335,8 @@ export function createItems(deps) {
     deps.ui.setDarkOverlay(false);
     deps.ui.setFreezeFeedback(false);
     deps.ui.flashShield(false);
-    deps.ui.setShieldBadge(false);  // 리셋 시 배지도 제거
+    deps.ui.setShieldBadge(false);    // 리셋 시 내 배지도 제거
+    deps.ui.setOppShieldBadge(false); // 리셋 시 상대 배지도 제거
     refreshSlots();
   }
 
