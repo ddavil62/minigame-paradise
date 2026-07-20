@@ -40,6 +40,7 @@ export function createUI(els) {
   const boardWrapEl = els.boardCanvas ? els.boardCanvas.parentElement : null;
   const darkOverlayEl = document.getElementById('dark-overlay');
   const freezeBadgeEl = document.getElementById('freeze-badge');
+  const shieldBadgeEl = document.getElementById('shield-badge');
   // 토스트 DOM
   const toastEl = document.getElementById('toast');
 
@@ -365,21 +366,48 @@ export function createUI(els) {
   }
 
   /**
+   * 방어막 장착/해제 배지를 보이거나 숨긴다 (차단 전까지 지속 표시).
+   * @param {boolean} on
+   */
+  function setShieldBadge(on) {
+    if (!shieldBadgeEl) return;
+    if (on) shieldBadgeEl.classList.add('active');
+    else shieldBadgeEl.classList.remove('active');
+  }
+
+  /**
    * 방어막 발동 시 보드 외곽에 짧은 글로우 효과 (Phase 3: 알림 텍스트 동시 표시).
    * @param {boolean} on
-   * @param {string} [message] 표시할 알림 텍스트 (예: "방어막 발동!")
+   * @param {string} [message] 표시할 알림 텍스트 (예: "방어막 장착!")
    */
   function flashShield(on, message) {
     if (!boardWrapEl) return;
     if (on) {
       boardWrapEl.classList.add('shield-flash');
-      // Phase 3: 보드 상단에 "방어막 발동!" 알림 (1초 후 자동 사라짐)
+      // Phase 3: 보드 상단에 알림 (1초 후 자동 사라짐)
       if (message) {
         showBoardNotice(message, 'shield');
       }
     } else {
       boardWrapEl.classList.remove('shield-flash');
     }
+  }
+
+  /**
+   * 방어막 차단 성공 시 강화 연출 (장착 글로우보다 강한 펄스 + 알림).
+   * @param {string} [message] 표시할 알림 텍스트 (예: "방어막 차단!")
+   */
+  function flashShieldBlock(message) {
+    if (!boardWrapEl) return;
+    boardWrapEl.classList.remove('shield-block-flash');
+    void boardWrapEl.offsetWidth; // reflow로 애니메이션 재시작
+    boardWrapEl.classList.add('shield-block-flash');
+    if (message) showBoardNotice(message, 'shield', 1500);
+    const onEnd = () => {
+      boardWrapEl.classList.remove('shield-block-flash');
+      boardWrapEl.removeEventListener('animationend', onEnd);
+    };
+    boardWrapEl.addEventListener('animationend', onEnd);
   }
 
   // ── Phase 3: 보드 상단 알림 텍스트 ─────────────────────────────
@@ -491,6 +519,9 @@ export function createUI(els) {
     setDarkOverlay,
     setFreezeFeedback,
     flashShield,
+    // 방어막 배지 + 차단 연출
+    setShieldBadge,
+    flashShieldBlock,
     // Phase 3
     showBoardNotice,
     shakeBoard,

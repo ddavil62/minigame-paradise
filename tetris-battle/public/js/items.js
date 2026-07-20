@@ -177,11 +177,12 @@ export function createItems(deps) {
 
   /**
    * 방어막 발동 (자신에게 shieldActive 플래그 ON).
-   * 시각 피드백 1초 (Phase 3: 보드 상단 "방어막 발동!" 알림 동시 표시).
+   * 배지를 차단 시까지 지속 표시 + 장착 순간 1초 글로우 연출.
    */
   function triggerShield() {
     shieldActive = true;
-    deps.ui.flashShield(true, '방어막 발동!');
+    deps.ui.setShieldBadge(true);  // 차단될 때까지 배지 유지
+    deps.ui.flashShield(true, '방어막 장착!');
     if (shieldFeedbackTimer) clearTimeout(shieldFeedbackTimer);
     shieldFeedbackTimer = setTimeout(() => {
       deps.ui.flashShield(false);
@@ -297,13 +298,25 @@ export function createItems(deps) {
   }
 
   /**
-   * 서버에서 SHIELD_BLOCK 수신 (내가 보낸 공격이 상대 방어막에 차단됨).
-   * 단순 알림 (송신자 시각 피드백).
+   * 서버에서 SHIELD_BLOCK 수신.
+   * shieldActive 플래그로 방어자와 공격자를 구분한다:
+   * - shieldActive가 true → 나는 방어자 (내 방어막이 차단 성공)
+   * - shieldActive가 false → 나는 공격자 (공격이 막힘)
    * @param {string} itemId
    */
   function onShieldBlocked(itemId) {
-    console.log(`[items] 내 ${itemId} 공격이 상대 방어막에 차단됨`);
-    deps.ui.setStatus(`상대 방어막에 차단됨 (${ITEMS[itemId]?.name || itemId})`);
+    if (shieldActive) {
+      // 방어자: 배지 제거 + 강화 연출
+      shieldActive = false;
+      deps.ui.setShieldBadge(false);
+      if (shieldFeedbackTimer) { clearTimeout(shieldFeedbackTimer); shieldFeedbackTimer = 0; }
+      deps.ui.flashShieldBlock('방어막 차단!');
+      console.log(`[items] 내 방어막이 ${itemId} 차단 성공`);
+    } else {
+      // 공격자: 상태 표시
+      deps.ui.setStatus(`상대 방어막에 차단됨 (${ITEMS[itemId]?.name || itemId})`);
+      console.log(`[items] 내 ${itemId} 공격이 상대 방어막에 차단됨`);
+    }
   }
 
   /**
@@ -321,6 +334,7 @@ export function createItems(deps) {
     deps.ui.setDarkOverlay(false);
     deps.ui.setFreezeFeedback(false);
     deps.ui.flashShield(false);
+    deps.ui.setShieldBadge(false);  // 리셋 시 배지도 제거
     refreshSlots();
   }
 
