@@ -63,6 +63,16 @@ const PALETTES = Object.freeze({
   tower: { sky: '#0B1322', haze: '#15213A', structure: '#344B68', accent: '#C68A3A' }, cloud: { sky: '#15213A', haze: '#3E91A3', structure: '#344B68', accent: '#B9E8E7' }, moon: { sky: '#0B1322', haze: '#786EA8', structure: '#344B68', accent: '#FFD97A' }, storm: { sky: '#07101D', haze: '#344B68', structure: '#3E91A3', accent: '#FFB454' }, orbit: { sky: '#07101D', haze: '#786EA8', structure: '#1F2C47', accent: '#D97FA5' },
   ocean: { sky: '#060F1C', haze: '#0A3550', structure: '#1A4560', accent: '#00D4CC' },
   volcano: { sky: '#0E0800', haze: '#3A1200', structure: '#5C2200', accent: '#FF6A1A' },
+  crystal: { sky: '#0D0A1E', haze: '#2A1A5E', structure: '#4A2A8E', accent: '#80E8FF' },
+  snowpeak: { sky: '#060E1A', haze: '#1A3450', structure: '#305878', accent: '#A8E8FF' },
+  desert: { sky: '#0F0A02', haze: '#3C2006', structure: '#6A3A0A', accent: '#FFAA3A' },
+  space: { sky: '#040810', haze: '#0A1420', structure: '#162438', accent: '#4AFF8A' },
+  glacier: { sky: '#080E16', haze: '#143060', structure: '#1C4882', accent: '#78D8F8' },
+  rainforest: { sky: '#050E06', haze: '#0A2810', structure: '#1A4A1A', accent: '#80FF60' },
+  factory: { sky: '#080808', haze: '#1A1814', structure: '#342C24', accent: '#FF8030' },
+  temple: { sky: '#0A0806', haze: '#2A1E10', structure: '#4A3820', accent: '#D4AA50' },
+  garden: { sky: '#070C1A', haze: '#1A3048', structure: '#2A5070', accent: '#80E8C8' },
+  library: { sky: '#08090E', haze: '#14182E', structure: '#242840', accent: '#C8A050' },
 });
 
 const cloudRows = [
@@ -152,6 +162,226 @@ const volcanoRows = [
   ['merge-lift',[920,660,400,24],[550,560,200,20],[80,480,420,24],[1160,632],[190,452],[100,400,300,100],{axis:'y',from:560,to:400,periodMs:4800,carryRiders:true}],
 ];
 
+// ── 레벨 8: 수정 궁전 (저중력 + 신호 연결) ──────────────────────────────
+// 세계 너비 1280, 높이 3600 (템플릿 A). 좌측 출발 → 우측 종착 지그재그.
+// relay + rotary + cycle-platform + cargo-lock + low-gravity + docking-lock + signal-link + merge-lift.
+const crystalRows = [
+  // m1 (p1): relay
+  ['relay',[70,3370,390,24],[480,3250,190,24],[840,3160,360,24],[200,3342],[1060,3132],[900,3110,260,100]],
+  // m2 (p2): rotary — route h=20, 회전 발판
+  ['rotary',[840,3000,360,24],[480,2880,190,20],[70,2800,390,24],[1060,2972],[200,2772],[100,2750,260,100],{pivot:[575,2880],length:190,periodMs:3800}],
+  // m3 (p1): cycle-platform
+  ['cycle-platform',[70,2640,390,24],[480,2520,190,24],[840,2430,360,24],[200,2612],[1060,2402],[900,2380,260,100],null,{cycleMs:2600,solidMs:1500,phaseOffsetMs:0}],
+  // m4 (p2): cargo-lock
+  ['cargo-lock',[840,2270,360,24],[480,2150,190,24],[70,2070,390,24],[1060,2242],[200,2042],[100,2020,260,100]],
+  // m5 (p1): low-gravity
+  ['low-gravity',[70,1910,390,24],[480,1790,190,24],[840,1700,360,24],[200,1882],[1060,1672],[900,1650,260,100]],
+  // m6 (p2): docking-lock
+  ['docking-lock',[840,1540,360,24],[480,1420,190,24],[70,1340,390,24],[1060,1512],[200,1312],[100,1290,260,100],null,{maxRelativeSpeed:120,maxHeightDelta:40}],
+  // m7 (p1): signal-link
+  ['signal-link',[70,1180,390,24],[480,1060,190,24],[840,980,360,24],[200,1152],[1060,952],[900,930,260,100]],
+  // m8 (p2): merge-lift — 템플릿 A 표준 dynamic
+  ['merge-lift',[840,820,360,24],[480,720,190,20],[70,640,390,24],[1060,792],[200,612],[100,590,260,100],{axis:'y',from:720,to:420,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 9: 설산 우편탑 (눈보라 + 시계 장치) ──────────────────────────────
+// 세계 너비 1280, 높이 3700 (템플릿 B). 좌측 출발 → 우측 종착 지그재그.
+// moving-car + wind-shutter + cycle-platform + updraft + signal-link + clock-latch + timer-gate + merge-lift.
+const snowpeakRows = [
+  // m1 (p1): moving-car
+  ['moving-car',[70,3470,390,24],[480,3350,190,24],[840,3260,360,24],[200,3442],[1060,3232],[900,3210,260,100],{axis:'x',from:480,to:800,periodMs:3600,carryRiders:true}],
+  // m2 (p2): wind-shutter
+  ['wind-shutter',[840,3100,360,24],[480,2980,190,24],[70,2900,390,24],[1060,3072],[200,2872],[100,2850,260,100],null,{forceX:780,activeMs:2000,cycleMs:3200}],
+  // m3 (p1): cycle-platform
+  ['cycle-platform',[70,2730,390,24],[480,2610,190,24],[840,2530,360,24],[200,2702],[1060,2502],[900,2480,260,100],null,{cycleMs:2800,solidMs:1600,phaseOffsetMs:0}],
+  // m4 (p2): updraft
+  ['updraft',[840,2360,360,24],[480,2240,190,24],[70,2160,390,24],[1060,2332],[200,2132],[100,2110,260,100],null,{liftAcceleration:-1900}],
+  // m5 (p1): signal-link
+  ['signal-link',[70,1990,390,24],[480,1870,190,24],[840,1780,360,24],[200,1962],[1060,1752],[900,1730,260,100]],
+  // m6 (p2): clock-latch
+  ['clock-latch',[840,1620,360,24],[480,1500,190,24],[70,1420,390,24],[1060,1592],[200,1392],[100,1370,260,100],null,{cycleMs:3000,targetMs:1500,toleranceMs:120}],
+  // m7 (p1): timer-gate
+  ['timer-gate',[70,1250,390,24],[480,1130,190,24],[840,1050,360,24],[200,1222],[1060,1022],[900,1000,260,100],null,{cycleMs:4800,openMs:1700,transitionMs:200}],
+  // m8 (p2): merge-lift — 템플릿 B 표준 dynamic
+  ['merge-lift',[840,880,360,24],[480,780,190,20],[70,700,390,24],[1060,852],[200,672],[100,650,260,100],{axis:'y',from:780,to:430,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 10: 사막 우편로 (모래폭풍 + 낙뢰) ──────────────────────────────
+// 세계 너비 1400, 높이 3400 (템플릿 C). gravity 1600. 좌측 출발 → 우측 종착 지그재그.
+// wind-shutter + safe-ground + cargo-lock + moving-car + relay + cycle-platform + clock-latch + merge-lift.
+const desertRows = [
+  // m1 (p1): wind-shutter
+  ['wind-shutter',[70,3180,430,24],[490,3060,200,24],[970,2970,360,24],[200,3152],[1110,2942],[1010,2920,260,100],null,{forceX:-800,activeMs:2200,cycleMs:3600}],
+  // m2 (p2): safe-ground
+  ['safe-ground',[970,2810,360,24],[490,2690,200,24],[70,2610,430,24],[1110,2782],[200,2582],[100,2560,260,100],null,{strikeCycleMs:2200,warningMs:700}],
+  // m3 (p1): cargo-lock
+  ['cargo-lock',[70,2440,430,24],[490,2320,200,24],[970,2240,360,24],[200,2412],[1110,2212],[1010,2190,260,100]],
+  // m4 (p2): moving-car
+  ['moving-car',[970,2080,360,24],[490,1960,200,24],[70,1880,430,24],[1110,2052],[200,1852],[100,1830,260,100],{axis:'x',from:490,to:850,periodMs:4000,carryRiders:true}],
+  // m5 (p1): relay
+  ['relay',[70,1720,430,24],[490,1600,200,24],[970,1520,360,24],[200,1692],[1110,1492],[1010,1470,260,100]],
+  // m6 (p2): cycle-platform
+  ['cycle-platform',[970,1360,360,24],[490,1240,200,24],[70,1160,430,24],[1110,1332],[200,1132],[100,1110,260,100],null,{cycleMs:2800,solidMs:1600,phaseOffsetMs:0}],
+  // m7 (p1): clock-latch
+  ['clock-latch',[70,1000,430,24],[490,880,200,24],[970,800,360,24],[200,972],[1110,772],[1010,750,260,100],null,{cycleMs:3200,targetMs:1600,toleranceMs:130}],
+  // m8 (p2): merge-lift — 템플릿 C 표준 dynamic
+  ['merge-lift',[970,640,360,24],[490,540,200,20],[70,460,430,24],[1110,612],[200,432],[100,410,260,100],{axis:'y',from:540,to:310,periodMs:5200,carryRiders:true}],
+];
+
+// ── 레벨 11: 우주정거장 (도킹 + 무중력 구역) ─────────────────────────────
+// 세계 너비 1280, 높이 3600 (템플릿 A). 좌측 출발 → 우측 종착 지그재그.
+// docking-lock + low-gravity + signal-link + relay + timer-gate + cargo-lock + rotary + merge-lift.
+const spaceRows = [
+  // m1 (p1): docking-lock
+  ['docking-lock',[70,3370,390,24],[480,3250,190,24],[840,3160,360,24],[200,3342],[1060,3132],[900,3110,260,100],null,{maxRelativeSpeed:130,maxHeightDelta:50}],
+  // m2 (p2): low-gravity
+  ['low-gravity',[840,3000,360,24],[480,2880,190,24],[70,2800,390,24],[1060,2972],[200,2772],[100,2750,260,100]],
+  // m3 (p1): signal-link
+  ['signal-link',[70,2640,390,24],[480,2520,190,24],[840,2430,360,24],[200,2612],[1060,2402],[900,2380,260,100]],
+  // m4 (p2): relay
+  ['relay',[840,2270,360,24],[480,2150,190,24],[70,2070,390,24],[1060,2242],[200,2042],[100,2020,260,100]],
+  // m5 (p1): timer-gate
+  ['timer-gate',[70,1910,390,24],[480,1790,190,24],[840,1700,360,24],[200,1882],[1060,1672],[900,1650,260,100],null,{cycleMs:5000,openMs:1800,transitionMs:220}],
+  // m6 (p2): cargo-lock
+  ['cargo-lock',[840,1540,360,24],[480,1420,190,24],[70,1340,390,24],[1060,1512],[200,1312],[100,1290,260,100]],
+  // m7 (p1): rotary — route h=20
+  ['rotary',[70,1180,390,24],[480,1060,190,20],[840,980,360,24],[200,1152],[1060,952],[900,930,260,100],{pivot:[575,1060],length:190,periodMs:4200}],
+  // m8 (p2): merge-lift — 템플릿 A 표준 dynamic
+  ['merge-lift',[840,820,360,24],[480,720,190,20],[70,640,390,24],[1060,792],[200,612],[100,590,260,100],{axis:'y',from:720,to:420,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 12: 빙하 우편부 (빙하 기류 + 타이밍) ─────────────────────────────
+// 세계 너비 1280, 높이 3700 (템플릿 B). 좌측 출발 → 우측 종착 지그재그.
+// updraft + moving-car + cycle-platform + wind-shutter + signal-link + clock-latch + timer-gate + merge-lift.
+const glacierRows = [
+  // m1 (p1): updraft
+  ['updraft',[70,3470,390,24],[480,3350,190,24],[840,3260,360,24],[200,3442],[1060,3232],[900,3210,260,100],null,{liftAcceleration:-1900}],
+  // m2 (p2): moving-car
+  ['moving-car',[840,3100,360,24],[480,2980,190,24],[70,2900,390,24],[1060,3072],[200,2872],[100,2850,260,100],{axis:'x',from:480,to:800,periodMs:3800,carryRiders:true}],
+  // m3 (p1): cycle-platform
+  ['cycle-platform',[70,2730,390,24],[480,2610,190,24],[840,2530,360,24],[200,2702],[1060,2502],[900,2480,260,100],null,{cycleMs:2600,solidMs:1500,phaseOffsetMs:0}],
+  // m4 (p2): wind-shutter
+  ['wind-shutter',[840,2360,360,24],[480,2240,190,24],[70,2160,390,24],[1060,2332],[200,2132],[100,2110,260,100],null,{forceX:-780,activeMs:2000,cycleMs:3200}],
+  // m5 (p1): signal-link
+  ['signal-link',[70,1990,390,24],[480,1870,190,24],[840,1780,360,24],[200,1962],[1060,1752],[900,1730,260,100]],
+  // m6 (p2): clock-latch
+  ['clock-latch',[840,1620,360,24],[480,1500,190,24],[70,1420,390,24],[1060,1592],[200,1392],[100,1370,260,100],null,{cycleMs:3000,targetMs:1500,toleranceMs:120}],
+  // m7 (p1): timer-gate
+  ['timer-gate',[70,1250,390,24],[480,1130,190,24],[840,1050,360,24],[200,1222],[1060,1022],[900,1000,260,100],null,{cycleMs:5000,openMs:1900,transitionMs:220}],
+  // m8 (p2): merge-lift — 템플릿 B 표준 dynamic
+  ['merge-lift',[840,880,360,24],[480,780,190,20],[70,700,390,24],[1060,852],[200,672],[100,650,260,100],{axis:'y',from:780,to:430,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 13: 열대우림 우편소 (회전 덩굴 + 낙뢰) ──────────────────────────
+// 세계 너비 1280, 높이 3600 (템플릿 A). 좌측 출발 → 우측 종착 지그재그.
+// cycle-platform + updraft + cargo-lock + moving-car + rotary + relay + lightning-lock + merge-lift.
+const rainforestRows = [
+  // m1 (p1): cycle-platform
+  ['cycle-platform',[70,3370,390,24],[480,3250,190,24],[840,3160,360,24],[200,3342],[1060,3132],[900,3110,260,100],null,{cycleMs:3000,solidMs:1800,phaseOffsetMs:0}],
+  // m2 (p2): updraft
+  ['updraft',[840,3000,360,24],[480,2880,190,24],[70,2800,390,24],[1060,2972],[200,2772],[100,2750,260,100],null,{liftAcceleration:-1900}],
+  // m3 (p1): cargo-lock
+  ['cargo-lock',[70,2640,390,24],[480,2520,190,24],[840,2430,360,24],[200,2612],[1060,2402],[900,2380,260,100]],
+  // m4 (p2): moving-car
+  ['moving-car',[840,2270,360,24],[480,2150,190,24],[70,2070,390,24],[1060,2242],[200,2042],[100,2020,260,100],{axis:'x',from:480,to:800,periodMs:3800,carryRiders:true}],
+  // m5 (p1): rotary — route h=20
+  ['rotary',[70,1910,390,24],[480,1790,190,20],[840,1700,360,24],[200,1882],[1060,1672],[900,1650,260,100],{pivot:[575,1790],length:190,periodMs:4000}],
+  // m6 (p2): relay
+  ['relay',[840,1540,360,24],[480,1420,190,24],[70,1340,390,24],[1060,1512],[200,1312],[100,1290,260,100]],
+  // m7 (p1): lightning-lock
+  ['lightning-lock',[70,1180,390,24],[480,1060,190,24],[840,980,360,24],[200,1152],[1060,952],[900,930,260,100],null,{strikeCycleMs:2000,warningMs:800}],
+  // m8 (p2): merge-lift — 템플릿 A 표준 dynamic
+  ['merge-lift',[840,820,360,24],[480,720,190,20],[70,640,390,24],[1060,792],[200,612],[100,590,260,100],{axis:'y',from:720,to:420,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 14: 기계 공장 (이동 기계 + 화염풍) ──────────────────────────────
+// 세계 너비 1280, 높이 3600 (템플릿 A). 좌측 출발 → 우측 종착 지그재그.
+// moving-car(수직) + timer-gate + cargo-lock + cycle-platform + clock-latch + wind-shutter + safe-ground + merge-lift.
+const factoryRows = [
+  // m1 (p1): moving-car (수직 이동)
+  ['moving-car',[70,3370,390,24],[480,3250,190,24],[840,3160,360,24],[200,3342],[1060,3132],[900,3110,260,100],{axis:'y',from:3250,to:3150,periodMs:3200,carryRiders:true}],
+  // m2 (p2): timer-gate
+  ['timer-gate',[840,3000,360,24],[480,2880,190,24],[70,2800,390,24],[1060,2972],[200,2772],[100,2750,260,100],null,{cycleMs:5200,openMs:2000,transitionMs:220}],
+  // m3 (p1): cargo-lock
+  ['cargo-lock',[70,2640,390,24],[480,2520,190,24],[840,2430,360,24],[200,2612],[1060,2402],[900,2380,260,100]],
+  // m4 (p2): cycle-platform
+  ['cycle-platform',[840,2270,360,24],[480,2150,190,24],[70,2070,390,24],[1060,2242],[200,2042],[100,2020,260,100],null,{cycleMs:2800,solidMs:1700,phaseOffsetMs:0}],
+  // m5 (p1): clock-latch
+  ['clock-latch',[70,1910,390,24],[480,1790,190,24],[840,1700,360,24],[200,1882],[1060,1672],[900,1650,260,100],null,{cycleMs:3000,targetMs:1500,toleranceMs:120}],
+  // m6 (p2): wind-shutter
+  ['wind-shutter',[840,1540,360,24],[480,1420,190,24],[70,1340,390,24],[1060,1512],[200,1312],[100,1290,260,100],null,{forceX:-700,activeMs:2000,cycleMs:3200}],
+  // m7 (p1): safe-ground
+  ['safe-ground',[70,1180,390,24],[480,1060,190,24],[840,980,360,24],[200,1152],[1060,952],[900,930,260,100],null,{strikeCycleMs:2200,warningMs:600}],
+  // m8 (p2): merge-lift — 템플릿 A 표준 dynamic
+  ['merge-lift',[840,820,360,24],[480,720,190,20],[70,640,390,24],[1060,792],[200,612],[100,590,260,100],{axis:'y',from:720,to:420,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 15: 고대 신전 (회전 함정 + 낙뢰) ────────────────────────────────
+// 세계 너비 1280, 높이 3600 (템플릿 A). 좌측 출발 → 우측 종착 지그재그.
+// rotary + docking-lock + cycle-platform + relay + wind-shutter + cargo-lock + lightning-lock + merge-lift.
+const templeRows = [
+  // m1 (p1): rotary — route h=20
+  ['rotary',[70,3370,390,24],[480,3250,190,20],[840,3160,360,24],[200,3342],[1060,3132],[900,3110,260,100],{pivot:[575,3250],length:190,periodMs:3600}],
+  // m2 (p2): docking-lock
+  ['docking-lock',[840,3000,360,24],[480,2880,190,24],[70,2800,390,24],[1060,2972],[200,2772],[100,2750,260,100],null,{maxRelativeSpeed:120,maxHeightDelta:40}],
+  // m3 (p1): cycle-platform
+  ['cycle-platform',[70,2640,390,24],[480,2520,190,24],[840,2430,360,24],[200,2612],[1060,2402],[900,2380,260,100],null,{cycleMs:2600,solidMs:1500,phaseOffsetMs:0}],
+  // m4 (p2): relay
+  ['relay',[840,2270,360,24],[480,2150,190,24],[70,2070,390,24],[1060,2242],[200,2042],[100,2020,260,100]],
+  // m5 (p1): wind-shutter
+  ['wind-shutter',[70,1910,390,24],[480,1790,190,24],[840,1700,360,24],[200,1882],[1060,1672],[900,1650,260,100],null,{forceX:800,activeMs:2000,cycleMs:3400}],
+  // m6 (p2): cargo-lock
+  ['cargo-lock',[840,1540,360,24],[480,1420,190,24],[70,1340,390,24],[1060,1512],[200,1312],[100,1290,260,100]],
+  // m7 (p1): lightning-lock
+  ['lightning-lock',[70,1180,390,24],[480,1060,190,24],[840,980,360,24],[200,1152],[1060,952],[900,930,260,100],null,{strikeCycleMs:1800,warningMs:900}],
+  // m8 (p2): merge-lift — 템플릿 A 표준 dynamic
+  ['merge-lift',[840,820,360,24],[480,720,190,20],[70,640,390,24],[1060,792],[200,612],[100,590,260,100],{axis:'y',from:720,to:420,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 16: 구름 위 정원 (저중력 + 상승 기류) ───────────────────────────
+// 세계 너비 1280, 높이 4400 (템플릿 D). gravity 900 (safeRise=175).
+// updraft + low-gravity + cycle-platform + wind-shutter + moving-car + relay + timer-gate + merge-lift.
+const gardenRows = [
+  // m1 (p1): updraft
+  ['updraft',[70,4160,390,24],[480,4000,190,24],[840,3880,360,24],[200,4132],[1060,3852],[900,3830,260,100],null,{liftAcceleration:-1900}],
+  // m2 (p2): low-gravity
+  ['low-gravity',[840,3720,360,24],[480,3560,190,24],[70,3440,390,24],[1060,3692],[200,3412],[100,3390,260,100]],
+  // m3 (p1): cycle-platform
+  ['cycle-platform',[70,3280,390,24],[480,3120,190,24],[840,3000,360,24],[200,3252],[1060,2972],[900,2950,260,100],null,{cycleMs:3200,solidMs:2000,phaseOffsetMs:0}],
+  // m4 (p2): wind-shutter
+  ['wind-shutter',[840,2840,360,24],[480,2680,190,24],[70,2560,390,24],[1060,2812],[200,2532],[100,2510,260,100],null,{forceX:-600,activeMs:2500,cycleMs:4000}],
+  // m5 (p1): moving-car
+  ['moving-car',[70,2400,390,24],[480,2240,190,24],[840,2120,360,24],[200,2372],[1060,2092],[900,2070,260,100],{axis:'x',from:480,to:800,periodMs:4200,carryRiders:true}],
+  // m6 (p2): relay
+  ['relay',[840,1960,360,24],[480,1800,190,24],[70,1680,390,24],[1060,1932],[200,1652],[100,1630,260,100]],
+  // m7 (p1): timer-gate
+  ['timer-gate',[70,1520,390,24],[480,1360,190,24],[840,1240,360,24],[200,1492],[1060,1212],[900,1190,260,100],null,{cycleMs:5500,openMs:2200,transitionMs:250}],
+  // m8 (p2): merge-lift — 템플릿 D 표준 dynamic
+  ['merge-lift',[840,1080,360,24],[480,920,190,20],[70,800,390,24],[1060,1052],[200,772],[100,750,260,100],{axis:'y',from:920,to:480,periodMs:5500,carryRiders:true}],
+];
+
+// ── 레벨 17: 별의 도서관 (시계 장치 + 순환 발판) ─────────────────────────
+// 세계 너비 1280, 높이 3600 (템플릿 A). 좌측 출발 → 우측 종착 지그재그.
+// clock-latch + signal-link + relay + cargo-lock + rotary + timer-gate + cycle-platform + merge-lift.
+const libraryRows = [
+  // m1 (p1): clock-latch
+  ['clock-latch',[70,3370,390,24],[480,3250,190,24],[840,3160,360,24],[200,3342],[1060,3132],[900,3110,260,100],null,{cycleMs:3000,targetMs:1500,toleranceMs:120}],
+  // m2 (p2): signal-link
+  ['signal-link',[840,3000,360,24],[480,2880,190,24],[70,2800,390,24],[1060,2972],[200,2772],[100,2750,260,100]],
+  // m3 (p1): relay
+  ['relay',[70,2640,390,24],[480,2520,190,24],[840,2430,360,24],[200,2612],[1060,2402],[900,2380,260,100]],
+  // m4 (p2): cargo-lock
+  ['cargo-lock',[840,2270,360,24],[480,2150,190,24],[70,2070,390,24],[1060,2242],[200,2042],[100,2020,260,100]],
+  // m5 (p1): rotary — route h=20
+  ['rotary',[70,1910,390,24],[480,1790,190,20],[840,1700,360,24],[200,1882],[1060,1672],[900,1650,260,100],{pivot:[575,1790],length:190,periodMs:3600}],
+  // m6 (p2): timer-gate
+  ['timer-gate',[840,1540,360,24],[480,1420,190,24],[70,1340,390,24],[1060,1512],[200,1312],[100,1290,260,100],null,{cycleMs:5000,openMs:1800,transitionMs:200}],
+  // m7 (p1): cycle-platform
+  ['cycle-platform',[70,1180,390,24],[480,1060,190,24],[840,980,360,24],[200,1152],[1060,952],[900,930,260,100],null,{cycleMs:2800,solidMs:1600,phaseOffsetMs:0}],
+  // m8 (p2): merge-lift — 템플릿 A 표준 dynamic
+  ['merge-lift',[840,820,360,24],[480,720,190,20],[70,640,390,24],[1060,792],[200,612],[100,590,260,100],{axis:'y',from:720,to:420,periodMs:5000,carryRiders:true}],
+];
+
 /** @param {Array} row 압축 행 @returns {object} */
 function unpack(row) { return { type: row[0], platforms: [row[1],row[2],row[3]], anchor: row[4], switch: row[5], zone: row[6], dynamic: row[7] ?? null, mechanics: row[8] ?? {} }; }
 
@@ -164,6 +394,26 @@ const LEVEL_DEFINITIONS = [
   { id:'deep-sea-post',nameKey:'level.ocean.name',themeKey:'level.ocean.theme',descriptionKey:'level.ocean.description',minutes:'8–13',palette:PALETTES.ocean,motif:'ocean',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3140,965,3140],[110,2780,175,2780],[900,2410,965,2410],[110,2040,175,2040],[900,1680,965,1680],[110,1320,175,1320],[900,960,965,960],[130,610,195,610]],rows:oceanRows.map(unpack),hazards:[] },
   // 레벨 7: 화산 우편대 — 안전지대(safe-ground) × 2 + 번개 잠금 + 화염풍(wind-shutter) × 2 + 회전 발판 + 시계 래치 + 합체 리프트
   { id:'volcanic-mail-base',nameKey:'level.volcano.name',themeKey:'level.volcano.theme',descriptionKey:'level.volcano.description',minutes:'10–15',palette:PALETTES.volcano,motif:'volcano',world:{width:1400,height:3400,spawnY:3280,dangerY:3560},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3340,480,50],[930,3340,470,50]],finishDeck:[290,300,820,28],finish:[450,248,950,248,700,210,2600,2400],checkpoints:[[150,3280,215,3280],[1010,2930,1075,2930],[130,2580,195,2580],[1010,2200,1075,2200],[130,1830,195,1830],[1010,1470,1075,1470],[130,1120,195,1120],[1010,770,1075,770],[130,440,195,440]],rows:volcanoRows.map(unpack),hazards:[] },
+  // 레벨 8: 수정 궁전 — relay + rotary + cycle-platform + cargo-lock + low-gravity + docking-lock + signal-link + merge-lift
+  { id:'crystal-palace',nameKey:'level.crystal.name',themeKey:'level.crystal.theme',descriptionKey:'level.crystal.description',minutes:'7–10',palette:PALETTES.crystal,motif:'crystal',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3130,965,3130],[110,2770,175,2770],[900,2400,965,2400],[110,2040,175,2040],[900,1670,965,1670],[110,1310,175,1310],[900,950,965,950],[110,610,175,610]],rows:crystalRows.map(unpack),hazards:[] },
+  // 레벨 9: 설산 우편탑 — moving-car + wind-shutter + cycle-platform + updraft + signal-link + clock-latch + timer-gate + merge-lift
+  { id:'snowpeak-tower',nameKey:'level.snowpeak.name',themeKey:'level.snowpeak.theme',descriptionKey:'level.snowpeak.description',minutes:'9–14',palette:PALETTES.snowpeak,motif:'snowpeak',world:{width:1280,height:3700,spawnY:3580,dangerY:3800},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3640,440,50],[860,3640,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3580,215,3580],[900,3230,965,3230],[110,2870,175,2870],[900,2500,965,2500],[110,2130,175,2130],[900,1750,965,1750],[110,1390,175,1390],[900,1020,965,1020],[110,670,175,670]],rows:snowpeakRows.map(unpack),hazards:[] },
+  // 레벨 10: 사막 우편로 — wind-shutter + safe-ground + cargo-lock + moving-car + relay + cycle-platform + clock-latch + merge-lift
+  { id:'desert-route',nameKey:'level.desert.name',themeKey:'level.desert.theme',descriptionKey:'level.desert.description',minutes:'8–12',palette:PALETTES.desert,motif:'desert',world:{width:1400,height:3400,spawnY:3280,dangerY:3560},physics:{gravity:1600,jumpSpeed:700,moveSpeed:260},floor:[[0,3340,500,50],[960,3340,440,50]],finishDeck:[280,300,840,28],finish:[480,248,960,248,720,210,2600,2400],checkpoints:[[160,3280,225,3280],[1050,2940,1115,2940],[110,2580,175,2580],[1050,2210,1115,2210],[110,1850,175,1850],[1050,1490,1115,1490],[110,1130,175,1130],[1050,770,1115,770],[110,430,175,430]],rows:desertRows.map(unpack),hazards:[] },
+  // 레벨 11: 우주정거장 — docking-lock + low-gravity + signal-link + relay + timer-gate + cargo-lock + rotary + merge-lift
+  { id:'space-station',nameKey:'level.space.name',themeKey:'level.space.theme',descriptionKey:'level.space.description',minutes:'9–14',palette:PALETTES.space,motif:'space',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3130,965,3130],[110,2770,175,2770],[900,2400,965,2400],[110,2040,175,2040],[900,1670,965,1670],[110,1310,175,1310],[900,950,965,950],[110,610,175,610]],rows:spaceRows.map(unpack),hazards:[] },
+  // 레벨 12: 빙하 우편부 — updraft + moving-car + cycle-platform + wind-shutter + signal-link + clock-latch + timer-gate + merge-lift
+  { id:'glacier-bureau',nameKey:'level.glacier.name',themeKey:'level.glacier.theme',descriptionKey:'level.glacier.description',minutes:'8–13',palette:PALETTES.glacier,motif:'glacier',world:{width:1280,height:3700,spawnY:3580,dangerY:3800},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3640,440,50],[860,3640,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3580,215,3580],[900,3230,965,3230],[110,2870,175,2870],[900,2500,965,2500],[110,2130,175,2130],[900,1750,965,1750],[110,1390,175,1390],[900,1020,965,1020],[110,670,175,670]],rows:glacierRows.map(unpack),hazards:[] },
+  // 레벨 13: 열대우림 우편소 — cycle-platform + updraft + cargo-lock + moving-car + rotary + relay + lightning-lock + merge-lift
+  { id:'rainforest-post',nameKey:'level.rainforest.name',themeKey:'level.rainforest.theme',descriptionKey:'level.rainforest.description',minutes:'9–14',palette:PALETTES.rainforest,motif:'rainforest',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3130,965,3130],[110,2770,175,2770],[900,2400,965,2400],[110,2040,175,2040],[900,1670,965,1670],[110,1310,175,1310],[900,950,965,950],[110,610,175,610]],rows:rainforestRows.map(unpack),hazards:[] },
+  // 레벨 14: 기계 공장 — moving-car(수직) + timer-gate + cargo-lock + cycle-platform + clock-latch + wind-shutter + safe-ground + merge-lift
+  { id:'machine-factory',nameKey:'level.factory.name',themeKey:'level.factory.theme',descriptionKey:'level.factory.description',minutes:'10–15',palette:PALETTES.factory,motif:'factory',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3130,965,3130],[110,2770,175,2770],[900,2400,965,2400],[110,2040,175,2040],[900,1670,965,1670],[110,1310,175,1310],[900,950,965,950],[110,610,175,610]],rows:factoryRows.map(unpack),hazards:[] },
+  // 레벨 15: 고대 신전 — rotary + docking-lock + cycle-platform + relay + wind-shutter + cargo-lock + lightning-lock + merge-lift
+  { id:'ancient-temple',nameKey:'level.temple.name',themeKey:'level.temple.theme',descriptionKey:'level.temple.description',minutes:'9–14',palette:PALETTES.temple,motif:'temple',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3130,965,3130],[110,2770,175,2770],[900,2400,965,2400],[110,2040,175,2040],[900,1670,965,1670],[110,1310,175,1310],[900,950,965,950],[110,610,175,610]],rows:templeRows.map(unpack),hazards:[] },
+  // 레벨 16: 구름 위 정원 — updraft + low-gravity + cycle-platform + wind-shutter + moving-car + relay + timer-gate + merge-lift
+  { id:'sky-garden',nameKey:'level.garden.name',themeKey:'level.garden.theme',descriptionKey:'level.garden.description',minutes:'10–16',palette:PALETTES.garden,motif:'garden',world:{width:1280,height:4400,spawnY:4270,dangerY:4560},physics:{gravity:900,jumpSpeed:650,moveSpeed:250},floor:[[0,4340,440,50],[860,4340,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,4270,215,4270],[900,3850,965,3850],[110,3410,175,3410],[900,2970,965,2970],[110,2530,175,2530],[900,2090,965,2090],[110,1650,175,1650],[900,1210,965,1210],[110,770,175,770]],rows:gardenRows.map(unpack),hazards:[] },
+  // 레벨 17: 별의 도서관 — clock-latch + signal-link + relay + cargo-lock + rotary + timer-gate + cycle-platform + merge-lift
+  { id:'stellar-library',nameKey:'level.library.name',themeKey:'level.library.theme',descriptionKey:'level.library.description',minutes:'8–13',palette:PALETTES.library,motif:'library',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3130,965,3130],[110,2770,175,2770],[900,2400,965,2400],[110,2040,175,2040],[900,1670,965,1670],[110,1310,175,1310],[900,950,965,950],[110,610,175,610]],rows:libraryRows.map(unpack),hazards:[] },
 ];
 
 const baseLevel = Object.freeze({ id:'starlight-tower',nameKey:'level.starlight.name',themeKey:'level.starlight.theme',descriptionKey:'level.starlight.description',minutes:'6–10',palette:PALETTES.tower,motif:'tower',world:{...WORLD},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},platforms:PLATFORMS.map((item)=>({...item})),checkpoints:CHECKPOINTS.map((item)=>({...item})),finish:{...FINISH,leftSwitch:{...FINISH.leftSwitch},rightSwitch:{...FINISH.rightSwitch},launcher:{...FINISH.launcher}},modules:MODULES.map((item)=>({...item,anchor:{...item.anchor},switch:{...item.switch},checkpoint:{...item.checkpoint}})),hazards:[] });
