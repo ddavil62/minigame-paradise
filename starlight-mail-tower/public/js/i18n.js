@@ -22,6 +22,8 @@ const MESSAGES = Object.freeze({
     'level.moon.name': '달빛 시계탑', 'level.moon.theme': '회전 발판과 주기', 'level.moon.description': '시계 장치의 박자에 맞춰 역할을 바꾸는 코스',
     'level.storm.name': '폭풍 관측소', 'level.storm.theme': '강풍과 안전지대', 'level.storm.description': '낙뢰 신호를 읽고 함께 피하는 고난도 코스',
     'level.orbital.name': '궤도 우편선', 'level.orbital.theme': '저중력과 도킹', 'level.orbital.description': '부유하며 신호를 합치는 종합 협동 코스',
+    'level.ocean.name': '심해 우편소', 'level.ocean.theme': '상승 기류와 타이밍', 'level.ocean.description': '해저 기류를 타고 수압 게이트를 열어가는 협동 코스',
+    'level.volcano.name': '화산 우편대', 'level.volcano.theme': '낙뢰와 화염풍', 'level.volcano.description': '번개를 피하고 화염 바람을 헤쳐 나가는 고강도 협동 코스',
     'aria.levelList': '배송 코스 선택', 'menu.selected': '선택됨', 'menu.locked': '호스트 선택',
   },
   en: {
@@ -43,6 +45,8 @@ const MESSAGES = Object.freeze({
     'level.moon.name': 'Moonlight Clocktower', 'level.moon.theme': 'Rotating Platforms & Cycles', 'level.moon.description': 'Swap roles to the rhythm of clockwork devices.',
     'level.storm.name': 'Storm Observatory', 'level.storm.theme': 'Gales & Safe Zones', 'level.storm.description': 'Read lightning signals and shelter together.',
     'level.orbital.name': 'Orbital Postship', 'level.orbital.theme': 'Low Gravity & Docking', 'level.orbital.description': 'A combined challenge of drifting and signal relays.',
+    'level.ocean.name': 'Deep Sea Post', 'level.ocean.theme': 'Updrafts & Timing', 'level.ocean.description': 'Ride underwater currents and open pressure gates together.',
+    'level.volcano.name': 'Volcanic Mail Base', 'level.volcano.theme': 'Lightning & Fire Wind', 'level.volcano.description': 'Dodge lightning and push through volcanic gusts in this intense run.',
     'aria.levelList': 'Choose a delivery course', 'menu.selected': 'Selected', 'menu.locked': 'Host choice',
   },
 });

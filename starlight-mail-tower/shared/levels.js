@@ -61,6 +61,8 @@ function buildIndependentLevel(definition) {
 
 const PALETTES = Object.freeze({
   tower: { sky: '#0B1322', haze: '#15213A', structure: '#344B68', accent: '#C68A3A' }, cloud: { sky: '#15213A', haze: '#3E91A3', structure: '#344B68', accent: '#B9E8E7' }, moon: { sky: '#0B1322', haze: '#786EA8', structure: '#344B68', accent: '#FFD97A' }, storm: { sky: '#07101D', haze: '#344B68', structure: '#3E91A3', accent: '#FFB454' }, orbit: { sky: '#07101D', haze: '#786EA8', structure: '#1F2C47', accent: '#D97FA5' },
+  ocean: { sky: '#060F1C', haze: '#0A3550', structure: '#1A4560', accent: '#00D4CC' },
+  volcano: { sky: '#0E0800', haze: '#3A1200', structure: '#5C2200', accent: '#FF6A1A' },
 });
 
 const cloudRows = [
@@ -104,6 +106,52 @@ const orbitRows = [
   ['merge-lift',[900,740,350,24],[560,590,200,24],[330,410,390,24],[1060,712],[470,382],[380,330,260,100],{axis:'y',from:590,to:340,periodMs:5600,carryRiders:true}],
 ];
 
+// ── 레벨 6: 심해 우편소 (상승 기류 + 타이머 게이트) ──────────────────────
+// 세계 너비 1280, 높이 3600. 좌측 출발 → 우측 종착 지그재그.
+// 기류(updraft) 2회 + 이동 객차(moving-car) + 주기 발판(cycle-platform) +
+// 타이머 게이트(timer-gate) 2회 + 신호 연결(signal-link) + 합체 리프트(merge-lift).
+const oceanRows = [
+  // m1 (p1): updraft — 좌측 출발, 기류 기둥 통과, 우측 착지
+  ['updraft',[70,3380,380,24],[490,3260,180,24],[850,3180,360,24],[200,3352],[1060,3152],[900,3100,260,100],null,{liftAcceleration:-1900}],
+  // m2 (p2): timer-gate — 우측 출발, 잠긴 게이트, 좌측 착지
+  ['timer-gate',[840,3020,370,24],[490,2910,190,24],[70,2820,390,24],[1060,2992],[200,2792],[100,2740,260,100],null,{cycleMs:5500,openMs:1900,transitionMs:220}],
+  // m3 (p1): moving-car — 좌측 출발, 횡이동 객차, 우측 착지
+  ['moving-car',[70,2660,390,24],[490,2550,210,24],[840,2450,360,24],[200,2632],[1050,2422],[900,2370,260,100],{axis:'x',from:490,to:820,periodMs:3800,carryRiders:true}],
+  // m4 (p2): cycle-platform — 우측 출발, 명멸 발판, 좌측 착지
+  ['cycle-platform',[840,2290,360,24],[490,2170,170,24],[70,2080,390,24],[1060,2262],[200,2052],[100,2000,260,100],null,{cycleMs:2800,solidMs:1700,phaseOffsetMs:0}],
+  // m5 (p1): updraft — 좌측 출발, 기류 2번째 기둥, 우측 착지
+  ['updraft',[70,1920,390,24],[490,1800,180,24],[840,1720,360,24],[200,1892],[1060,1692],[900,1640,260,100],null,{liftAcceleration:-1900}],
+  // m6 (p2): timer-gate (빠른 주기) — 우측 출발, 좌측 착지
+  ['timer-gate',[840,1560,360,24],[490,1440,190,24],[70,1360,390,24],[1060,1532],[200,1332],[100,1280,260,100],null,{cycleMs:4500,openMs:1500,transitionMs:200}],
+  // m7 (p1): signal-link — 좌측 출발, 우측 착지
+  ['signal-link',[70,1200,390,24],[490,1080,200,24],[840,1000,360,24],[200,1172],[1050,972],[900,920,260,100]],
+  // m8 (p2): merge-lift — 우측 출발, 리프트 탑승, 좌측 착지 (결승 진입)
+  ['merge-lift',[840,840,360,24],[490,740,200,20],[80,650,380,24],[1060,812],[180,622],[100,570,280,100],{axis:'y',from:740,to:410,periodMs:5000,carryRiders:true}],
+];
+
+// ── 레벨 7: 화산 우편대 (낙뢰 안전지대 + 화염풍) ────────────────────────
+// 세계 너비 1400, 높이 3400. 좌측 출발 → 우측 종착 지그재그.
+// 안전지대(safe-ground) 2회 + 화염풍(wind-shutter) 2회 + 회전 발판(rotary) +
+// 시계 래치(clock-latch) + 번개 잠금(lightning-lock) + 합체 리프트(merge-lift).
+const volcanoRows = [
+  // m1 (p1): safe-ground — 좌측 출발, 피뢰 타이밍, 우측 착지
+  ['safe-ground',[70,3180,420,24],[540,3060,220,24],[920,2970,400,24],[200,3152],[1180,2942],[980,2890,290,100],null,{strikeCycleMs:2400,warningMs:700}],
+  // m2 (p2): wind-shutter (좌풍) — 우측 출발, 바람 역주행, 좌측 착지
+  ['wind-shutter',[920,2820,400,24],[540,2700,220,24],[70,2620,430,24],[1170,2792],[200,2592],[100,2540,290,100],null,{forceX:-860,activeMs:2200,cycleMs:3400}],
+  // m3 (p1): rotary — 좌측 출발, 회전 다리, 우측 착지
+  ['rotary',[70,2470,430,24],[540,2350,200,20],[920,2240,400,24],[200,2442],[1150,2212],[980,2160,290,100],{pivot:[645,2360],length:220,periodMs:4000}],
+  // m4 (p2): clock-latch — 우측 출발, 시계 박자 맞추기, 좌측 착지
+  ['clock-latch',[920,2090,400,24],[540,1970,210,24],[70,1870,430,24],[1170,2062],[200,1842],[100,1790,290,100],null,{cycleMs:3000,targetMs:1500,toleranceMs:120}],
+  // m5 (p1): safe-ground (빠른 주기) — 좌측 출발, 우측 착지
+  ['safe-ground',[70,1720,430,24],[540,1600,220,24],[920,1510,400,24],[200,1692],[1180,1482],[980,1430,290,100],null,{strikeCycleMs:2000,warningMs:600}],
+  // m6 (p2): wind-shutter (우풍) — 우측 출발, 방향 바뀐 화염풍, 좌측 착지
+  ['wind-shutter',[920,1360,400,24],[540,1240,220,24],[70,1160,430,24],[1170,1332],[200,1132],[100,1080,290,100],null,{forceX:920,activeMs:2000,cycleMs:3200}],
+  // m7 (p1): lightning-lock — 좌측 출발, 우측 착지
+  ['lightning-lock',[70,1010,430,24],[540,890,220,24],[920,810,400,24],[200,982],[1180,782],[980,730,290,100],null,{strikeCycleMs:1800,warningMs:900}],
+  // m8 (p2): merge-lift — 우측 출발, 리프트 탑승, 좌측 착지 (결승 진입)
+  ['merge-lift',[920,660,400,24],[550,560,200,20],[80,480,420,24],[1160,632],[190,452],[100,400,300,100],{axis:'y',from:560,to:400,periodMs:4800,carryRiders:true}],
+];
+
 /** @param {Array} row 압축 행 @returns {object} */
 function unpack(row) { return { type: row[0], platforms: [row[1],row[2],row[3]], anchor: row[4], switch: row[5], zone: row[6], dynamic: row[7] ?? null, mechanics: row[8] ?? {} }; }
 
@@ -112,6 +160,10 @@ const LEVEL_DEFINITIONS = [
   { id:'moon-clock',nameKey:'level.moon.name',themeKey:'level.moon.theme',descriptionKey:'level.moon.description',minutes:'8–12',palette:PALETTES.moon,motif:'clock',world:{width:1280,height:3880,spawnY:3760,dangerY:4020},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3820,390,50],[850,3820,430,50]],finishDeck:[280,300,720,28],finish:[420,245,860,245,640,205,2400,2400],checkpoints:[[120,3760,185,3760],[900,3400,965,3400],[210,2960,275,2960],[920,2520,985,2520],[160,2080,225,2080],[900,1640,965,1640],[230,1200,295,1200],[880,760,945,760],[390,390,455,390]],rows:moonRows.map(unpack),hazards:[] },
   { id:'storm-station',nameKey:'level.storm.name',themeKey:'level.storm.theme',descriptionKey:'level.storm.description',minutes:'8–13',palette:PALETTES.storm,motif:'storm',world:{width:1520,height:3480,spawnY:3370,dangerY:3650},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3430,560,50],[1010,3430,510,50]],finishDeck:[350,300,820,28],finish:[500,250,1020,250,760,210,2600,2400],checkpoints:[[190,3370,255,3370],[1150,3010,1215,3010],[290,2630,355,2630],[1130,2250,1195,2250],[180,1870,245,1870],[1120,1490,1185,1490],[310,1110,375,1110],[1090,730,1155,730],[450,390,515,390]],rows:stormRows.map(unpack),hazards:[{id:'storm-wind',type:'wind',x:480,y:500,width:600,height:2900,forceX:820},{id:'storm-lift',type:'updraft',x:600,y:600,width:260,height:2600,liftAcceleration:-1900}] },
   { id:'orbital-post',nameKey:'level.orbital.name',themeKey:'level.orbital.theme',descriptionKey:'level.orbital.description',minutes:'9–15',palette:PALETTES.orbit,motif:'orbit',world:{width:1360,height:4200,spawnY:4080,dangerY:4460},physics:{gravity:720,jumpSpeed:520,moveAcceleration:680,maxSpeed:310,airDrag:.35,groundDrag:5.5},floor:[[0,4140,430,50],[900,4140,460,50]],finishDeck:[300,300,760,28],finish:[450,245,910,245,680,205,2200,2800],checkpoints:[[150,4080,215,4080],[980,3660,1045,3660],[250,3200,315,3200],[970,2740,1035,2740],[180,2280,245,2280],[940,1820,1005,1820],[280,1360,345,1360],[920,900,985,900],[410,390,475,390]],rows:orbitRows.map(unpack),hazards:[] },
+  // 레벨 6: 심해 우편소 — 상승 기류(updraft) × 2 + 타이머 게이트 × 2 + 이동 객차 + 명멸 발판 + 신호 연결 + 합체 리프트
+  { id:'deep-sea-post',nameKey:'level.ocean.name',themeKey:'level.ocean.theme',descriptionKey:'level.ocean.description',minutes:'8–13',palette:PALETTES.ocean,motif:'ocean',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3140,965,3140],[110,2780,175,2780],[900,2410,965,2410],[110,2040,175,2040],[900,1680,965,1680],[110,1320,175,1320],[900,960,965,960],[130,610,195,610]],rows:oceanRows.map(unpack),hazards:[] },
+  // 레벨 7: 화산 우편대 — 안전지대(safe-ground) × 2 + 번개 잠금 + 화염풍(wind-shutter) × 2 + 회전 발판 + 시계 래치 + 합체 리프트
+  { id:'volcanic-mail-base',nameKey:'level.volcano.name',themeKey:'level.volcano.theme',descriptionKey:'level.volcano.description',minutes:'10–15',palette:PALETTES.volcano,motif:'volcano',world:{width:1400,height:3400,spawnY:3280,dangerY:3560},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3340,480,50],[930,3340,470,50]],finishDeck:[290,300,820,28],finish:[450,248,950,248,700,210,2600,2400],checkpoints:[[150,3280,215,3280],[1010,2930,1075,2930],[130,2580,195,2580],[1010,2200,1075,2200],[130,1830,195,1830],[1010,1470,1075,1470],[130,1120,195,1120],[1010,770,1075,770],[130,440,195,440]],rows:volcanoRows.map(unpack),hazards:[] },
 ];
 
 const baseLevel = Object.freeze({ id:'starlight-tower',nameKey:'level.starlight.name',themeKey:'level.starlight.theme',descriptionKey:'level.starlight.description',minutes:'6–10',palette:PALETTES.tower,motif:'tower',world:{...WORLD},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},platforms:PLATFORMS.map((item)=>({...item})),checkpoints:CHECKPOINTS.map((item)=>({...item})),finish:{...FINISH,leftSwitch:{...FINISH.leftSwitch},rightSwitch:{...FINISH.rightSwitch},launcher:{...FINISH.launcher}},modules:MODULES.map((item)=>({...item,anchor:{...item.anchor},switch:{...item.switch},checkpoint:{...item.checkpoint}})),hazards:[] });
