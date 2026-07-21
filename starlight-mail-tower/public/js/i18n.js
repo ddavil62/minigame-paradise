@@ -34,6 +34,7 @@ const MESSAGES = Object.freeze({
     'level.temple.name': '고대 신전', 'level.temple.theme': '회전 함정과 낙뢰', 'level.temple.description': '회전 발판과 낙뢰 함정 사이를 헤쳐 나가는 신전 코스',
     'level.garden.name': '구름 위 정원', 'level.garden.theme': '저중력과 상승 기류', 'level.garden.description': '저중력 하늘 정원에서 부유하며 기류를 타는 협동 코스',
     'level.library.name': '별의 도서관', 'level.library.theme': '시계 장치와 순환 발판', 'level.library.description': '정교한 시계 장치와 순환 발판의 리듬을 맞추는 협동 코스',
+    'ai.start': 'AI랑 시작',
     'aria.levelList': '배송 코스 선택', 'menu.selected': '선택됨', 'menu.locked': '호스트 선택',
   },
   en: {
@@ -67,6 +68,7 @@ const MESSAGES = Object.freeze({
     'level.temple.name': 'Ancient Temple', 'level.temple.theme': 'Rotating Traps & Lightning', 'level.temple.description': 'Brave rotating platforms and lightning chambers in an ancient temple.',
     'level.garden.name': 'Sky Garden', 'level.garden.theme': 'Low Gravity & Updrafts', 'level.garden.description': 'Float through a low-gravity sky garden riding warm air currents.',
     'level.library.name': 'Stellar Library', 'level.library.theme': 'Clockwork & Cycling Platforms', 'level.library.description': 'Match the rhythm of clockwork devices and cycling platforms.',
+    'ai.start': 'Start with AI',
     'aria.levelList': 'Choose a delivery course', 'menu.selected': 'Selected', 'menu.locked': 'Host choice',
   },
 });

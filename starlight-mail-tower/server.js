@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { advanceModuleForTesting, applyInput, createSimulation, snapshotSimulation, stepSimulation, triggerFinishForTesting } from './game/simulation.js';
@@ -41,6 +42,8 @@ export function createApp(options = {}) {
     if (!validation.ok) throw new Error(`Invalid level ${level.id}: ${validation.errors.join(', ')}`);
   }
   let hostUrl = options.hostUrl ?? '';
+  const getBotUrl = options.getBotUrl ?? null;
+  let botChild = null;
   const reconnectGraceMs = options.reconnectGraceMs ?? (Number(process.env.STARLIGHT_RECONNECT_MS) || DEFAULT_RECONNECT_GRACE_MS);
   const testing = options.testing === true || process.env.STARLIGHT_TESTING === '1';
   const wss = new WebSocketServer({ noServer: true, maxPayload: 2048 });
@@ -145,6 +148,34 @@ export function createApp(options = {}) {
     slot.disconnectTimer = setTimeout(() => expireReconnect(client.playerId), reconnectGraceMs);
     slot.disconnectTimer.unref();
     broadcast({ type: SERVER_MESSAGE.PAUSED, reason: 'partner_reconnecting', playerId: client.playerId, reconnectDeadline: slot.disconnectDeadline });
+  }
+
+  /** mode=ai 진입 시 봇 프로세스를 기동한다. @returns {void} */
+  function spawnBot() {
+    if (!getBotUrl || botChild) return;
+    const url = getBotUrl();
+    botChild = spawn(process.execPath, [path.join(ROOT_DIR, 'bot.js'), '--url', url], {
+      cwd: ROOT_DIR,
+      stdio: 'inherit',
+    });
+    botChild.on('error', (err) => {
+      console.error(`[starlight-bot] spawn 에러:`, err.message);
+      botChild = null;
+    });
+    botChild.on('exit', (code) => {
+      botChild = null;
+      console.log(`[starlight-bot] 종료 (code=${code})`);
+    });
+    console.log(`[starlight-bot] 기동: ${url} (pid=${botChild.pid})`);
+  }
+
+  /** 봇 프로세스를 종료한다. @returns {void} */
+  function killBot() {
+    if (botChild) {
+      console.log(`[starlight-bot] kill (pid=${botChild.pid})`);
+      botChild.kill('SIGTERM');
+      botChild = null;
+    }
   }
 
   /** @param {import('ws').WebSocket} ws 소켓 @param {object} client 메타 @param {object} slot 역할 슬롯 @returns {void} */
@@ -273,6 +304,8 @@ export function createApp(options = {}) {
       }
       if (client.playerId && !client.explicitLeave && simulation.phase !== 'ended') pauseForDisconnect(client);
       else if (client.playerId) ready.delete(client.playerId);
+      // 모든 클라이언트가 떠나면 봇 프로세스도 종료한다.
+      if (clients.size === 0) killBot();
       if (testing && clients.size === 0) {
         for (const slot of slots.values()) if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer);
         pauseState = null; slots.clear(); ready.clear(); restartVotes.clear(); resultVotes.clear(); cancelResultTransition(); selectedLevelId = DEFAULT_LEVEL_ID; simulation = createSimulation(selectedLevelId);
@@ -341,11 +374,19 @@ export function createApp(options = {}) {
   }
 
   /** @param {http.IncomingMessage} req 요청 @param {import('stream').Duplex} socket 소켓 @param {Buffer} head 업그레이드 헤드 @returns {void} */
-  function handleUpgrade(req, socket, head) { wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req)); }
+  function handleUpgrade(req, socket, head) {
+    const requestUrl = new URL(req.url ?? '/', 'http://local');
+    const mode = requestUrl.searchParams.get('mode');
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit('connection', ws, req);
+      // mode=ai: 인간이 접속한 것이므로 봇 spawn
+      if (mode === 'ai' && !botChild) spawnBot();
+    });
+  }
   /** @param {string} value 호스트 주소 @returns {void} */
   function setHostUrl(value) { hostUrl = value; }
   /** @returns {void} */
-  function close() { clearInterval(timer); if (restartTimer) clearTimeout(restartTimer); if (resultTimer) clearTimeout(resultTimer); for (const slot of slots.values()) if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer); for (const ws of clients.keys()) ws.terminate(); wss.close(); }
+  function close() { killBot(); clearInterval(timer); if (restartTimer) clearTimeout(restartTimer); if (resultTimer) clearTimeout(resultTimer); for (const slot of slots.values()) if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer); for (const ws of clients.keys()) ws.terminate(); wss.close(); }
   /** @returns {object} */
   function getSimulation() { return simulation; }
   return { handleHttp, handleUpgrade, setHostUrl, close, getSimulation };

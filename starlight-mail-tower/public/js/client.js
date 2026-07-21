@@ -68,8 +68,14 @@ if (parameters.get('fresh') === '1') {
 
 for (let index = 0; index < 15; index += 1) reconnectTicks.appendChild(document.createElement('i'));
 
-/** @returns {string} 현재 경로의 WebSocket URL */
-function buildWebSocketUrl() { const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'; const basePath = location.pathname.replace(/\/[^/]*$/, '/'); return `${protocol}//${location.host}${basePath}ws`; }
+/** @returns {string} 현재 경로의 WebSocket URL (mode 파라미터 포함) */
+function buildWebSocketUrl() {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const basePath = location.pathname.replace(/\/[^/]*$/, '/');
+  const mode = parameters.get('mode');
+  const modeQuery = mode ? `?mode=${mode}` : '';
+  return `${protocol}//${location.host}${basePath}ws${modeQuery}`;
+}
 
 /** @param {object} message 송신 메시지 @returns {void} */
 function send(message) { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message)); }
@@ -267,6 +273,13 @@ function openLobbyConfirm() { previousFocus = document.activeElement; lobbyConfi
 function closeLobbyConfirm() { lobbyConfirmOverlay.hidden = true; previousFocus?.focus?.(); }
 
 readyButton.addEventListener('click', () => send({ type: CLIENT_MESSAGE.READY }));
+const aiStartButton = document.querySelector('#ai-start-button');
+if (aiStartButton) {
+  aiStartButton.addEventListener('click', () => {
+    localStorage.removeItem(RESUME_TOKEN_KEY);
+    location.href = `${location.pathname}?mode=ai&fresh=1`;
+  });
+}
 document.querySelectorAll('[data-result-action]').forEach((button) => button.addEventListener('click', () => send({ type: CLIENT_MESSAGE.RESULT_VOTE, action: button.dataset.resultAction })));
 document.querySelector('#session-lobby-button').addEventListener('click', returnToLobby);
 document.querySelector('#toolbar-lobby-button').addEventListener('click', openLobbyConfirm);

@@ -121,7 +121,9 @@ const GAME_APPS = {
   'codenames':      createCodenamesClassicApp({
     getBotUrl: () => `ws://localhost:${PORT}/codenames/ws?mode=bot`,
   }),
-  'starlight-mail-tower': createStarlightMailTowerApp(),
+  'starlight-mail-tower': createStarlightMailTowerApp({
+    getBotUrl: () => `ws://localhost:${PORT}/starlight-mail-tower/ws?mode=bot`,
+  }),
   'moonlight-kitchen-express': createMoonlightKitchenExpressApp({ testing: process.env.KITCHEN_E2E === '1' }),
   // 베네치아 타이핑 배틀 — 봇 지원 (2026-07-19 추가).
   'venezia': createVeneziaApp({

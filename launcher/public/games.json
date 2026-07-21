@@ -157,13 +157,11 @@
     "color": "#3E91A3",
     "emoji": "",
     "keyArt": "/starlight-mail-tower/assets/key-art.svg",
-    "botAvailable": false,
+    "botAvailable": true,
     "minPlayers": 2,
     "maxPlayers": 2,
     "playersLabelKo": "2인 전용",
-    "playersLabelEn": "2 players only",
-    "botLabelKo": "AI 미지원",
-    "botLabelEn": "No AI"
+    "playersLabelEn": "2 players only"
   },
   {
     "id": "moonlight-kitchen-express",
