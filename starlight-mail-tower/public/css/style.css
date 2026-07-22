@@ -83,7 +83,7 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
 #ready-button:focus-visible, .toolbar button:focus-visible, .session-card button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 #ready-button:disabled { opacity: 0.48; cursor: default; transform: none; }
 #ai-start-button { width: 160px; height: 46px; min-height: 46px; border: 2px solid rgba(245, 233, 201, 0.45); border-radius: 10px; color: var(--cream); background: transparent; font-weight: 700; cursor: pointer; transition: transform 160ms ease, filter 160ms ease; margin-top: 10px; }
-#ready-note { min-height: 21px; margin: 7px 0 0; color: rgba(245, 233, 201, 0.72); }
+#ready-note { min-height: 21px; margin: 10px 0 0; color: rgba(245, 233, 201, 0.72); }
 
 #toast { position: absolute; z-index: 120; left: 31.25%; bottom: calc(2.8% + 68px); width: 37.5%; min-height: 48px; display: grid; place-items: center; padding: 8px 18px; border: 2px solid var(--green); border-radius: 10px; background: rgba(31, 44, 71, 0.96); color: var(--green); font-weight: 700; opacity: 0; transform: translateY(10px); transition: opacity 160ms ease, transform 160ms ease; pointer-events: none; }
 #toast.visible { opacity: 1; transform: translateY(0); }
@@ -235,7 +235,7 @@ body:has(#ready-overlay:not([hidden])) .toolbar, body:has(#result-overlay:not([h
 }
 @media (max-width: 520px) {
   .ready-card { max-height: none; overflow: visible; padding-left: 0; padding-right: 0; }
-  .ready-card > .eyebrow, .ready-card > h1, .ready-card > .crew-row, .ready-card > .controls, .ready-card > #ready-button, .ready-card > #ready-note { width: calc(100% - 32px); margin-left: 16px; margin-right: 16px; }
+  .ready-card > .eyebrow, .ready-card > h1, .ready-card > .crew-row, .ready-card > .controls, .ready-card > #ready-button, .ready-card > #ai-start-button, .ready-card > #ready-note { width: calc(100% - 32px); margin-left: 16px; margin-right: 16px; }
   .level-picker-heading { padding: 0 16px; }.level-list { width: 100%; }
   .level-card { width: 100%; min-height: 132px; display: grid; grid-template-columns: 104px minmax(0,1fr); }
   .level-banner { width: 104px; height: 100%; min-height: 100px; border-right: 2px solid var(--card-accent); border-bottom: 0; }.level-info { align-content: center; }

@@ -70,8 +70,22 @@ export function createPhysicalDriver(levelId) {
       const horizontalGap = support ? Math.max(target.x - (support.x + support.width), support.x - (target.x + target.width), 0) : 0;
       const jumpReach = target.dynamic ? 160 : Number.isFinite(simulation.level.physics.moveAcceleration) ? 240 : 220;
       const targetDevice = Number.isInteger(target.deviceIndex) ? simulation.devices[target.deviceIndex] : null;
+      const targetMech = Number.isInteger(target.deviceIndex) ? simulation.level.modules[target.deviceIndex]?.mechanics : null;
       const safeRise = (simulation.level.physics.gravity ?? 1450) < 1000 ? 175 : 122;
-      const waitingForRange = climbing && support && (horizontalGap > jumpReach || target.y < feet - safeRise || targetDevice?.solid === false);
+
+      // 타이머 게이트 / 사이클 플랫폼: 잔여 솔리드 윈도우가 부족하면 다음 사이클 시작까지 대기한다.
+      let solidWindowTooShort = false;
+      if (targetDevice?.solid && targetMech) {
+        if (targetMech.solidMs !== undefined) {
+          // cycle-platform: phaseMs < solidMs 구간이 솔리드. 잔여 = solidMs - phaseMs.
+          solidWindowTooShort = (targetMech.solidMs - (targetDevice.phaseMs ?? 0)) < 1500;
+        } else if (targetMech.cycleMs !== undefined && targetMech.openMs !== undefined) {
+          // timer-gate: phaseMs >= openMs 구간이 솔리드. 잔여 = cycleMs - phaseMs.
+          solidWindowTooShort = (targetMech.cycleMs - (targetDevice.phaseMs ?? 0)) < 2000;
+        }
+      }
+
+      const waitingForRange = climbing && support && (horizontalGap > jumpReach || target.y < feet - safeRise || targetDevice?.solid === false || solidWindowTooShort);
       const steeringX = climbing && (Math.abs(takeoffX - actor.x) > 10 || waitingForRange) ? takeoffX : targetX;
       const dx = steeringX - actor.x;
       const braking = Number.isFinite(simulation.level.physics.moveAcceleration) && Math.abs(dx) < 28 && Math.abs(actor.vx) > 45;
@@ -156,6 +170,8 @@ export function runPhysicalPlaythrough(levelId) {
   const driver = createPhysicalDriver(levelId);
   const { simulation, desired, events, tick, reachPlatform, moveToX, boostToModule } = driver;
   const boosts = [];
+  const gravity = simulation.level.physics.gravity ?? 1450;
+  const safeRisePx = gravity < 1000 ? 175 : 122;
   tick(20);
   for (let index = 0; index < simulation.level.modules.length; index += 1) {
     const module = simulation.level.modules[index];
@@ -171,16 +187,33 @@ export function runPhysicalPlaythrough(levelId) {
     const route = driver.platform(`m${index + 1}-route`);
     const end = driver.platform(`m${index + 1}-end`);
     const routeExitX = end.x > route.x ? route.x + route.width - 36 : route.x + 36;
+
+    // low-gravity 모듈: 구역이 end 플랫폼 쪽에 집중되므로 반대편 가장자리에 착지시켜 떠내려가는 것을 방지한다.
+    const deviceType = simulation.devices[index]?.type;
+    const endPreferredX = deviceType === 'low-gravity'
+      ? (end.x < route.x ? end.x + end.width - 28 : end.x + 28)
+      : null;
+
+    // rotary 루트는 회전 중 착지 실패가 잦으므로 최대 틱을 늘린다.
+    const routeMaxTicks = deviceType === 'rotary' ? 720 : 360;
+
     let partnerCrossed = false;
     for (let attempt = 0; attempt < 4 && !partnerCrossed; attempt += 1) {
       try {
         const partnerActor = driver.player(partnerId);
         const approach = driver.platform(module.approachPlatformId);
-        if (partnerActor.y + PLAYER_HALF_HEIGHT > approach.y + 2) reachPlatform(partnerId, module.approachPlatformId, 360);
+        const pFeet = partnerActor.y + PLAYER_HALF_HEIGHT;
+        if (pFeet > approach.y + 2) {
+          // 플레이어가 어프로치보다 아래에 있을 때, 직접 점프가 불가한 경우 이전 모듈 루트를 경유한다.
+          if (index > 0 && pFeet > approach.y + safeRisePx) {
+            reachPlatform(partnerId, `m${index}-route`, 360);
+          }
+          reachPlatform(partnerId, module.approachPlatformId, 360);
+        }
         reachPlatform(partnerId, module.returnPlatformId, 360);
         reachPlatform(partnerId, module.boostLandingPlatformId, 360);
-        reachPlatform(partnerId, `m${index + 1}-route`, 360, routeExitX);
-        reachPlatform(partnerId, `m${index + 1}-end`, 360);
+        reachPlatform(partnerId, `m${index + 1}-route`, routeMaxTicks, routeExitX);
+        reachPlatform(partnerId, `m${index + 1}-end`, 360, endPreferredX);
         partnerCrossed = true;
       } catch (error) { if (attempt === 3) throw error; }
     }
@@ -195,11 +228,18 @@ export function runPhysicalPlaythrough(levelId) {
       try {
         const anchorActor = driver.player(anchorId);
         const approach = driver.platform(module.approachPlatformId);
-        if (anchorActor.y + PLAYER_HALF_HEIGHT > approach.y + 2) reachPlatform(anchorId, module.approachPlatformId, 360);
+        const aFeet = anchorActor.y + PLAYER_HALF_HEIGHT;
+        if (aFeet > approach.y + 2) {
+          // 플레이어가 어프로치보다 아래에 있을 때, 직접 점프가 불가한 경우 이전 모듈 루트를 경유한다.
+          if (index > 0 && aFeet > approach.y + safeRisePx) {
+            reachPlatform(anchorId, `m${index}-route`, 360);
+          }
+          reachPlatform(anchorId, module.approachPlatformId, 360);
+        }
         reachPlatform(anchorId, module.returnPlatformId, 360);
         reachPlatform(anchorId, module.boostLandingPlatformId, 360);
-        reachPlatform(anchorId, `m${index + 1}-route`, 360, routeExitX);
-        reachPlatform(anchorId, `m${index + 1}-end`, 360);
+        reachPlatform(anchorId, `m${index + 1}-route`, routeMaxTicks, routeExitX);
+        reachPlatform(anchorId, `m${index + 1}-end`, 360, endPreferredX);
         anchorCrossed = true;
       } catch (error) { if (attempt === 3) throw error; }
     }

@@ -1,5 +1,50 @@
 # Changelog
 
+## [2026-07-22] - 별빛 우편탑 1인 AI 봇 추가
+
+### 추가
+
+- `starlight-mail-tower/bot.js` 신규(703라인): 단일 프로세스에서 p1/p2 두 WebSocket 연결을 동시 관리하는 AI 봇. 상태 머신 11단계(`INIT` → `WAITING` → `MODULE_BOOST` → `MODULE_ANCHOR` → `MODULE_PARTNER_CROSS` → `MODULE_PARTNER_SWITCH` → `MODULE_ANCHOR_CROSS` → `MODULE_CHECKPOINT` → `FINISH_DECK` → `FINISH_PRESS` → `DONE`)로 전체 협동 등반을 자동 수행한다.
+- 부스트 서브 상태 4단계(`ALIGN` → `RECEIVER_JUMP` → `STRIKER_JUMP` → `WAIT_LANDING`): `physical-playthrough.js`의 `boostToModule` 패턴을 WS INPUT 메시지 기반으로 이식. 30Hz setInterval(`BOT_TICK_MS=33`)로 두 플레이어의 desired 입력을 독립 송신한다.
+- `starlight-mail-tower/server.js`: `getBotUrl` 옵션, `spawnBot()`/`killBot()` 함수, `handleUpgrade`에서 `mode=ai` 감지 시 봇 spawn, 클라이언트 `disconnect` 시 killBot, `close()` 함수에서도 killBot 호출.
+- `starlight-mail-tower/public/index.html`: `#ai-start-button` 추가 (ready-button 아래, ready-note 위).
+- `starlight-mail-tower/public/js/client.js`: AI 버튼 클릭 핸들러 (`?mode=ai&fresh=1` 이동), `buildWebSocketUrl()`에 mode 파라미터 포함.
+- `starlight-mail-tower/public/js/i18n.js`: `ai.start` 키 추가 (ko: "AI랑 시작", en: "Start with AI").
+- `starlight-mail-tower/public/css/style.css`: `#ready-note` margin 7px → 10px, 모바일 `#ai-start-button` 너비 일관화.
+- `launcher/server.js`: starlight-mail-tower createApp에 `getBotUrl` 주입.
+- `launcher/public/games.json`: starlight-mail-tower `botAvailable: true`, `botLabelKo`/`botLabelEn` 제거.
+- 인간 파트너 모드 대응: 봇이 두 WS 연결을 시도하되 인간이 이미 한 슬롯을 점유한 경우 ROOM_FULL 수신 후 `ownedIds` 집합 기반으로 성공한 연결만으로 운영한다. 런처 대기실 AI채우기 시 봇이 두 슬롯 모두 점유하여 완전 자동 플레이한다.
+- 타임아웃 방어: 각 서브 상태 `MAX_TICKS_PER_PHASE=900`(30초) + 3회 재시도 후 `process.exit(1)`.
+- RESULT_VOTE 자동 전송: `GAME_OVER` 수신 후 500ms 대기 후 소유한 슬롯에만 `RESULT_VOTE(RETRY)` 전송.
+- `SESSION_ENDED` 수신 시 즉시 `process.exit(0)`. `SIGTERM`/`SIGINT` 핸들러에서 WS 소켓 정리.
+
+### 변경
+
+- 스펙에서는 상태 머신을 `BOOST_N`/`ANCHOR_N`/`PARTNER_N`/`RETURN_N`/`CHECKPOINT_N` 등 모듈 인덱스 내포 형태로 설계했으나, 구현 시 `moduleIndex` 변수와 분리된 상태 이름(`MODULE_BOOST`, `MODULE_ANCHOR` 등)으로 단순화했다.
+- 스펙의 `moveToX` 헬퍼 대신 `driveToX`(dx 기반 left/right 제어)로 간소화. 서버 물리가 grounded 상태의 수평 이동을 처리하므로 봇은 방향만 지시한다.
+- 파트너 크로스 시퀀스: `physical-playthrough.js`의 approach → return → start → route → end 순서 대신 `switch.x`로 직접 이동을 시도하는 방식으로 간소화.
+
+### 검증
+
+- QA 자동 테스트: WS QA 29/29 + Playwright E2E 13/13 + 기존 simulation.spec.js 16/16 = 58건 전부 PASS.
+- 예외 시나리오 6건(봇 re-spawn 방지, 빈 name JOIN, playing 중 READY, ROOM_FULL, SNAPSHOT 수신, spawnBot 중복 방지) 전부 PASS.
+- 시각적 검증: 데스크톱 1280x720 + 모바일 390x844 / 360x640 스크린샷 7건 확인.
+- 기존 테스트 14건 실패는 전부 봇 변경과 무관한 기존 결함(coop-boost-reachability 레벨별 물리 경로 13건 + world-expansion 단언 stale 1건).
+
+### 알려진 제약
+
+- 파트너 크로스 간소화로 동적 플랫폼(이동 객차, 회전 발판 등) 레벨에서는 봇이 완주에 실패할 수 있다. 기본 레벨(starlight-tower)에서는 정상 동작 확인.
+- 레벨 호환성: 17개 레벨 중 물리 특성이 다른 레벨에서 단순 driveToX 패턴으로는 완주 실패 가능. physical-playthrough.js도 일부 레벨에서 동일 한계.
+
+### 참고
+
+- 스펙: `.claude/specs/2026-07-21-starlight-ai-bot-plan.md`
+- 목적 정의: `.claude/specs/2026-07-21-starlight-ai-bot-scope.md`
+- 구현 리포트: `.claude/specs/2026-07-21-starlight-ai-bot-coder-report.md`
+- QA: `.claude/specs/2026-07-22-starlight-ai-bot-qa.md` (`PASS`)
+
+---
+
 ## [2026-07-20] - 별빛 우편탑 협동 부스트·5레벨 도달성 보완
 
 ### 추가
