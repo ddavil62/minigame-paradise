@@ -197,5 +197,26 @@
     "botAvailable": true,
     "minPlayers": 2,
     "maxPlayers": 2
+  },
+  {
+    "id": "sichuan-battle",
+    "name": "사천성 배틀",
+    "nameKo": "사천성 배틀",
+    "nameEn": "Sichuan Battle",
+    "description": "같은 타일을 연결하고 아이템으로 상대를 방해하는 2인 사천성 대전",
+    "descriptionKo": "같은 타일을 연결하고 아이템으로 상대를 방해하는 2인 사천성 대전",
+    "descriptionEn": "A two-player tile-link race packed with frequent tactical items",
+    "port": 3018,
+    "httpPath": "/sichuan-battle/",
+    "wsPath": "/sichuan-battle/ws",
+    "color": "#D8B76A",
+    "emoji": "🀄",
+    "botAvailable": false,
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "playersLabelKo": "2인 전용",
+    "playersLabelEn": "2 players only",
+    "botLabelKo": "AI 미지원",
+    "botLabelEn": "No AI"
   }
 ]

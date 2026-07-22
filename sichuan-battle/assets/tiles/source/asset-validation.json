@@ -1,0 +1,279 @@
+{
+  "faces": [
+    {
+      "faceId": "01",
+      "name": "sun",
+      "bounds": [
+        52,
+        84,
+        204,
+        236
+      ],
+      "hash": "3d65b1caa964da106dbf42f2b7a9e047f687b71884a640803a82b84f8fe9e6fa"
+    },
+    {
+      "faceId": "02",
+      "name": "crescent",
+      "bounds": [
+        40,
+        76,
+        200,
+        244
+      ],
+      "hash": "3671c0cd17986edd8b58fd1c38db4e7034b593fb82995fc1f665c602834f3935"
+    },
+    {
+      "faceId": "03",
+      "name": "north-star",
+      "bounds": [
+        52,
+        60,
+        204,
+        260
+      ],
+      "hash": "81f321a895532db7d35219fc50ec49787c8ff2ff4b84c578e1c432a3e27361e0"
+    },
+    {
+      "faceId": "04",
+      "name": "cloud",
+      "bounds": [
+        44,
+        108,
+        212,
+        212
+      ],
+      "hash": "c6674964f90fecd78804362354eaff7b918709fb35c3d5935a61bebd3281ca19"
+    },
+    {
+      "faceId": "05",
+      "name": "mountain",
+      "bounds": [
+        44,
+        76,
+        212,
+        228
+      ],
+      "hash": "155079821d75fa22da111040747e126da83fe9cd07682bacd1484ce6e689be74"
+    },
+    {
+      "faceId": "06",
+      "name": "river",
+      "bounds": [
+        44,
+        84,
+        212,
+        220
+      ],
+      "hash": "869305de915181ec893e7864bd0530bcb70253e111743021a87c6093613c5527"
+    },
+    {
+      "faceId": "07",
+      "name": "pine",
+      "bounds": [
+        64,
+        76,
+        184,
+        248
+      ],
+      "hash": "dbca2dd79e0b4e94ec11f3171aa87c8766c43ffd52b1437b737ecddb0da3d4e2"
+    },
+    {
+      "faceId": "08",
+      "name": "bamboo",
+      "bounds": [
+        64,
+        72,
+        192,
+        248
+      ],
+      "hash": "3e9608290a3a6b7d2e8fabfd08a76729f85824edde5b71034c82a0421fbc38a8"
+    },
+    {
+      "faceId": "09",
+      "name": "plum",
+      "bounds": [
+        72,
+        104,
+        184,
+        216
+      ],
+      "hash": "0d1d104ed7d4992352bd71780bc5207ab0c0a1182388674f4c255801ada105cb"
+    },
+    {
+      "faceId": "10",
+      "name": "lotus",
+      "bounds": [
+        52,
+        72,
+        204,
+        228
+      ],
+      "hash": "e354728ea022714b6af67a74dcb3e0b982aafc7cc63fba841e0148456395ce82"
+    },
+    {
+      "faceId": "11",
+      "name": "ginkgo",
+      "bounds": [
+        60,
+        76,
+        196,
+        248
+      ],
+      "hash": "8776ddaf28a8f73a143ad7e12ae527cecb160535c8d2d18c34ade2594a6e33e0"
+    },
+    {
+      "faceId": "12",
+      "name": "maple",
+      "bounds": [
+        44,
+        64,
+        212,
+        256
+      ],
+      "hash": "507e7c1da82f42102f6509f3e8cddf7165c44e0b59b5c2490f2a005ac9f782cf"
+    },
+    {
+      "faceId": "13",
+      "name": "crane",
+      "bounds": [
+        52,
+        72,
+        204,
+        256
+      ],
+      "hash": "8597588e9ad26953167b456194ccefe20835861eb598b3e41615706f2d42410f"
+    },
+    {
+      "faceId": "14",
+      "name": "koi",
+      "bounds": [
+        56,
+        112,
+        212,
+        208
+      ],
+      "hash": "fd993f5bb2f9a71ea630ce3a0a2cc32d999579fe77cfb0bdb708bafc5b69f5ae"
+    },
+    {
+      "faceId": "15",
+      "name": "butterfly",
+      "bounds": [
+        52,
+        100,
+        204,
+        224
+      ],
+      "hash": "c87b7783f1d4c242af5c6c87b2db8c8310e815b7d00d2be50ef2e34d01418652"
+    },
+    {
+      "faceId": "16",
+      "name": "turtle",
+      "bounds": [
+        44,
+        92,
+        212,
+        248
+      ],
+      "hash": "6176e30ad8d7b0fd6f6520846280c0153ee60e689edd8afe85db1d4d2a9894f9"
+    },
+    {
+      "faceId": "17",
+      "name": "fan",
+      "bounds": [
+        56,
+        96,
+        200,
+        252
+      ],
+      "hash": "d4526c4722c1d75fae2357b01e08d24237a7c54b9db2bce6165f3050025efae0"
+    },
+    {
+      "faceId": "18",
+      "name": "lantern",
+      "bounds": [
+        76,
+        88,
+        180,
+        256
+      ],
+      "hash": "b5bbef1371122c6c278f5c6c45ee9f9eb007045fb29572ae5eddc1d7309a5f20"
+    },
+    {
+      "faceId": "19",
+      "name": "wind-bell",
+      "bounds": [
+        52,
+        76,
+        204,
+        244
+      ],
+      "hash": "12cdfd4835f8bfa19c3ecc356716f166267d8d82ebff943e5587ee0f042405ba"
+    },
+    {
+      "faceId": "20",
+      "name": "parasol",
+      "bounds": [
+        48,
+        88,
+        204,
+        244
+      ],
+      "hash": "f7b26dca61e054a73c71c17819cbca33f1a69b760a6ca5c8264c28cbd6c0e7c0"
+    },
+    {
+      "faceId": "21",
+      "name": "lucky-knot",
+      "bounds": [
+        60,
+        64,
+        192,
+        252
+      ],
+      "hash": "fd0af0250efa333d84fd033a9d412c62dfda26fb834168c1ff3bd05f08d882aa"
+    },
+    {
+      "faceId": "22",
+      "name": "coin",
+      "bounds": [
+        48,
+        80,
+        208,
+        240
+      ],
+      "hash": "02ea13d209d5fc7c46cb9937314663cc8d264990c1f1fc7ac2924b27465d901a"
+    },
+    {
+      "faceId": "23",
+      "name": "compass-star",
+      "bounds": [
+        44,
+        56,
+        212,
+        264
+      ],
+      "hash": "6aa3c1f1cfa3c9f032c11f9d7d5acd77bd83db27b0fec5840df7e7303370d2a4"
+    },
+    {
+      "faceId": "24",
+      "name": "vase",
+      "bounds": [
+        60,
+        68,
+        196,
+        248
+      ],
+      "hash": "3db51636dffc75fa8f72e1d52a907ea8c96a59acc5c0dc0b0456a3d034c81dac"
+    }
+  ],
+  "safeArea": [
+    36,
+    48,
+    220,
+    272
+  ],
+  "strokeRange": [
+    8,
+    12
+  ],
+  "duplicateSilhouettes": 0
+}

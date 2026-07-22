@@ -1,0 +1,11 @@
+/**
+ * @fileoverview 타일 보드, 선택, 경로와 상태 오버레이를 렌더링한다.
+ */
+import {t} from './i18n.js';
+export class BoardView {
+  /** @param {HTMLElement} root 보드 요소 @param {(a:string,b:string)=>void} onPair 짝 요청 콜백 */ constructor(root,onPair){this.root=root;this.onPair=onPair;this.selected=null;this.tiles=[];}
+  /** @param {object[]} tiles 서버 타일 @param {object[]} [effects=[]] 활성 효과 */ render(tiles,effects=[]){this.tiles=tiles;const hintIds=new Set(effects.filter((effect)=>effect.itemId==='hint').flatMap((effect)=>effect.targets||[]));this.root.replaceChildren(...tiles.map((tile)=>{const button=document.createElement('button');button.className='tile';button.dataset.tileId=tile.tileId;button.style.backgroundImage=`url('/sichuan-battle/assets/tiles/tile-${String(tile.faceId).padStart(2,'0')}.png')`;button.setAttribute('role','gridcell');button.setAttribute('aria-label',tile.flipped?t('flippedTile'):t('tileLabel',{face:tile.faceId}));button.disabled=tile.removed||tile.locked;button.classList.toggle('removed',tile.removed);button.classList.toggle('locked',tile.locked);button.classList.toggle('flipped',tile.flipped);button.classList.toggle('fogged',tile.fogged);button.classList.toggle('hinted',hintIds.has(tile.tileId));if(tile.flipped){const back=document.createElement('span');back.className='tile-back';back.textContent='?';back.setAttribute('aria-hidden','true');button.appendChild(back);}button.addEventListener('click',()=>this.pick(tile.tileId));return button;}));}
+  /** @param {string} tileId 선택한 ID @returns {void} */ pick(tileId){if(!this.selected){this.selected=tileId;this.root.querySelector(`[data-tile-id="${tileId}"]`)?.classList.add('selected');return;}const first=this.selected;this.clearSelection();if(first!==tileId)this.onPair(first,tileId);}
+  /** @returns {void} 선택을 해제한다. */ clearSelection(){this.root.querySelectorAll('.selected').forEach((node)=>node.classList.remove('selected'));this.selected=null;}
+  /** @param {{x:number,y:number}[]} path 경로 @returns {void} */ showPath(path){const layer=document.getElementById('path-layer');if(!layer)return;const points=path.map((point)=>`${point.x+.5},${point.y+.5}`).join(' ');layer.innerHTML=`<polyline points="${points}"/>`;setTimeout(()=>{layer.innerHTML='';},420);}
+}

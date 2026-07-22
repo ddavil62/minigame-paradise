@@ -1,6 +1,7 @@
 # 미니게임 천국 기획서
 
-> 최종 업데이트: 2026-07-22 — **별빛 우편탑 1인 AI 봇 추가.** 단일 봇 프로세스가 p1/p2 두 WebSocket 연결을 동시 관리해 부스트·앵커·스위치·체크포인트·결승 전 협동 메커니즘을 자동 수행한다. 대기 화면에 "AI랑 시작" 버튼이 추가되어 1인 테스트 환경에서 17개 레벨 전체를 검증할 수 있다. launcher botAvailable: true 갱신. QA PASS.
+> 최종 업데이트: 2026-07-23 — **사천성 배틀 추가.** 동일 초기 배치의 독립 12×8 보드에서 경쟁하는 LAN 1:1 퍼즐 대전으로, 고빈도 7종 아이템전·재접속·재대결·ko/en UI와 GPT Image 2 기반 타일·배경을 제공한다. QA PASS.
+> 이전 갱신: 2026-07-22 — **별빛 우편탑 1인 AI 봇 추가.** 단일 봇 프로세스가 p1/p2 두 WebSocket 연결을 동시 관리해 부스트·앵커·스위치·체크포인트·결승 전 협동 메커니즘을 자동 수행한다. 대기 화면에 "AI랑 시작" 버튼이 추가되어 1인 테스트 환경에서 17개 레벨 전체를 검증할 수 있다. launcher botAvailable: true 갱신. QA PASS.
 > 이전 갱신: 2026-07-20 — **별빛 우편탑 협동 부스트·5레벨 도달성 보완.** 공중 동료를 아래에서 점프로 올려치는 서버 권위 협동 부스트와 장치 연동 복귀 발판을 추가했다. 5개 레벨 모두 좌표 강제 없이 실제 입력과 30Hz 물리로 8개 장치·결승을 무추락 완주한다.
 > 이전 갱신: 2026-07-20 — **베네치아 전투·아이템 동기화·메뉴 복귀 수정.** 아이템 슬롯을 서버 권위 전체 배열로 동기화해 경기 중 획득·사용 후에도 양쪽 상태가 어긋나지 않는다. 정답은 상대 HP를, 바닥에 닿은 단어는 소유자 HP를 각각 2 감소시키며 HP 0에서 승패가 결정된다. 게임 중에는 상시 `← 게임 선택` 버튼으로 통합 포탈에 복귀할 수 있다.
 > 이전 갱신: 2026-07-19 — **베네치아 조작·급류 규칙 개선.** 아이템은 입력창 포커스 중에도 단독 숫자키 1/2/3과 숫자패드 1/2/3으로 사용한다. `item_freeze` 프로토콜 ID는 유지하되 표시와 효과는 🌊 급류(4초간 상대 단어 낙하 2배)로 교체했으며, 서버 권위 누적 낙하 시계가 Canvas와 만료를 함께 결정한다.
@@ -18,7 +19,7 @@
 
 ## 프로젝트 개요
 
-LAN 환경에서 2~5인이 즐기는 미니게임 14종 통합 패키지. 단일 포트(3000)에서 통합 라우터로 런처와 각 게임을 경로별로 제공한다. 게임 포탈에서 카드를 선택해 독립 대기실에 입장하고, 최소 인원 이상이 모두 준비하면 게임이 시작된다.
+LAN 환경에서 2~5인이 즐기는 미니게임 15종 통합 패키지. 단일 포트(3000)에서 통합 라우터로 런처와 각 게임을 경로별로 제공한다. 게임 포탈에서 카드를 선택해 독립 대기실에 입장하고, 최소 인원 이상이 모두 준비하면 게임이 시작된다.
 
 ## 기술 스택
 
@@ -39,6 +40,7 @@ minigame-paradise/
   matgo/             # 맞고 (봇 지원)
   yutnori/           # 윷놀이
   tetris-battle/     # 테트리스 배틀
+  sichuan-battle/    # 사천성 배틀 1:1 아이템 퍼즐 대전
   davinci-code/      # 다빈치 코드 플러스
   codenames-duet/    # 코드네임 듀엣
   codenames/         # 코드네임 클래식
@@ -61,8 +63,10 @@ minigame-paradise/
 | 통합 라우터 | `launcher/server.js` | 단일 HTTP/WS 서버, path별 게임 dispatch, 게임별 대기실(`rooms: Map`) 관리 |
 | 베네치아 타이핑 배틀 서버 | `venezia/server.js` | 서버 권위 타이핑 대전 — 단어 생성·제출 검증, 누적 낙하 시계·급류, 전체 아이템 슬롯 동기화, HP 피해·종료 관리 |
 | 포탈/대기실 클라이언트 | `launcher/public/app.js` | 포탈 뷰(게임 카드 그리드) + 대기실 뷰(READY/AI 채우기) 상태 관리 |
-| 게임 목록 | `launcher/public/games.json` | 14종 게임 메타데이터 (경로, 봇 지원, `minPlayers`/`maxPlayers` 인원 범위) |
+| 게임 목록 | `launcher/public/games.json` | 15종 게임 메타데이터 (경로, 봇 지원, `minPlayers`/`maxPlayers` 인원 범위) |
 | 각 게임 서버 | `{game}/server.js` | `createApp()` factory로 launcher에 연결 |
+| 사천성 규칙 엔진 | `sichuan-battle/lib/` | 시드 보드·최대 2회 꺾임 경로·완주 가능 셔플·아이템·경기 상태 관리 |
+| 사천성 서버/클라이언트 | `sichuan-battle/server.js`, `sichuan-battle/public/` | 서버 권위 LAN 1:1 프로토콜과 보드·아이템·결과 UI 제공 |
 | 별빛 우편탑 시뮬레이션 | `starlight-mail-tower/game/` | 30Hz 서버 권위 이동·협동 부스트·동적 장치·체크포인트·결승 상태 관리 |
 | 별빛 우편탑 레벨 카탈로그 | `starlight-mail-tower/shared/levels.js` | 5개 레벨의 필수 부스트 구간·장치 연동 복귀 경로·8모듈·체크포인트·피날레 공용 데이터 제공 |
 | 별빛 우편탑 기록 저장소 | `starlight-mail-tower/game/records.js` | 레벨별 최단 기록을 JSON으로 원자 저장하고 손상 기록을 복구 |
@@ -73,8 +77,8 @@ minigame-paradise/
 
 | 기능 | 설명 | 상태 |
 |------|------|------|
-| 단일 포트 통합 라우터 | HTTP/WS를 경로별로 14개 게임에 dispatch | 완료 |
-| 게임 포탈 | 닉네임 게이트 통과 후 게임 카드 14개 표시. 카드 클릭으로 대기실 입장 | 완료 |
+| 단일 포트 통합 라우터 | HTTP/WS를 경로별로 15개 게임에 dispatch | 완료 |
+| 게임 포탈 | 닉네임 게이트 통과 후 게임 카드 15개 표시. 카드 클릭으로 대기실 입장 | 완료 |
 | 게임별 대기실 | 게임 카드 클릭 시 `/lobby/ws?gameId={gameId}`로 독립 대기실 입장. 전원 READY + 인원 >= minPlayers 시 게임 시작 | 완료 |
 | 대기실 AI 채우기 | 호스트가 빈 슬롯을 AI 봇으로 채워 게임 시작. botAvailable=false 게임은 ERROR 반환 | 완료 |
 | 타임아웃 킥 | 대기실 입장 후 60초 내 미준비 시 자동 퇴장(KICKED) | 완료 |
@@ -86,6 +90,7 @@ minigame-paradise/
 | 맞고 (matgo) | 2인 화투 고스톱, AI 봇 지원 | 완료 |
 | 윷놀이 N인 (Phase 1-B) | 윷놀이 2~4인 가변 플레이. N인 턴 순환, 잡기/업기 N인 판정, P3/P4 색상, rematch N인 확장 | 완료 |
 | 테트리스 배틀 | 한게임 스타일 1:1 테트리스 대전 | 완료 |
+| 사천성 배틀 | 동일 12×8 초기 배치의 독립 보드에서 최대 2회 꺾임 규칙과 고빈도 7종 아이템으로 겨루는 LAN 1:1 대전 | 완료 |
 | 다빈치 코드 플러스 | 2인 추리 게임. 빨강/노랑/파랑 3색 39장 타일, 조커 배치 페이즈, 2-column 레이아웃(좌 게임보드 + 우 정보 패널), 숫자 메모판(39칸), 추측 기록 누적 | 완료 |
 | 코드네임 듀엣 | 2인 협동 워드 게임 | 완료 |
 | 코드네임 클래식 | 4인 팀 기반 단어 추리 게임 | 완료 |
@@ -100,7 +105,8 @@ minigame-paradise/
 
 ## 알려진 제약사항
 
-- 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle, codenames, venezia, starlight-mail-tower에서 지원한다. hanabi, codenames-duet, davinci-code, moonlight-kitchen-express는 AI를 지원하지 않는다.
+- 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle, codenames, venezia, starlight-mail-tower에서 지원한다. hanabi, codenames-duet, davinci-code, moonlight-kitchen-express, sichuan-battle은 AI를 지원하지 않는다.
+- 사천성 배틀은 LAN 1:1·데스크톱 전용이다. 모바일 전용 UX, 3인 이상, 온라인 매치메이킹과 영구 전적은 지원하지 않는다.
 - 게임별 다인용 로직은 윷놀이만 2~4인 완료. 요트/루미큐브/하나비(Phase 1-C~E)는 미구현.
 - 윷놀이 3~4인 게임 중 1명 disconnect 시 게임 즉시 종료. 탈락 처리 후 계속 진행 미지원.
 - 일부 기존 게임 클라이언트에 `fetch('/lobby/return')` 호출 코드가 잔존한다. 404는 처리되지만 별도 정리가 필요하다.
