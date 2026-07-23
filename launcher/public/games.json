@@ -211,12 +211,12 @@
     "wsPath": "/sichuan-battle/ws",
     "color": "#D8B76A",
     "emoji": "🀄",
-    "botAvailable": false,
+    "botAvailable": true,
     "minPlayers": 2,
     "maxPlayers": 2,
-    "playersLabelKo": "2인 전용",
-    "playersLabelEn": "2 players only",
-    "botLabelKo": "AI 미지원",
-    "botLabelEn": "No AI"
+    "playersLabelKo": "1인 AI · 2인 대전",
+    "playersLabelEn": "Solo AI · 2 players",
+    "botLabelKo": "보통 AI 지원",
+    "botLabelEn": "Normal AI available"
   }
 ]

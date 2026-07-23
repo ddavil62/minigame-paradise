@@ -130,8 +130,10 @@ const GAME_APPS = {
   'venezia': createVeneziaApp({
     getBotUrl: () => `ws://localhost:${PORT}/venezia/ws?mode=bot`,
   }),
-  // 사천성 배틀 — 서버 권위 LAN 1:1, AI 미지원.
-  'sichuan-battle': createSichuanBattleApp(),
+  // 사천성 배틀 — 서버 권위 보통 난이도 AI 지원.
+  'sichuan-battle': createSichuanBattleApp({
+    getBotUrl: () => `ws://localhost:${PORT}/sichuan-battle/ws?mode=bot`,
+  }),
 };
 
 /**
@@ -566,8 +568,12 @@ function checkReady(room, game) {
     }
   }
 
+  // 사천성은 게임 서버가 일회성 토큰을 발급한 뒤 REQUEST_AI로 봇을 생성한다.
+  // 런처의 레거시 무토큰 봇 spawn을 사용하면 정상적인 보안 게이트에 거부된다.
+  const usesGameManagedAi = room.gameId === 'sichuan-battle' && room.aiSlotCount > 0;
+
   // 2. AI 봇 spawn (aiSlotCount > 0 && botAvailable)
-  if (room.aiSlotCount > 0 && game.botAvailable) {
+  if (room.aiSlotCount > 0 && game.botAvailable && !usesGameManagedAi) {
     console.log(`[launcher] AI채우기 봇 ${room.aiSlotCount}개 spawn: ${room.gameId}`);
     for (let i = 0; i < room.aiSlotCount; i++) {
       spawnBotForAiFill(room.gameId);
@@ -583,7 +589,7 @@ function checkReady(room, game) {
       type: 'REDIRECT',
       gameId: room.gameId,
       path: redirectPath,
-      mode: 'human',
+      mode: usesGameManagedAi ? 'ai' : 'human',
       playerCount,
       role: meta.id === 'p1' ? 'p1' : 'p2',
       transitionMs: 300,
@@ -592,7 +598,7 @@ function checkReady(room, game) {
 
   // 4. 대기실 정리
   rooms.delete(room.gameId);
-  console.log(`[launcher] REDIRECT → gameId=${room.gameId}, path=${redirectPath}, mode=human, playerCount=${playerCount}`);
+  console.log(`[launcher] REDIRECT → gameId=${room.gameId}, path=${redirectPath}, mode=${usesGameManagedAi ? 'ai' : 'human'}, playerCount=${playerCount}`);
 }
 
 /**

@@ -19,11 +19,13 @@
       <p data-i18n="waitingDetail">같은 배치에서 먼저 타일을 연결하세요.</p>
       <div class="waiting-players" id="waiting-players"></div>
       <button id="ready-button" class="primary" data-i18n="ready">준비</button>
+      <button id="ai-battle-button" class="ai-battle" data-i18n="aiBattle">AI 대전</button>
+      <p class="ai-help" data-i18n="aiNormal">AI는 보통 난이도로 플레이합니다</p>
     </section>
 
     <section id="game-view" class="game-layout hidden">
       <aside class="status-panel opponent-panel">
-        <span class="panel-label" data-i18n="opponent">상대</span><strong id="opponent-name">—</strong>
+        <span class="panel-label" data-i18n="opponent">상대</span><strong><span id="opponent-name">—</span> <span id="opponent-ai-badge" class="ai-badge hidden" data-i18n="aiBadge">AI</span></strong>
         <div class="progress-track"><i id="opponent-progress"></i></div>
         <b><span id="opponent-score">0</span> / 48</b>
         <div id="opponent-effects" class="effect-list" aria-live="polite"></div>

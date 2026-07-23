@@ -6,9 +6,9 @@ import { findAnyLegalPair, findPath } from './pathfinder.js';
 import { ATTACK_ITEMS, ITEM_DEFINITIONS, chooseTargets, rollDrop } from './items.js';
 
 /** @param {string} id 플레이어 ID @param {string} name 표시 이름 @returns {object} 경기 플레이어 상태 */
-function createPlayer(id, name) {
+function createPlayer(id, name, isBot = false) {
   return { id, name, board: null, revision: 0, removedPairs: 0, inventory: [], inventoryRevision: 0, pity: 0, dropOrdinal: 0,
-    cooldownUntil: 0, attackCooldownUntil: 0, immuneUntil: 0, shuffleImmuneUntil: 0, shieldUntil: 0, effects: {}, pendingAutoShuffle: null, requestCache: new Map() };
+    isBot, cooldownUntil: 0, attackCooldownUntil: 0, immuneUntil: 0, shuffleImmuneUntil: 0, shieldUntil: 0, effects: {}, pendingAutoShuffle: null, requestCache: new Map() };
 }
 
 export class SichuanGame {
@@ -19,8 +19,8 @@ export class SichuanGame {
     this.phase = 'waiting'; this.players = []; this.startedAt = 0; this.deadlineAt = 0; this.result = null;
   }
 
-  /** @param {string} id ID @param {string} name 이름 @returns {object} 생성된 상태 */
-  addPlayer(id, name) { const player = createPlayer(id, name); this.players.push(player); return player; }
+  /** @param {string} id ID @param {string} name 이름 @param {boolean} [isBot=false] AI 여부 @returns {object} 생성된 상태 */
+  addPlayer(id, name, isBot = false) { const player = createPlayer(id, name, isBot); this.players.push(player); return player; }
 
   /** @returns {void} 동일 초기 보드로 경기를 시작한다. */
   start() {
@@ -34,9 +34,9 @@ export class SichuanGame {
     const me = this.players.find((player) => player.id === playerId); const opponent = this.players.find((player) => player.id !== playerId);
     if (!me) return null;
     return { matchId: this.matchId, matchSeed: this.seed, phase: this.phase, startedAt: this.startedAt, deadlineAt: this.deadlineAt,
-      me: { id: me.id, name: me.name, board: me.board ? serializeBoard(me.board) : null, removedPairs: me.removedPairs, inventory: me.inventory,
+      me: { id: me.id, name: me.name, isBot: me.isBot, board: me.board ? serializeBoard(me.board) : null, removedPairs: me.removedPairs, inventory: me.inventory,
         inventoryRevision: me.inventoryRevision, effects: this.publicEffects(me), shieldUntil: me.shieldUntil, shuffleWarning: me.pendingAutoShuffle },
-      opponent: opponent ? { id: opponent.id, name: opponent.name, removedPairs: opponent.removedPairs,
+      opponent: opponent ? { id: opponent.id, name: opponent.name, isBot: opponent.isBot, removedPairs: opponent.removedPairs,
         remaining: 96 - opponent.removedPairs * 2, effects: this.publicEffects(opponent), shieldUntil: opponent.shieldUntil, connected: true } : null,
       result: this.result };
   }
