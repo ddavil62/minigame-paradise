@@ -1,5 +1,33 @@
 # Changelog
 
+## [2026-07-23] - 주기 동기화 중 타일 클릭 유실 수정
+
+### 변경
+
+- `BoardView`가 250ms `STATE_SYNC`마다 96개 버튼을 교체하지 않고 `tileId` keyed DOM을 재사용하도록 변경했다.
+- 타일 click을 보드 루트 한 곳에서 위임 처리하고, disabled·ARIA·locale·뒤집기 자식과 시각 상태를 기존 노드에 갱신한다.
+- WebSocket이 실제 OPEN 상태에서 전송에 성공한 요청만 pending으로 만들고 PAIR 응답을 `requestId + matchId`로 조율한다.
+- pending에 2초 응답 제한을 추가하고 revision·셔플·연결 종료·재대결·경기 전환에서 타이머와 transient 상태를 정리한다.
+
+### 수정
+
+- `pointerdown`과 `pointerup` 사이의 주기 동기화가 활성 버튼을 제거해 합성 `click`이 유실되던 간헐적 입력 무반응을 수정했다.
+- 미연결·전송 예외·응답 유실에서 보드가 pending 상태로 영구 비활성화되거나 늦은 응답이 현재 선택을 지우는 문제를 방지했다.
+
+### 검증
+
+- 결정적 `pointerdown → STATE_SYNC → pointerup`, 실제 터치, Space/Enter와 120회 선택/취소 스트레스 테스트를 추가했다.
+- 입력 신뢰성 spec 5회 반복 15/15, 전체 Playwright 12/12, 전체 Node 42/42와 변경 JavaScript 문법 검사를 통과했다.
+- 독립 QA에서 실제 250ms 동기화와 고정 시드 128회 입력, send 예외·reset 격리 시나리오 2/2를 통과했다.
+- page error, console error, 테스트 hang과 잔류 서버가 없음을 확인했다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-23-sichuan-battle-intermittent-click-drop.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-23-sichuan-battle-intermittent-click-drop-report.md`
+- QA: `../../../.Codex/specs/2026-07-23-sichuan-battle-intermittent-click-drop-qa.md` (`PASS`)
+- `visual_change: none`이며 `assets/` 변경이 없어 Art Director 검수와 Mockup Sync를 생략했다.
+
 ## [2026-07-23] - 독립 듀얼 보드 및 입력 피드백 복구
 
 ### 추가

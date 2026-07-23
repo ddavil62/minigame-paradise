@@ -111,7 +111,7 @@ export function createApp(options = {}) {
     }
     if (message.type === 'MATCH_PAIR') {
       const result = room.game.matchPair(slot.id, message);
-      send(slot.ws, { type: result.ok ? 'PAIR_ACCEPTED' : 'PAIR_REJECTED', ...result, requestId: message.requestId });
+      send(slot.ws, { type: result.ok ? 'PAIR_ACCEPTED' : 'PAIR_REJECTED', ...result, requestId: message.requestId, matchId: room.game.matchId });
       if(result.ok&&result.shuffleWarning)send(slot.ws,{type:'SHUFFLE_WARNING',targetId:slot.id,...result.shuffleWarning});syncAll(); return;
     }
     if (message.type === 'USE_ITEM') {
