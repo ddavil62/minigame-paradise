@@ -7,6 +7,7 @@ import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { WebSocket } from 'ws';
 import { createApp, DISCONNECT_GRACE_MS } from '../server.js';
+import { findAnyLegalPair } from '../lib/pathfinder.js';
 
 /** @param {number} [duration=60_000] 경기 시간 @returns {Promise<{app:object,server:http.Server,url:string}>} 격리 서버 */
 async function startGameServer(duration = 60_000, disconnectGraceMs = 250) {
@@ -120,7 +121,9 @@ test('같은 세션 토큰으로 15초 안에 playerId와 개인 경기 상태�
   const sockets = [match.a, match.b];
   context.after(() => stopGameServer(fixture, sockets));
   await new Promise((resolve) => setTimeout(resolve, 3_100));
-  const pair = match.startA.snapshot.me.board.tiles.slice(0, 2);
+  const legalPair = findAnyLegalPair(match.startA.snapshot.me.board.tiles);
+  assert.ok(legalPair);
+  const pair = [legalPair.a, legalPair.b];
   const accepted = waitFor(match.a, 'PAIR_ACCEPTED');
   match.a.send(JSON.stringify({
     type: 'MATCH_PAIR',
