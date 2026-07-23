@@ -78,3 +78,10 @@ test('진행 단계별 셔플이 상태와 face 다중집합을 보존하며 결
 });
 
 test('독립 보드 복제본 변경은 상대 보드에 영향을 주지 않는다', () => { for (let seed = 0; seed < 20; seed += 1) { const generated = createBoard(seed); const left = structuredClone(generated); const right = structuredClone(generated); left.tiles[0].removed = true; left.tiles[1].faceId = 99; assert.notDeepEqual(left, right); assert.deepEqual(right, generated); } });
+
+test('개인화 스냅샷은 상대 공개 보드를 독립 복제하고 해답을 노출하지 않는다', () => {
+  const game = new SichuanGame({ seed: 77, now: () => 1000 }); game.addPlayer('p1', 'A'); game.addPlayer('p2', 'B'); game.start();
+  const first = game.snapshot('p1'); assert.ok(first.opponent.board); assert.equal('solution' in first.me.board, false); assert.equal('solution' in first.opponent.board, false);
+  assert.notStrictEqual(first.me.board, first.opponent.board); assert.notStrictEqual(first.me.board.tiles, first.opponent.board.tiles);
+  first.opponent.board.tiles[0].faceId = 999; assert.notEqual(game.players[1].board.tiles[0].faceId, 999);
+});

@@ -24,21 +24,25 @@
     </section>
 
     <section id="game-view" class="game-layout hidden">
-      <aside class="status-panel opponent-panel">
-        <span class="panel-label" data-i18n="opponent">상대</span><strong><span id="opponent-name">—</span> <span id="opponent-ai-badge" class="ai-badge hidden" data-i18n="aiBadge">AI</span></strong>
+      <aside class="status-panel opponent-panel" aria-labelledby="opponent-board-title">
+        <span class="panel-label" id="opponent-board-title" data-i18n="opponentBoard">상대 보드</span><strong><span id="opponent-name">—</span> <span id="opponent-ai-badge" class="ai-badge hidden" data-i18n="aiBadge">AI</span></strong>
+        <div id="opponent-board-frame" class="opponent-board-frame">
+          <div id="opponent-board" class="tile-board opponent-board" role="img" data-i18n-aria-label="opponentBoardLabel" aria-label="상대 사천성 보드"></div>
+        </div>
         <div class="progress-track"><i id="opponent-progress"></i></div>
         <b><span id="opponent-score">0</span> / 48</b>
         <div id="opponent-effects" class="effect-list" aria-live="polite"></div>
       </aside>
 
       <section class="board-column">
-        <div class="board-heading"><div><span data-i18n="me">나</span> · <strong id="my-name">—</strong></div><b><span id="my-score">0</span> / 48</b></div>
+        <div class="board-heading"><div><span data-i18n="myBoard">내 보드</span> · <strong id="my-name">—</strong></div><b><span id="my-score">0</span> / 48</b></div>
         <div id="board-frame" class="board-frame">
-          <div id="board" class="tile-board" role="grid" aria-label="사천성 타일 보드"></div>
+          <div id="board" class="tile-board" role="grid" data-i18n-aria-label="myBoardLabel" aria-label="내 사천성 타일 보드"></div>
           <svg id="path-layer" class="path-layer" viewBox="0 0 12 8" preserveAspectRatio="none" aria-hidden="true"></svg>
           <div id="shuffle-warning-badge" class="shuffle-warning-badge hidden" role="status" aria-live="assertive"><span aria-hidden="true">⤨</span> <b data-i18n="shuffleWarning">강제 셔플 예고</b></div>
           <div id="countdown" class="countdown hidden"></div>
         </div>
+        <p id="board-feedback" class="board-feedback" role="status" aria-live="polite" data-i18n="selectFirst">연결할 첫 타일을 선택하세요.</p>
       </section>
 
       <aside class="status-panel item-panel">

@@ -1,5 +1,41 @@
 # Changelog
 
+## [2026-07-23] - 독립 듀얼 보드 및 입력 피드백 복구
+
+### 추가
+
+- 큰 내 조작 보드와 상대의 실제 진행 상태를 보여주는 읽기 전용 12×8 축소 보드를 PvP·AI 화면에 동시에 표시했다.
+- 개인화 snapshot의 `opponent.board`에 해답·인벤토리 등 비공개 정보를 제외한 공개 보드 사본을 추가했다.
+- 첫 선택, 판정 대기, 성공 경로·제거, 문양 불일치·경로 불가 등 사유별 실패를 보드 상태와 ko/en 문구로 표시했다.
+- 390×844에서 `내 보드 → 상대 보드 → 아이템` 순서로 접근 가능한 세로 레이아웃을 추가했다.
+
+### 변경
+
+- `public/js/board-view.js`를 조작/읽기 전용 인스턴스로 분리 운용하고, 250ms 상태 동기화 재렌더 뒤에도 선택·pending 상태를 복원하도록 재구성했다.
+- 승인·거절 응답에 원 요청 `requestId`를 연결해 오래된 응답이 현재 입력 상태를 지우지 않게 했다.
+- 공개 보드 직렬화에서 `solution` 필드를 구조적으로 제외하고 양쪽 보드의 revision·제거·효과 상태를 독립 동기화했다.
+
+### 수정
+
+- 첫 타일 클릭 강조가 주기적 `STATE_SYNC` 뒤 사라져 선택 여부를 알 수 없던 문제를 수정했다.
+- 두 번째 클릭 뒤 성공·실패가 불명확하고 pending 중 추가 짝 요청이 가능하던 문제를 수정했다.
+- 한 플레이어의 제거가 본인 주 보드와 상대편 축소 보드에만 반영되도록 독립 보드 표시를 복구했다.
+
+### 검증
+
+- Node 테스트 42/42, Playwright 7/7과 변경 JavaScript `node --check`, `git diff --check`를 통과했다.
+- 1366×768, 1024×768, 390×844에서 양쪽 보드 비중첩·무가로 overflow, 모바일 순서와 읽기 전용 상대 보드를 확인했다.
+- AD 모드 3 `APPROVED`, 최종 QA `PASS`를 기록했다.
+- 비차단 제약으로 390px 내 타일 약 28×30px와 `/favicon.ico` 404 메시지를 확인했다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-23-sichuan-battle-dual-board-playability.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-23-sichuan-battle-dual-board-playability-report.md`
+- UI 검수: `../../../.Codex/specs/2026-07-23-sichuan-battle-dual-board-playability-ui-review.md` (`APPROVED`)
+- QA: `../../../.Codex/specs/2026-07-23-sichuan-battle-dual-board-playability-qa.md` (`PASS`)
+- `assets/` 변경이 없어 Mockup Sync와 `studio-mockup` 동기화는 생략했다.
+
 ## [2026-07-23] - AI 대전 모드
 
 ### 추가

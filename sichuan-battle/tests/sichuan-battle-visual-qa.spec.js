@@ -31,8 +31,9 @@ test('1366·1024에서 GPT 에셋, ko/en, 레이아웃과 콘솔이 정상이다
     await Promise.all([a.goto('/?name=QA-A&e2e=1'), b.goto('/?name=QA-B&e2e=1')]);
     await a.locator('.tile').first().waitFor(); await b.locator('.tile').first().waitFor();
     await assertViewport(a, width);
-    await expect(a.locator('.tile')).toHaveCount(96);
-    await expect(a.locator('.tile').first()).toHaveCSS('background-image', /tile-\d+\.png/);
+    await expect(a.locator('#board .tile')).toHaveCount(96);
+    await expect(a.locator('#opponent-board .tile')).toHaveCount(96);
+    await expect(a.locator('#board .tile').first()).toHaveCSS('background-image', /tile-\d+\.png/);
     await a.screenshot({ path: `tests/screenshots/qa-sichuan-${width}x768-ko.png`, fullPage: true });
     await a.locator('#language-button').click();
     await expect(a.locator('h1')).toHaveText('Sichuan Battle');

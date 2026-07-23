@@ -36,7 +36,7 @@ export class SichuanGame {
     return { matchId: this.matchId, matchSeed: this.seed, phase: this.phase, startedAt: this.startedAt, deadlineAt: this.deadlineAt,
       me: { id: me.id, name: me.name, isBot: me.isBot, board: me.board ? serializeBoard(me.board) : null, removedPairs: me.removedPairs, inventory: me.inventory,
         inventoryRevision: me.inventoryRevision, effects: this.publicEffects(me), shieldUntil: me.shieldUntil, shuffleWarning: me.pendingAutoShuffle },
-      opponent: opponent ? { id: opponent.id, name: opponent.name, isBot: opponent.isBot, removedPairs: opponent.removedPairs,
+      opponent: opponent ? { id: opponent.id, name: opponent.name, isBot: opponent.isBot, board: opponent.board ? serializeBoard(opponent.board) : null, removedPairs: opponent.removedPairs,
         remaining: 96 - opponent.removedPairs * 2, effects: this.publicEffects(opponent), shieldUntil: opponent.shieldUntil, connected: true } : null,
       result: this.result };
   }

@@ -126,7 +126,7 @@ export function createBoard(seed) {
 }
 
 /** @param {object} board 보드 @returns {object} 깊은 복사 가능한 스냅샷 */
-export function serializeBoard(board) { return { ...board, solution: undefined, tiles: board.tiles.map((tile) => ({ ...tile })) }; }
+export function serializeBoard(board) { const { solution: _solution, ...publicBoard } = board; return { ...publicBoard, tiles: board.tiles.map((tile) => ({ ...tile })) }; }
 
 /** @param {object} board 보드 @param {string|number} seed 경기 시드 @returns {object} 완주 가능하게 셔플된 보드 */
 export function shuffleRemaining(board, seed) {
