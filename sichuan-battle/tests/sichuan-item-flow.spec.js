@@ -25,16 +25,15 @@ test('서로 다른 세 아이템을 다음 동기화 전에 연속 입력해 �
 
 test('힌트 사용 시 본인 보드의 연결 가능한 같은 문양 두 타일만 강조한다', async ({ browser }) => {
   const aContext = await browser.newContext({ viewport: { width: 1024, height: 768 } });
-  const bContext = await browser.newContext({ viewport: { width: 1024, height: 768 } });
-  const a = await aContext.newPage(); const b = await bContext.newPage();
-  await Promise.all([a.goto('/?name=HintA&e2e=1'), b.goto('/?name=HintB&e2e=1')]);
+  const a = await aContext.newPage();
+  await a.goto('/?name=HintA&e2e=1&mode=ai');
   await a.locator('#board .tile').first().waitFor(); await a.waitForTimeout(3200);
   await grant(a, 'hint'); await a.locator('[data-item-id="hint"]').click();
   await expect(a.locator('#board .tile.hinted')).toHaveCount(2);
   const faces = await a.locator('#board .tile.hinted').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label')));
   expect(faces[0]).toBe(faces[1]);
-  await expect(b.locator('#opponent-board .tile.hinted')).toHaveCount(0);
-  await aContext.close(); await bContext.close();
+  await expect(a.locator('#opponent-board .tile.hinted')).toHaveCount(0);
+  await aContext.close();
 });
 
 for (const width of [1366, 1024]) {

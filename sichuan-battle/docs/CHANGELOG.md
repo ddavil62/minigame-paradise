@@ -1,5 +1,107 @@
 # Changelog
 
+## [2026-07-25] - 실플레이 힌트·뒤집기 분산·슬롯 정산 회귀 수정
+
+### 변경
+
+- 힌트 안내를 일반 타일 선택 피드백과 분리된 고정 배너로 렌더링했다. 유효한 두 대상은 ①·② 배지와 강한 외곽선으로 표시하며, 경로가 없거나 SVG 밖에서 잘려도 배너와 대상 강조는 유지된다.
+- 뒤집기 대상을 화면 상단(`y < 4`)과 하단(`y >= 4`)으로 먼저 나눠 후보가 충분한 16장 공격은 상·하 8장씩 할당하고, 각 절반 안에서는 활성 행을 순환하며 결정적 PRNG로 타일을 선택하도록 변경했다.
+- 아이템 입력 즉시 사용 슬롯을 빈칸으로 낙관 렌더링하고 `requestId + slotId`로 정산한다. `ITEM_RESOLVED`와 `STATE_SYNC` 순서 역전, 응답 유실, 재접속에서도 1.5초 watchdog이 pending을 복구하거나 소비 완료로 정리한다.
+- 인벤토리 슬롯의 pending 문구를 제거하고, 활성 공격은 `뒤집기 · 3.2s`처럼 별도 효과 칩으로 표시해 소비 슬롯과 지속 효과를 구분했다.
+
+### 검증
+
+- AD 모드 3에서 1366×768·1024×768·390×844의 ko/en 및 reduced-motion을 검수했다. 독립 힌트 배너, 대상 2장, 뒤집기 상·하 8/8, 즉시 빈 슬롯과 효과 칩을 확인해 `APPROVED` 판정을 받았다.
+- Node 집중 회귀는 공간 분산·힌트 privacy·동일 공격 갱신·3연타·정화·방어막을 포함해 19/19를 통과했다.
+- 실제 WebSocket과 운영형 `s-*` 슬롯을 사용하는 Playwright는 힌트 지속·진행 보드 8/8·메시지 순서 역전·응답 유실·재접속을 포함해 7/7을 통과했고 최종 QA는 `PASS`다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-25-sichuan-live-item-regression-spec.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-25-sichuan-live-item-regression-report.md`
+- UI 검수: `../../../.Codex/specs/2026-07-25-sichuan-live-item-regression-ad3.md` (`APPROVED`)
+- QA: `../../../.Codex/specs/2026-07-25-sichuan-live-item-regression-qa.md` (`PASS`, Node 19/19, Playwright 7/7)
+- `assets/` 변경이 없어 Mockup Sync와 `studio-mockup` 동기화를 생략했다.
+
+## [2026-07-25] - 아이템 조작감·오디오·상태 피드백 개선
+
+### 추가
+
+- 외부 오디오 파일 없이 Web Audio 오실레이터·게인·필터로 낮은 볼륨의 반복 BGM과 선택·힌트·매칭·실패·아이템·공격·방어막 차단 SFX를 합성했다.
+- 첫 pointer/keyboard 제스처 이후 오디오를 시작하고, ko/en 및 ARIA를 제공하는 음소거 토글과 `localStorage` 설정 복원을 추가했다.
+- 방어막 활성 중 내 보드 외곽에 glow를 표시하고 1회 공격 차단 또는 경기 초기화 시 즉시 제거하는 상태 피드백을 추가했다.
+
+### 변경
+
+- 힌트를 3초 자동 만료에서 해당 쌍 매칭·셔플·경기 종료까지 유지하는 방식으로 바꿨다. 두 타일에 ①·② 배지와 강한 외곽선, 연결 경로를 표시하고 비대상 타일을 감광한다.
+- 힌트 안내를 보드 내부 오버레이가 아닌 보드 아래 피드백 행에 배치하고, 효과 칩은 숫자 카운트 대신 `연결할 때까지`/`Until matched`를 표시한다.
+- 잠금·뒤집기·안개 대상을 사분면 중심 배분에서 실제 남은 타일의 `y` 행별 균등 quota로 변경했다. 잉여 행과 행 내부 타일은 결정적 PRNG로 무작위 선택한다.
+- 아이템 클릭·단축키 입력 시 슬롯을 로컬 pending으로 즉시 표시하고 `requestId + slotId` 명령 큐에서 순차 전송·정산하도록 변경했다. 서로 다른 3슬롯의 100ms 이하 연속 입력을 모두 소비한다.
+- 같은 공격을 활성 중 다시 사용하면 새 효과를 중첩하지 않고 기존 `effectId`와 targets를 유지한 채 `endsAt`을 기본 지속시간으로 초기화한다.
+- 제거할 디버프가 없어도 정화 아이템을 정상 소비하고 3초 면역을 부여하도록 변경했다.
+
+### 수정
+
+- 힌트 안내가 보드 타일 위에 겹치던 AD 모드 3 지적을 해결하고 세 대상 뷰포트에서 보드와 안내 사이 7px 간격을 확보했다.
+- 경기 전환·재접속에서 pending 명령과 오디오 노드를 정리하고, 공격 차단 직후 권위 상태와 함께 방어막 glow가 남지 않게 했다.
+- QA에서 이전 사분면·3초 힌트 계약과 충돌하던 테스트를 실제 행 분산·지속 힌트 계약으로 갱신하고, 격리 E2E의 경기 이탈 정리를 보강했다.
+
+### 검증
+
+- AD 모드 3 재검수에서 1366×768·1024×768·390×844, ko/en의 힌트 배지·경로·안내, 오디오 토글, 방어막 glow와 reduced-motion을 검수해 `APPROVED` 판정을 받았다.
+- Node 집중 테스트는 행 분산·지속 힌트 privacy·동일 공격 갱신·빈 정화를 포함해 파일별 12/12를 통과했다. 5,000 seed의 방해 대상 행별 최대 편차는 1 이하였다.
+- 격리 실제 서버 Playwright는 3/3을 통과했다. 100ms 미만 3연타, 힌트의 4초 이후 유지와 매칭 제거, 오디오 unlock·BGM·mute 복원·7종 SFX, 방어막 glow와 차단 제거를 확인했다.
+- QA 수정 뒤 제품 런타임 코드는 추가로 변경하지 않았으며 최종 판정은 `PASS`다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-25-sichuan-item-audio-polish-spec.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-25-sichuan-item-audio-polish-report.md`
+- AD 수정 리포트: `../../../.Codex/specs/2026-07-25-sichuan-item-audio-polish-revise-report.md`
+- UI 재검수: `../../../.Codex/specs/2026-07-25-sichuan-item-audio-polish-ad3-rereview.md` (`APPROVED`)
+- QA: `../../../.Codex/specs/2026-07-25-sichuan-item-audio-polish-qa-rerun.md` (`PASS`)
+- 신규·변경 에셋이 없어 Mockup Sync와 `studio-mockup` 동기화를 생략했다.
+
+## [2026-07-25] - 아이템 공간 균형·정규화·드롭·방어·힌트 보강
+
+### 원인
+
+- 기존 비복원 무작위 선택은 장기 누적 분포는 균등했지만 단일 사용에서 상단 절반에 대상이 몰리는 클러스터를 허용했다.
+- 클라이언트 렌더 경계가 unknown 슬롯을 검증하지 않아 미정의 아이콘이 `undefined`로 노출됐고, 서버의 outbound effect와 권위 effect 상태에도 같은 allowlist·형상 검증이 빠져 있었다.
+- 첫 제거 보장, raw 72%, pity 2 규칙은 30쌍 기준 약 22.32개를 지급해 원하는 공급량보다 높았다.
+- 방어막이 10초 타이머에 결합돼 다음 공격 전 만료될 수 있었고, 힌트는 데이터 계약이 있어도 시각 강조와 실제 메시지 경로 검증이 약했다.
+
+### 변경
+
+- 잠금 6장·뒤집기 16장·안개 18장을 좌상·우상·좌하·우하 quota로 배분하고, 사분면 내부 행 round-robin과 부족 후보 재분배로 한 번의 공격에서도 상하·좌우 균형을 맞췄다.
+- 서버 생성·grant·snapshot·사용, AI 선택, 클라이언트 렌더·마우스·1/2/3 키에 `lock`, `flip`, `fog`, `hint`, `cleanse`, `shield` allowlist와 슬롯 정규화를 적용했다.
+- 드롭을 첫 제거 보장, raw 14%, pity 5로 조정했다. 10,000 seed 평균은 30쌍 7.5202개, 48쌍 11.7575개로 이전 기대량의 약 1/3이다.
+- 방어막을 만료 시간이 없는 `shieldActive` boolean으로 교체했다. 다음 유효 공격 한 번만 막고 `1회`/`1 hit` 칩에는 `<time>`을 만들지 않는다.
+- 실제 `TEST_GRANT_ITEM → USE_ITEM → ITEM_RESOLVED → STATE_SYNC`의 힌트 targets/path를 본인에게만 공개하고, 정확히 두 타일을 4px outline·inset ring·`✦` 표식과 pulse로 강조했다. reduced-motion에서는 정적 강조를 유지한다.
+
+### 수정
+
+- QA F-01에서 `publicEffects()`가 unknown·구버전·손상 effect를 snapshot에 공개하는 원인을 확인했다. outbound 경계에 allowlist와 finite `endsAt` 검증을 추가하고, legacy timed shield와 invalid effect를 본인·상대 snapshot에서 제거했다.
+- QA F-02에서 outbound에서 숨긴 null effect가 권위 상태에 남아 다음 `tick()`·`useItem()`에서 예외를 일으키는 원인을 확인했다. `normalizeEffects()`를 `tick`, `publicEffects`, `recomputeDisruptionFlags`, `clearHints`, `endEffect` 진입점에 적용해 저장 가능한 `lock`·`flip`·`fog`·`hint`만 안전한 형상으로 유지했다.
+- 정규화 뒤에도 유효 hint의 targets/path 본인 공개, lock 플래그 재계산·만료, 연속 hint→attack→cleanse 상태 전이가 유지되도록 회귀를 보강했다.
+
+### 검증
+
+- AD 모드 3에서 실제 AI·PvP, 1366×768·1024×768·390×844, ko/en, 기본·reduced-motion을 검수해 `APPROVED`했다. 힌트는 본인 2장·상대 0장, outline 4px, marker opacity 1, 가로 overflow 0px였고 방어 칩의 `<time>`은 0개였다.
+- 공간 분포 5,000 seed에서 모든 단일 사용의 사분면·상하·좌우 차이가 1 이하였다. lock의 상단 4장 이상 쏠림은 0/5000이고 flip·fog는 상하 각각 8장·9장이었다.
+- 100,000 drop opportunity에서 23,547회가 드롭됐고 6종 가중치는 각 목표의 ±1%p 이내였다.
+- 최초 QA는 Node 60/61에서 F-01을 발견했고, F-01 수정 뒤 전체 Node 62/62와 독립 Playwright 3/3을 통과했다. Round 2는 집중 Node 25/26에서 F-02를 발견했다.
+- 최종 QA Round 3에서 F-01·F-02가 모두 해결됐으며 집중 Node 28/28, 최소 Playwright 1/1을 통과했다. 직전 독립 Playwright 전체 3/3과 관련 기존 Playwright 16/16 결과도 유지했고 최종 판정은 `PASS`다.
+- JavaScript 문법 검사와 `git diff --check`를 통과했으며 제품 UI·CSS·에셋은 QA 수정 과정에서 추가 변경되지 않았다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-25-sichuan-item-followup.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-25-sichuan-item-followup-report.md`
+- UI 검수: `../../../.Codex/specs/2026-07-25-sichuan-item-followup-ad3.md` (`APPROVED`)
+- QA: `../../../.Codex/specs/2026-07-25-sichuan-item-followup-qa.md` (`PASS`, Round 3)
+- 신규·변경 아트 에셋이 없어 Mockup Sync와 `studio-mockup` 동기화를 생략했다.
+
 ## [2026-07-25] - 아이템 연속 사용·효과 공정성·HUD 재배치
 
 ### 변경

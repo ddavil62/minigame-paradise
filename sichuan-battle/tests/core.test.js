@@ -40,8 +40,8 @@ test('100,000회 가중치가 목표 ±1%p에 든다', () => {
   for (const [id, definition] of Object.entries(ITEM_DEFINITIONS)) assert.ok(Math.abs(counts[id] / drops * 100 - definition.weight / totalWeight * 100) < 1, `${id} distribution`);
 });
 
-test('10,000경기 드롭 기회가 30쌍 22~24개, 완주 35~38개 범위다', () => {
-  for (const pairs of [30, 48]) { let total = 0; for (let seed = 0; seed < 10000; seed += 1) { let pity = 0; for (let ordinal = 1; ordinal <= pairs; ordinal += 1) { const inputPity = pity; const result = rollDrop(seed, ordinal, inputPity); pity = result.pity; if (result.dropped) total += 1; assert.deepEqual(result, rollDrop(seed, ordinal, inputPity)); } } const average = total / 10000; assert.ok(average >= (pairs === 30 ? 22 : 35) && average <= (pairs === 30 ? 24 : 38), `${pairs}: ${average}`); }
+test('10,000경기 드롭 기회가 30쌍 7.35~7.70개, 완주 11.55~12.00개 범위다', () => {
+  for (const pairs of [30, 48]) { let total = 0; for (let seed = 0; seed < 10000; seed += 1) { let pity = 0; for (let ordinal = 1; ordinal <= pairs; ordinal += 1) { const inputPity = pity; const result = rollDrop(seed, ordinal, inputPity); pity = result.pity; if (result.dropped) total += 1; assert.deepEqual(result, rollDrop(seed, ordinal, inputPity)); } } const average = total / 10000; assert.ok(average >= (pairs === 30 ? 7.35 : 11.55) && average <= (pairs === 30 ? 7.70 : 12.00), `${pairs}: ${average}`); }
 });
 
 test('경기는 stale 요청과 중복 요청을 안전하게 처리한다', () => {
@@ -66,6 +66,43 @@ test('결정적 무작위 방해 대상은 상단 고정이 아니며 기존 같
   assert.deepEqual(first, repeat); assert.equal(first.length, 6); assert.ok(first.some((id) => board.tiles.find((tile) => tile.tileId === id).y >= 4));
   board.tiles.find((tile) => tile.tileId === first[0]).locked = true;
   const next = chooseTargets(board, 'lock', createPrng(456)); assert.equal(next.includes(first[0]), false);
+});
+
+test('5,000개 시드의 방해 대상은 실제 활성 y행별 최대 편차 1로 균형을 이룬다', () => {
+  const board = createBoard(19);
+  for (const itemId of ['lock', 'flip', 'fog']) for (let seed = 0; seed < 5000; seed += 1) {
+    const ids = chooseTargets(board, itemId, createPrng(seed));
+    const rows = Array(8).fill(0);
+    for (const tileId of ids) {
+      const tile = board.tiles.find((entry) => entry.tileId === tileId);
+      rows[tile.y] += 1;
+    }
+    assert.ok(Math.max(...rows) - Math.min(...rows) <= 1, `${itemId}:${seed}:${rows}`);
+  }
+});
+
+test('snapshot은 구버전·unknown·잘못된 슬롯을 한 번 정리하고 6종 아이템만 공개한다', () => {
+  const game = new SichuanGame({ seed: 14, now: () => 5000 }); const player = game.addPlayer('p1', 'A'); game.addPlayer('p2', 'B'); game.start(); game.tick();
+  player.inventory = [
+    { slotId: 'legacy', itemId: 'force_shuffle' }, { slotId: 'unknown', itemId: 'banana' }, { slotId: 'missing' },
+    { slotId: null, itemId: 'hint' }, { slotId: 'ok', itemId: 'hint' }, { slotId: 'ok', itemId: 'shield' },
+  ];
+  player.inventoryRevision = 7;
+  const first = game.snapshot('p1');
+  assert.deepEqual(first.me.inventory, [{ slotId: 'ok', itemId: 'hint' }]);
+  assert.equal(first.me.inventoryRevision, 8);
+  assert.equal(game.snapshot('p1').me.inventoryRevision, 8);
+  assert.equal(game.grantItem('p1', 'force_shuffle'), null);
+});
+
+test('방어막은 시간 경과에 무관하게 다음 유효 공격 한 번만 막는다', () => {
+  let now = 1000; const game = new SichuanGame({ seed: 15, now: () => now, duration: 1_000_000 }); const attacker = game.addPlayer('p1', 'A'); const defender = game.addPlayer('p2', 'B'); game.start(); now = 5000; game.tick();
+  defender.inventory = [{ slotId: 'shield', itemId: 'shield' }]; defender.inventoryRevision = 1;
+  assert.equal(game.useItem('p2', { requestId: 'shield', matchId: game.matchId, slotId: 'shield', inventoryRevision: 1 }).ok, true);
+  now += 180000; game.tick(); assert.equal(defender.shieldActive, true);
+  attacker.inventory = [{ slotId: 'lock', itemId: 'lock' }]; attacker.inventoryRevision = 1;
+  const blocked = game.useItem('p1', { requestId: 'attack', matchId: game.matchId, slotId: 'lock', inventoryRevision: 1 });
+  assert.equal(blocked.blocked, true); assert.equal(defender.shieldActive, false);
 });
 
 test('자동 교차는 450ms 경고 후 힌트를 정리하고 합법 수를 복구한다', () => {

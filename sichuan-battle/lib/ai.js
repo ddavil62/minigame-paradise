@@ -2,6 +2,7 @@
  * @fileoverview 사천성 AI의 합법 짝 탐색, 보통 난이도 템포와 아이템 선택 정책을 제공한다.
  */
 import { findPath } from './pathfinder.js';
+import { isKnownItemId } from './items.js';
 
 export const NORMAL_AI_TIMING = Object.freeze({ first: [900, 1700], pair: [850, 1550], item: [550, 1200], think: [700, 1400], rest: [900, 1800], disrupted: [350, 800] });
 
@@ -43,16 +44,23 @@ export function chooseLegalPair(snapshot, rng = Math.random) {
  * @returns {object|null} 인벤토리 슬롯
  */
 export function chooseAiItem(snapshot, context = {}, rng = Math.random) {
-  const inventory = snapshot?.me?.inventory || []; if (!inventory.length) return null;
+  const rawInventory = snapshot?.me?.inventory || [];
+  const seen = new Set();
+  const inventory = rawInventory.filter((slot) => {
+    const valid = slot && typeof slot.slotId === 'string' && slot.slotId && !seen.has(slot.slotId) && isKnownItemId(slot.itemId);
+    if (valid) seen.add(slot.slotId);
+    return valid;
+  }).slice(0, 3);
+  if (!inventory.length) return null;
   const effects = snapshot?.me?.effects || []; const disrupted = effects.some((effect) => ['lock', 'flip', 'fog'].includes(effect.itemId));
   const byId = (id) => inventory.find((slot) => slot.itemId === id);
   if (disrupted && byId('cleanse')) return byId('cleanse');
-  if (!snapshot.me.shieldUntil || snapshot.me.shieldUntil <= Date.now()) if (byId('shield') && rng() < 0.68) return byId('shield');
+  if (!snapshot.me.shieldActive && byId('shield') && rng() < 0.68) return byId('shield');
   if (enumerateLegalPairs(snapshot?.me?.board?.tiles || []).length === 0 && byId('hint')) return byId('hint');
   const attacks = ['lock', 'flip', 'fog'].map(byId).filter(Boolean);
   if (attacks.length && ((snapshot?.opponent?.remaining ?? 96) < 50 || (context.actionOrdinal || 0) % 3 === 1 || inventory.length === 3)) return attacks[Math.floor(rng() * attacks.length)];
   if (byId('hint') && rng() < 0.32) return byId('hint');
-  return inventory.length === 3 ? inventory[Math.floor(rng() * inventory.length)] : null;
+  return rawInventory.length >= 3 ? inventory[Math.floor(rng() * inventory.length)] : null;
 }
 
 /**

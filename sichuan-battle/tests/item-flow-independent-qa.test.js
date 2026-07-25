@@ -124,7 +124,7 @@ test('중첩 만료·정화 면역·방어막 연속 공격의 상태 전이가 
   const applied = second.game.useItem('p1', { requestId: 'applied', matchId: second.game.matchId, slotId: 'apply-me', inventoryRevision: 2 });
   assert.equal(blocked.blocked, true);
   assert.equal(applied.blocked, false);
-  assert.equal(shieldDefender.shieldUntil, 0);
+  assert.equal(shieldDefender.shieldActive, false);
   assert.equal(shieldDefender.board.tiles.filter((tile) => tile.flipped).length, 16);
 });
 
@@ -138,7 +138,7 @@ test('힌트는 본인에게만 두 대상을 공개하고 자동 셔플 대기�
   const opponentView = game.snapshot('p2').opponent.effects.find((effect) => effect.itemId === 'hint');
   assert.equal(mine.targets.length, 2);
   assert.equal('targets' in opponentView, false);
-  assert.equal('path' in mine, false);
+  assert.ok(Array.isArray(mine.path));
   assert.equal('path' in opponentView, false);
   assert.ok(findAnyLegalPair(player.board.tiles));
 

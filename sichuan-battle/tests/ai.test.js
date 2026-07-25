@@ -10,7 +10,7 @@ import { AiController } from '../bot.js';
 import { findPath } from '../lib/pathfinder.js';
 
 /** @param {object} board 보드 @param {object[]} [inventory=[]] 슬롯 @returns {object} 스냅샷 */
-function snapshot(board, inventory = []) { return { me: { board, inventory, effects: [], shieldUntil: 0 }, opponent: { remaining: 30 } }; }
+function snapshot(board, inventory = []) { return { me: { board, inventory, effects: [], shieldActive: false }, opponent: { remaining: 30 } }; }
 
 test('AI가 공개 보드에서 서버 경로 판정과 일치하는 합법 짝만 열거한다', () => {
   const board = createBoard(4242); const pairs = enumerateLegalPairs(board.tiles); assert.ok(pairs.length > 0);
@@ -32,10 +32,12 @@ test('숙고 18%·휴지 12%와 후보 풀 65%·35%가 시드 기반 허용 오�
 });
 
 test('AI 아이템 정책은 정화·방어와 6종 슬롯을 상황에 맞게 선택한다', () => {
-  const board = createBoard(9); const all = ['lock', 'flip', 'fog', 'hint', 'cleanse', 'shield'].map((itemId, index) => ({ slotId: `s${index}`, itemId }));
-  const state = snapshot(board, all); state.me.effects = [{ itemId: 'lock' }]; assert.equal(chooseAiItem(state, {}, () => 0).itemId, 'cleanse');
+  const board = createBoard(9); const valid = ['cleanse', 'shield', 'lock'].map((itemId, index) => ({ slotId: `s${index}`, itemId }));
+  const state = snapshot(board, valid); state.me.effects = [{ itemId: 'lock' }]; assert.equal(chooseAiItem(state, {}, () => 0).itemId, 'cleanse');
   state.me.effects = []; assert.equal(chooseAiItem(state, {}, () => 0).itemId, 'shield');
-  state.me.shieldUntil = Date.now() + 10000; const selected = chooseAiItem(state, { actionOrdinal: 1 }, () => 0); assert.ok(all.some((slot) => slot.itemId === selected.itemId));
+  state.me.shieldActive = true; const selected = chooseAiItem(state, { actionOrdinal: 1 }, () => 0); assert.equal(selected.itemId, 'lock');
+  state.me.inventory = [{ slotId: 'bad', itemId: 'force_shuffle' }, { slotId: 'ok', itemId: 'hint' }];
+  assert.equal(chooseAiItem(state, {}, () => 0)?.itemId, 'hint');
 });
 
 test('인벤토리 획득 snapshot은 일반 짝 타이머 대신 item 전용 지연을 예약한다', () => {

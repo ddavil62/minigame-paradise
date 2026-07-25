@@ -88,11 +88,11 @@ test('방어막은 다음 공격 한 번만 막고 즉시 소멸한다', () => {
   const [attacker, defender] = game.players;
   defender.inventory = [{ slotId: 'shield', itemId: 'shield' }]; defender.inventoryRevision = 1;
   assert.equal(game.useItem('p2', { requestId: 'shield', matchId: game.matchId, slotId: 'shield', inventoryRevision: 1 }).ok, true);
-  assert.ok(defender.shieldUntil > now.value);
+  assert.equal(defender.shieldActive, true);
   attacker.inventory = [{ slotId: 'lock', itemId: 'lock' }]; attacker.inventoryRevision = 1;
   const blocked = game.useItem('p1', { requestId: 'lock', matchId: game.matchId, slotId: 'lock', inventoryRevision: 1 });
   assert.equal(blocked.blocked, true);
-  assert.equal(defender.shieldUntil, 0);
+  assert.equal(defender.shieldActive, false);
   assert.equal(defender.board.tiles.some((tile) => tile.locked), false);
 });
 
@@ -144,7 +144,83 @@ test('힌트 대상은 본인 snapshot에만 공개되고 상대에게 경로와
   const used = game.useItem('p1', { requestId: 'hint-private', matchId: game.matchId, slotId: 'hint', inventoryRevision: 1 }); assert.equal(used.ok, true);
   const mine = game.snapshot('p1').me.effects.find((effect) => effect.itemId === 'hint');
   const theirs = game.snapshot('p2').opponent.effects.find((effect) => effect.itemId === 'hint');
-  assert.equal(mine.targets.length, 2); assert.equal('targets' in theirs, false); assert.equal('path' in mine, false); assert.equal('path' in theirs, false);
+  assert.equal(mine.targets.length, 2); assert.equal('targets' in theirs, false); assert.ok(Array.isArray(mine.path)); assert.equal('path' in theirs, false);
+});
+
+test('본인과 상대 snapshot은 유효한 timed effect만 공개하고 legacy shield와 unknown 효과를 제거한다', () => {
+  const { game } = playingGame();
+  const [first, second] = game.players;
+  const hintTargets = first.board.tiles.slice(0, 2).map((tile) => tile.tileId);
+  first.effects = {
+    hint: { effectId: 'hint', itemId: 'hint', endsAt: 9_000, targets: hintTargets, path: [{ x: 0, y: 0 }, { x: 1, y: 0 }] },
+    lock: { effectId: 'lock', itemId: 'lock', endsAt: 9_100, targets: [] },
+    unknown: { effectId: 'unknown', itemId: 'banana', endsAt: 9_200 },
+    removed: { effectId: 'removed', itemId: 'force_shuffle', endsAt: 9_300 },
+    legacyShield: { effectId: 'legacy-shield', itemId: 'shield', endsAt: 9_400 },
+    missingItem: { effectId: 'missing', endsAt: 9_500 },
+    invalidEndsAt: { effectId: 'invalid-time', itemId: 'fog', endsAt: '9500' },
+    infinite: { effectId: 'infinite', itemId: 'flip', endsAt: Infinity },
+    empty: null,
+  };
+  second.effects = {
+    fog: { effectId: 'fog', itemId: 'fog', endsAt: 9_600, targets: [] },
+    unknown: { effectId: 'unknown-2', itemId: null, endsAt: 9_700 },
+    legacyShield: { effectId: 'legacy-shield-2', itemId: 'shield', endsAt: 9_800 },
+    invalidEndsAt: { effectId: 'invalid-time-2', itemId: 'cleanse', endsAt: Number.NaN },
+  };
+  const firstView = game.snapshot('p1');
+  assert.deepEqual(firstView.me.effects.map((effect) => effect.itemId), ['hint', 'lock']);
+  assert.deepEqual(firstView.opponent.effects.map((effect) => effect.itemId), ['fog']);
+  assert.deepEqual(firstView.me.effects[0].targets, hintTargets);
+  assert.ok(Array.isArray(firstView.me.effects[0].path));
+  const secondView = game.snapshot('p2');
+  assert.deepEqual(secondView.me.effects.map((effect) => effect.itemId), ['fog']);
+  assert.deepEqual(secondView.opponent.effects.map((effect) => effect.itemId), ['hint', 'lock']);
+  const privateHint = secondView.opponent.effects.find((effect) => effect.itemId === 'hint');
+  assert.equal('targets' in privateHint, false); assert.equal('path' in privateHint, false);
+});
+
+test('invalid 권위 effect는 모든 상태 전이에서 정규화되고 다음 정상 아이템을 막지 않는다', () => {
+  const { game } = playingGame(303);
+  const [attacker, defender] = game.players;
+  const attackTarget = defender.board.tiles[0].tileId;
+  const invalid = {
+    empty: null,
+    unknown: { effectId: 'unknown', itemId: 'banana', endsAt: 9_000 },
+    removed: { effectId: 'removed', itemId: 'force_shuffle', endsAt: 9_000 },
+    legacyShield: { effectId: 'shield', itemId: 'shield', endsAt: 9_000 },
+    cleanse: { effectId: 'cleanse', itemId: 'cleanse', endsAt: 9_000 },
+    missingTime: { effectId: 'missing-time', itemId: 'lock' },
+    badTime: { effectId: 'bad-time', itemId: 'fog', endsAt: '9000' },
+  };
+  attacker.effects = { ...invalid };
+  assert.doesNotThrow(() => game.tick());
+  assert.deepEqual(attacker.effects, {});
+  attacker.effects = {
+    ...invalid,
+    hint: { effectId: 'hint', itemId: 'hint', endsAt: 9_100, targets: [attacker.board.tiles[0].tileId, null, attacker.board.tiles[0].tileId], path: [null, { x: 0, y: 0 }, { x: '1', y: 0 }] },
+  };
+  const publicHint = game.snapshot('p1').me.effects[0];
+  assert.deepEqual(publicHint.targets, [attacker.board.tiles[0].tileId]);
+  assert.deepEqual(publicHint.path, [{ x: 0, y: 0 }]);
+  defender.effects = {
+    ...invalid,
+    lock: { effectId: 'lock', itemId: 'lock', endsAt: 9_200, targets: [attackTarget, null, attackTarget] },
+  };
+  assert.doesNotThrow(() => game.recomputeDisruptionFlags(defender));
+  assert.equal(defender.board.tiles[0].locked, true);
+  assert.doesNotThrow(() => game.endEffect(defender, 'lock'));
+  assert.equal(defender.board.tiles[0].locked, false);
+  attacker.effects = { ...invalid, hint: { effectId: 'hint', itemId: 'hint', endsAt: 9_300, targets: [], path: [] } };
+  assert.doesNotThrow(() => game.clearHints(attacker));
+  assert.deepEqual(attacker.effects, {});
+
+  assert.ok(game.grantItem('p1', 'hint', 'next-hint'));
+  assert.equal(game.useItem('p1', { requestId: 'next-hint', matchId: game.matchId, slotId: 'next-hint' }).ok, true);
+  assert.ok(game.grantItem('p1', 'lock', 'next-lock'));
+  assert.equal(game.useItem('p1', { requestId: 'next-lock', matchId: game.matchId, slotId: 'next-lock' }).ok, true);
+  assert.ok(game.grantItem('p2', 'cleanse', 'next-cleanse'));
+  assert.equal(game.useItem('p2', { requestId: 'next-cleanse', matchId: game.matchId, slotId: 'next-cleanse' }).ok, true);
 });
 
 test('겹친 방해 효과 하나가 만료돼도 나머지 효과의 타일 플래그는 유지된다', () => {

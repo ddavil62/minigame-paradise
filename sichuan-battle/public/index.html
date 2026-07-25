@@ -11,7 +11,7 @@
     <header class="topbar">
       <div><span class="eyebrow">TILE-LINK DUEL</span><h1 data-i18n="title">사천성 배틀</h1></div>
       <div class="timer" id="timer" aria-live="polite">03:00</div>
-      <div class="top-actions"><button id="language-button" class="quiet">EN</button><a class="quiet button-link" href="/" data-i18n="portal">게임 선택</a></div>
+      <div class="top-actions"><button id="audio-button" class="quiet audio-toggle" data-i18n-aria-label="muteAudio" aria-pressed="false"><span aria-hidden="true">♪</span><span id="audio-label" data-i18n="soundOn">소리 켬</span></button><button id="language-button" class="quiet">EN</button><a class="quiet button-link" href="/" data-i18n="portal">게임 선택</a></div>
     </header>
 
     <section id="waiting-view" class="overlay-card" aria-live="polite">
@@ -31,6 +31,11 @@
           <svg id="path-layer" class="path-layer" viewBox="0 0 12 8" preserveAspectRatio="none" aria-hidden="true"></svg>
           <div id="shuffle-warning-badge" class="shuffle-warning-badge hidden" role="status" aria-live="assertive"><span aria-hidden="true">⟳</span> <b data-i18n="autoShuffleWarning">막힘 자동 셔플</b></div>
           <div id="countdown" class="countdown hidden"></div>
+        </div>
+        <div id="hint-banner" class="hint-banner hidden" role="status" aria-live="polite" aria-hidden="true">
+          <span aria-hidden="true">✦</span>
+          <strong data-i18n="hintBannerTitle">힌트 발견!</strong>
+          <span data-i18n="hintBannerDetail">①과 ② 타일을 연결하세요</span>
         </div>
         <p id="board-feedback" class="board-feedback" role="status" aria-live="polite" data-i18n="selectFirst">연결할 첫 타일을 선택하세요.</p>
       </section>

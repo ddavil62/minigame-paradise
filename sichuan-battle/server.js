@@ -10,7 +10,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { SichuanGame } from './lib/game.js';
-import { ITEM_DEFINITIONS } from './lib/items.js';
+import { isKnownItemId } from './lib/items.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -106,8 +106,13 @@ export function createApp(options = {}) {
     if (message.type === 'RETURN_LOBBY' || message.type === 'LEAVE_MATCH') { if (room.slots.some((entry) => entry.isBot)) disposeAiSession('human left', true); else slot.ws.close(); return; }
     if (!room.game) { send(slot.ws, { type: 'ERROR', code: 'NOT_PLAYING' }); return; }
     if(options.testing&&message.type==='TEST_FINISH_MATCH'){room.game.finish(slot.id,'test');syncAll();return;}
-    if (options.testing && message.type === 'TEST_GRANT_ITEM' && ITEM_DEFINITIONS[message.itemId]) {
-      const player=room.game.players.find((entry)=>entry.id===slot.id);if(player&&player.inventory.length<3){player.inventoryRevision+=1;player.inventory.push({slotId:`test-${player.inventoryRevision}`,itemId:message.itemId});syncAll();}return;
+    if (options.testing && message.type === 'TEST_GRANT_ITEM') {
+      if (!isKnownItemId(message.itemId)) { send(slot.ws, { type: 'ERROR', code: 'INVALID_ITEM' }); return; }
+      // E2E가 운영에서 생성되는 s-* 슬롯 ID도 동일한 경로로 검증할 수 있게 한다.
+      const requestedSlotId = typeof message.slotId === 'string' && /^s-[a-z0-9-]{1,80}$/i.test(message.slotId) ? message.slotId : null;
+      const granted = room.game.grantItem(slot.id, message.itemId, requestedSlotId || `test-${room.game.players.find((entry) => entry.id === slot.id)?.inventoryRevision + 1}`);
+      if (!granted) { send(slot.ws, { type: 'ERROR', code: 'INVENTORY_FULL' }); return; }
+      syncAll(); return;
     }
     if (message.type === 'MATCH_PAIR') {
       const result = room.game.matchPair(slot.id, message);

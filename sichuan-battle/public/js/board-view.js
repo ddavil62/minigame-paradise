@@ -8,11 +8,11 @@ const PAIR_TIMEOUT_MS=2000;
 export class BoardView {
   /**
    * @param {HTMLElement} root 보드 요소
-   * @param {{interactive?:boolean,onPair?:(a:string,b:string,revision:number)=>string|null,pathLayer?:SVGElement|null,feedback?:HTMLElement|null}} [options] 보드 옵션
+   * @param {{interactive?:boolean,onPair?:(a:string,b:string,revision:number)=>string|null,onEvent?:(name:string)=>void,pathLayer?:SVGElement|null,feedback?:HTMLElement|null,hintBanner?:HTMLElement|null}} [options] 보드 옵션
    */
   constructor(root,options={}){
     this.root=root;this.interactive=options.interactive!==false;this.onPair=options.onPair||(()=>null);
-    this.pathLayer=options.pathLayer||null;this.feedback=options.feedback||null;this.tiles=[];this.effects=[];this.boardRevision=-1;
+    this.pathLayer=options.pathLayer||null;this.feedback=options.feedback||null;this.hintBanner=options.hintBanner||null;this.onEvent=options.onEvent||(()=>{});this.tiles=[];this.effects=[];this.boardRevision=-1;
     this.matchId=null;this.phase='waiting';this.shufflePending=false;this.connectionReady=false;this.selectedTileId=null;this.pendingPair=null;
     this.feedbackKey=this.interactive?'selectFirst':null;this.successIds=new Set();this.invalidIds=new Set();this.feedbackTimer=null;
     /** @type {Map<string,HTMLElement>} tileId별로 경기 중 동일 객체를 유지한다. */
@@ -53,7 +53,14 @@ export class BoardView {
     this.boardRevision=revision;this.tiles=tiles||[];this.effects=effects;
     const available=new Set(this.tiles.filter((tile)=>!tile.removed&&!tile.locked).map((tile)=>tile.tileId));
     if(this.selectedTileId&&!available.has(this.selectedTileId))this.clearSelection(false);
-    const hintIds=new Set(effects.filter((effect)=>effect.itemId==='hint').flatMap((effect)=>effect.targets||[]));
+    const currentTiles=new Map(this.tiles.map((tile)=>[tile.tileId,tile]));
+    const hintEffect=effects.find((effect)=>effect?.itemId==='hint'&&Array.isArray(effect.targets));
+    const validHintTargets=(hintEffect?.targets||[]).filter((tileId,index,values)=>{
+      const tile=currentTiles.get(tileId);
+      return typeof tileId==='string'&&index===values.indexOf(tileId)&&tile&&!tile.removed;
+    }).slice(0,2);
+    const visibleHint=validHintTargets.length?{...hintEffect,targets:validHintTargets}:null;
+    const hintIds=new Map(validHintTargets.map((tileId,index)=>[tileId,index+1]));
     const currentIds=new Set(this.tiles.map((tile)=>tile.tileId));
     for(const [tileId,node] of this.tileNodes)if(!currentIds.has(tileId)){node.remove();this.tileNodes.delete(tileId);}
     this.tiles.forEach((tile,index)=>{
@@ -64,6 +71,9 @@ export class BoardView {
       if(this.root.children[index]!==node)this.root.insertBefore(node,this.root.children[index]||null);
     });
     this.root.setAttribute('aria-busy',this.pendingPair?'true':'false');
+    this.root.classList.toggle('has-hint',Boolean(visibleHint));
+    this.renderHint(visibleHint);
+    this.renderHintBanner(visibleHint);
     this.updateFeedback();
   }
 
@@ -76,15 +86,18 @@ export class BoardView {
     return node;
   }
 
-  /** @private @param {HTMLElement} node 기존 노드 @param {object} tile 서버 타일 @param {Set<string>} hintIds 힌트 ID @returns {void} */
+  /** @private @param {HTMLElement} node 기존 노드 @param {object} tile 서버 타일 @param {Map<string,number>} hintIds 힌트 ID와 순번 @returns {void} */
   updateTileNode(node,tile,hintIds){
     node.style.backgroundImage=`url('/sichuan-battle/assets/tiles/tile-${String(tile.faceId).padStart(2,'0')}.png')`;
+    const hintNumber=this.interactive?hintIds.get(tile.tileId):null;const hinted=Boolean(hintNumber);
     if(this.interactive){
-      node.setAttribute('aria-label',tile.flipped?t('flippedTile'):t('tileLabel',{face:tile.faceId}));
+      const label=tile.flipped?t('flippedTile'):t('tileLabel',{face:tile.faceId});
+      node.setAttribute('aria-label',hinted?`${label}. ${t('hintTarget')}`:label);
       node.disabled=tile.removed||tile.locked||!this.isInteractionEnabled();
       node.setAttribute('aria-pressed',this.selectedTileId===tile.tileId?'true':'false');
     }
-    node.classList.toggle('removed',tile.removed);node.classList.toggle('locked',tile.locked);node.classList.toggle('flipped',tile.flipped);node.classList.toggle('fogged',tile.fogged);node.classList.toggle('hinted',this.interactive&&hintIds.has(tile.tileId));
+    node.classList.toggle('removed',tile.removed);node.classList.toggle('locked',tile.locked);node.classList.toggle('flipped',tile.flipped);node.classList.toggle('fogged',tile.fogged);node.classList.toggle('hinted',hinted);
+    if(hinted)node.dataset.hintNumber=String(hintNumber);else delete node.dataset.hintNumber;
     node.classList.toggle('selected',this.selectedTileId===tile.tileId);node.classList.toggle('pending',Boolean(this.pendingPair&&[this.pendingPair.tileAId,this.pendingPair.tileBId].includes(tile.tileId)));
     node.classList.toggle('match-success',this.successIds.has(tile.tileId));node.classList.toggle('match-invalid',this.invalidIds.has(tile.tileId));
     const back=node.querySelector('.tile-back');
@@ -97,7 +110,7 @@ export class BoardView {
     if(!this.isInteractionEnabled())return;
     const tile=this.tiles.find((entry)=>entry.tileId===tileId);if(!tile||tile.removed||tile.locked)return;
     this.pickCount+=1;
-    if(!this.selectedTileId){this.selectedTileId=tileId;this.feedbackKey='selectSecond';this.render(this.tiles,this.effects,this.boardRevision);return;}
+    if(!this.selectedTileId){this.selectedTileId=tileId;this.feedbackKey='selectSecond';this.onEvent('select');this.render(this.tiles,this.effects,this.boardRevision);return;}
     if(this.selectedTileId===tileId){this.clearSelection();this.feedbackKey='selectionCancelled';this.updateFeedback();return;}
     const first=this.selectedTileId;const requestId=this.onPair(first,tileId,this.boardRevision);
     if(!requestId)return;
@@ -119,7 +132,7 @@ export class BoardView {
   handleRejected(message){
     if(!this.matchesPending(message))return false;
     this.invalidIds=new Set([this.pendingPair.tileAId,this.pendingPair.tileBId]);this.clearPending('rejected');this.selectedTileId=null;
-    this.feedbackKey=BoardView.feedbackKeyForReason(message.reason);this.render(this.tiles,this.effects,this.boardRevision);this.scheduleFeedbackClear();return true;
+    this.feedbackKey=BoardView.feedbackKeyForReason(message.reason);this.onEvent('invalid');this.render(this.tiles,this.effects,this.boardRevision);this.scheduleFeedbackClear();return true;
   }
 
   /** @private @param {object} message 서버 응답 @returns {boolean} 현재 경기의 현재 요청인지 */
@@ -144,8 +157,37 @@ export class BoardView {
   scheduleFeedbackClear(){clearTimeout(this.feedbackTimer);this.feedbackTimer=setTimeout(()=>{this.successIds.clear();this.invalidIds.clear();this.feedbackKey='selectFirst';this.render(this.tiles,this.effects,this.boardRevision);},700);}
 
   /** @private @returns {void} 접근성 상태 문구를 갱신한다. */
-  updateFeedback(){if(!this.feedback)return;this.feedback.textContent=this.feedbackKey?t(this.feedbackKey):'';this.feedback.dataset.state=this.feedbackKey||'';}
+  updateFeedback(){
+    if(!this.feedback)return;
+    const hintActive=this.effects.some((effect)=>effect.itemId==='hint'&&Array.isArray(effect.targets)&&effect.targets.length===2);
+    const showHint=hintActive&&this.feedbackKey==='selectFirst';
+    this.feedback.textContent=showHint?t('hintGuidance'):this.feedbackKey?t(this.feedbackKey):'';
+    this.feedback.dataset.state=showHint?'hintGuidance':this.feedbackKey||'';
+  }
+
+  /** @private @param {object|null} effect 현재 힌트 효과 @returns {void} */
+  renderHintBanner(effect){
+    if(!this.hintBanner)return;
+    const active=Boolean(effect&&Array.isArray(effect.targets)&&effect.targets.length);
+    this.hintBanner.classList.toggle('hidden',!active);
+    this.hintBanner.setAttribute('aria-hidden',String(!active));
+  }
 
   /** @param {{x:number,y:number}[]} path 경로 @returns {void} */
-  showPath(path){if(!this.pathLayer||path.length<2)return;const points=path.map((point)=>`${point.x+.5},${point.y+.5}`).join(' ');this.pathLayer.innerHTML=`<polyline points="${points}"/>`;setTimeout(()=>this.pathLayer?.replaceChildren(),520);}
+  showPath(path){
+    if(!this.pathLayer||path.length<2)return;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.dataset.layer='match';
+    line.setAttribute('points',path.map((point)=>`${point.x+.5},${point.y+.5}`).join(' '));this.pathLayer.appendChild(line);
+    this.onEvent('match');setTimeout(()=>line.remove(),520);
+  }
+
+  /** @private @param {object|undefined} effect 현재 힌트 효과 @returns {void} */
+  renderHint(effect){
+    if(!this.interactive)return;
+    if(!this.pathLayer)return;
+    this.pathLayer.querySelector('[data-layer="hint"]')?.remove();
+    if(!effect||!Array.isArray(effect.path)||effect.path.length<2)return;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.dataset.layer='hint';
+    line.setAttribute('points',effect.path.map((point)=>`${point.x+.5},${point.y+.5}`).join(' '));this.pathLayer.prepend(line);
+  }
 }
