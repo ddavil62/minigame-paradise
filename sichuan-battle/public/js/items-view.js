@@ -2,7 +2,7 @@
  * @fileoverview 3개 아이템 슬롯과 활성 효과 칩을 렌더링한다.
  */
 import {t} from './i18n.js';
-const ICONS={lock:'🔒',flip:'◩',force_shuffle:'⤨',fog:'≋',hint:'✦',cleanse:'✧',shield:'◈'};
+const ICONS={lock:'🔒',flip:'◩',fog:'≋',hint:'✦',cleanse:'✧',shield:'◈'};
 const animationFrames=new WeakMap();
 /** @param {HTMLElement} root 슬롯 루트 @param {object[]} inventory 인벤토리 @param {(slotId:string)=>void} use 사용 콜백 @returns {void} */
 export function renderInventory(root,inventory,use){root.replaceChildren(...Array.from({length:3},(_,index)=>{const slot=inventory[index];const button=document.createElement('button');button.className=`item-slot${slot?'':' empty'}`;button.disabled=!slot;if(slot){const name=t(`item_${slot.itemId}`);const description=t(`item_${slot.itemId}_description`);button.dataset.itemId=slot.itemId;button.setAttribute('aria-label',`${index+1}. ${name}. ${description}`);button.innerHTML=`<span class="item-icon">${ICONS[slot.itemId]}</span><span><b>${name}</b><small>${description}</small></span><span class="slot-key">${index+1}</span>`;}else button.innerHTML=`<span></span><span>EMPTY</span><span class="slot-key">${index+1}</span>`;if(slot)button.addEventListener('click',()=>use(slot.slotId));return button;}));}

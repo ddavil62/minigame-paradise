@@ -69,8 +69,8 @@ test('3분 종료는 점수 승패와 동점을 서버에서 한 번만 확정�
   assert.equal(draw.game.result.reason, 'time_draw');
 });
 
-test('정화는 잠금·뒤집기·안개·실행 전 강제 셔플을 해제하고 3초 면역을 준다', () => {
-  for (const itemId of ['lock', 'flip', 'fog', 'force_shuffle']) {
+test('정화는 잠금·뒤집기·안개를 해제하고 3초 면역을 준다', () => {
+  for (const itemId of ['lock', 'flip', 'fog']) {
     const { game, now } = playingGame(200 + itemId.length);
     const [attacker, defender] = game.players;
     attacker.inventory = [{ slotId: 'attack', itemId }]; attacker.inventoryRevision = 1;
@@ -108,16 +108,52 @@ test('힌트는 안내한 짝을 제거하면 즉시 종료된다', () => {
   assert.equal(Object.values(player.effects).some((effect) => effect.itemId === 'hint'), false);
 });
 
-test('셔플은 기존 힌트를 종료한다', () => {
-  const { game, now } = playingGame();
-  const [player, opponent] = game.players;
+test('자동 셔플 실행은 기존 힌트를 종료한다', () => {
+  const { game } = playingGame();
+  const [player] = game.players;
   player.inventory = [{ slotId: 'hint', itemId: 'hint' }]; player.inventoryRevision = 1;
   game.useItem('p1', { requestId: 'hint', matchId: game.matchId, slotId: 'hint', inventoryRevision: 1 });
-  opponent.inventory = [{ slotId: 'shuffle', itemId: 'force_shuffle' }]; opponent.inventoryRevision = 1;
-  game.useItem('p2', { requestId: 'shuffle', matchId: game.matchId, slotId: 'shuffle', inventoryRevision: 1 });
-  now.value += 801; game.tick();
+  game.shufflePlayer(player);
   assert.equal(Object.values(player.effects).some((effect) => effect.itemId === 'hint'), false);
   assert.ok(findAnyLegalPair(player.board.tiles));
+});
+
+test('자동 셔플 뒤에도 단독·중첩 방해 효과의 대상 플래그를 만료 전까지 복구한다', () => {
+  for (const itemId of ['lock', 'flip', 'fog']) {
+    const { game } = playingGame(410 + itemId.length); const defender = game.players[1];
+    const targetId = defender.board.tiles[20].tileId; const key = itemId === 'lock' ? 'locked' : itemId === 'flip' ? 'flipped' : 'fogged';
+    defender.effects.only = { effectId: 'only', itemId, targets: [targetId], endsAt: 9_000 };
+    game.recomputeDisruptionFlags(defender); game.shufflePlayer(defender);
+    assert.equal(defender.board.tiles.find((tile) => tile.tileId === targetId)[key], true);
+    assert.equal(defender.effects.only.itemId, itemId);
+  }
+
+  const { game } = playingGame(420); const defender = game.players[1]; const targetId = defender.board.tiles[30].tileId;
+  defender.effects.lock = { effectId: 'lock', itemId: 'lock', targets: [targetId], endsAt: 9_000 };
+  defender.effects.flip = { effectId: 'flip', itemId: 'flip', targets: [targetId], endsAt: 9_100 };
+  defender.effects.fog = { effectId: 'fog', itemId: 'fog', targets: [targetId], endsAt: 9_200 };
+  game.recomputeDisruptionFlags(defender); game.shufflePlayer(defender);
+  const target = defender.board.tiles.find((tile) => tile.tileId === targetId);
+  assert.equal(target.locked, true); assert.equal(target.flipped, true); assert.equal(target.fogged, true);
+  assert.equal(Object.keys(defender.effects).length, 3);
+});
+
+test('힌트 대상은 본인 snapshot에만 공개되고 상대에게 경로와 target을 숨긴다', () => {
+  const { game } = playingGame();
+  const player = game.players[0]; player.inventory = [{ slotId: 'hint', itemId: 'hint' }]; player.inventoryRevision = 1;
+  const used = game.useItem('p1', { requestId: 'hint-private', matchId: game.matchId, slotId: 'hint', inventoryRevision: 1 }); assert.equal(used.ok, true);
+  const mine = game.snapshot('p1').me.effects.find((effect) => effect.itemId === 'hint');
+  const theirs = game.snapshot('p2').opponent.effects.find((effect) => effect.itemId === 'hint');
+  assert.equal(mine.targets.length, 2); assert.equal('targets' in theirs, false); assert.equal('path' in mine, false); assert.equal('path' in theirs, false);
+});
+
+test('겹친 방해 효과 하나가 만료돼도 나머지 효과의 타일 플래그는 유지된다', () => {
+  const { game, now } = playingGame(); const defender = game.players[1];
+  const tileId = defender.board.tiles[20].tileId;
+  defender.effects.lock = { effectId: 'lock', itemId: 'lock', targets: [tileId], endsAt: now.value + 10 };
+  defender.effects.flip = { effectId: 'flip', itemId: 'flip', targets: [tileId], endsAt: now.value + 100 };
+  game.recomputeDisruptionFlags(defender); assert.equal(defender.board.tiles[20].locked, true); assert.equal(defender.board.tiles[20].flipped, true);
+  now.value += 11; game.tick(); assert.equal(defender.board.tiles[20].locked, false); assert.equal(defender.board.tiles[20].flipped, true);
 });
 
 test('stale matchId를 가진 제거 요청은 거부한다', () => {
@@ -129,16 +165,17 @@ test('stale matchId를 가진 제거 요청은 거부한다', () => {
   assert.equal(player.removedPairs, 0);
 });
 
-test('ko/en 사전은 키가 같고 7종 아이템 이름·설명을 모두 가진다', async () => {
+test('ko/en 사전은 키가 같고 6종 아이템 이름·설명을 모두 가진다', async () => {
   globalThis.localStorage = { getItem: () => null, setItem: () => {} };
   const { COPY } = await import('../public/js/i18n.js');
   assert.deepEqual(Object.keys(COPY.ko).sort(), Object.keys(COPY.en).sort());
-  for (const id of ['lock', 'flip', 'force_shuffle', 'fog', 'hint', 'cleanse', 'shield']) {
+  for (const id of ['lock', 'flip', 'fog', 'hint', 'cleanse', 'shield']) {
     assert.equal(typeof COPY.ko[`item_${id}`], 'string');
     assert.equal(typeof COPY.en[`item_${id}`], 'string');
     assert.equal(typeof COPY.ko[`item_${id}_description`], 'string');
     assert.equal(typeof COPY.en[`item_${id}_description`], 'string');
   }
+  assert.equal('item_force_shuffle' in COPY.ko, false); assert.equal('item_force_shuffle' in COPY.en, false);
 });
 
 test('플레이어별 초당 30회 상한이 PING 폭주를 제한한다', async () => {

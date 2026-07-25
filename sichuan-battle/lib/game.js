@@ -4,11 +4,12 @@
 import { createBoard, serializeBoard, shuffleRemaining } from './board.js';
 import { findAnyLegalPair, findPath } from './pathfinder.js';
 import { ATTACK_ITEMS, ITEM_DEFINITIONS, chooseTargets, rollDrop } from './items.js';
+import { createPrng, deriveSeed } from './prng.js';
 
 /** @param {string} id 플레이어 ID @param {string} name 표시 이름 @returns {object} 경기 플레이어 상태 */
 function createPlayer(id, name, isBot = false) {
   return { id, name, board: null, revision: 0, removedPairs: 0, inventory: [], inventoryRevision: 0, pity: 0, dropOrdinal: 0,
-    isBot, cooldownUntil: 0, attackCooldownUntil: 0, immuneUntil: 0, shuffleImmuneUntil: 0, shieldUntil: 0, effects: {}, pendingAutoShuffle: null, requestCache: new Map() };
+    isBot, immuneUntil: 0, shieldUntil: 0, effects: {}, pendingAutoShuffle: null, requestCache: new Map(), itemUseOrdinal: 0 };
 }
 
 export class SichuanGame {
@@ -35,14 +36,20 @@ export class SichuanGame {
     if (!me) return null;
     return { matchId: this.matchId, matchSeed: this.seed, phase: this.phase, startedAt: this.startedAt, deadlineAt: this.deadlineAt,
       me: { id: me.id, name: me.name, isBot: me.isBot, board: me.board ? serializeBoard(me.board) : null, removedPairs: me.removedPairs, inventory: me.inventory,
-        inventoryRevision: me.inventoryRevision, effects: this.publicEffects(me), shieldUntil: me.shieldUntil, shuffleWarning: me.pendingAutoShuffle },
+        inventoryRevision: me.inventoryRevision, effects: this.publicEffects(me, true), shieldUntil: me.shieldUntil, shuffleWarning: me.pendingAutoShuffle },
       opponent: opponent ? { id: opponent.id, name: opponent.name, isBot: opponent.isBot, board: opponent.board ? serializeBoard(opponent.board) : null, removedPairs: opponent.removedPairs,
-        remaining: 96 - opponent.removedPairs * 2, effects: this.publicEffects(opponent), shieldUntil: opponent.shieldUntil, connected: true } : null,
+        remaining: 96 - opponent.removedPairs * 2, effects: this.publicEffects(opponent, false), shieldUntil: opponent.shieldUntil, connected: true } : null,
       result: this.result };
   }
 
   /** @param {object} player 플레이어 @returns {object[]} 공개 효과 */
-  publicEffects(player) { return Object.values(player.effects).map((effect) => ({ effectId: effect.effectId, itemId: effect.itemId, endsAt: effect.endsAt })); }
+  publicEffects(player, owner = false) {
+    return Object.values(player.effects).map((effect) => {
+      const visible = { effectId: effect.effectId, itemId: effect.itemId, endsAt: effect.endsAt };
+      if (owner && effect.itemId === 'hint') visible.targets = [...(effect.targets || [])];
+      return visible;
+    });
+  }
 
   /** @returns {void} 만료 효과와 경기 시간을 정리한다. */
   tick() {
@@ -55,19 +62,26 @@ export class SichuanGame {
   /** @param {object} player 플레이어 @param {string} effectId 효과 ID @returns {void} */
   endEffect(player, effectId) {
     const effect = player.effects[effectId]; if (!effect) return;
-    if (effect.itemId === 'force_shuffle') {
-      this.shufflePlayer(player); player.shuffleImmuneUntil = this.now() + 8000; delete player.effects[effectId]; return;
-    }
-    player.board.tiles.forEach((tile) => { if (effect.targets?.includes(tile.tileId)) { tile.locked = false; tile.flipped = false; tile.fogged = false; } });
     delete player.effects[effectId];
-    if (ATTACK_ITEMS.has(effect.itemId)) player.immuneUntil = Math.max(player.immuneUntil, this.now() + 1500);
+    this.recomputeDisruptionFlags(player);
   }
 
   /** @param {object} player 플레이어 @returns {void} 활성 힌트를 면역 없이 즉시 제거한다. */
   clearHints(player) { for (const [id,effect] of Object.entries(player.effects)) if (effect.itemId === 'hint') delete player.effects[id]; }
 
+  /** @param {object} player 플레이어 @returns {void} 활성 방해 효과에서 타일 플래그를 다시 계산한다. */
+  recomputeDisruptionFlags(player) {
+    player.board.tiles.forEach((tile) => { tile.locked = false; tile.flipped = false; tile.fogged = false; });
+    for (const effect of Object.values(player.effects)) {
+      const key = effect.itemId === 'lock' ? 'locked' : effect.itemId === 'flip' ? 'flipped' : effect.itemId === 'fog' ? 'fogged' : null;
+      if (!key) continue;
+      const targets = new Set(effect.targets || []);
+      player.board.tiles.forEach((tile) => { if (targets.has(tile.tileId) && !tile.removed) tile[key] = true; });
+    }
+  }
+
   /** @param {object} player 플레이어 @returns {void} 모든 셔플이 공유하는 힌트 정리와 재배치 진입점. */
-  shufflePlayer(player) { this.clearHints(player); shuffleRemaining(player.board,this.seed); }
+  shufflePlayer(player) { this.clearHints(player); shuffleRemaining(player.board,this.seed); this.recomputeDisruptionFlags(player); }
 
   /** @param {string} playerId 플레이어 @param {object} intent 제거 의도 @returns {object} 처리 결과 */
   matchPair(playerId, intent) {
@@ -114,27 +128,26 @@ export class SichuanGame {
     if (player.requestCache.has(cacheKey)) return player.requestCache.get(cacheKey);
     const slotIndex = player.inventory.findIndex((slot) => slot.slotId === intent.slotId); const slot = player.inventory[slotIndex];
     let result;
-    if (!slot || intent.inventoryRevision !== player.inventoryRevision) result = { ok: false, reason: 'STALE_INVENTORY' };
-    else if (now < player.cooldownUntil || (ATTACK_ITEMS.has(slot.itemId) && now < player.attackCooldownUntil)) result = { ok: false, reason: 'COOLDOWN' };
+    if (!slot || !ITEM_DEFINITIONS[slot.itemId]) result = { ok: false, reason: 'STALE_INVENTORY' };
+    else if (slot.itemId === 'hint' && (player.pendingAutoShuffle || !findAnyLegalPair(player.board.tiles))) result = { ok: false, reason: 'NO_HINT_AVAILABLE' };
     else if (slot.itemId === 'shield' && player.shieldUntil > now) result = { ok: false, reason: 'ALREADY_ACTIVE' };
-    else if (ATTACK_ITEMS.has(slot.itemId) && (target.immuneUntil > now || Object.values(target.effects).some((effect) => ATTACK_ITEMS.has(effect.itemId)))) result = { ok: false, reason: 'TARGET_BUSY' };
-    else if (slot.itemId === 'force_shuffle' && target.shuffleImmuneUntil > now) result = { ok: false, reason: 'SHUFFLE_IMMUNE' };
+    else if (ATTACK_ITEMS.has(slot.itemId) && target.immuneUntil > now) result = { ok: false, reason: 'IMMUNE' };
     else {
-      player.inventory.splice(slotIndex, 1); player.inventoryRevision += 1; player.cooldownUntil = now + 1250;
-      if (ATTACK_ITEMS.has(slot.itemId)) player.attackCooldownUntil = now + 2000;
-      const effectId = `${this.matchId}-${slot.itemId}-${now}`; let blocked = false; let targets = [];
+      player.inventory.splice(slotIndex, 1); player.inventoryRevision += 1; player.itemUseOrdinal += 1;
+      const effectId = `${this.matchId}-${slot.itemId}-${player.itemUseOrdinal}`; let blocked = false; let targets = [];
       if (ATTACK_ITEMS.has(slot.itemId) && target.shieldUntil > now) { target.shieldUntil = 0; blocked = true; }
       else if (slot.itemId === 'shield') player.shieldUntil = now + ITEM_DEFINITIONS.shield.duration;
-      else if (slot.itemId === 'cleanse') { Object.keys(player.effects).forEach((id) => { if (player.effects[id].itemId === 'force_shuffle') delete player.effects[id]; else this.endEffect(player, id); }); player.immuneUntil = now + 3000; }
+      else if (slot.itemId === 'cleanse') { for (const id of Object.keys(player.effects)) delete player.effects[id]; this.recomputeDisruptionFlags(player); player.immuneUntil = now + 3000; }
       else if (slot.itemId === 'hint') { const pair = findAnyLegalPair(player.board.tiles); targets = pair ? [pair.a.tileId, pair.b.tileId] : []; player.effects[effectId] = { effectId, itemId: slot.itemId, targets, path: pair?.path, endsAt: now + 3000 }; }
-      else if (!blocked && slot.itemId === 'force_shuffle') { target.effects[effectId] = { effectId, itemId: slot.itemId, targets: [], endsAt: now + ITEM_DEFINITIONS.force_shuffle.duration }; }
       else if (!blocked) {
-        targets = chooseTargets(target.board, slot.itemId); target.board.tiles.forEach((tile) => { if (!targets.includes(tile.tileId)) return; if (slot.itemId === 'lock') tile.locked = true; if (slot.itemId === 'flip') tile.flipped = true; if (slot.itemId === 'fog') tile.fogged = true; });
+        const random = createPrng(deriveSeed(this.seed, `item:${player.id}:${player.itemUseOrdinal}:${slot.itemId}`));
+        targets = chooseTargets(target.board, slot.itemId, random);
         target.effects[effectId] = { effectId, itemId: slot.itemId, targets, endsAt: now + ITEM_DEFINITIONS[slot.itemId].duration };
+        this.recomputeDisruptionFlags(target);
       }
       result = { ok: true, requestId: intent.requestId, itemId: slot.itemId, inventoryRevision: player.inventoryRevision, blocked, effectId, targets };
     }
-    player.requestCache.set(cacheKey, result); return result;
+    player.requestCache.set(cacheKey, result); if (player.requestCache.size > 128) player.requestCache.delete(player.requestCache.keys().next().value); return result;
   }
 
   /** @param {string|null} winnerId 승자 @param {string} reason 사유 @returns {void} */

@@ -31,8 +31,8 @@ test('숙고 18%·휴지 12%와 후보 풀 65%·35%가 시드 기반 허용 오�
   assert.ok(Math.abs(top / 2000 - 0.65) < 0.04); assert.ok(Math.abs(all / 2000 - 0.35) < 0.04);
 });
 
-test('AI 아이템 정책은 정화·방어와 7종 슬롯을 상황에 맞게 선택한다', () => {
-  const board = createBoard(9); const all = ['lock', 'flip', 'force_shuffle', 'fog', 'hint', 'cleanse', 'shield'].map((itemId, index) => ({ slotId: `s${index}`, itemId }));
+test('AI 아이템 정책은 정화·방어와 6종 슬롯을 상황에 맞게 선택한다', () => {
+  const board = createBoard(9); const all = ['lock', 'flip', 'fog', 'hint', 'cleanse', 'shield'].map((itemId, index) => ({ slotId: `s${index}`, itemId }));
   const state = snapshot(board, all); state.me.effects = [{ itemId: 'lock' }]; assert.equal(chooseAiItem(state, {}, () => 0).itemId, 'cleanse');
   state.me.effects = []; assert.equal(chooseAiItem(state, {}, () => 0).itemId, 'shield');
   state.me.shieldUntil = Date.now() + 10000; const selected = chooseAiItem(state, { actionOrdinal: 1 }, () => 0); assert.ok(all.some((slot) => slot.itemId === selected.itemId));

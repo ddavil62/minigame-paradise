@@ -38,18 +38,18 @@ export function chooseLegalPair(snapshot, rng = Math.random) {
 }
 
 /**
- * 현재 효과와 점수 상황에 따라 보유 아이템 하나를 고른다.
+ * 현재 효과와 점수 상황에 따라 6종 보유 아이템 하나를 고른다.
  * @param {object} snapshot 개인화 스냅샷 @param {{actionOrdinal?:number}} [context] 문맥 @param {()=>number} [rng=Math.random] 난수
  * @returns {object|null} 인벤토리 슬롯
  */
 export function chooseAiItem(snapshot, context = {}, rng = Math.random) {
   const inventory = snapshot?.me?.inventory || []; if (!inventory.length) return null;
-  const effects = snapshot?.me?.effects || []; const disrupted = effects.some((effect) => ['lock', 'flip', 'fog', 'force_shuffle'].includes(effect.itemId));
+  const effects = snapshot?.me?.effects || []; const disrupted = effects.some((effect) => ['lock', 'flip', 'fog'].includes(effect.itemId));
   const byId = (id) => inventory.find((slot) => slot.itemId === id);
   if (disrupted && byId('cleanse')) return byId('cleanse');
   if (!snapshot.me.shieldUntil || snapshot.me.shieldUntil <= Date.now()) if (byId('shield') && rng() < 0.68) return byId('shield');
   if (enumerateLegalPairs(snapshot?.me?.board?.tiles || []).length === 0 && byId('hint')) return byId('hint');
-  const attacks = ['force_shuffle', 'lock', 'flip', 'fog'].map(byId).filter(Boolean);
+  const attacks = ['lock', 'flip', 'fog'].map(byId).filter(Boolean);
   if (attacks.length && ((snapshot?.opponent?.remaining ?? 96) < 50 || (context.actionOrdinal || 0) % 3 === 1 || inventory.length === 3)) return attacks[Math.floor(rng() * attacks.length)];
   if (byId('hint') && rng() < 0.32) return byId('hint');
   return inventory.length === 3 ? inventory[Math.floor(rng() * inventory.length)] : null;

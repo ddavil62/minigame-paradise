@@ -117,7 +117,6 @@ export function createApp(options = {}) {
     if (message.type === 'USE_ITEM') {
       const result = room.game.useItem(slot.id, message);
       send(slot.ws, { type: 'ITEM_RESOLVED', ...result });
-      if (result.ok && result.itemId === 'force_shuffle' && !result.blocked) { const target=room.slots.find((entry)=>entry.id!==slot.id);room.slots.forEach((entry) => send(entry.ws, { type: 'SHUFFLE_WARNING', effectId: result.effectId, targetId: target?.id, executeAt: Date.now() + 800 })); }
       if (result.blocked) room.slots.forEach((entry) => send(entry.ws, { type: 'ATTACK_BLOCKED', itemId: result.itemId, defenderId: room.slots.find((entry) => entry.id !== slot.id)?.id }));
       syncAll(); return;
     }

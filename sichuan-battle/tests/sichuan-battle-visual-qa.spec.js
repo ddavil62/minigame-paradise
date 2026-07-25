@@ -10,7 +10,9 @@ async function assertViewport(page, width) {
   const item = await page.locator('.item-panel').boundingBox();
   expect(layout.x).toBeGreaterThanOrEqual(0);
   expect(layout.x + layout.width).toBeLessThanOrEqual(width);
-  expect(board.x + board.width).toBeLessThanOrEqual(item.x);
+  const opponent = await page.locator('.opponent-panel').boundingBox();
+  expect(item.x + item.width).toBeLessThanOrEqual(board.x);
+  expect(board.x + board.width).toBeLessThanOrEqual(opponent.x);
   expect(await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }))).toEqual({ width, height: 768 });
 }
 

@@ -1,5 +1,38 @@
 # Changelog
 
+## [2026-07-25] - 아이템 연속 사용·효과 공정성·HUD 재배치
+
+### 변경
+
+- 아이템을 잠금·뒤집기·안개·힌트·정화·방어막 6종으로 정리하고 강제 셔플을 정의·드롭·사용·AI·UI·ko/en에서 제거했다. 남은 가중치 합계 88을 기준으로 기존 상대 가중치를 유지한다.
+- 서버가 `matchId + slotId` 소유권과 `requestId` 중복 캐시로 사용을 판정하도록 바꿔, 같은 초기 `inventoryRevision`으로 보낸 서로 다른 3슬롯도 250ms 동기화 전에 각각 한 번 처리한다.
+- 일반·공격 쿨다운과 활성 공격 기반 `TARGET_BUSY`를 제거하되 `USE_ITEM` 초당 8회, 전체 메시지 초당 30회 제한, 정화 면역과 방어막은 유지했다.
+- 잠금 6장·뒤집기 16장·안개 18장을 경기 seed, 사용자, 사용 순번과 item ID에서 파생한 결정적 PRNG로 유효 후보 전체에 분산한다.
+- 데스크톱 HUD를 `아이템 | 내 보드 | 상대 보드`, 모바일을 `내 보드 → 아이템 → 상대 보드` 순서로 재배치했다.
+
+### 수정
+
+- 힌트 효과의 `targets`가 공개 snapshot에서 누락되어 효과 칩만 보이던 직접 원인을 수정했다. 본인에게 합법 짝 두 타일만 3초 공개하고 상대에게 targets와 내부 path를 숨긴다.
+- 좌표순 타일 배열에 `slice(0, maximum)`을 적용해 방해 대상이 항상 윗줄에 몰리던 직접 원인을 결정적 Fisher–Yates 비복원 선택으로 교체했다.
+- 효과 종료가 모든 방해 플래그를 함께 지워 중첩 효과가 조기 해제되던 문제를 남은 활성 효과 전체의 플래그 재계산으로 수정했다.
+- QA F-01에서 `shuffleRemaining()`이 타일 플래그를 초기화한 뒤 활성 효과를 복원하지 않아 자동 교착 셔플과 효과 칩이 불일치하는 문제를 발견했다. `shufflePlayer()`가 셔플 직후 `recomputeDisruptionFlags()`를 호출하도록 수정해 동일 tileId의 잠금·뒤집기·안개를 만료 전까지 유지한다.
+- 공유 room 정리 타이밍에 의존하던 2브라우저 연타 테스트를 단일 사람과 인증 AI 조합으로 격리하고, 동기화 경합 테스트는 같은 브라우저 작업 안에서 DOM identity·focus를 원자적으로 검증하도록 보정했다.
+
+### 검증
+
+- AD 모드 3 Round 1에서 1366×768, 1024×768, 390×844의 새 레이아웃·힌트·효과 칩을 `APPROVED`했다.
+- F-01 수정 후 AD 모드 3 Round 2에서 자동 셔플 뒤 잠금 6장·뒤집기 16장·안개 18장과 효과 칩 3개의 일치, 세 viewport의 비중첩·무가로 overflow를 다시 `APPROVED`했다.
+- 최종 QA Round 2에서 집중 Node 20/20, 전체 Node 52/52, 관련 Playwright 10/10, 변경 JavaScript 문법 검사와 `git diff --check`를 통과해 `PASS` 판정을 받았다.
+- 빠른 3슬롯 사용, request dedup, 소비 슬롯 재사용 거절, 힌트 본인 공개·상대 비공개, 결정적 대상 분산, 중첩 만료, 정화·면역·방어막, AI와 ko/en 회귀를 확인했다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-25-sichuan-item-flow.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-25-sichuan-item-flow-report.md`
+- UI 검수: `../../../.Codex/specs/2026-07-25-sichuan-item-flow-ad3.md` (`APPROVED`, Round 2)
+- QA: `../../../.Codex/specs/2026-07-25-sichuan-item-flow-qa.md` (`PASS`, Round 2)
+- `assets/` 변경이 없어 Mockup Sync와 `studio-mockup` 동기화를 생략했다.
+
 ## [2026-07-23] - 주기 동기화 중 타일 클릭 유실 수정
 
 ### 변경

@@ -53,17 +53,21 @@ test('실제 250ms 동기화와 128회 고정 시드 위상에서도 클릭과 D
 
   // revision을 올리지 않는 뒤집기·안개·힌트 표현도 같은 객체에 즉시 반영되어야 한다.
   await tile.focus();
-  await page.evaluate((id)=>{
+  const renderedState=await page.evaluate((id)=>{
     const snapshot=window.__sichuanTestSnapshot();
     const target=snapshot.me.board.tiles.find((entry)=>entry.tileId===id);
     target.flipped=true;target.fogged=true;
     snapshot.me.effects=[...(snapshot.me.effects||[]),{effectId:'qa-hint',itemId:'hint',targets:[id],expiresAt:Date.now()+1000}];
     window.__sichuanInjectMessage({type:'STATE_SYNC',snapshot,serverNow:Date.now()});
+    const node=window.__sichuanTileNode(id);
+    return{
+      expressions:['flipped','fogged','hinted'].every((name)=>node.classList.contains(name)),
+      identity:node===window.__qaHeldNode,
+      focused:document.activeElement===node
+    };
   },tileId);
-  await expect(tile).toHaveClass(/flipped/);
-  await expect(tile).toHaveClass(/fogged/);
-  await expect(tile).toHaveClass(/hinted/);
-  expect(await tile.evaluate((node)=>node===window.__qaHeldNode&&document.activeElement===node)).toBe(true);
+  // 다음 250ms 권위 동기화가 도착하기 전에 같은 렌더 프레임의 세 표현을 함께 검증한다.
+  expect(renderedState).toEqual({expressions:true,identity:true,focused:true});
   // 두 연결을 순서대로 닫아 첫 close가 상대 연결을 확인한 뒤, 마지막 close가 방을 확실히 정리하게 한다.
   await page.evaluate(()=>window.__sichuanTestSend({type:'LEAVE_MATCH'}));
   await opponent.waitForTimeout(300);

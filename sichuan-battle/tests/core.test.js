@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { createBoard, measureAdjacency, shuffleRemaining } from '../lib/board.js';
 import { findAnyLegalPair, findPath } from '../lib/pathfinder.js';
 import { verifyGeneratedSolution } from '../lib/solver.js';
-import { ITEM_DEFINITIONS, rollDrop } from '../lib/items.js';
+import { ITEM_DEFINITIONS, chooseTargets, rollDrop } from '../lib/items.js';
+import { createPrng } from '../lib/prng.js';
 import { SichuanGame } from '../lib/game.js';
 
 test('1,000개 시드가 24종×4장과 저장 해답을 보장한다', () => {
@@ -35,7 +36,8 @@ test('반복 셔플은 항상 완주 가능한 해답을 만든다', () => {
 test('100,000회 가중치가 목표 ±1%p에 든다', () => {
   const counts = Object.fromEntries(Object.keys(ITEM_DEFINITIONS).map((id) => [id, 0])); let pity = 0; let drops = 0;
   for (let ordinal = 1; ordinal <= 100000; ordinal += 1) { const result = rollDrop(42, ordinal, pity); pity = result.pity; if (result.dropped) { counts[result.itemId] += 1; drops += 1; } }
-  for (const [id, definition] of Object.entries(ITEM_DEFINITIONS)) assert.ok(Math.abs(counts[id] / drops * 100 - definition.weight) < 1, `${id} distribution`);
+  const totalWeight = Object.values(ITEM_DEFINITIONS).reduce((total, definition) => total + definition.weight, 0);
+  for (const [id, definition] of Object.entries(ITEM_DEFINITIONS)) assert.ok(Math.abs(counts[id] / drops * 100 - definition.weight / totalWeight * 100) < 1, `${id} distribution`);
 });
 
 test('10,000경기 드롭 기회가 30쌍 22~24개, 완주 35~38개 범위다', () => {
@@ -49,10 +51,21 @@ test('경기는 stale 요청과 중복 요청을 안전하게 처리한다', () 
   const intent = { requestId: 'ok', matchId: game.matchId, tileAId: pair[0].tileId, tileBId: pair[1].tileId, boardRevision: 0 }; const accepted = game.matchPair('p1', intent); assert.equal(accepted.ok, true); assert.deepEqual(game.matchPair('p1', intent), accepted); assert.equal(game.players[0].removedPairs, 1); assert.equal(game.matchPair('p1', { ...intent, requestId: 'missing', matchId: undefined }).reason, 'STALE_MATCH');
 });
 
-test('강제 셔플은 0.8초 경고 후 실행하고 정화하면 취소한다', () => {
-  let now = 0; const game = new SichuanGame({ seed: 8, now: () => now }); const attacker = game.addPlayer('p1', 'A'); const defender = game.addPlayer('p2', 'B'); game.start(); now = 4000; game.tick(); attacker.inventory = [{ slotId: 'attack', itemId: 'force_shuffle' }]; attacker.inventoryRevision = 1;
-  const warned = game.useItem('p1', { requestId: 'force', matchId: game.matchId, slotId: 'attack', inventoryRevision: 1 }); assert.equal(warned.ok, true); assert.ok(Object.values(defender.effects).some((effect) => effect.itemId === 'force_shuffle')); const revision = defender.board.revision; now = 4799; game.tick(); assert.equal(defender.board.revision, revision); now = 4801; game.tick(); assert.equal(defender.board.revision, revision + 1);
-  attacker.cooldownUntil = 0; attacker.attackCooldownUntil = 0; defender.shuffleImmuneUntil = 0; attacker.inventory = [{ slotId: 'again', itemId: 'force_shuffle' }]; attacker.inventoryRevision += 1; game.useItem('p1', { requestId: 'force2', matchId: game.matchId, slotId: 'again', inventoryRevision: attacker.inventoryRevision }); defender.inventory = [{ slotId: 'clean', itemId: 'cleanse' }]; defender.inventoryRevision = 1; game.useItem('p2', { requestId: 'cleanse', matchId: game.matchId, slotId: 'clean', inventoryRevision: 1 }); const before = defender.board.revision; now += 900; game.tick(); assert.equal(defender.board.revision, before);
+test('서로 다른 세 슬롯은 같은 초기 revision으로 연속 사용되고 요청 재전송은 한 번만 소비한다', () => {
+  let now = 0; const game = new SichuanGame({ seed: 8, now: () => now }); const attacker = game.addPlayer('p1', 'A'); const defender = game.addPlayer('p2', 'B'); game.start(); now = 4000; game.tick();
+  attacker.inventory = [{ slotId: 'a', itemId: 'lock' }, { slotId: 'b', itemId: 'flip' }, { slotId: 'c', itemId: 'fog' }]; attacker.inventoryRevision = 3;
+  const intents = attacker.inventory.map((slot, index) => ({ requestId: `item-${index}`, matchId: game.matchId, slotId: slot.slotId, inventoryRevision: 3 }));
+  const results = intents.map((intent) => game.useItem('p1', intent));
+  assert.deepEqual(results.map((result) => result.ok), [true, true, true]); assert.equal(attacker.inventory.length, 0); assert.equal(attacker.inventoryRevision, 6); assert.equal(Object.keys(defender.effects).length, 3);
+  assert.deepEqual(game.useItem('p1', intents[0]), results[0]); assert.equal(attacker.inventoryRevision, 6); assert.equal(Object.keys(defender.effects).length, 3);
+  assert.equal(game.useItem('p1', { ...intents[0], requestId: 'new-request' }).reason, 'STALE_INVENTORY');
+});
+
+test('결정적 무작위 방해 대상은 상단 고정이 아니며 기존 같은 효과 타일을 제외한다', () => {
+  const board = createBoard(19); const first = chooseTargets(board, 'lock', createPrng(123)); const repeat = chooseTargets(board, 'lock', createPrng(123));
+  assert.deepEqual(first, repeat); assert.equal(first.length, 6); assert.ok(first.some((id) => board.tiles.find((tile) => tile.tileId === id).y >= 4));
+  board.tiles.find((tile) => tile.tileId === first[0]).locked = true;
+  const next = chooseTargets(board, 'lock', createPrng(456)); assert.equal(next.includes(first[0]), false);
 });
 
 test('자동 교차는 450ms 경고 후 힌트를 정리하고 합법 수를 복구한다', () => {
