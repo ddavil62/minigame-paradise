@@ -212,7 +212,6 @@ export class SichuanGame {
     }
     if (!slot || !ITEM_DEFINITIONS[slot.itemId]) result = { ok: false, reason: 'STALE_INVENTORY' };
     else if (slot.itemId === 'hint' && (player.pendingAutoShuffle || !findAnyLegalPair(player.board.tiles))) result = { ok: false, reason: 'NO_HINT_AVAILABLE' };
-    else if (slot.itemId === 'shield' && player.shieldActive) result = { ok: false, reason: 'ALREADY_ACTIVE' };
     else if (ATTACK_ITEMS.has(slot.itemId) && target.immuneUntil > now) result = { ok: false, reason: 'IMMUNE' };
     else if (ATTACK_ITEMS.has(slot.itemId) && !attackTargets.length) result = { ok: false, reason: 'NO_VALID_TARGET' };
     else {

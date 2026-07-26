@@ -233,8 +233,9 @@ test('방어막은 무기한이며 첫 유효 공격만 막고 면역·후보 �
   assert.equal(game.useItem('b', { matchId: game.matchId, requestId: 'shield-again', slotId: 'shield-2' }).ok, true);
   game.grantItem('b', 'shield', 'shield-3');
   const duplicate = game.useItem('b', { matchId: game.matchId, requestId: 'shield-duplicate', slotId: 'shield-3' });
-  assert.deepEqual([duplicate.ok, duplicate.reason], [false, 'ALREADY_ACTIVE']);
-  assert.ok(defender.inventory.some((slot) => slot.slotId === 'shield-3'));
+  assert.equal(duplicate.ok, true);
+  assert.equal(defender.inventory.some((slot) => slot.slotId === 'shield-3'), false);
+  assert.equal(defender.shieldActive, true);
   game.grantItem('a', 'lock', 'attack-1');
   game.grantItem('a', 'fog', 'attack-2');
   const blocked = game.useItem('a', { matchId: game.matchId, requestId: 'attack-1', slotId: 'attack-1', inventoryRevision: attacker.inventoryRevision });
