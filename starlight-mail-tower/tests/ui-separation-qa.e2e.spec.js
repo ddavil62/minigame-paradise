@@ -1,12 +1,42 @@
 /**
  * @fileoverview UI 분리 작업 QA 검증 -- 3행 Grid 레이아웃, 캔버스 letterbox,
  *   WARN-A 레디 오버레이, 회귀 검증, 엣지케이스를 포괄 검증한다.
+ *   2단계 탭 분기 도입 후 `.level-card`는 활성 탭 분만 렌더되므로,
+ *   전체 17레벨 검증은 4탭을 순회하여 고유 levelId를 수집하는 방식으로 수행한다.
  */
 
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs/promises';
 
 const SCREENSHOT_DIR = 'tests/screenshots';
+
+/** 탭별 기대 카드 수 (4탭 합계 17) */
+const TAB_CARD_COUNTS = {
+  'tab-tower': 5, 'tab-nature': 5, 'tab-cosmic': 4, 'tab-wonder': 3,
+};
+const TOTAL_LEVEL_COUNT = Object.values(TAB_CARD_COUNTS).reduce((a, b) => a + b, 0);
+
+/**
+ * 4개 탭을 순회하며 고유 levelId를 수집한다.
+ * 각 탭의 카드 수가 기대값과 일치하는지도 함께 검증한다.
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<string[]>} 고유 levelId 배열
+ */
+async function collectAllLevelIds(page) {
+  const allIds = new Set();
+  for (const [tabId, expectedCount] of Object.entries(TAB_CARD_COUNTS)) {
+    await page.locator(`.level-tab[data-tab="${tabId}"]`).click();
+    await expect(page.locator('.level-card')).toHaveCount(expectedCount, { timeout: 3000 });
+    const ids = await page.evaluate(() =>
+      [...document.querySelectorAll('.level-card')].map(c => c.dataset.levelId)
+    );
+    ids.forEach(id => allIds.add(id));
+  }
+  // 기지 탭으로 복귀
+  await page.locator('.level-tab[data-tab="tab-tower"]').click();
+  await expect(page.locator('.level-card')).toHaveCount(TAB_CARD_COUNTS['tab-tower'], { timeout: 3000 });
+  return [...allIds];
+}
 
 test.describe('UI 분리 QA: 3행 Grid 구조 검증', () => {
   test('AC-1: topbar / play-viewport / bottombar 3개 요소가 수직 순서 배치된다 (1280x720)', async ({ browser }) => {
@@ -89,8 +119,11 @@ test.describe('UI 분리 QA: WARN-A 레디 오버레이 검증 (최우선)', () 
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
     await Promise.all([pageA.goto('/?name=QA-WARNA-A'), pageB.goto('/?name=QA-WARNA-B')]);
-    // 서버 연결 후 레벨 카드가 렌더되기를 대기
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
+    // 초기 탭(기지) 카드 렌더 대기
+    await expect(pageA.locator('.level-card')).toHaveCount(TAB_CARD_COUNTS['tab-tower'], { timeout: 5000 });
+    // 4탭 순회로 전체 17개 고유 레벨 존재 검증
+    const allIds = await collectAllLevelIds(pageA);
+    expect(allIds).toHaveLength(TOTAL_LEVEL_COUNT);
 
     const metrics = await pageA.evaluate(() => {
       const card = document.querySelector('.ready-card');
@@ -165,7 +198,10 @@ test.describe('UI 분리 QA: WARN-A 레디 오버레이 검증 (최우선)', () 
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
     await Promise.all([pageA.goto('/?name=QA-1440A'), pageB.goto('/?name=QA-1440B')]);
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
+    // 초기 탭 카드 렌더 대기 + 전체 17레벨 접근 가능 검증
+    await expect(pageA.locator('.level-card')).toHaveCount(TAB_CARD_COUNTS['tab-tower'], { timeout: 5000 });
+    const allIds = await collectAllLevelIds(pageA);
+    expect(allIds).toHaveLength(TOTAL_LEVEL_COUNT);
 
     const metrics = await pageA.evaluate(() => {
       const card = document.querySelector('.ready-card');
@@ -193,7 +229,10 @@ test.describe('UI 분리 QA: WARN-A 레디 오버레이 검증 (최우선)', () 
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
     await Promise.all([pageA.goto('/?name=QA-1280A'), pageB.goto('/?name=QA-1280B')]);
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
+    // 초기 탭 카드 렌더 대기 + 전체 17레벨 접근 가능 검증
+    await expect(pageA.locator('.level-card')).toHaveCount(TAB_CARD_COUNTS['tab-tower'], { timeout: 5000 });
+    const allIds = await collectAllLevelIds(pageA);
+    expect(allIds).toHaveLength(TOTAL_LEVEL_COUNT);
 
     const metrics = await pageA.evaluate(() => {
       const card = document.querySelector('.ready-card');
@@ -220,7 +259,8 @@ test.describe('UI 분리 QA: WARN-A 레디 오버레이 검증 (최우선)', () 
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
     await Promise.all([pageA.goto('/?name=QA-WARNB-A'), pageB.goto('/?name=QA-WARNB-B')]);
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
+    // 초기 탭(기지) 카드 렌더 대기 (탭 분기로 5장만 표시)
+    await expect(pageA.locator('.level-card')).toHaveCount(TAB_CARD_COUNTS['tab-tower'], { timeout: 5000 });
 
     const metrics = await pageA.evaluate(() => {
       const card = document.querySelector('.ready-card');

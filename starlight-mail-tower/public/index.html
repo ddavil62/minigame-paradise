@@ -41,6 +41,13 @@
           <h1 id="ready-title" data-i18n="game.title">별빛 우편탑</h1>
           <section class="level-picker" aria-labelledby="level-picker-title">
             <div class="level-picker-heading"><strong id="level-picker-title" data-i18n="menu.choose">코스 선택</strong><span id="level-host-note" data-i18n="menu.hostOnly">호스트가 선택합니다</span></div>
+            <div class="level-tabs" role="tablist" aria-label="월드 탭">
+              <button class="level-tab active" role="tab" aria-selected="true" data-tab="tab-tower" data-i18n="tab.tower">기지</button>
+              <button class="level-tab" role="tab" aria-selected="false" data-tab="tab-nature" data-i18n="tab.nature">자연</button>
+              <button class="level-tab" role="tab" aria-selected="false" data-tab="tab-cosmic" data-i18n="tab.cosmic">우주</button>
+              <button class="level-tab" role="tab" aria-selected="false" data-tab="tab-wonder" data-i18n="tab.wonder">경이</button>
+            </div>
+            <p class="level-detail-desc" id="level-detail-desc"></p>
             <div id="level-list" class="level-list" role="listbox" data-i18n-aria-label="aria.levelList"></div>
           </section>
           <div class="crew-row">
@@ -48,9 +55,11 @@
             <div id="p2-crew" class="crew-card coral" data-i18n-aria-label="aria.roleB"><span>○ ••</span><strong id="p2-name" data-i18n="waiting.short">대기 중</strong><i aria-hidden="true"></i></div>
           </div>
           <p class="controls" data-i18n="controls">A/D 또는 ←/→ 이동 · Space 점프 · E/Enter 상호작용 · 공중 동료를 아래에서 점프로 올려치면 협동 부스트</p>
-          <button id="ready-button" type="button" data-i18n="ready" hidden>준비</button>
-          <button id="ai-start-button" type="button" data-i18n="ai.start" hidden>AI랑 시작</button>
-          <p id="ready-note" data-i18n="waiting.partner">파트너 접속을 기다리는 중...</p>
+          <div class="ready-footer">
+            <button id="ready-button" type="button" data-i18n="ready" hidden>준비</button>
+            <button id="ai-start-button" type="button" data-i18n="ai.start" hidden>AI랑 시작</button>
+            <p id="ready-note" data-i18n="waiting.partner">파트너 접속을 기다리는 중...</p>
+          </div>
         </div>
       </section>
       <section id="reconnect-overlay" class="overlay session-overlay" role="dialog" aria-modal="true" aria-labelledby="reconnect-title" tabindex="-1" hidden>

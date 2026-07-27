@@ -1,12 +1,16 @@
 /**
  * @fileoverview QA2 신규 엣지케이스 탐색 -- 미디어 쿼리 경계, 키보드 접근성,
- *   리사이즈 안정성, 결과 오버레이, 실제 게임플레이
+ *   리사이즈 안정성, 결과 오버레이, 실제 게임플레이.
+ *   2단계 탭 분기 도입 후 활성 탭 카드만 렌더된다.
  */
 
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs/promises';
 
 const SCREENSHOT_DIR = 'tests/screenshots';
+
+/** 탭별 기대 카드 수 (초기 탭 = tab-tower 5장) */
+const INITIAL_TAB_CARD_COUNT = 5;
 
 test.describe('QA2 신규 엣지케이스: 미디어 쿼리 경계 리사이즈', () => {
   test('1024x577 → 1024x576 → 1024x577 연속 리사이즈 시 레이아웃 파손 없음', async ({ browser }) => {
@@ -66,19 +70,20 @@ test.describe('QA2 신규 엣지케이스: 미디어 쿼리 경계 리사이즈'
 });
 
 test.describe('QA2 신규 엣지케이스: 키보드 접근성', () => {
-  test('Tab으로 레벨 카드 → 준비 버튼 순서 접근 가능', async ({ browser }) => {
+  test('Tab으로 탭 버튼 → 레벨 카드 → 준비 버튼 순서 접근 가능', async ({ browser }) => {
     const ctxA = await browser.newContext({ viewport: { width: 1280, height: 720 } });
     const ctxB = await browser.newContext({ viewport: { width: 1280, height: 720 } });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
     await Promise.all([pageA.goto('/?name=QA2-KB-A'), pageB.goto('/?name=QA2-KB-B')]);
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
+    // 탭 분기: 초기 탭(기지) 5장만 표시
+    await expect(pageA.locator('.level-card')).toHaveCount(INITIAL_TAB_CARD_COUNT, { timeout: 5000 });
 
     // 첫 번째 Tab 후 포커스 확인
     await pageA.keyboard.press('Tab');
     await pageA.waitForTimeout(100);
-    // 여러 번 Tab 해서 ready-button에 도달
-    for (let i = 0; i < 25; i++) {
+    // 탭 버튼 4개 + 카드 5장 + 크루 + 준비 버튼 등을 넘어가며 접근
+    for (let i = 0; i < 20; i++) {
       await pageA.keyboard.press('Tab');
     }
     // 어딘가에 포커스가 있어야 함 (키보드 트래핑 없음)
@@ -196,22 +201,15 @@ test.describe('QA2 신규 엣지케이스: 실제 게임플레이 (이동/점프
 });
 
 test.describe('QA2 신규 엣지케이스: ready-card flex-start + 짧은 콘텐츠', () => {
-  test('카드가 짧을 때(5레벨 이하 시뮬) 부모 overlay grid place-items:center가 세로 중앙 배치', async ({ browser }) => {
-    // 이 테스트는 CSS 구조 검증 -- 실제 서버는 17카드를 보내므로
-    // 강제로 일부 카드를 숨겨서 짧은 콘텐츠 시뮬레이션
+  test('카드가 짧을 때(탭당 5장) 부모 overlay grid place-items:center가 세로 중앙 배치', async ({ browser }) => {
+    // 탭 분기 도입으로 기본 상태에서 이미 5장만 표시되므로 별도 숨김 불필요
     const ctxA = await browser.newContext({ viewport: { width: 1280, height: 720 } });
     const ctxB = await browser.newContext({ viewport: { width: 1280, height: 720 } });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
     await Promise.all([pageA.goto('/?name=QA2-Short-A'), pageB.goto('/?name=QA2-Short-B')]);
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
-
-    // 12개 카드를 숨겨서 5개만 남김
-    await pageA.evaluate(() => {
-      const cards = document.querySelectorAll('.level-card');
-      for (let i = 5; i < cards.length; i++) cards[i].style.display = 'none';
-    });
-    await pageA.waitForTimeout(200);
+    // 탭 분기: 초기 탭(기지) 5장 표시 — 이미 짧은 콘텐츠 상태
+    await expect(pageA.locator('.level-card')).toHaveCount(INITIAL_TAB_CARD_COUNT, { timeout: 5000 });
 
     const metrics = await pageA.evaluate(() => {
       const card = document.querySelector('.ready-card');

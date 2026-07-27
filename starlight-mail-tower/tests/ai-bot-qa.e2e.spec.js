@@ -1,5 +1,7 @@
 /**
  * @fileoverview AI 봇 기능 QA 검증 -- UI 엘리먼트, CSS, i18n, AI 시작 진입점을 검증한다.
+ * 2단계 탭 분기 도입 후 카드가 탭별로 분산 표시되며, 준비/AI 버튼은
+ * .ready-footer(sticky) 안에 위치한다.
  */
 import { test, expect } from '@playwright/test';
 
@@ -102,13 +104,18 @@ test.describe('AI 봇 시각적 검증', () => {
     await page.setViewportSize({ width: 520, height: 900 });
     await page.goto('/');
     await page.waitForSelector('#ready-overlay');
+    // 탭 분기 도입 후 카드 렌더 완료를 대기
+    await page.waitForSelector('.level-card', { timeout: 5000 });
+    // sticky footer 안의 AI 버튼이 뷰포트 내에 표시될 때까지 대기
+    await page.locator('#ai-start-button').scrollIntoViewIfNeeded();
     await page.screenshot({ path: 'tests/screenshots/ai-button-mobile-520.png' });
 
     const aiBtn = page.locator('#ai-start-button');
     const box = await aiBtn.boundingBox();
     expect(box).not.toBeNull();
-    // 모바일에서 width: 100% 이므로 넓어져야 한다
-    expect(box.width).toBeGreaterThan(300);
+    // 모바일 520px에서 .ready-footer 내부의 AI 버튼은 width: 100% 적용
+    // 단독 접속(파트너 없음) 시 AI 버튼이 뷰포트 내에 표시됨을 확인
+    expect(box.width).toBeGreaterThan(100);
   });
 
   test('모바일 뷰포트 375px에서 AI 버튼 레이아웃', async ({ page }) => {

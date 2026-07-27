@@ -1,5 +1,46 @@
 # Changelog
 
+## [2026-07-28] - 레디 화면 재설계 (UI 2단계)
+
+### 추가
+
+- `public/index.html`에 `.level-tabs` 탭바(4버튼: 기지/자연/우주/경이)와 `#level-detail-desc` 설명 영역을 신설했다.
+- `public/index.html`에 `.ready-footer` 래퍼를 신설하고 `#ready-button`, `#ai-start-button`, `#ready-note`를 내부로 이동했다.
+- `public/js/client.js`에 `TAB_MOTIFS` 매핑 상수(tab-tower: tower/train/clock/storm/orbit, tab-nature: ocean/volcano/rainforest/glacier/snowpeak, tab-cosmic: space/crystal/desert/factory, tab-wonder: garden/temple/library), `activeTabId` 상태, `setActiveTab()`, `renderLevelDetail()` 함수를 추가했다.
+- `public/js/client.js`의 `renderLevelCards()`에 탭 필터 로직을 삽입해 활성 탭의 레벨만 표시한다.
+- `public/js/client.js`의 `updateMenu()`에 탭 자동 전환 로직을 추가해 서버가 다른 탭의 `selectedLevelId`를 보내면 해당 탭으로 자동 전환한다.
+- `public/js/i18n.js`에 KO/EN 양쪽 `tab.tower`, `tab.nature`, `tab.cosmic`, `tab.wonder` 번역 키 4개를 추가했다.
+- `tests/ready-screen-phase2.e2e.spec.js`에 15건의 E2E 테스트(AC-1~AC-15 대응)를 신설했다.
+- `tests/ready-screen-phase2-qa.e2e.spec.js`에 QA 자체 테스트 31건을 신설했다.
+- `tests/footer-overlap-regression.e2e.spec.js`에 5개 해상도 풋터 겹침 회귀 테스트 5건을 신설했다.
+
+### 변경
+
+- `.level-card` min-height를 132px에서 88px(CSS)로 변경하고 `.level-banner` height를 44px에서 28px으로 축소했다. 실측 카드 높이: 데스크탑 99.6px, 모바일 72px.
+- `.level-info em`(설명문 2줄)을 `display:none`으로 숨기고 `#level-detail-desc` 단일 영역에서 선택 레벨 설명만 표시한다.
+- `.level-list` 그리드를 `minmax(180px,1fr)`에서 `minmax(140px,1fr)`로 변경해 데스크탑 5열 단일 행을 확보했다.
+- `.ready-card`를 `display:flex; flex-direction:column; overflow-y:auto; max-height:calc(100dvh - 32px)`로 통일했다.
+- `.ready-footer`에 `position:sticky; bottom:0; margin-top:auto`를 적용해 준비 버튼을 항상 하단에 고정했다.
+- `.level-tab` 터치 영역을 데스크탑 min-height 36px, 모바일(640px 이하) 40px로 설정했다.
+- 모바일(520px 이하)에서 `.crew-row` 2열 복원, `.level-list` gap 12->8px, 카드/배너 min-height 축소(80->68px), 배너 폭 104->96px을 적용했다.
+- 탭 분기로 낡아진 기존 테스트 8건(`ui-separation-qa`, `qa2-edge-cases`, `defect1-recheck`, `world-expansion`, `ai-bot-qa`)의 `cardCount=17` 단언을 탭 순회 방식으로 갱신했다.
+
+### 검증
+
+- AD 모드 3 1차 REVISE(BLOCKER 3, HIGH 1, MED 2) -> 수정 후 2차 APPROVED. 5개 해상도(1920x1080/1440x900/1280x720/1024x576/520x900) x 4개 탭 = 20개 조합 전부 maxScroll=0, 겹침 0px, `#ready-button` 뷰포트 내 노출.
+- QA PASS: 수용 기준 AC-1~AC-15 전체 충족, 예외 시나리오 14건 전부 PASS.
+- 전체 스위트: 115 PASS / 4 FAIL(전부 선재 부채).
+- 1단계 CARRY-1(1024x576에서 scrollHeight 1420~1456px, 준비 버튼 접근에 874px 스크롤 필요) 완전 해소.
+
+### 참고
+
+- 스펙: `.claude/specs/2026-07-28-starlight-ready-screen-plan.md`
+- 구현 리포트: `.claude/specs/2026-07-28-starlight-ready-screen-coder-report.md`
+- AD 모드 3 (1차): `.claude/specs/2026-07-28-starlight-ready-screen-ui-review.md` (REVISE)
+- AD 모드 3 (2차): `.claude/specs/2026-07-28-starlight-ready-screen-ui-review2.md` (APPROVED)
+- QA: `.claude/specs/2026-07-28-starlight-ready-screen-qa.md` (PASS)
+- 에셋 파일 변경이 없어 Mockup Sync를 생략했다.
+
 ## [2026-07-27] - 런처 준비 승계 중복 UI 제거
 
 ### 변경

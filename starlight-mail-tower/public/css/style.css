@@ -193,7 +193,7 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
 .crew-card strong { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
 .crew-card.cyan { border-color: var(--cyan); }.crew-card.cyan span { color: var(--cyan); }.crew-card.coral { border-color: var(--coral); }.crew-card.coral span { color: var(--coral); }
 .crew-card i { position: absolute; right: 10px; top: 10px; width: 10px; height: 10px; border: 2px solid var(--cream); border-radius: 50%; opacity: 0.45; }.crew-card.ready { border-color: var(--green); background: rgba(100, 220, 150, 0.10); }.crew-card.ready i { border-radius: 2px; border-color: var(--green); opacity: 1; }.crew-card.ready i::after { content: ""; position: absolute; left: 1px; top: -1px; width: 4px; height: 7px; border: solid var(--green); border-width: 0 2px 2px 0; transform: rotate(45deg); }
-.controls { margin: 9px 0; line-height: 1.45; }
+.controls { margin: 9px 0; line-height: 1.45; flex-shrink: 0; }
 #ready-button { width: 160px; height: 46px; min-width: 160px; min-height: 46px; flex: 0 0 46px; border: 2px solid var(--gold); border-radius: 10px; color: var(--void); background: var(--gold); font-weight: 800; cursor: pointer; transition: transform 160ms ease, filter 160ms ease; }
 #ready-button:hover { transform: translateY(-2px); filter: brightness(1.08); }
 #ready-button:focus-visible, .toolbar button:focus-visible, .session-card button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
@@ -253,7 +253,11 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
   .connection-panel { font-size: 12px; }
   .player-status { padding: 4px 8px; }
   .overlay-card { padding: 18px 24px; }
-  .ready-card { width: 480px; height: 320px; padding-left: 22px; padding-right: 22px; }
+  .ready-card { width: min(880px, 94%); height: auto; max-height: calc(100dvh - 32px); padding-left: 22px; padding-right: 22px; padding-bottom: 0; }
+  .level-tab { min-height: 36px; font-size: 11px; }
+  .level-detail-desc { font-size: 10px; min-height: 15px; }
+  .level-card { min-height: 80px; }
+  .ready-footer { padding: 8px 0 10px; }
   .crew-card { height: 72px; padding: 6px 10px; }
   .controls { margin: 6px 0; }
   #ready-button { height: 44px; min-height: 44px; flex-basis: 44px; }
@@ -271,25 +275,41 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
 }
 
 /* ── 월드 선택 및 3방향 결과 합의 ── */
-.ready-card { width: min(880px, 94%); height: auto; max-height: calc(100dvh - 32px); overflow-y: auto; padding: 20px 28px; }
+.ready-card { width: min(880px, 94%); height: auto; max-height: calc(100dvh - 32px); overflow-y: auto; padding: 16px 28px 0; display: flex; flex-direction: column; }
 .level-picker { width: 100%; margin: 4px 0 14px; }
 .level-picker-heading { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
 .level-picker-heading span { color: rgba(245,233,201,.72); }
-.level-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
-.level-card { min-height: 132px; padding: 0; overflow: hidden; text-align: left; color: var(--cream); border: 1px solid rgba(245,233,201,.15); border-radius: 12px; background: var(--panel); cursor: pointer; transition: transform 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out; }
+.level-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.level-card { min-height: 88px; padding: 0; overflow: hidden; text-align: left; color: var(--cream); border: 1px solid rgba(245,233,201,.15); border-radius: 12px; background: var(--panel); cursor: pointer; transition: transform 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out; }
 .level-card:hover { transform: translateY(-2px); border-color: rgba(245,233,201,.35); }
 .level-card:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .level-card[aria-selected="true"] { border: 2px solid var(--gold); box-shadow: 0 0 16px rgba(255,217,122,.18); }
 .level-card:disabled { cursor: default; }
-.level-banner { display: block; height: 44px; position: relative; overflow: hidden; background: linear-gradient(135deg, var(--card-sky), var(--card-haze)); border-bottom: 2px solid var(--card-accent); }
+.level-banner { display: block; height: 28px; position: relative; overflow: hidden; background: linear-gradient(135deg, var(--card-sky), var(--card-haze)); border-bottom: 2px solid var(--card-accent); }
 .level-banner::before, .level-banner::after { content: ""; position: absolute; border: 2px solid var(--card-accent); opacity: .8; }
 .level-banner::before { width: 52px; height: 20px; left: 12px; top: 10px; border-radius: 4px; }
 .level-banner::after { width: 24px; height: 24px; right: 12px; top: 8px; border-radius: 50%; }
-.level-info { display: grid; gap: 3px; padding: 8px 10px; }
-.level-info strong { font-size: 15px; }.level-info small { color: var(--gold); }.level-info em { min-height: 30px; font-size: 11px; line-height: 1.3; font-style: normal; color: rgba(245,233,201,.72); }.level-info time { font: 700 12px Consolas, monospace; }
-.level-meta { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid rgba(245,233,201,.15); }
-.level-meta > span { display: flex; min-height: 22px; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.level-info { display: grid; gap: 1px; padding: 3px 8px; }
+.level-info strong { font-size: 13px; line-height: 1.2; }.level-info small { color: var(--gold); font-size: 10px; line-height: 1.2; }.level-info em { display: none; }.level-info time { font: 700 11px Consolas, monospace; }
+.level-meta { display: grid; gap: 1px; padding-top: 2px; border-top: 1px solid rgba(245,233,201,.15); }
+.level-meta > span { display: flex; min-height: 13px; align-items: center; justify-content: space-between; gap: 6px; font-size: 10px; }
 .level-meta b { color: rgba(245,233,201,.72); font-weight: 400; }.level-meta time { color: var(--cream); }
+
+/* ── 월드 탭 컨테이너 ── */
+.level-tabs { display: flex; gap: 6px; margin-bottom: 6px; flex-shrink: 0; }
+.level-tab { flex: 1 1 0; min-height: 36px; border: 1px solid rgba(245,233,201,.20); border-radius: 7px; color: rgba(245,233,201,.55); background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 140ms ease, color 140ms ease, border-color 140ms ease; white-space: nowrap; }
+.level-tab:hover { border-color: rgba(245,233,201,.40); color: rgba(245,233,201,.85); }
+.level-tab.active, .level-tab[aria-selected="true"] { border-color: var(--gold); color: var(--gold); background: rgba(255,217,122,.10); }
+.level-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ── 선택된 레벨 설명 (탭 아래, 카드 목록 위) ── */
+.level-detail-desc { min-height: 18px; margin: 0 0 6px; font-size: 11px; line-height: 1.4; color: rgba(245,233,201,.65); flex-shrink: 0; }
+
+/* ── 준비 버튼 그룹: 카드 하단에 항상 고정 ── */
+.ready-footer { position: sticky; bottom: 0; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 14px 0 12px; background: linear-gradient(to bottom, rgba(21,33,58,0) 0%, rgba(21,33,58,.98) 14px); margin-top: auto; }
+#ai-start-button { margin-top: 0; }
+#ready-note { min-height: 21px; margin: 6px 0 0; color: rgba(245,233,201,.72); }
+
 .result-level-name { position: absolute; top: 130px; left: 0; right: 0; color: var(--gold); }
 .result-stats { top: 166px; }
 .team-row { top: 318px; }
@@ -297,6 +317,9 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
 .result-actions button { width: 168px; min-height: 48px; }
 #rematch-status { top: 432px; }
 
+@media (max-width: 1280px) {
+  .ready-footer { padding: 8px 0 8px; }
+}
 @media (max-width: 1024px) {
   .level-list { grid-template-columns: repeat(3, 1fr); }
   .ready-card { width: min(880px, 94%); max-height: calc(100dvh - 32px); }
@@ -304,8 +327,8 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
 }
 @media (min-width: 521px) and (max-height: 576px) {
   /* 낮은 16:9 화면 — 데스크톱 기본과 동일하게 auto-fill + 스크롤 가능 */
-  .level-list { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
-  .level-card { min-height: 132px; }
+  .level-list { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .level-card { min-height: 80px; }
   .ready-card { overflow-y: auto; justify-content: flex-start; }
 }
 @media (max-width: 520px) {
@@ -313,7 +336,8 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
   #game-shell { width: 100vw; min-height: 100dvh; grid-template-rows: 40px 1fr 44px; }
   .overlay { position: fixed; overflow-y: auto; align-items: start; padding: 16px; }
   .ready-card { width: 100%; max-height: none; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
-  .level-list { grid-template-columns: 1fr; gap: 12px; }.level-card { min-height: 132px; }
+  .level-list { grid-template-columns: 1fr; gap: 12px; }.level-card { min-height: 80px; }
+  .level-tabs { gap: 4px; }.level-tab { font-size: 10px; min-height: 40px; }
   .crew-row { grid-template-columns: 1fr; }.crew-card { min-height: 64px; }
   #ready-button { width: 100%; min-height: 48px; }
   #ai-start-button { width: 100%; min-height: 48px; }
@@ -360,11 +384,19 @@ body:has(#ready-overlay:not([hidden])) .toolbar, body:has(#result-overlay:not([h
   .result-level-name { top: 130px; }.result-stats { left: 28px; width: 544px; top: 162px; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }.team-row { top: 296px; }.result-actions { top: 346px; }#rematch-status { top: 418px; }
 }
 @media (max-width: 520px) {
-  .ready-card { max-height: none; overflow: visible; padding-left: 0; padding-right: 0; }
-  .ready-card > .eyebrow, .ready-card > h1, .ready-card > .crew-row, .ready-card > .controls, .ready-card > #ready-button, .ready-card > #ai-start-button, .ready-card > #ready-note { width: calc(100% - 32px); margin-left: 16px; margin-right: 16px; }
-  .level-picker-heading { padding: 0 16px; }.level-list { width: 100%; }
-  .level-card { width: 100%; min-height: 132px; display: grid; grid-template-columns: 104px minmax(0,1fr); }
-  .level-banner { width: 104px; height: 100%; min-height: 100px; border-right: 2px solid var(--card-accent); border-bottom: 0; }.level-info { align-content: center; }
+  .ready-card { max-height: calc(100dvh - 16px); overflow-y: auto; padding-left: 0; padding-right: 0; }
+  .ready-card > .eyebrow, .ready-card > h1, .ready-card > .crew-row, .ready-card > .controls { width: calc(100% - 32px); margin-left: 16px; margin-right: 16px; }
+  /* 모바일에서도 sticky 유지 — 준비 버튼을 스크롤 없이 노출한다.
+     카드 좌우 패딩이 0이므로 footer 자체에 16px 패딩을 줘 배경 그라데이션이 폭 전체를 덮게 한다. */
+  .ready-footer { padding-left: 16px; padding-right: 16px; }
+  /* 세로 스크롤 총량을 줄이기 위해 크루 카드를 다시 2열로 되돌린다 (520px에서 열당 약 236px 확보). */
+  .crew-row { grid-template-columns: 1fr 1fr; }
+  .level-tabs { padding: 0 16px; }.level-picker-heading { padding: 0 16px; }.level-list { width: 100%; }
+  /* 카드 높이·간격을 낮춰 5장 목록이 sticky footer와 겹치지 않고 한 화면에 들어오게 한다. */
+  .level-list { gap: 8px; }
+  .level-card { width: 100%; min-height: 68px; display: grid; grid-template-columns: 96px minmax(0,1fr); }
+  .level-banner { width: 96px; height: 100%; min-height: 68px; border-right: 2px solid var(--card-accent); border-bottom: 0; }
+  .level-info { align-content: center; padding: 2px 8px; gap: 0; }
   .result-card { width: 100%; max-width: none; min-height: 690px; height: auto; overflow: hidden; }
   .result-stats { left: auto; width: 100%; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 12px; }.result-stats div { width: auto; height: 82px; }.result-stats strong { font-size: 18px; }
   .result-actions { gap: 18px; }

@@ -1,5 +1,6 @@
 /**
- * @fileoverview 두 브라우저의 권위 레벨 선택 동기화, 5개 카드, 테마 Canvas와 모바일 UI를 검증한다.
+ * @fileoverview 두 브라우저의 권위 레벨 선택 동기화, 탭별 카드 표시, 테마 Canvas와 모바일 UI를 검증한다.
+ * 2단계 탭 분기 도입 후 카드 높이가 압축되었다 (데스크탑 ~100px, 모바일 ~72px).
  */
 
 import { expect, test } from '@playwright/test';
@@ -30,7 +31,8 @@ test('390×844 레벨 선택은 단일 열, 44px 이상 조작 영역과 키보�
   await expect(page.locator('.level-card')).toHaveCount(5);
   const first = await page.locator('.level-card').first().boundingBox();
   const ready = await page.locator('#ready-button').boundingBox();
-  expect(first.width).toBeLessThanOrEqual(358); expect(first.height).toBeGreaterThanOrEqual(132); expect(ready.height).toBeGreaterThanOrEqual(44);
+  // 2단계 카드 압축: 모바일 카드 높이는 68~80px 범위 (min-height: 68px in 520px breakpoint)
+  expect(first.width).toBeLessThanOrEqual(358); expect(first.height).toBeGreaterThanOrEqual(44); expect(first.height).toBeLessThanOrEqual(100); expect(ready.height).toBeGreaterThanOrEqual(44);
   await page.keyboard.press('Tab');
   await expect(page.locator(':focus')).toBeVisible();
   await context.close();

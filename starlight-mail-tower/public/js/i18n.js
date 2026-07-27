@@ -36,6 +36,7 @@ const MESSAGES = Object.freeze({
     'level.library.name': '별의 도서관', 'level.library.theme': '시계 장치와 순환 발판', 'level.library.description': '정교한 시계 장치와 순환 발판의 리듬을 맞추는 협동 코스',
     'ai.start': 'AI랑 시작',
     'aria.levelList': '배송 코스 선택', 'menu.selected': '선택됨', 'menu.locked': '호스트 선택',
+    'tab.tower': '기지', 'tab.nature': '자연', 'tab.cosmic': '우주', 'tab.wonder': '경이',
   },
   en: {
     'game.title': 'Starlight Mail Tower', 'game.subtitle': 'A night mail run for two repair robots', 'section.name': 'Sorting Deck',
@@ -70,6 +71,7 @@ const MESSAGES = Object.freeze({
     'level.library.name': 'Stellar Library', 'level.library.theme': 'Clockwork & Cycling Platforms', 'level.library.description': 'Match the rhythm of clockwork devices and cycling platforms.',
     'ai.start': 'Start with AI',
     'aria.levelList': 'Choose a delivery course', 'menu.selected': 'Selected', 'menu.locked': 'Host choice',
+    'tab.tower': 'Base', 'tab.nature': 'Nature', 'tab.cosmic': 'Cosmic', 'tab.wonder': 'Wonder',
   },
 });
 

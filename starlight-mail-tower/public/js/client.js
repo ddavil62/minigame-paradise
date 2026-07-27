@@ -60,6 +60,18 @@ let levelRecords = {};
 let selectedLevelId = 'starlight-tower';
 let hasSeenCoopBoost = false;
 
+/** 월드 탭 ID → 포함 motif 목록 매핑 (levels.js 실제 motif 값 기준) */
+const TAB_MOTIFS = Object.freeze({
+  'tab-tower': ['tower', 'train', 'clock', 'storm', 'orbit'],
+  'tab-nature': ['ocean', 'volcano', 'rainforest', 'glacier', 'snowpeak'],
+  'tab-cosmic': ['space', 'crystal', 'desert', 'factory'],
+  'tab-wonder': ['garden', 'temple', 'library'],
+});
+let activeTabId = 'tab-tower';
+
+const levelDetailDesc = document.querySelector('#level-detail-desc');
+const levelTabs = document.querySelectorAll('.level-tab');
+
 // HTML은 READY 버튼을 숨긴 채 시작해 런처 인계 화면의 순간 노출을 막고, 직접 진입에서만 복구한다.
 readyOverlay.hidden = pendingLobbyReadyHandoff;
 readyButton.hidden = pendingLobbyReadyHandoff;
@@ -96,23 +108,69 @@ function findLevel(levelId) { return levelCatalog.find((level) => level.id === l
 /** @returns {void} */
 function renderLevelCards() {
   levelList.replaceChildren();
-  for (const level of levelCatalog) {
+  // 활성 탭에 속하는 레벨만 렌더링
+  const allowedMotifs = TAB_MOTIFS[activeTabId] ?? [];
+  const visibleLevels = levelCatalog.filter((level) => allowedMotifs.includes(level.motif));
+  for (const level of visibleLevels) {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'level-card'; button.dataset.levelId = level.id; button.setAttribute('role', 'option'); button.setAttribute('aria-selected', String(level.id === selectedLevelId)); button.disabled = playerId !== 'p1';
     button.style.setProperty('--card-sky', level.palette.sky); button.style.setProperty('--card-haze', level.palette.haze); button.style.setProperty('--card-accent', level.palette.accent);
     const record = levelRecords[level.id];
     const estimated = getLocale() === 'ko' ? `${t('menu.estimatedTime')} ${level.minutes}분` : `${t('menu.estimatedTime')} ${level.minutes} min`;
+    // em 요소는 CSS에서 display:none이지만 템플릿 구조는 유지 (회귀 방지)
     button.innerHTML = `<span class="level-banner" aria-hidden="true"></span><span class="level-info"><strong></strong><small></small><em></em><span class="level-meta"><span><b>${t('menu.estimatedTime')}</b><span>${estimated.replace(`${t('menu.estimatedTime')} `, '')}</span></span><span><b>${t('menu.best')}</b><time>${record ? formatTime(record) : '--:--.-'}</time></span></span></span><span class="selection-seal">✉ <b>${t('menu.selected')}</b></span><span class="guest-lock" aria-hidden="true"></span>`;
     button.querySelector('strong').textContent = t(level.nameKey); button.querySelector('small').textContent = t(level.themeKey); button.querySelector('em').textContent = t(level.descriptionKey);
     button.addEventListener('click', () => send({ type: CLIENT_MESSAGE.SELECT_LEVEL, levelId: level.id }));
     levelList.appendChild(button);
   }
   levelHostNote.textContent = t(playerId === 'p1' ? 'menu.hostControl' : 'menu.hostOnly');
+  renderLevelDetail();
+}
+
+/**
+ * 선택된 레벨의 설명문을 `.level-detail-desc`에 표시한다.
+ * selectedLevelId에 해당하는 레벨이 없으면 빈 문자열로 초기화한다.
+ * @returns {void}
+ */
+function renderLevelDetail() {
+  const level = findLevel(selectedLevelId);
+  if (levelDetailDesc) {
+    levelDetailDesc.textContent = level ? t(level.descriptionKey) : '';
+  }
+}
+
+/**
+ * 활성 탭을 전환하고 카드를 재렌더링한다.
+ * @param {string} tabId 탭 ID (예: 'tab-tower')
+ * @returns {void}
+ */
+function setActiveTab(tabId) {
+  if (!TAB_MOTIFS[tabId]) return;
+  activeTabId = tabId;
+  levelTabs.forEach((tab) => {
+    const isActive = tab.dataset.tab === tabId;
+    tab.classList.toggle('active', isActive);
+    tab.setAttribute('aria-selected', String(isActive));
+  });
+  renderLevelCards();
 }
 
 /** @param {object} message 서버 메뉴 상태 @returns {void} */
 function updateMenu(message) {
-  levelCatalog = message.levels ?? levelCatalog; levelRecords = message.records ?? levelRecords; selectedLevelId = message.selectedLevelId ?? selectedLevelId; renderLevelCards();
+  levelCatalog = message.levels ?? levelCatalog; levelRecords = message.records ?? levelRecords; selectedLevelId = message.selectedLevelId ?? selectedLevelId;
+
+  // 선택된 레벨이 현재 탭에 없으면 해당 레벨이 속한 탭으로 자동 전환
+  const selectedLevel = levelCatalog.find((level) => level.id === selectedLevelId);
+  if (selectedLevel) {
+    const targetTab = Object.entries(TAB_MOTIFS).find(([, motifs]) => motifs.includes(selectedLevel.motif));
+    if (targetTab && targetTab[0] !== activeTabId) {
+      setActiveTab(targetTab[0]);
+      if (message.phase === 'waiting' && !pendingLobbyReadyHandoff) { readyOverlay.hidden = false; resultOverlay.hidden = true; }
+      return; // setActiveTab이 renderLevelCards를 호출하므로 중복 방지
+    }
+  }
+
+  renderLevelCards();
   if (message.phase === 'waiting' && !pendingLobbyReadyHandoff) { readyOverlay.hidden = false; resultOverlay.hidden = true; }
 }
 
@@ -278,6 +336,23 @@ function openLobbyConfirm() { previousFocus = document.activeElement; lobbyConfi
 
 /** @returns {void} */
 function closeLobbyConfirm() { lobbyConfirmOverlay.hidden = true; previousFocus?.focus?.(); }
+
+// 월드 탭 클릭 이벤트
+levelTabs.forEach((tab) => {
+  tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
+});
+
+// 탭 키보드 내비게이션 (좌우 화살표로 탭 이동, aria-pattern 준수)
+document.querySelector('.level-tabs')?.addEventListener('keydown', (event) => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+  const tabs = [...levelTabs];
+  const currentIndex = tabs.findIndex((tab) => tab.dataset.tab === activeTabId);
+  const delta = event.key === 'ArrowRight' ? 1 : -1;
+  const nextIndex = (currentIndex + delta + tabs.length) % tabs.length;
+  tabs[nextIndex].focus();
+  setActiveTab(tabs[nextIndex].dataset.tab);
+  event.preventDefault();
+});
 
 readyButton.addEventListener('click', () => send({ type: CLIENT_MESSAGE.READY }));
 if (aiStartButton) {

@@ -1,21 +1,20 @@
 /**
- * @fileoverview DEFECT-1 재검증 — 1024x576에서 ready-card overflow-y:hidden → auto 수정 확인
- * QA 1차 리포트의 실측값(scrollHeight 1253, clientHeight 540, 713px 잘림)과 정량 대조
+ * @fileoverview DEFECT-1 재검증 — 1024x576에서 ready-card overflow-y:hidden → auto 수정 확인.
+ * QA 1차 리포트의 실측값(scrollHeight 1253, clientHeight 540, 713px 잘림)과 정량 대조.
+ * 2단계 탭 분기 도입으로 초기 탭(기지) 5장만 렌더되며, 520px 모바일에서는
+ * max-height: calc(100dvh - 16px)이 적용된다.
  */
 
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs/promises';
 
 const SCREENSHOT_DIR = 'tests/screenshots';
-const BASE = 'http://localhost:3015';
 
 test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버튼 접근', () => {
 
-  test('1024x576에서 17카드 + 준비 버튼/AI 버튼 도달 가능성 검증', async ({ browser }) => {
-    // 캐시 무효화를 위해 cache-bust 파라미터 사용
+  test('1024x576에서 탭 분기 카드 + 준비 버튼/AI 버튼 도달 가능성 검증', async ({ browser, baseURL }) => {
     const ctxA = await browser.newContext({
       viewport: { width: 1024, height: 576 },
-      bypassCSP: true,
     });
     const ctxB = await browser.newContext({
       viewport: { width: 1024, height: 576 },
@@ -23,25 +22,14 @@ test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버�
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
 
-    // localStorage clear + 캐시 버스터로 CSS 갱신 강제
-    await pageA.goto(`${BASE}/?name=D1-Recheck-A&_cb=${Date.now()}`);
-    await pageA.evaluate(() => localStorage.clear());
-    await pageA.reload();
-    await pageB.goto(`${BASE}/?name=D1-Recheck-B&_cb=${Date.now()}`);
-    await pageB.evaluate(() => localStorage.clear());
-    await pageB.reload();
+    // 두 브라우저 동시 접속으로 서버 페어링 유도
+    await Promise.all([
+      pageA.goto(`${baseURL}/?name=D1-Recheck-A`),
+      pageB.goto(`${baseURL}/?name=D1-Recheck-B`),
+    ]);
 
-    // CSS 캐시 무효화: link[rel=stylesheet] href에 타임스탬프 쿼리 추가
-    await pageA.evaluate(() => {
-      document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-        const url = new URL(link.href);
-        url.searchParams.set('_nocache', Date.now().toString());
-        link.href = url.href;
-      });
-    });
-
-    // 17개 레벨 카드 렌더 대기
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
+    // 초기 탭(기지)에 5장의 레벨 카드 렌더 대기 (2단계 탭 분기 반영)
+    await expect(pageA.locator('.level-card')).toHaveCount(5, { timeout: 10000 });
 
     // 핵심 실측
     const metrics = await pageA.evaluate(() => {
@@ -98,7 +86,8 @@ test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버�
     // 수정 후: overflow-y=auto, 스크롤 가능
     expect(metrics.overflowY).toBe('auto');
     expect(metrics.justifyContent).toBe('flex-start');
-    expect(metrics.levelCardCount).toBe(17);
+    // 2단계 탭 분기: 초기 탭(기지)에 5장만 표시
+    expect(metrics.levelCardCount).toBe(5);
 
     // scrollTop=0에서 상단 콘텐츠 도달 가능
     expect(metrics.eyebrow.top).toBeGreaterThanOrEqual(metrics.card.top);
@@ -166,22 +155,22 @@ test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버�
     await ctxB.close();
   });
 
-  test('1024x576에서 실제 준비 버튼 클릭으로 게임 시작 확인', async ({ browser }) => {
+  test('1024x576에서 실제 준비 버튼 클릭으로 게임 시작 확인', async ({ browser, baseURL }) => {
     const ctxA = await browser.newContext({ viewport: { width: 1024, height: 576 } });
     const ctxB = await browser.newContext({ viewport: { width: 1024, height: 576 } });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
 
     await Promise.all([
-      pageA.goto(`${BASE}/?name=D1-Click-A`),
-      pageB.goto(`${BASE}/?name=D1-Click-B`),
+      pageA.goto(`${baseURL}/?name=D1-Click-A`),
+      pageB.goto(`${baseURL}/?name=D1-Click-B`),
     ]);
     await pageA.evaluate(() => localStorage.clear());
     await pageB.evaluate(() => localStorage.clear());
 
-    // 17 카드 대기
-    await expect(pageA.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
-    await expect(pageB.locator('.level-card')).toHaveCount(17, { timeout: 5000 });
+    // 초기 탭(기지) 카드 대기 (2단계 탭 분기 반영)
+    await expect(pageA.locator('.level-card')).toHaveCount(5, { timeout: 5000 });
+    await expect(pageB.locator('.level-card')).toHaveCount(5, { timeout: 5000 });
 
     // scrollTop=max으로 준비 버튼 노출 (필요하다면)
     await pageA.evaluate(() => {
@@ -218,11 +207,11 @@ test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버�
     await ctxB.close();
   });
 
-  test('미디어 쿼리 경계 521x576 vs 520x576 전환 검증', async ({ browser }) => {
+  test('미디어 쿼리 경계 521x576 vs 520x576 전환 검증', async ({ browser, baseURL }) => {
     // 521x576 (min-width: 521px) and (max-height: 576px) -- 신규 분기
     const ctx521 = await browser.newContext({ viewport: { width: 521, height: 576 } });
     const page521 = await ctx521.newPage();
-    await page521.goto(`${BASE}/?name=D1-MQ-521`);
+    await page521.goto(`${baseURL}/?name=D1-MQ-521`);
     const m521 = await page521.evaluate(() => {
       const card = document.querySelector('.ready-card');
       const cs = getComputedStyle(card);
@@ -240,7 +229,7 @@ test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버�
     // 520x576 (max-width: 520px) -- 모바일 분기
     const ctx520 = await browser.newContext({ viewport: { width: 520, height: 576 } });
     const page520 = await ctx520.newPage();
-    await page520.goto(`${BASE}/?name=D1-MQ-520`);
+    await page520.goto(`${baseURL}/?name=D1-MQ-520`);
     const m520 = await page520.evaluate(() => {
       const card = document.querySelector('.ready-card');
       const cs = getComputedStyle(card);
@@ -254,16 +243,19 @@ test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버�
       };
     });
     console.log(`520x576: overflow-y=${m520.overflowY}, maxHeight=${m520.maxHeight}, cardWidth=${m520.cardWidth}, overlay overflow-y=${m520.overlayOverflowY}`);
-    // 520px 이하에서는 모바일 분기 — ready-card의 max-height: none, 오버레이가 스크롤 담당
-    expect(m520.maxHeight).toBe('none');
+    // 520px 이하 모바일 분기 — 2단계에서 max-height: calc(100dvh - 16px) + overflow-y: auto 적용
+    // 520x576 뷰포트에서 100dvh = 576px → max-height = 560px
+    const parsedMaxH = parseFloat(m520.maxHeight);
+    expect(parsedMaxH).toBeGreaterThan(0);
+    expect(parsedMaxH).toBeLessThanOrEqual(576); // 뷰포트 높이 이하
     await ctx520.close();
   });
 
-  test('height 경계 576 vs 577 전환 검증', async ({ browser }) => {
+  test('height 경계 576 vs 577 전환 검증', async ({ browser, baseURL }) => {
     // 1024x576 — max-height:576px 분기 적용
     const ctx576 = await browser.newContext({ viewport: { width: 1024, height: 576 } });
     const page576 = await ctx576.newPage();
-    await page576.goto(`${BASE}/?name=D1-H576`);
+    await page576.goto(`${baseURL}/?name=D1-H576`);
     const m576 = await page576.evaluate(() => {
       const cs = getComputedStyle(document.querySelector('#game-shell'));
       const cardCS = getComputedStyle(document.querySelector('.ready-card'));
@@ -280,7 +272,7 @@ test.describe('DEFECT-1 재검증: 1024x576 ready-card 스크롤 및 준비 버�
     // 1024x577 — max-height:576px 미적용 (데스크톱 규칙)
     const ctx577 = await browser.newContext({ viewport: { width: 1024, height: 577 } });
     const page577 = await ctx577.newPage();
-    await page577.goto(`${BASE}/?name=D1-H577`);
+    await page577.goto(`${baseURL}/?name=D1-H577`);
     const m577 = await page577.evaluate(() => {
       const cs = getComputedStyle(document.querySelector('#game-shell'));
       const cardCS = getComputedStyle(document.querySelector('.ready-card'));

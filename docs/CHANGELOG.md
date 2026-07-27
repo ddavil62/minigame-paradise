@@ -1,5 +1,35 @@
 # Changelog
 
+## [2026-07-28] - 별빛 우편탑 레디 화면 재설계 (UI 2단계)
+
+### 추가
+
+- `starlight-mail-tower/public/index.html`에 월드 탭 4개(기지/자연/우주/경이)와 `#level-detail-desc` 설명 영역, `.ready-footer` sticky 래퍼를 신설했다.
+- `starlight-mail-tower/public/js/client.js`에 `TAB_MOTIFS` 매핑, `setActiveTab()`, `renderLevelDetail()`, 탭 자동 전환 로직을 추가했다.
+- `starlight-mail-tower/public/js/i18n.js`에 `tab.tower/nature/cosmic/wonder` KO/EN 번역 키 4개를 추가했다.
+- `starlight-mail-tower/tests/`에 신규 E2E 테스트 3파일(ready-screen-phase2 15건, phase2-qa 31건, footer-overlap-regression 5건)을 추가했다.
+
+### 변경
+
+- `.level-card` min-height 132->88px(CSS), `.level-banner` 44->28px. 실측: 데스크탑 99.6px, 모바일 72px.
+- `.level-info em`(설명문)을 `display:none`으로 숨기고 탭 아래 단일 영역으로 이동했다.
+- `.level-list` 그리드를 `minmax(140px,1fr)`로 변경해 데스크탑 5열 단일 행을 확보했다.
+- `.ready-card`를 flex column + `overflow-y:auto` + `max-height:calc(100dvh - 32px)`로 통일했다.
+- `.ready-footer`에 `position:sticky; bottom:0; margin-top:auto`를 적용했다.
+- 모바일(520px 이하) `.crew-row` 2열 복원, 카드/배너 min-height 추가 축소, gap 8px.
+- 탭 분기로 낡아진 기존 테스트 8건의 `cardCount=17` 단언을 탭 순회 방식으로 갱신했다.
+
+### 검증
+
+- AD 모드 3 2차 APPROVED. 5해상도 x 4탭 = 20조합 전부 maxScroll=0, 겹침 0px.
+- QA PASS: AC-1~AC-15 전체 충족, 예외 14건 PASS. 전체 스위트 115 PASS / 4 FAIL(선재 부채).
+- 1단계 CARRY-1(1024x576 스크롤 874px) 완전 해소.
+
+### 참고
+
+- 스펙: `.claude/specs/2026-07-28-starlight-ready-screen-plan.md`
+- QA: `.claude/specs/2026-07-28-starlight-ready-screen-qa.md`
+
 ## [2026-07-27] - 미니게임 리포트 Phase E 윷놀이 모바일 보드·AI 채우기 수정
 
 ### 변경
