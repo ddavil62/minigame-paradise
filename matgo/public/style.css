@@ -252,7 +252,12 @@ body {
   min-height: 0;
   overflow: hidden;
 }
-.my-hand-zone { border-color: var(--gold); }
+.my-hand-zone {
+  border-color: var(--gold);
+  /* 호버 상승 6px가 손패 패널 경계에 잘리지 않도록 위쪽 여백과 가시 영역을 확보한다. */
+  padding-top: 12px;
+  overflow: visible;
+}
 .hand-zone-label {
   font-size: 11px;
   color: var(--grey-soft);
@@ -274,6 +279,11 @@ body {
   margin: 0 auto;
   flex: 1;
   min-height: 0;
+}
+.my-hand-zone .hand-cards {
+  box-sizing: border-box;
+  padding-top: 6px;
+  overflow: visible;
 }
 .hand-zone .hand-cards .card {
   max-width: 100%;

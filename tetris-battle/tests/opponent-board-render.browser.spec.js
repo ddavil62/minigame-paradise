@@ -69,6 +69,7 @@ test('아이템 지급 규칙이 데스크톱과 작은 화면의 102px 가용 �
       const panelRect = panel.getBoundingClientRect();
       const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
       return {
+        text: rule.textContent.trim(),
         clientWidth: rule.clientWidth,
         scrollWidth: rule.scrollWidth,
         rightOverflow: Math.max(0, ruleRect.right - panelRect.right),
@@ -77,6 +78,7 @@ test('아이템 지급 규칙이 데스크톱과 작은 화면의 102px 가용 �
       };
     });
 
+    expect(layout.text).toBe('LINE CLEAR · 80%');
     expect(layout.clientWidth).toBe(102);
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
     expect(layout.rightOverflow).toBe(0);

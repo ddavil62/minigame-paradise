@@ -6,7 +6,35 @@ import {
   BOARD_SIZE, CELL_RADIUS, CELL_RADIUS_BIG,
   allCells, cellToCoord, homeCoord, goalCoord,
 } from './board.js';
+import { canonicalNodeId, cellForNodeId } from './board-node.js';
 import { drawYutSticks, YUT_NAMES_KO, YUT_CSS_CLASS } from './yut.js';
+
+/** 보드 위 말의 고정 반지름. 경로·칸·플레이어에 따라 크기가 바뀌지 않는다. */
+export const BOARD_PIECE_RADIUS = 15;
+
+/**
+ * 보드 위 말의 정규화된 렌더링 정보를 반환한다.
+ *
+ * 잡기 후에는 한 노드에 한 팀만 남으므로 플레이어별 임의 오프셋을 적용하지
+ * 않고 노드 중앙에 표시한다. 이로써 지름길 진입 시 말이 작아지거나 한쪽으로
+ * 치우쳐 보이지 않는다.
+ *
+ * @param {{cell:number,nodeId?:string|null}} piece 말 상태
+ * @returns {{nodeId:string,x:number,y:number,r:number}|null}
+ */
+export function boardPieceVisual(piece) {
+  if (!piece) return null;
+  const nodeId = piece.nodeId || canonicalNodeId(piece.cell);
+  const cell = cellForNodeId(nodeId);
+  const coord = cell === null ? null : cellToCoord(cell);
+  if (!nodeId || !coord) return null;
+  return {
+    nodeId,
+    x: coord.x,
+    y: coord.y,
+    r: BOARD_PIECE_RADIUS,
+  };
+}
 
 /**
  * Canvas 드로잉 색상 상수 (W-1 정리).
@@ -360,7 +388,9 @@ export function createUI(els) {
         groups.get(key).push(idx);
         return;
       }
-      const key = `c_${p.cell}`;
+      const nodeId = p.nodeId || canonicalNodeId(p.cell);
+      if (!nodeId) return;
+      const key = nodeId;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(idx);
     });
@@ -386,16 +416,12 @@ export function createUI(els) {
         continue;
       }
       // 일반 칸: 같은 칸에 모인 piece 묶음을 하나로 표시 + 숫자
-      const cellNum = parseInt(key.slice(2), 10);
-      const c = cellToCoord(cellNum);
-      if (!c) continue;
-      const r = c.big ? 16 : 13;
+      const firstPiece = player.pieces[indices[0]];
+      const visual = boardPieceVisual(firstPiece);
+      if (!visual) continue;
       // 업힘 카운트 = indices.length (같은 cell의 자기 말 수)
       const totalStack = indices.length;
-      // N인 확장: 플레이어별 x/y 오프셋으로 같은 칸에서 겹침 방지
-      const PIECE_OFFSETS = { p1: { x: -6, y: -4 }, p2: { x: 6, y: -4 }, p3: { x: -6, y: 8 }, p4: { x: 6, y: 8 } };
-      const off = PIECE_OFFSETS[player.id] || { x: 0, y: 0 };
-      drawPiece(ctx, c.x + off.x, c.y + off.y, r, color, colorDim,
+      drawPiece(ctx, visual.x, visual.y, visual.r, color, colorDim,
         totalStack > 1 ? String(totalStack) : '');
     }
 

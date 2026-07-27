@@ -108,17 +108,17 @@ async function run() {
   }
 
   // ── E1. 슬롯 가득 → ITEM_GRANT 차단 ─────────────────
-  section('E1. 슬롯 가득(3개) 차면 후속 3콤보 이벤트에도 추가 지급 없음');
+  section('E1. 슬롯 가득(3개) 차면 후속 당첨 이벤트에도 추가 지급 없음');
   {
     const { a, b } = await joinTwo();
-    for (let eventId = 1; eventId <= 3; eventId++) {
-      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: eventId + 2, clearEventId: eventId });
+    for (let eventId = 1; eventId <= 30; eventId++) {
+      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 0, clearEventId: eventId });
     }
-    await sleep(200);
+    await sleep(250);
     const grants = a.received.filter((m) => m.type === 'ITEM_GRANT');
     assert(grants.length === 3, `빈 슬롯 3개에 정확히 3개 지급 (실제: ${grants.length})`);
     const before = grants.length;
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 6, clearEventId: 4 });
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 0, clearEventId: 31 });
     await sleep(150);
     const after = a.received.filter((m) => m.type === 'ITEM_GRANT').length;
     assert(after === before, `슬롯 가득 후 추가 이벤트는 GRANT 0건 (before=${before}, after=${after})`);

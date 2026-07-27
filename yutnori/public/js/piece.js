@@ -5,6 +5,7 @@
  */
 
 import { hitTestCell } from './board.js';
+import { canonicalNodeId } from './board-node.js';
 
 /**
  * 캔버스 클릭 좌표 → 같은 칸에 있는 내 piece 인덱스를 추정.
@@ -29,9 +30,11 @@ export function pickMyPieceAt(state, myId, clickX, clickY) {
     // 아래 pickHomePiece에서 처리.)
     return -1;
   }
+  const hitNodeId = canonicalNodeId(hit.cell);
   for (let i = 0; i < me.pieces.length; i++) {
     const p = me.pieces[i];
-    if (!p.done && p.cell === hit.cell) {
+    const pieceNodeId = p.nodeId || canonicalNodeId(p.cell);
+    if (!p.done && pieceNodeId !== null && pieceNodeId === hitNodeId) {
       return i;
     }
   }

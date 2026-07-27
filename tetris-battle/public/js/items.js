@@ -9,7 +9,7 @@
  *  - shield        (방어): 다음 공격 1회 무효화
  *
  * 흐름:
- *  - 3콤보 이상 라인 클리어 → 서버가 ITEM_GRANT 확정 전송 → 첫 빈 슬롯 채움
+ *  - 라인 클리어 → 서버가 80% 확률로 ITEM_GRANT 전송 → 첫 빈 슬롯 채움
  *  - Z/X/C → useItem(slot) → 방어형은 즉시 로컬 적용, 공격형은 서버 경유로 상대에게 전달
  *  - 상대로부터 ITEM_EFFECT 수신 → applyEffect(id, duration) → 다크/프리즈/가비지폭탄 처리
  *  - 공격을 받기 직전 서버가 shieldActive 확인 → 활성이면 SHIELD_BLOCK으로 양쪽 통보

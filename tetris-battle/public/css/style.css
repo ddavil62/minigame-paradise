@@ -979,3 +979,82 @@ body {
   text-align: center;
   flex-shrink: 0;
 }
+
+/* ── 세로형 모바일 게임 레이아웃 ─────────────────────────────────────────── */
+@media (max-width: 600px) and (orientation: portrait) {
+  .game-header {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .game-header h1 {
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  .status-bar {
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .btn-back-to-lobby {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  .game-main {
+    /* 120px 아이템 패널과 70px NEXT 패널을 유지한 채 남은 폭을 보드에 배정한다. */
+    --board-h: min(330px, calc((100vw - 225px) * 2), calc(100vh - 500px));
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 8px;
+    overflow-y: auto;
+  }
+
+  .player-area.me {
+    display: grid;
+    grid-template-columns: 120px calc(var(--board-h) / 2) 70px;
+    gap: 6px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .player-area.me > .side-panel.narrow {
+    width: 70px;
+  }
+
+  .player-area.me > .side-panel.narrow .panel-block {
+    padding: 5px;
+  }
+
+  .center-area {
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .vs-label {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .countdown {
+    min-height: 0;
+    font-size: 48px;
+  }
+
+  .player-area.opponent {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .game-footer {
+    padding: 5px 8px;
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

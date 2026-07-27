@@ -225,7 +225,7 @@ export function createGame(deps) {
       level = 1 + Math.floor(totalLines / LINES_PER_LEVEL);
       combo += 1;
       // 가비지 전송 (변환표 + 콤보 보너스).
-      // 가비지가 0이어도 서버가 콤보 아이템 조건을 판정할 수 있도록 전송한다.
+      // 가비지가 0이어도 서버가 라인 클리어 아이템 확률을 판정할 수 있도록 전송한다.
       const garbage = garbageFromLines(cleared) + comboBonus(combo);
       clearEventId += 1;
       deps.onAttack(garbage, combo, clearEventId);

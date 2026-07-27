@@ -505,7 +505,7 @@ it('JOKER-013: 자동 획득은 보너스 없음 — 더미 뒤집기/턴 변경
 //   신규 조건: p1Done && p2Credit === 0 → 종료 트리거.
 //   → flushHandsToCaptured로 p2 조커 2 + m05 → p2 captured 이동.
 //   → 점수 평가: p1 점수 vs p2 점수 비교 후 승자/무승부 결정.
-it('JOKER-014: p1 손 0 + p2 손 3장(조커 2+일반 1) + credit 0 → 라운드 자동 종료 + 잔여 captured 이동', () => {
+it('JOKER-014: p1 손 0 + p2 손 3장 → 자동 정산 없이 p2가 남은 패를 직접 냄', () => {
   const g = makeGame({
     p1Hand:  ['m11_gwang'],
     p2Hand:  ['m00_joker_a', 'm00_joker_b', 'm05_kkeut'],
@@ -516,21 +516,14 @@ it('JOKER-014: p1 손 0 + p2 손 3장(조커 2+일반 1) + credit 0 → 라운�
 
   const r = playCard(g, 'p1', 'm11_gwang');
   truthy(r.ok, 'playCard ok');
-  // 검증 1: 라운드 종료됨 (phase=round_end)
-  eq(g.phase, 'round_end', 'phase=round_end (자동 종료)');
-  // 검증 2: roundResult 존재
-  truthy(g.roundResult, 'roundResult 존재');
-  // 검증 3: p2 손이 비워졌고 잔여 카드가 captured로 이동
-  eq(g.hands.p2.length, 0, 'p2 손 비움');
-  truthy(g.captured.p2.some((c) => c.id === 'm00_joker_a'), 'p2 captured에 joker_a');
-  truthy(g.captured.p2.some((c) => c.id === 'm00_joker_b'), 'p2 captured에 joker_b');
-  truthy(g.captured.p2.some((c) => c.id === 'm05_kkeut'), 'p2 captured에 m05_kkeut');
-  // 검증 4: p1 captured 그대로 (m11_gwang + m11_pi_b)
+  eq(g.phase, 'awaiting_play', 'phase=awaiting_play');
+  eq(g.turn, 'p2', '남은 패가 있는 p2 차례');
+  eq(g.hands.p2.length, 3, 'p2 손 자동 제거 없음');
+  not(g.captured.p2.some((c) => c.id === 'm05_kkeut'), '미사용 패 자동 포획 없음');
   truthy(g.captured.p1.some((c) => c.id === 'm11_gwang'), 'p1 captured m11_gwang');
   truthy(g.captured.p1.some((c) => c.id === 'm11_pi_b'), 'p1 captured m11_pi_b');
-  // 검증 5: 점수 — p2는 조커 2 = piCount 4 + 끗 1장 = 0점 (10장 미만), p1은 광 1 = 0점 → 무승부
-  // (단, p2는 조커 + m05 captured만이라 7점 못 미침 → roundWinner null)
-  eq(g.roundWinner, null, '둘 다 7점 미만 → 무승부');
+  truthy(playCard(g, 'p2', 'm05_kkeut').ok, 'p2가 일반 패를 직접 플레이');
+  eq(g.hands.p2.length, 2, '직접 낸 패만 손에서 제거');
 });
 
 // ── JOKER-015: 케이스 B로 조커 받음 → 끝까지 안 냄 → 자동 captured 이동 ──
@@ -539,7 +532,7 @@ it('JOKER-014: p1 손 0 + p2 손 3장(조커 2+일반 1) + credit 0 → 라운�
 //   - 단순화: p2 손에 조커 1장 + 일반 1장 = 2장, p1 손 1장, 양쪽 credit 0.
 //   - p1이 카드 내면 p1 손 0, p2 손 2장 → 신규 조건 트리거(p1Done && p2Credit=0).
 //   - 신규 종료: p2의 조커 1장 + 일반 1장이 p2 captured로 이동, piCount +2 반영.
-it('JOKER-015: 케이스 B 조커 잔여 → 라운드 종료 시 captured 이동 + piCount +2 반영', () => {
+it('JOKER-015: 케이스 B 조커 잔여도 자동 captured 이동 없이 입력 대기', () => {
   const g = makeGame({
     p1Hand:  ['m11_pi_b'],
     p2Hand:  ['m00_joker_a', 'm10_pi_a'], // 케이스 B로 받은 조커 + 일반 1장(피)
@@ -549,15 +542,10 @@ it('JOKER-015: 케이스 B 조커 잔여 → 라운드 종료 시 captured 이�
   });
   // p1이 m11_pi_b 냄 → 바닥 m11_pi_c와 1매칭 → 둘 다 p1 captured → finishTurn(p1)
   playCard(g, 'p1', 'm11_pi_b');
-  // 종료 트리거
-  eq(g.phase, 'round_end', 'phase=round_end');
-  // p2 잔여 카드 자동 이동
-  eq(g.hands.p2.length, 0, 'p2 손 0');
-  truthy(g.captured.p2.some((c) => c.id === 'm00_joker_a'), '조커 captured');
-  truthy(g.captured.p2.some((c) => c.id === 'm10_pi_a'), '일반 카드 captured');
-  // piCount 검증: 조커 1 = +2, m10_pi_a = +1 → piCount = 3
-  const score = calculateScore(g.captured.p2);
-  eq(score.piCount, 3, 'piCount=3 (조커 2 + 피 1)');
+  eq(g.phase, 'awaiting_play', 'phase=awaiting_play');
+  eq(g.turn, 'p2', 'p2 입력 차례');
+  eq(g.hands.p2.length, 2, 'p2 손 보존');
+  eq(g.captured.p2.length, 0, '자동 captured 이동 없음');
 });
 
 // ── JOKER-016: 폭탄 후 p1 손 0 + credit 2 → 종료 X (폭탄 권리 우선) ──

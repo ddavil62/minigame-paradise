@@ -20,6 +20,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
+/** 라인 클리어 한 번당 아이템 지급 확률(2026-07-20 상향 결정 복원). */
+export const ITEM_GRANT_PROB = 0.8;
+
+/**
+ * 아이템 지급 난수값이 80% 당첨 구간에 포함되는지 판정한다.
+ * @param {number} roll 0 이상 1 미만의 난수값
+ * @returns {boolean}
+ */
+export function isWinningItemGrantRoll(roll) {
+  return Number.isFinite(roll) && roll >= 0 && roll < ITEM_GRANT_PROB;
+}
+
 // ──────────────────────────────────────────────────────────────
 // createApp(): launcher 통합 라우터용 앱 인스턴스를 생성한다.
 // 모든 룸 상태(players)는 closure 내부에 보관되어 다른 게임과 격리된다.
@@ -29,7 +41,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 // ──────────────────────────────────────────────────────────────
 /**
  * 테트리스 배틀 게임 앱 인스턴스를 생성한다.
- * @param {{ hostUrl?: string, getBotUrl?: () => (string|null) }} [opts]
+ * @param {{ hostUrl?: string, getBotUrl?: () => (string|null), random?: () => number }} [opts]
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
@@ -37,6 +49,8 @@ export function createApp(opts = {}) {
   let HOST_URL = typeof opts.hostUrl === 'string' ? opts.hostUrl : '';
   // mode=ai 사용자 진입 시 봇이 접속할 WS URL을 공급하는 함수(통합 라우터가 주입).
   const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
+  // 테스트에서는 결정적 경계값을 주입하고, 실제 게임에서는 표준 난수를 사용한다.
+  const random = typeof opts.random === 'function' ? opts.random : Math.random;
 
   // ── Express 정적 파일 서빙 ────────────────────────────────────
   const expressApp = express();
@@ -132,8 +146,6 @@ const ITEM_DURATIONS = {
   line_clear: 0,
   shield: 0,
 };
-/** 아이템을 지급하기 시작하는 최소 콤보 값. */
-const ITEM_GRANT_COMBO = 3;
 const MAX_ITEM_SLOTS = 3;
 
 /**
@@ -141,7 +153,7 @@ const MAX_ITEM_SLOTS = 3;
  * @returns {string}
  */
 function pickRandomItem() {
-  return ITEM_IDS[Math.floor(Math.random() * ITEM_IDS.length)];
+  return ITEM_IDS[Math.floor(random() * ITEM_IDS.length)];
 }
 
 /**
@@ -219,18 +231,18 @@ function broadcastReadyState() {
 }
 
 /**
- * 3콤보 이상인 고유 라인 클리어 이벤트에 아이템을 확정 지급한다.
+ * 고유 라인 클리어 이벤트마다 80% 확률로 아이템을 지급한다.
  * 빈 슬롯 선택과 이벤트 중복 제거는 서버가 권위적으로 처리한다.
  * @param {Player} player 수혜자
- * @param {number} combo 서버가 검증한 콤보
  * @param {number} clearEventId 라운드 내 클리어 이벤트 식별자
  */
-function tryGrantItem(player, combo, clearEventId) {
-  if (combo < ITEM_GRANT_COMBO) return;
+function tryGrantItem(player, clearEventId) {
   if (!Number.isInteger(clearEventId) || clearEventId <= player.lastClearEventId) return;
+  // 확률 실패 이벤트도 처리 완료로 기록해 동일 이벤트 재전송으로 재추첨하지 못하게 한다.
   player.lastClearEventId = clearEventId;
   const slotIndex = player.itemSlots.indexOf(null);
   if (slotIndex < 0) return;
+  if (!isWinningItemGrantRoll(random())) return;
   const itemId = pickRandomItem();
   player.itemSlots[slotIndex] = itemId;
   player.slotCount = player.itemSlots.filter(Boolean).length;
@@ -378,8 +390,8 @@ wss.on('connection', (ws, req) => {
             combo: safeCombo,
           });
         }
-        // 3콤보 이상인 고유 클리어 이벤트에 확정 지급한다.
-        tryGrantItem(player, safeCombo, clearEventId);
+        // 콤보 수와 무관하게 고유 라인 클리어 이벤트마다 80% 확률로 지급한다.
+        tryGrantItem(player, clearEventId);
         break;
       }
 

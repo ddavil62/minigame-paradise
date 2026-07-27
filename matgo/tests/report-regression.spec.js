@@ -9,6 +9,7 @@ import {
   chooseFloor,
   nextRoundStarter,
   playCard,
+  selectKkeutType,
 } from '../game.js';
 import { buildDeck } from '../cards.js';
 import { applyFinalMultipliers } from '../score.js';
@@ -160,6 +161,64 @@ test('R20: 승자 끗 7장 이상이면 패자 끗 수와 무관하게 멍박이
 
   expect(result.multiplier).toBe(2);
   expect(result.reasons).toContain('멍박 ×2');
+});
+
+test('R29: 바닥 마지막 두 장을 손패와 더미가 각각 맞추면 쓸로 피를 한 번 빼앗는다', () => {
+  const game = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor: ['m01_tti_hong', 'm02_tti_hong'],
+    deck: ['m02_kkeut_godori'],
+  });
+  game.captured.p2 = [card('m06_pi_a'), card('m07_pi_a')];
+
+  expect(playCard(game, 'p1', 'm01_gwang').ok).toBe(true);
+  expect(game.lastAction.kind).toBe('sseul');
+  expect(game.lastAction.stoleFromOpp).toBe(1);
+  expect(game.floor).toHaveLength(0);
+  expect(game.captured.p1.map((c) => c.id)).toEqual(expect.arrayContaining([
+    'm01_gwang', 'm01_tti_hong', 'm02_kkeut_godori', 'm02_tti_hong',
+  ]));
+  expect(game.captured.p2).toHaveLength(1);
+});
+
+test('R29: 같은 월 네 장 선택 경로는 쓸로 잘못 재라벨링하지 않는다', () => {
+  const game = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor: ['m01_tti_hong', 'm01_pi_a'],
+    deck: ['m01_pi_b'],
+  });
+
+  expect(playCard(game, 'p1', 'm01_gwang').ok).toBe(true);
+  expect(chooseFloor(game, 'p1', 'm01_tti_hong').ok).toBe(true);
+  expect(game.lastAction.kind).not.toBe('sseul');
+});
+
+test('R30: 상대 손이 먼저 비어도 내 마지막 손패는 자동 포획하지 않고 직접 플레이한다', () => {
+  const game = makeGame({
+    p1Hand: ['m09_kkeut'],
+    p2Hand: ['m09_pi_a'],
+    floor: [],
+    deck: ['m07_kkeut', 'm08_kkeut_godori'],
+  });
+  game.turn = 'p2';
+
+  expect(playCard(game, 'p2', 'm09_pi_a').ok).toBe(true);
+  expect(game.phase).toBe('awaiting_play');
+  expect(game.turn).toBe('p1');
+  expect(game.hands.p1.map((c) => c.id)).toEqual(['m09_kkeut']);
+  expect(game.captured.p1.some((c) => c.id === 'm09_kkeut')).toBe(false);
+
+  expect(playCard(game, 'p1', 'm09_kkeut').ok).toBe(true);
+  expect(game.hands.p1).toHaveLength(0);
+  expect(game.captured.p1.map((c) => c.id)).toEqual(expect.arrayContaining([
+    'm09_kkeut', 'm09_pi_a',
+  ]));
+  expect(game.floor.some((c) => c.id === 'm07_kkeut')).toBe(true);
+  expect(game.phase).toBe('awaiting_kkeut_choice');
+  expect(selectKkeutType(game, 'p1', 'kkeut').ok).toBe(true);
+  expect(game.phase).toBe('round_end');
 });
 
 test('R16/R24: 강탈은 실제 카드 좌표에서 출발하고 효과는 포획 정리 뒤 전면 표시된다', () => {

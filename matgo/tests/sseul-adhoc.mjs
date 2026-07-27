@@ -72,26 +72,20 @@ function not(v, msg) {
 }
 
 // ── G-40 ─────────────────────────────────────────────────────
-it('G-40: 쓸 — 바닥 2장 + 손패 1장 선택 + 더미 1장 → kind=sseul, 4장 captured + 피 1장', () => {
+it('G-40: 쓸 — 바닥 마지막 두 장을 손패와 더미가 각각 맞춤 → 피 1장', () => {
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
-    floor:  ['m01_tti_hong', 'm01_pi_a'],
-    deck:   ['m01_pi_b'],
+    floor:  ['m01_tti_hong', 'm02_tti_hong'],
+    deck:   ['m02_kkeut_godori'],
   });
   g.captured.p2 = [card('m06_pi_a')];
 
   const r1 = playCard(g, 'p1', 'm01_gwang');
   truthy(r1.ok, 'playCard ok');
-  eq(g.phase, 'awaiting_floor_choice', 'awaiting_floor_choice 진입');
-
-  const r2 = chooseFloor(g, 'p1', 'm01_tti_hong');
-  truthy(r2.ok, 'chooseFloor ok');
 
   eq(g.lastAction.kind, 'sseul', 'kind=sseul');
-  eq(g.lastAction.month, 1, 'month=1');
-  eq(g.captured.p1.filter((c) => c.month === 1).length, 4, '1월 4장 captured');
-  eq(g.floor.filter((c) => c.month === 1).length, 0, '바닥 1월 0장');
+  eq(g.floor.length, 0, '바닥 0장');
   truthy(g.captured.p1.some((c) => c.id === 'm06_pi_a'), 'p2 피 빼앗음');
   eq(g.captured.p2.length, 0, 'p2 captured 비움');
 });
@@ -101,22 +95,20 @@ it('G-41: 쓸 — 상대 피 0장이어도 정상 진행', () => {
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
-    floor:  ['m01_tti_hong', 'm01_pi_a'],
-    deck:   ['m01_pi_b'],
+    floor:  ['m01_tti_hong', 'm02_tti_hong'],
+    deck:   ['m02_kkeut_godori'],
   });
   g.captured.p2 = [];
 
   playCard(g, 'p1', 'm01_gwang');
-  chooseFloor(g, 'p1', 'm01_tti_hong');
 
   eq(g.lastAction.kind, 'sseul', 'kind=sseul');
-  eq(g.captured.p1.filter((c) => c.month === 1).length, 4, '1월 4장 captured');
   eq(g.captured.p1.length, 4, '피 빼앗기 skip — 4장만');
   truthy(['awaiting_play', 'awaiting_go_stop', 'round_end'].includes(g.phase), `phase=${g.phase} 정상`);
 });
 
 // ── G-42 ─────────────────────────────────────────────────────
-it('G-42: 쓸 vs 따닥 구분 — chooseFloor 경로 후 ttadak이면 sseul로 재라벨', () => {
+it('G-42: 같은 월 네 장 선택 경로는 쓸로 재라벨링하지 않음', () => {
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
@@ -125,8 +117,7 @@ it('G-42: 쓸 vs 따닥 구분 — chooseFloor 경로 후 ttadak이면 sseul로 
   });
   playCard(g, 'p1', 'm01_gwang');
   chooseFloor(g, 'p1', 'm01_tti_hong');
-  eq(g.lastAction.kind, 'sseul', 'sseul로 식별');
-  not(g.lastAction.kind === 'ttadak', 'ttadak 아님');
+  not(g.lastAction.kind === 'sseul', 'sseul 아님');
 });
 
 // ── G-43 ─────────────────────────────────────────────────────

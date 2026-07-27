@@ -1907,14 +1907,31 @@
      * @param {DOMRect}     rect
      * @param {number}      durMs
      */
-    function flyTo(clone, rect, durMs) {
+    function flyTo(clone, rect, durMs, attachment = null) {
       clone.style.transition = `left ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1), `
-                             + `top ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1)`;
-      clone.style.left   = `${rect.left}px`;
-      clone.style.top    = `${rect.top}px`;
+                             + `top ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1), `
+                             + `transform ${durMs / 1000}s cubic-bezier(0.25, 0.8, 0.35, 1)`;
+      clone.style.left = `${rect.left + (attachment?.x || 0)}px`;
+      clone.style.top = `${rect.top + (attachment?.y || 0)}px`;
+      clone.style.transform = attachment ? `rotate(${attachment.rotate}deg)` : '';
       // width/height는 transition 없이 즉시 목표 크기로 — 경로(left/top)에 영향 없음.
       clone.style.width  = `${rect.width}px`;
       clone.style.height = `${rect.height}px`;
+    }
+
+    /**
+     * 매칭 카드가 아래 짝을 완전히 덮지 않도록 출처별 부착 각도와 오프셋을 반환한다.
+     *
+     * @param {object} entry fly 엔트리
+     * @returns {{x:number,y:number,rotate:number}|null}
+     */
+    function attachmentPose(entry) {
+      if (!entry.isCap || !findMeetRectFor(entry.cardId)) return null;
+      if (entry.origin === 'deck') return { x: 9, y: 4, rotate: 6 };
+      if (entry.origin === 'hand' || entry.origin === 'opp-hand') {
+        return { x: -9, y: 3, rotate: -6 };
+      }
+      return null;
     }
     function flashMeet(clone) {
       const orig = clone.style.boxShadow;
@@ -1949,7 +1966,9 @@
         case 'HAND_THROW': {
           // A가 던진다 — 손/상대손 → midRect (짝 prev 위치 or cur floor 위치).
           requestAnimationFrame(() => requestAnimationFrame(() => {
-            for (const e of handLikeEntries) flyTo(e.clone, e.midRect, T.HAND_THROW);
+            for (const e of handLikeEntries) {
+              flyTo(e.clone, e.midRect, T.HAND_THROW, attachmentPose(e));
+            }
           }));
           stateTimer = setTimeout(() => transition('HAND_LAND'), T.HAND_THROW);
           break;
@@ -1988,7 +2007,7 @@
           }
           requestAnimationFrame(() => requestAnimationFrame(() => {
             for (const e of deckEntries) {
-              flyTo(e.clone, e.midRect, T.DECK_THROW);
+              flyTo(e.clone, e.midRect, T.DECK_THROW, attachmentPose(e));
             }
           }));
           stateTimer = setTimeout(() => transition('DECK_LAND'), T.DECK_THROW);

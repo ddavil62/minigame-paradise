@@ -1,5 +1,56 @@
 # Changelog
 
+## [2026-07-27] — 리포트 27~30 카드 표시·쓸·마지막 손패 수정
+
+사용자 리포트 `27, 28, 29, 30`을 카드 가독성, 쓸 판정, 마지막 턴 진행 흐름으로 묶어 수정했다.
+
+### UI
+
+- `public/client.js`의 매칭 카드 부착 자세에 출처별 오프셋과 회전을 적용했다.
+  - 손패 출처: `x=-9px`, `y=3px`, `rotate=-6deg`
+  - 더미 출처: `x=9px`, `y=4px`, `rotate=6deg`
+- 바닥 짝패가 새 카드 아래에 완전히 가려지지 않고 양쪽 카드가 구분된다.
+- `public/style.css`에서 내 손패 영역 상단 여백과 overflow를 조정해 hover 시 `translateY(-6px)`로 올라간 카드가 잘리지 않게 했다.
+- 데스크톱 1920×1080과 모바일 390×844에서 부착 카드, hover 카드, 9월 선택 모달의 화면 경계와 겹침을 확인했다.
+
+### 규칙
+
+- 쓸은 턴 시작 시 바닥에 남아 있던 마지막 두 장을 손패와 더미 카드가 각각 1:1로 먹어 바닥을 비운 경우에만 성립한다.
+- 쓸 성립 시 상대 피를 정확히 한 장 강탈하고 `lastAction.kind`를 `sseul`로 기록한다.
+- 같은 월 네 장을 처리했지만 위 조건이 아닌 기존 선택 경로는 `ttadak`으로 유지하며, 쓸로 잘못 표시하지 않는다.
+- 상대 손패가 먼저 소진돼도 현재 플레이어의 마지막 손패를 자동 회수하지 않는다. `awaiting_play`에서 직접 낸 뒤 매칭, 더미 뒤집기, 9월 끗/쌍피 선택을 순서대로 처리하고 라운드를 종료한다.
+- 쓸과 마지막 손패 처리 전후에 전체 카드 수와 카드 ID 고유성을 보존한다.
+
+### 테스트
+
+- Playwright `61/61 PASS`
+  - `tests/game.unit.spec.js`
+  - `tests/report-regression.spec.js`
+  - `tests/reports-27-30-qa.spec.js`
+  - `tests/report-ui-regression.spec.js`
+  - `tests/reports-27-30-ui.spec.js`
+- 직접 규칙 회귀 `42/42 PASS`
+  - `tests/sseul-adhoc.mjs`: `11/11`
+  - `tests/joker-adhoc.mjs`: `24/24`
+  - `tests/bombdup-adhoc.mjs`: `7/7`
+- 전체 자동 검증 `103/103 PASS`, AD 모드 3 `APPROVED`, QA `PASS`.
+
+### 알려진 제약과 유지보수 주의
+
+- 고정 1280×800 캔버스를 모바일에서 축소하므로 부착 오프셋이 작게 보이고 선택 버튼의 터치 영역·간격도 권장치보다 작다. 이번 변경으로 화면 밖 잘림이나 겹침은 발생하지 않았다.
+- `game.js`의 `finishTurnKeepTurn`은 일반 `finishTurn`과 유사 코드가 있어 향후 턴 종료 규칙을 변경할 때 두 경로를 함께 검토해야 한다.
+
+### 참고
+
+- 목적 정의: `.Codex/specs/2026-07-27-minigames-reports-27-32-scope.md`
+- 실행 계획: `.Codex/specs/2026-07-27-minigames-reports-27-32-plan.md`
+- 구현: `.Codex/specs/2026-07-27-minigames-reports-matgo-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-reports-matgo-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-reports-matgo-qa.md`
+- 에셋 변경 없음
+
+---
+
 ## [2026-07-27] — 리포트 9건 규칙·연출 통합 수정
 
 사용자 리포트 `2, 3, 4, 16, 17, 18, 19, 20, 24`를 조커·강탈·폭탄·선공·멍박·UI 연출 흐름으로 통합 수정했다.

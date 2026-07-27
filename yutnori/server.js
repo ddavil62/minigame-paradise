@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import os from 'os';
 import { spawn } from 'child_process';
 import fs from 'fs';
+import { canonicalNodeId } from './public/js/board-node.js';
 
 // ── 경로 ──────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -641,6 +642,9 @@ function broadcastState() {
       name: p.name,
       pieces: p.pieces.map((piece) => ({
         cell: piece.cell,
+        // 경로 인덱스와 별개인 물리 보드 노드. 클라이언트도 이 값을 기준으로
+        // 같은 칸의 말 묶음과 클릭 판정을 수행한다.
+        nodeId: canonicalNodeId(piece.cell),
         stack: piece.stack,
         done: piece.done,
       })),
@@ -751,8 +755,9 @@ function autoDiscardUnusableBackdos(pieces) {
 function resolveLanding(mover, pieceIdx) {
   const piece = mover.pieces[pieceIdx];
   let captured = false;
+  const landingNodeId = canonicalNodeId(piece.cell);
 
-  if (piece.done || piece.cell === HOME || piece.cell === GOAL) {
+  if (piece.done || landingNodeId === null) {
     // 완주 또는 출발 전이면 충돌 없음
   } else {
     // 같은 칸에 다른 말이 있는가?
@@ -764,7 +769,7 @@ function resolveLanding(mover, pieceIdx) {
       let oppCaught = 0;
       for (let i = 0; i < opp.pieces.length; i++) {
         const op = opp.pieces[i];
-        if (!op.done && op.cell === piece.cell) {
+        if (!op.done && canonicalNodeId(op.cell) === landingNodeId) {
           oppCaught += op.stack;
           op.cell = HOME;
           op.stack = 1; // 잡혀 흩어짐 — 업혀 있던 말도 전부 HOME으로
@@ -778,7 +783,7 @@ function resolveLanding(mover, pieceIdx) {
     for (let i = 0; i < mover.pieces.length; i++) {
       if (i === pieceIdx) continue;
       const mp = mover.pieces[i];
-      if (!mp.done && mp.cell === piece.cell) {
+      if (!mp.done && canonicalNodeId(mp.cell) === landingNodeId) {
         // 합치기: mp를 piece에 흡수. mp는 "없는 셈"으로 처리하기 위해 cell을 -2(흡수됨) 표시 대신
         // 단순화: mp.stack을 piece.stack에 더하고 mp는 같은 셀에 그대로 두되 stack=0으로 둠 → 렌더링 시 0은 표시 X.
         // 하지만 추후 이동 시 stack=0 말이 따라다녀야 함. 더 단순한 방법: mp를 piece에 흡수하고
@@ -858,12 +863,13 @@ function movePiece(mover, pieceIdx, resultName, branchChoice = null) {
 
   // 같은 cell에 있던 자기 말(업힌 묶음)을 함께 이동시킨다.
   const startCell = piece.cell;
+  const startNodeId = canonicalNodeId(startCell);
   const groupIndices = [pieceIdx];
-  if (startCell !== HOME && startCell !== GOAL) {
+  if (startNodeId !== null) {
     for (let i = 0; i < mover.pieces.length; i++) {
       if (i === pieceIdx) continue;
       const mp = mover.pieces[i];
-      if (!mp.done && mp.cell === startCell) {
+      if (!mp.done && canonicalNodeId(mp.cell) === startNodeId) {
         groupIndices.push(i);
       }
     }

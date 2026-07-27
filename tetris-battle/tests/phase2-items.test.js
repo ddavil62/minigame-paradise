@@ -294,36 +294,19 @@ async function runWsScenarios() {
     await sleep(120);
   }
 
-  section('B. WS — 시나리오 9: 3콤보 이상 고유 이벤트에 확정 지급');
+  section('B. WS — 시나리오 9: 고유 라인 클리어 이벤트마다 높은 확률로 지급');
   {
     const { a, b } = await joinTwo();
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 2, clearEventId: 1 });
-    await sleep(120);
-    assert(!a.received.some((m) => m.type === 'ITEM_GRANT'), '2콤보에는 아이템 미지급');
-
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 2 });
-    const first = await a.waitMessage((m) => m.type === 'ITEM_GRANT');
-    assert(first.slotIndex === 0, '3콤보 고유 이벤트는 첫 빈 슬롯 0에 확정 지급');
-
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 2 });
-    await sleep(120);
-    assert(
-      a.received.filter((m) => m.type === 'ITEM_GRANT').length === 1,
-      '동일 clearEventId 재전송은 중복 지급하지 않음',
-    );
-
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 4, clearEventId: 3 });
-    const second = await a.waitMessage((m) => (
-      m.type === 'ITEM_GRANT' && m.slotIndex === 1
-    ));
-    a.send({ type: 'ITEM_USE', itemId: first.itemId, slotIndex: first.slotIndex });
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 5, clearEventId: 4 });
-    await sleep(150);
-    const slotZeroGrants = a.received.filter((m) => (
-      m.type === 'ITEM_GRANT' && m.slotIndex === 0
-    ));
-    assert(second.slotIndex === 1, '연속 이벤트는 다음 빈 슬롯 1에 지급');
-    assert(slotZeroGrants.length === 2, '사용한 슬롯 0을 다음 지급이 재사용');
+    // 확률 검증의 정확한 경계와 중복 방지는 report32-item-grant.test.js에서
+    // 주입 RNG로 결정적으로 검사한다. 여기서는 실제 Math.random 경로를 연속 표본으로 확인한다.
+    for (let eventId = 1; eventId <= 20; eventId++) {
+      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 0, clearEventId: eventId });
+    }
+    await sleep(250);
+    const grants = a.received.filter((m) => m.type === 'ITEM_GRANT');
+    assert(grants.length >= 1, `0콤보 20회 라인 클리어에서 GRANT 수신 (실제: ${grants.length})`);
+    assert(grants.length <= 3, `GRANT는 슬롯 한도 3개를 넘지 않음 (실제: ${grants.length})`);
+    assert(grants[0]?.slotIndex === 0, '첫 당첨은 첫 빈 슬롯 0에 지급');
     a.close(); b.close();
     await sleep(120);
   }

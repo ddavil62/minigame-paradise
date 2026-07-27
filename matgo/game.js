@@ -333,7 +333,8 @@ export function* playCardSteps(g, playerId, cardId) {
     return;
   }
 
-  resolveCardOnFloor(g, playerId, card, true);
+  const floorCountAtTurnStart = g.floor.length;
+  const handResolution = resolveCardOnFloor(g, playerId, card, true);
   yield { step: 'hand_played', card };
 
   // awaiting_floor_choice로 빠지면 사용자 선택 대기 (chooseFloor에서 이어짐)
@@ -344,6 +345,10 @@ export function* playCardSteps(g, playerId, cardId) {
 
   // 단계 2: 덱 1장 뒤집기 + 매칭 처리
   drawAndResolve(g, playerId, card);
+  applySseulAfterFullFloorClear(g, playerId, {
+    floorCountAtTurnStart,
+    handMatched: handResolution.matched === 1,
+  });
   yield { step: 'deck_flipped' };
   if (g.phase === 'awaiting_floor_choice') return;
 
@@ -411,18 +416,6 @@ export function* chooseFloorSteps(g, playerId, cardId) {
   if (wasFromHand) {
     // 단계 2: 덱 뒤집기 (손패에서 온 매칭이었던 경우만)
     drawAndResolve(g, playerId, pending.srcCard);
-    // ── 쓸 재라벨링 (한국 표준 룰) ──
-    // 직전 단계 1이 awaiting_floor_choice → 선택(손패 매칭) 후 더미 뒤집기에서 같은 월이
-    // 또 매칭되어 그 월 4장 전부 가져간 케이스 = 쓸. drawAndResolve가 이를 'ttadak'으로
-    // 라벨링하지만, 사용자 정의상 따닥과 쓸은 별개. 효과(피 1장)는 동일하나 표시만 분리.
-    // 조건: drawAndResolve 결과 kind === 'ttadak' + 직전 chooseFloor의 wasFromHand=true.
-    if (g.lastAction && g.lastAction.kind === 'ttadak' && g.lastAction.player === playerId) {
-      g.lastAction = {
-        ...g.lastAction,
-        kind: 'sseul',
-        month: pending.month,
-      };
-    }
     yield { step: 'deck_flipped' };
     if (g.phase === 'awaiting_floor_choice') return;
   }
@@ -702,36 +695,6 @@ function stealPi(g, taker, victim, count) {
 
 // ── 턴 마무리: 점수 평가 + 고/스톱 분기 ─────────────────────
 /**
- * 라운드 종료 직전, 양쪽 손에 남은 카드를 각자 본인 captured로 이동한다.
- *
- * 배경 (2026-06-08 조커 라운드 종료 불가 수정):
- *   조커 케이스 B로 한쪽 손이 +1 누적되면 "기회 보존의 법칙"에 의한 양쪽 잔여
- *   동기화가 깨져 양쪽 손이 동시에 0이 되지 않는다. 신규 종료 조건(한쪽이 손+credit=0
- *   이고 상대 credit=0)로 라운드를 종료하더라도 한쪽 손에는 잔여 카드가 남는다.
- *   이 잔여 카드들은 룰상 본인이 가져간 것으로 간주(점수에 반영)하여 정산한다.
- *
- * 처리:
- *   - 양쪽 손에 남은 모든 카드를 각자 본인 captured에 push (type 그대로).
- *   - 조커는 captured에 들어가면 score.js가 `c.type === 'joker'`를 피 더미로
- *     계산하므로 별도 변환 불필요 (1장당 피 2장 가치).
- *   - 일반 카드도 type 그대로 들어가면 score.js가 자동 분류(광/끗/띠/피).
- *   - 손은 비운다.
- *
- * @param {GameState} g
- * @returns {{p1:number, p2:number}} 양쪽 이동 장수
- */
-function flushHandsToCaptured(g) {
-  const moved = { p1: 0, p2: 0 };
-  for (const pid of ['p1', 'p2']) {
-    if (g.hands[pid].length === 0) continue;
-    moved[pid] = g.hands[pid].length;
-    g.captured[pid].push(...g.hands[pid]);
-    g.hands[pid] = [];
-  }
-  return moved;
-}
-
-/**
  * 점수 평가 + 고/스톱/술잔/3뻑 분기 수행 후 턴을 교대하지 않고 그대로 유지.
  *
  * B4 조커 케이스 A 전용: 손에서 조커를 냈을 때 플레이어는 턴을 유지하고
@@ -761,16 +724,6 @@ function finishTurnKeepTurn(g, playerId) {
   if (breakdown.score >= SCORE_THRESHOLD_GO_STOP) {
     const lastGoScore = g.lastGoScore?.[playerId] ?? null;
     if (lastGoScore === null || breakdown.score > lastGoScore) {
-      const remainingCredit = g.bombDeckCredit?.[playerId] || 0;
-      const opp = playerId === 'p1' ? 'p2' : 'p1';
-      const oppRemaining = g.hands[opp].length + (g.bombDeckCredit?.[opp] || 0);
-      const selfStuck = g.hands[playerId].length === 0 && remainingCredit === 0;
-      const oppStuckAndSelfNoCredit = oppRemaining === 0 && remainingCredit === 0;
-      if (selfStuck || oppStuckAndSelfNoCredit) {
-        flushHandsToCaptured(g);
-        endRoundWin(g, playerId);
-        return;
-      }
       g.phase = 'awaiting_go_stop';
       g.lastAction = { ...g.lastAction, scoreReached: breakdown.score, by: playerId };
       return;
@@ -783,8 +736,7 @@ function finishTurnKeepTurn(g, playerId) {
   const p2Credit = g.bombDeckCredit?.p2 || 0;
   const p1Done = (p1Hand + p1Credit) === 0;
   const p2Done = (p2Hand + p2Credit) === 0;
-  if ((p1Done && p2Credit === 0) || (p2Done && p1Credit === 0)) {
-    flushHandsToCaptured(g);
+  if (p1Done && p2Done) {
     const p1Final = calculateScore(g.captured.p1, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p1 }).score;
     const p2Final = calculateScore(g.captured.p2, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p2 }).score;
     if (p1Final >= SCORE_THRESHOLD_GO_STOP && p1Final >= p2Final) {
@@ -832,47 +784,22 @@ function finishTurn(g, playerId) {
     // 첫 발생이거나, 마지막 고 시점 점수보다 늘었으면 결정 단계로 이동
     const lastGoScore = g.lastGoScore?.[playerId] ?? null;
     if (lastGoScore === null || breakdown.score > lastGoScore) {
-      // 자기가 더 진행할 수 없는 상황이면 자동 스톱.
-      // (a) 자기 손 0 + 보너스 권리 0 → 다음 자기 차례에 할 수 있는 행동 없음.
-      // (b) 상대 손+credit = 0 + 자기 credit = 0 (2026-06-08 보강) → 자기는
-      //     상대 턴을 기다릴 수 없고(상대도 아무것도 못함) 본인 손/credit이 다 떨어진
-      //     시점에 라운드 종료가 트리거되므로 본인이 결국 종료자. 이 시점에 7점이면
-      //     자동 승, 미만이면 일반 라운드 종료(아래 종료 조건에서 처리).
-      // 폭탄 권리(bombDeckCredit > 0)가 본인에 남아 있으면 손 0이어도 고/스톱 결정 가능.
-      const remainingCredit = g.bombDeckCredit?.[playerId] || 0;
-      const opp = playerId === 'p1' ? 'p2' : 'p1';
-      const oppRemaining = g.hands[opp].length + (g.bombDeckCredit?.[opp] || 0);
-      const selfStuck = g.hands[playerId].length === 0 && remainingCredit === 0;
-      const oppStuckAndSelfNoCredit = oppRemaining === 0 && remainingCredit === 0;
-      if (selfStuck || oppStuckAndSelfNoCredit) {
-        // 잔여 손은 본인 captured로 이동 후 승리 처리 (점수는 이미 7점 이상 도달)
-        flushHandsToCaptured(g);
-        endRoundWin(g, playerId);
-        return;
-      }
       g.phase = 'awaiting_go_stop';
       g.lastAction = { ...g.lastAction, scoreReached: breakdown.score, by: playerId };
       return;
     }
   }
 
-  // 라운드 종료 조건 (2026-06-08 보강):
-  //   "한쪽의 손+credit = 0 이고 상대의 credit = 0"이면 라운드 자동 종료.
-  //   - 폭탄 권리(bombDeckCredit) 우선: 한쪽이 0이어도 상대 credit > 0이면 보너스 뒤집기
-  //     끝까지 진행. (예: 사용자 0+0, 상대 0+2 → 종료 X)
-  //   - 조커 케이스 B로 한쪽 손이 +1 누적되어도 상대가 먼저 0에 도달 + 본인 credit=0이면
-  //     상대는 더 진행 불가 → 본인 잔여를 본인 captured로 정산 후 종료.
-  //   양쪽 모두 0 + 양쪽 credit 0이면 기존과 동일하게 무승부.
+  // 양쪽의 손패와 보너스 권리가 모두 소진된 뒤에만 라운드를 종료한다.
+  // 한쪽이 먼저 비었으면 상대의 남은 손패를 자동 포획하지 않고 실제 입력 기회를 보장한다.
   const p1Hand = g.hands.p1.length;
   const p2Hand = g.hands.p2.length;
   const p1Credit = g.bombDeckCredit?.p1 || 0;
   const p2Credit = g.bombDeckCredit?.p2 || 0;
   const p1Done = (p1Hand + p1Credit) === 0;
   const p2Done = (p2Hand + p2Credit) === 0;
-  if ((p1Done && p2Credit === 0) || (p2Done && p1Credit === 0)) {
-    // 잔여 손 카드는 각자 본인 captured로 자동 정산 (조커 + 일반 카드)
-    flushHandsToCaptured(g);
-    // 정산 후 7점 이상인 쪽이 있으면 승리, 둘 다 7점 미만이면 무승부.
+  if (p1Done && p2Done) {
+    // 모든 실제 행동이 끝난 시점의 포획 패만으로 최종 점수를 계산한다.
     const p1Final = calculateScore(g.captured.p1, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p1 }).score;
     const p2Final = calculateScore(g.captured.p2, { kkeutAsSsangpi: g.kkeutAsSsangpi?.p2 }).score;
     if (p1Final >= SCORE_THRESHOLD_GO_STOP && p1Final >= p2Final) {
@@ -885,8 +812,11 @@ function finishTurn(g, playerId) {
     return;
   }
 
-  // 다음 턴으로
-  g.turn = playerId === 'p1' ? 'p2' : 'p1';
+  // 다음 행동자가 이미 손패/보너스 권리를 소진했으면 건너뛰고 현재 플레이어가
+  // 남은 마지막 패를 직접 내도록 한다.
+  const opp = playerId === 'p1' ? 'p2' : 'p1';
+  const oppHasAction = g.hands[opp].length + (g.bombDeckCredit?.[opp] || 0) > 0;
+  g.turn = oppHasAction ? opp : playerId;
   g.phase = 'awaiting_play';
   // 턴 종료 시 손 origin 정보 reset (다음 턴 시각화에 잔존하면 잘못된 fly 발동).
   g.pendingChoiceSrcCardId = null;  // B1 수정: chooseFloor srcCard 보존 필드도 리셋
@@ -1246,6 +1176,38 @@ function* continueBombResolution(g, playerId) {
   g.bombResolvingPlayer = null;
   finishTurn(g, playerId);
   yield { step: 'turn_finished' };
+}
+
+/**
+ * 손패와 더미가 바닥의 서로 다른 마지막 두 장을 각각 맞춰 바닥을 비운 경우 쓸을 적용한다.
+ *
+ * 쓸은 같은 월 네 장을 모으는 따닥과 다르다. 턴 시작 시 바닥이 정확히 두 장이고,
+ * 손패가 한 장을 1:1로 먹은 뒤 더미가 남은 한 장을 1:1로 먹어 바닥이 비었을 때만
+ * 상대 피 한 장을 한 번 빼앗는다.
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ * @param {{floorCountAtTurnStart:number, handMatched:boolean}} context
+ * @returns {boolean} 쓸 적용 여부
+ */
+function applySseulAfterFullFloorClear(g, playerId, context) {
+  const deckMatchedLastCard = g.lastAction?.kind === 'pair_from_flip';
+  if (context.floorCountAtTurnStart !== 2
+    || !context.handMatched
+    || !deckMatchedLastCard
+    || g.floor.length !== 0) {
+    return false;
+  }
+
+  const opp = playerId === 'p1' ? 'p2' : 'p1';
+  stealPi(g, playerId, opp, 1);
+  g.lastAction = {
+    ...g.lastAction,
+    kind: 'sseul',
+    player: playerId,
+    stoleFromOpp: 1,
+  };
+  return true;
 }
 
 /**

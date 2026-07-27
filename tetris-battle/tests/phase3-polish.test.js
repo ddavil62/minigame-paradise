@@ -126,15 +126,18 @@ async function run() {
     process.exit(1);
   }
 
-  // ── P1. 3콤보 이상인 Single 클리어도 확정 지급 ───────────────
-  section('P1 — lines=0이어도 3콤보 고유 이벤트면 ITEM_GRANT 확정');
+  // ── P1. Single 클리어도 80% 지급 추첨 대상 ───────────────
+  section('P1 — lines=0·0콤보 고유 이벤트도 ITEM_GRANT 추첨');
   {
     const { a, b } = await joinTwo();
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 1 });
-    await sleep(150);
+    for (let eventId = 1; eventId <= 20; eventId++) {
+      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 0, clearEventId: eventId });
+    }
+    await sleep(250);
     const grants = a.received.filter((m) => m.type === 'ITEM_GRANT');
     const garbages = b.received.filter((m) => m.type === 'GARBAGE_RECV');
-    assert(grants.length === 1, `lines=0 + 3콤보 → GRANT 정확히 1건 (실제: ${grants.length})`);
+    assert(grants.length >= 1 && grants.length <= 3,
+      `lines=0 + 0콤보도 확률 지급 대상 (GRANT 실제: ${grants.length})`);
     assert(garbages.length === 0, `lines=0이므로 GARBAGE_RECV는 0건 (실제: ${garbages.length})`);
     a.close(); b.close();
     await sleep(150);
@@ -234,7 +237,7 @@ async function run() {
   }
 
   // ── P7. 재대결 후 이벤트 식별자와 슬롯 상태 초기화 ──────────
-  section('P7. 재대결 후에도 3콤보 확정 지급이 정상 동작');
+  section('P7. 재대결 후에도 80% 확률 지급이 정상 동작');
   {
     const { a, b } = await joinTwo();
     // 첫 게임: A가 GAME_OVER
@@ -249,11 +252,14 @@ async function run() {
     // 재대결 후 A의 GRANT 카운트를 별도로 측정하기 위해 그동안 받은 GRANT를 무시
     const grantsBefore = a.received.filter((m) => m.type === 'ITEM_GRANT').length;
     // 새 라운드의 clearEventId가 1부터 다시 시작해도 정상 수락해야 한다.
-    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 1 });
-    await sleep(150);
+    for (let eventId = 1; eventId <= 20; eventId++) {
+      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 0, clearEventId: eventId });
+    }
+    await sleep(250);
     const grantsAfter = a.received.filter((m) => m.type === 'ITEM_GRANT').length;
     const newGrants = grantsAfter - grantsBefore;
-    assert(newGrants === 1, `재대결 후 새 GRANT가 정확히 1건 도착 (신규: ${newGrants})`);
+    assert(newGrants >= 1 && newGrants <= 3,
+      `재대결 후 새 확률 GRANT가 슬롯 한도 안에서 도착 (신규: ${newGrants})`);
     a.close(); b.close();
     await sleep(150);
   }
