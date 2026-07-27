@@ -4,6 +4,102 @@
 
 ---
 
+## [2026-07-27] 3콤보 확정 아이템과 상대 전체 보드 동기화
+
+### 변경
+- `server.js`의 아이템 지급 조건을 라인 클리어 확률 방식에서 **3콤보 이상 고유 클리어 이벤트마다 확정 지급**으로 변경했다. 서버가 `clearEventId`로 중복 이벤트를 차단하고, 3개 슬롯의 첫 빈 위치를 선택하며 사용한 슬롯을 다음 지급에서 재사용한다.
+- 아이템 종류 선택은 기존 무작위 방식을 유지하고, 지급 발생 조건만 결정론적으로 변경했다.
+- `BOARD_STATE`/`OPPONENT_BOARD`에 검증된 22×10 `cells`와 `final` 필드를 추가했다. 상대 미니맵은 높이 막대 대신 실제 블록 종류와 가비지 구멍을 그리며, 구형 `height`/`stack` payload는 폴백으로 유지한다.
+- 토프아웃 시 `BOARD_STATE(final:true)`를 `GAME_OVER`보다 먼저 송신해 최종 가비지·상단 블록 프레임이 결과 오버레이보다 먼저 상대 화면에 도착하게 했다.
+- 아이템 패널에 `3 COMBO+ · 지급` 안내를 추가하고 기존 `--accent` 색상을 사용했다. 1280×720과 1024×576에서 102px 가용 폭을 넘지 않는다.
+
+### 검증
+- 콤보 2 미지급, 콤보 3 이상 확정 지급, 같은 `clearEventId` 중복 차단, 슬롯 포화·재사용을 검증했다.
+- 전체 셀, 일반 블록 색, 가비지 구멍, `final` 보존 및 최종 `OPPONENT_BOARD`가 `GAME_RESULT`보다 먼저 도착하는 순서를 검증했다.
+- 기존 프리즈 입력과 P1/P2 각각 5회 재대결 경계를 보존했다.
+- Phase C 직접·관련 테스트는 모두 PASS했고 전체 실행 집계는 364 PASS / 1개의 비관련 기존 정적 검사 실패였다. 유일한 실패 `phase3-4-qa-edge.test.js` Q7b는 기존 유니코드 `printBanner`와 ASCII 전용 검사 불일치이며 이번 변경 diff와 무관해 별도 후속으로 분리했다.
+- Art Director 모드 3 최종 **APPROVED**, Phase C QA **PASS**, Chromium 3/3 PASS.
+
+### 참고
+- 스펙: `.Codex/specs/2026-07-27-minigames-bug-report-batch-scope.md`
+- 구현 리포트: `.Codex/specs/2026-07-27-minigames-phase-c-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-phase-c-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-phase-c-qa.md`
+- `assets/` 추가·변경이 없어 Mockup Sync를 생략했다.
+
+---
+
+## [2026-07-27] 종료 세션 지연 종료의 신규 슬롯 훼손 수정
+
+### 수정
+- `server.js`의 WebSocket 종료 처리가 현재 `players` 배열에 동일한 참가자 객체가 남아 있을 때만 실행된다.
+- 종료된 경기의 구 `p1`/`p2` 소켓이 늦게 닫혀도, 동일 ID를 재사용한 새 경기 참가자와 새 봇 슬롯을 제거하지 않는다.
+- 참가자 제거도 문자열 ID가 아니라 객체 동일성으로 수행해 이전 세션과 새 세션을 분리한다.
+
+### 검증
+- 종료 경기 `GAME_OVER` 뒤 새 2인이 입장한 다음 구 소켓을 닫고 새 참가자의 READY→START를 확인했다.
+- 런처·테트리스 세션 수명주기 시나리오를 각각 10회 반복해 20/20 PASS.
+- 기존 입력 잠금·재대결 회귀 8/8 PASS.
+
+### 참고
+- 스펙: `.Codex/specs/2026-07-27-minigames-bug-report-batch-scope.md`
+- 구현 리포트: `.Codex/specs/2026-07-27-minigames-phase-a-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-phase-a-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-phase-a-qa.md` (`PASS`)
+- 게임별 단일 활성 방 구조는 유지하며, 여러 활성 매치의 동시 격리는 이번 범위에 포함하지 않았다.
+- `assets/` 추가·변경이 없어 Mockup Sync를 생략했다.
+
+---
+
+## [2026-07-22] 방어막 소멸 레거시 메시지 호환 복구
+
+### 수정
+- `public/js/network.js`가 `SHIELD_BLOCK.isDefender`의 명시적 `true`/`false`는 그대로 보존하고, 필드 누락·비boolean 값은 `undefined`로 전달하도록 수정했다. 레거시 메시지를 공격자 역할인 `false`로 강제하던 단절을 제거했다.
+- `public/js/items.js`는 명시적 서버 역할값을 최우선으로 사용하고, 역할값이 없는 경우에만 수신 직전 로컬 `shieldActive`를 fallback으로 사용한다. 단독 레거시 방어자는 실제 차단 시 `active → breaking → idle`로 전환되고 종료 뒤 글로우가 남지 않는다.
+- 최신 서버에서 양쪽 방어막이 동시에 활성인 경우에는 기존처럼 공격자 `isDefender:false`의 자기 방어막을 보존하고, 방어자 `isDefender:true`만 소멸한다.
+
+### 검증
+- 실제 독립 BrowserContext 2개와 WebSocket 서버를 사용한 레거시 무필드·최신 명시 역할 시나리오에서 슬롯 UI 조작부터 `SHIELD_BLOCK` 수신, DOM/CSS 정리까지 확인했다.
+- AD 모드 3 **APPROVED**, 실제 2브라우저 시나리오 4개와 관련 회귀 88개를 합한 **92/92 PASS**. 차단 1초 뒤 `active`/`breaking` 클래스 제거, `opacity:0`, 투명 border, `box-shadow:none` 및 콘솔 오류 0건을 확인했다.
+- 레거시 프로토콜에서 양쪽 로컬 방어막이 동시에 활성인 경우에는 역할 필드만으로 실제 방어자를 완전히 구분할 수 없는 기존 한계가 있다. 최신 서버는 명시적 `isDefender`로 이 모호성을 해소한다.
+
+### 참고
+- 스펙: `.Codex/specs/2026-07-22-tetris-shield-dissolve-fix.md`
+- 구현 리포트: `.Codex/specs/2026-07-22-tetris-shield-dissolve-fix-report.md`
+- UI 검수: `.Codex/specs/2026-07-22-tetris-shield-dissolve-fix-ui-review.md`
+- QA: `.Codex/specs/2026-07-22-tetris-shield-dissolve-fix-qa.md`
+- `assets/` 추가·변경이 없어 Mockup Sync를 생략했다.
+
+---
+
+## [2026-07-22] 방어막 보드 외곽 글로우 및 차단 소멸 효과
+
+### 변경
+- `public/index.html`에서 플레이 보드 내부의 `◇ 방어막` 텍스트 배지를 제거하고, 캔버스와 같은 경계에 정렬되는 장식 전용 `#shield-frame`을 추가했다.
+- `public/css/style.css`에 방어막 활성 중 유지되는 금색 외곽 글로우와 코너 하이라이트를 추가했다. 내부 면은 투명하고 입력을 통과시켜 블록·격자·고스트를 가리지 않는다.
+- 공격 차단 시 활성 글로우가 백색 플래시와 짧은 팽창·수축을 거쳐 0.76초에 소멸하는 효과를 추가했다. `prefers-reduced-motion`에서는 지속 호흡을 중단하고 짧은 불투명도 전환만 사용한다.
+- `public/js/ui.js`에 활성·차단·정리 상태 API를 추가하고, `animationend`와 900ms 폴백 타이머를 함께 관리한다. reset·재활성·라운드 경계에서 리스너, 타이머, 임시 클래스를 멱등 정리한다.
+- `public/js/items.js`에서 방어막 사용·차단·reset을 새 외곽 프레임 상태와 연결하고, 기존 장착 순간 1초 캔버스 그림자 타이머를 제거했다.
+
+### 수정
+- 양쪽 플레이어가 모두 방어막을 가진 상태에서 공격자의 로컬 방어막까지 소모되던 역할 오판을 수정했다.
+- `server.js`가 `SHIELD_BLOCK` 수신자별로 공격자에게 `isDefender:false`, 실제 방어자에게 `isDefender:true`를 전송한다.
+- `public/js/network.js`와 `public/js/main.js`가 서버 역할값을 명시적으로 전달하고, `public/js/items.js`는 실제 방어자만 `active → breaking → idle`로 전환한다. 공격자는 자기 글로우를 유지하고 상대 방어막 아이콘만 해제한다.
+
+### 검증
+- Art Director 모드 3 최초 검수 및 QA 수정 후 재검수 모두 **APPROVED**. 기본 `1280×800`과 축소 `900×650` 화면에서 캔버스 네 변 정렬 오차가 각 1px 이내이며, 플레이 정보 가림과 레이아웃 이동이 없음을 확인했다.
+- Playwright 구현·독립 QA 12/12 PASS. 동시 방어막 역할 분기, 활성·차단·reset, 작은 화면, reduced-motion을 검증했다.
+- 관련 회귀 테스트 89개 단언과 독립 입력 QA가 모두 PASS했다.
+
+### 참고
+- 스펙: `.Codex/specs/2026-07-22-tetris-shield-glow.md`
+- 구현 리포트: `.Codex/specs/2026-07-22-tetris-shield-glow-report.md`
+- UI 검수: `.Codex/specs/2026-07-22-tetris-shield-glow-ui-review.md`
+- QA: `.Codex/specs/2026-07-22-tetris-shield-glow-qa.md`
+- `assets/` 추가·변경이 없어 Mockup Sync는 생략했다.
+
+---
+
 ## [2026-07-20] 재대결 입력 잠금 및 프리즈 중 아이템 사용 수정
 
 ### 수정

@@ -102,8 +102,8 @@ test('G-01: createGame — 손패 10+10, 바닥 항상 8 (조커 자동 획득 +
 
 test('G-02: createGame — 초기 phase와 잔고', () => {
   const g = createGame();
-  // createGame 직후 phase는 awaiting_play여야 한다
-  expect(g.phase).toBe('awaiting_play');
+  // 무작위 분배에서 사통이 나오면 결정 대기, 아니면 곧바로 플레이 대기다.
+  expect(['awaiting_play', 'awaiting_sangtong']).toContain(g.phase);
   expect(g.money.p1).toBe(10000);
   expect(g.money.p2).toBe(10000);
   expect(g.goCount.p1).toBe(0);
@@ -306,14 +306,15 @@ test('G-14: 피박 — roundResult.reasons에 포함 (패자 piCount≤7)', () =
   expect(g.roundResult.reasons).toContain('피박 ×2');
 });
 
-test('G-15: 멍박 — roundResult.reasons에 포함 (패자 kkeut=0)', () => {
+test('G-15: 멍박 — 승자 끗 7장 이상이면 패자 끗 수와 무관하게 적용', () => {
   const g = makeGame({ p1Hand: ['m05_kkeut'], p2Hand: ['m07_pi_a'], floor: [], deck: [], turn: 'p1' });
   g.phase = 'awaiting_go_stop';
-  // p1: 3광+홍단+5끗 = 7점
+  // p1: 끗 7장 이상
   g.captured.p1 = [card('m01_gwang'), card('m03_gwang'), card('m08_gwang'),
                     card('m01_tti_hong'), card('m02_tti_hong'), card('m03_tti_hong'),
-                    card('m05_kkeut'), card('m06_kkeut'), card('m07_kkeut'), card('m09_tti_cheong'), card('m10_kkeut')];
-  // p2: 피 8장 + 끗 0장 → piCount=8(피박없음), kkeut=0(멍박)
+                    card('m02_kkeut_godori'), card('m04_kkeut_godori'), card('m05_kkeut'),
+                    card('m06_kkeut'), card('m07_kkeut'), card('m08_kkeut_godori'), card('m10_kkeut')];
+  // p2: 피 8장이라 피박 없음. 멍박은 패자 끗 수를 참조하지 않는다.
   g.captured.p2 = [card('m04_pi_a'), card('m04_pi_b'), card('m05_pi_a'), card('m05_pi_b'),
                     card('m06_pi_a'), card('m06_pi_b'), card('m07_pi_b'), card('m08_pi_a')];
   g.kkeutChoiceMade.p1 = true;
@@ -672,8 +673,7 @@ test('G-35: 폭탄 후 bombExtraDraw=false (덱 2장 모두 정상 뒤집힘 시
   expect(['awaiting_play', 'round_end', 'awaiting_go_stop'].includes(g.phase)).toBe(true);
 });
 
-test('G-36: 폭탄 후 첫 번째 뒤집기에서 같은 월 2장 → awaiting_floor_choice (폭탄 권리 +2 유지)', () => {
-  // 2026-06-02 룰 정정: bombExtraDraw(드로우 2회 연속) 모델은 bombDeckCredit("기회 보존의 법칙")로 대체됨.
+test('G-36: 폭탄 통상 뒤집기에서 같은 월 2장 → 선택 동안 추가 뒤집기 2회 유지', () => {
   // 첫 번째 뒤집기로 같은 월 2장이 있는 케이스를 만들어 awaiting_floor_choice 진입.
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
@@ -685,12 +685,11 @@ test('G-36: 폭탄 후 첫 번째 뒤집기에서 같은 월 2장 → awaiting_f
   expect(r.ok).toBe(true);
   // 첫 번째 뒤집기에서 멈춤(바닥 선택 대기).
   expect(g.phase).toBe('awaiting_floor_choice');
-  // 폭탄 발동으로 누적된 보너스 뒤집기 권리 +2가 살아 있어야 한다.
-  expect(g.bombDeckCredit.p1).toBe(2);
+  expect(g.pendingBombFlips.p1).toBe(2);
+  expect(g.bombDeckCredit.p1).toBe(0);
 });
 
-test('G-37: bomb→awaiting_floor_choice에서 chooseFloor로 해소 → 턴 정상 마무리 (폭탄 권리 보존)', () => {
-  // 2026-06-02 룰 정정: 두 번째 강제 뒤집기 대신 bombDeckCredit(+2)이 이후 턴에 bonusFlipSteps로 소비된다.
+test('G-37: 폭탄 선택 해소 후 남은 추가 뒤집기를 같은 턴에 이어서 처리', () => {
   // G-36과 동일 셋업 + 덱에 추가 카드.
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm05_kkeut'],
@@ -701,13 +700,14 @@ test('G-37: bomb→awaiting_floor_choice에서 chooseFloor로 해소 → 턴 정
   });
   bomb(g, 'p1', 1);
   expect(g.phase).toBe('awaiting_floor_choice');
-  expect(g.bombDeckCredit.p1).toBe(2);
+  expect(g.pendingBombFlips.p1).toBe(2);
 
   // 바닥에서 m07_pi_a 선택
   const r = chooseFloor(g, 'p1', 'm07_pi_a');
   expect(r.ok).toBe(true);
-  // 폭탄 권리(+2)는 소진되지 않고 보존되어 이후 p1 차례에 bonusFlipSteps로 사용된다.
-  expect(g.bombDeckCredit.p1).toBe(2);
+  // 남은 덱을 즉시 뒤집고, 덱이 비면 추가 권리를 정리한다.
+  expect(g.pendingBombFlips.p1).toBe(0);
+  expect(g.bombDeckCredit.p1).toBe(0);
   // 바닥 선택 해소 후 정상적으로 턴 교대 또는 round_end
   expect(['awaiting_play', 'round_end', 'awaiting_go_stop'].includes(g.phase)).toBe(true);
 });

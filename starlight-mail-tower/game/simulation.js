@@ -237,6 +237,25 @@ function applyZoneForces(simulation, player, dt) {
 }
 
 /**
+ * 체크포인트 좌표 아래의 가장 가까운 지지면을 기준으로 안전한 중심 Y를 계산한다.
+ * 체크포인트 데이터가 발판 윗면과 너무 가까워 캐릭터가 내부에서 생성되는 경우를 보정한다.
+ * @param {object} simulation 시뮬레이션
+ * @param {number} x 플레이어 복귀 X
+ * @param {number} rawY 레벨 데이터의 복귀 Y
+ * @returns {number} 발판을 관통하지 않는 복귀 중심 Y
+ */
+function safeRespawnY(simulation, x, rawY) {
+  const support = simulation.dynamicPlatforms
+    .filter((platform) => platform.solid !== false
+      && x >= platform.x
+      && x <= platform.x + platform.width
+      && platform.y >= rawY)
+    .sort((first, second) => first.y - second.y)[0];
+  if (!support) return rawY;
+  return Math.min(rawY, support.y - PLAYER_HEIGHT / 2 - 0.01);
+}
+
+/**
  * 체크포인트 위치로 플레이어를 원자적으로 복귀시킨다.
  * @param {object} simulation 시뮬레이션
  * @returns {void}
@@ -245,7 +264,8 @@ function restoreCheckpoint(simulation) {
   const checkpoint = simulation.level.checkpoints[simulation.checkpointId];
   simulation.players.forEach((player, index) => {
     player.x = index === 0 ? checkpoint.x1 : checkpoint.x2;
-    player.y = index === 0 ? checkpoint.y1 : checkpoint.y2;
+    const rawY = index === 0 ? checkpoint.y1 : checkpoint.y2;
+    player.y = safeRespawnY(simulation, player.x, rawY);
     player.vx = 0;
     player.vy = 0;
     player.anchored = false;

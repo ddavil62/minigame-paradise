@@ -105,10 +105,11 @@ test('방어막은 시간 경과에 무관하게 다음 유효 공격 한 번만
   assert.equal(blocked.blocked, true); assert.equal(defender.shieldActive, false);
 });
 
-test('자동 교차는 450ms 경고 후 힌트를 정리하고 합법 수를 복구한다', () => {
+test('교착은 선택 상태에서 멈추고 즉시 셔플 선택 시 힌트를 정리해 합법 수를 복구한다', () => {
   let now = 1000; const game = new SichuanGame({ seed: 9, now: () => now }); const player = game.addPlayer('p1', 'A'); game.addPlayer('p2', 'B'); game.start(); now = 4001; game.tick(); player.removedPairs = 46;
   player.board = { revision: 0, shuffleOrdinal: 0, tiles: [{ tileId: 'a', faceId: 1, x: 0, y: 0, removed: false, locked: false }, { tileId: 'b', faceId: 1, x: 1, y: 0, removed: false, locked: false }, { tileId: 'c', faceId: 2, x: 3, y: 0, removed: false, locked: true }, { tileId: 'd', faceId: 2, x: 4, y: 0, removed: false, locked: true }] }; player.effects.h = { effectId: 'h', itemId: 'hint', targets: ['a', 'b'], endsAt: 9000 };
-  const result = game.matchPair('p1', { requestId: 'auto', matchId: game.matchId, tileAId: 'a', tileBId: 'b', boardRevision: 0 }); assert.ok(result.shuffleWarning); assert.equal(result.shuffleWarning.executeAt, now + 450); assert.equal(Object.values(player.effects).some((effect) => effect.itemId === 'hint'), false); const revision = player.board.revision; now += 449; game.tick(); assert.equal(player.board.revision, revision); now += 2; game.tick(); assert.equal(player.board.revision, revision + 1); assert.equal(player.pendingAutoShuffle, null); assert.ok(findAnyLegalPair(player.board.tiles));
+  const result = game.matchPair('p1', { requestId: 'choice', matchId: game.matchId, tileAId: 'a', tileBId: 'b', boardRevision: 0 }); assert.equal(result.deadlock.phase, 'choice'); assert.equal(Object.values(player.effects).some((effect) => effect.itemId === 'hint'), false); const revision = player.board.revision; now += 1000; game.tick(); assert.equal(player.board.revision, revision);
+  const decision = { requestId: 'shuffle-now', matchId: game.matchId, deadlockId: result.deadlock.deadlockId, action: 'shuffle' }; const shuffled = game.resolveDeadlock('p1', decision); assert.equal(shuffled.ok, true); assert.equal(shuffled.action, 'shuffle'); assert.equal(player.board.revision, revision + 1); assert.equal(player.pendingAutoShuffle, null); assert.ok(findAnyLegalPair(player.board.tiles)); assert.deepEqual(game.resolveDeadlock('p1', decision), shuffled);
 });
 
 test('10,000개 시드가 무작위 분산 통계와 결정성 및 완주 가능성을 만족한다', () => {

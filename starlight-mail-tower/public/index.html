@@ -8,9 +8,10 @@
 </head>
 <body>
   <main id="game-shell" aria-label="별빛 우편탑 협동 등반 게임" data-i18n-aria-label="aria.game">
-    <div id="viewport-frame">
-      <canvas id="game-canvas" width="1280" height="720" aria-label="별빛 우편탑 분류 데크" data-i18n-aria-label="aria.canvas"></canvas>
-      <section id="hud" aria-live="polite">
+
+    <!-- 상단 바: 게임 메타 정보 + 툴바 -->
+    <header id="topbar">
+      <section id="hud" class="hud-top" aria-live="polite">
         <div class="hud-panel section-panel">
           <strong id="section-name" data-i18n="section.name">분류 데크</strong>
           <span id="progress-label">1 / 3</span>
@@ -22,12 +23,19 @@
           <span id="connection-label" data-i18n="connection.connecting">연결 중</span>
           <span class="role-mark role-b">○ B</span>
         </div>
-        <div id="self-status" class="hud-panel player-status left-status">△ <span data-i18n="status.moving">이동</span></div>
-        <div id="partner-status" class="hud-panel player-status right-status">○ <span data-i18n="status.waiting">대기</span></div>
-        <div id="action-hint" class="hud-panel action-hint"><span id="finish-clock" class="finish-clock" hidden aria-hidden="true"><b></b><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="action-hint-text" data-i18n="hint.anchor">단자에서 E를 길게 눌러 고정하세요</span></div>
       </section>
+      <div class="toolbar" role="toolbar" data-i18n-aria-label="aria.toolbar">
+        <button id="locale-button" type="button" aria-label="언어 전환" aria-pressed="false" data-i18n-aria-label="aria.locale">KO / EN</button>
+        <button id="mute-button" type="button" aria-label="음소거" aria-pressed="false" data-i18n-aria-label="aria.mute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12-1a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/><path class="mute-slash" d="M3 3l18 18"/></svg></button>
+        <button id="toolbar-lobby-button" type="button" data-i18n-aria-label="aria.lobby"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M7 3h8v12H7M10 9H2m0 0 3-3M2 9l3 3"/></svg><span data-i18n="toolbar.lobby">게임 선택</span></button>
+      </div>
+    </header>
+
+    <!-- 플레이 뷰포트: 캔버스 + 일시적 오버레이 -->
+    <div id="play-viewport">
+      <canvas id="game-canvas" width="1280" height="720" aria-label="별빛 우편탑 분류 데크" data-i18n-aria-label="aria.canvas"></canvas>
       <div id="toast" role="status" aria-live="assertive"></div>
-      <section id="ready-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="ready-title">
+      <section id="ready-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="ready-title" hidden>
         <div class="overlay-card ready-card">
           <p class="eyebrow" data-i18n="game.subtitle">두 정비 로봇의 야간 우편 작전</p>
           <h1 id="ready-title" data-i18n="game.title">별빛 우편탑</h1>
@@ -40,8 +48,8 @@
             <div id="p2-crew" class="crew-card coral" data-i18n-aria-label="aria.roleB"><span>○ ••</span><strong id="p2-name" data-i18n="waiting.short">대기 중</strong><i aria-hidden="true"></i></div>
           </div>
           <p class="controls" data-i18n="controls">A/D 또는 ←/→ 이동 · Space 점프 · E/Enter 상호작용 · 공중 동료를 아래에서 점프로 올려치면 협동 부스트</p>
-          <button id="ready-button" type="button" data-i18n="ready">준비</button>
-          <button id="ai-start-button" type="button" data-i18n="ai.start">AI랑 시작</button>
+          <button id="ready-button" type="button" data-i18n="ready" hidden>준비</button>
+          <button id="ai-start-button" type="button" data-i18n="ai.start" hidden>AI랑 시작</button>
           <p id="ready-note" data-i18n="waiting.partner">파트너 접속을 기다리는 중...</p>
         </div>
       </section>
@@ -96,12 +104,15 @@
           <p id="rematch-status" data-i18n="result.waiting">파트너의 준비를 기다립니다.</p>
         </div>
       </section>
-      <div class="toolbar" role="toolbar" data-i18n-aria-label="aria.toolbar">
-        <button id="locale-button" type="button" aria-label="언어 전환" aria-pressed="false" data-i18n-aria-label="aria.locale">KO / EN</button>
-        <button id="mute-button" type="button" aria-label="음소거" aria-pressed="false" data-i18n-aria-label="aria.mute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12-1a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/><path class="mute-slash" d="M3 3l18 18"/></svg></button>
-        <button id="toolbar-lobby-button" type="button" data-i18n-aria-label="aria.lobby"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M7 3h8v12H7M10 9H2m0 0 3-3M2 9l3 3"/></svg><span data-i18n="toolbar.lobby">게임 선택</span></button>
-      </div>
     </div>
+
+    <!-- 하단 바: 플레이어 상태 + 행동 안내 -->
+    <footer id="bottombar">
+      <div id="self-status" class="player-status left-status">△ <span data-i18n="status.moving">이동</span></div>
+      <div id="action-hint" class="action-hint"><span id="finish-clock" class="finish-clock" hidden aria-hidden="true"><b></b><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="action-hint-text" data-i18n="hint.anchor">단자에서 E를 길게 눌러 고정하세요</span></div>
+      <div id="partner-status" class="player-status right-status">○ <span data-i18n="status.waiting">대기</span></div>
+    </footer>
+
   </main>
   <script type="module" src="./js/client.js"></script>
 </body>

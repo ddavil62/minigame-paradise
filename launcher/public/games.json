@@ -49,6 +49,7 @@
     "emoji": "🎲",
     "botAvailable": true,
     "botMaxPlayers": 2,
+    "aiFillTargetPlayers": 2,
     "minPlayers": 2,
     "maxPlayers": 4
   },
@@ -102,7 +103,9 @@
     "emoji": "🎲",
     "botAvailable": true,
     "minPlayers": 2,
-    "maxPlayers": 4
+    "maxPlayers": 2,
+    "playersLabelKo": "2인 대전",
+    "playersLabelEn": "2-player battle"
   },
   {
     "id": "rummikub",

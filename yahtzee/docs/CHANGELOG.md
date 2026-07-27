@@ -1,5 +1,37 @@
 # Yahtzee CHANGELOG
 
+## 2026-07-27 — 런처 AI handoff 및 다섯 주사위 보관 의사결정 수정
+
+사용자 리포트 5, 9, 22를 대상으로 런처의 야추 인원 계약과 AI 의사결정을 실제 1:1 게임 규칙에 맞췄다.
+
+### 변경
+
+- `launcher/public/games.json`: 야추 `maxPlayers`를 2로 고정하고 카드에 `2인 대전`/`2-player battle` 메타를 추가했다.
+- `launcher/public/app.js`: 실인원과 AI 슬롯을 함께 점유 인원으로 계산해 AI 채우기 뒤 사람 1 + AI 1만 표시한다.
+- `bot.js`: 보관 결정이 다섯 주사위 모두인 경우 추가 굴림 대신 `pickAndScore()`로 즉시 카테고리를 선택한다.
+
+### 수정
+
+- AI 채우기에서 AI 3명이 추가되고 `Room Full 2/2` 또는 시작 준비 화면에 고착되던 문제를 제거했다.
+- 런처 READY 뒤 야추 내부에서 READY를 다시 요구하지 않고 게임 화면으로 전환한다.
+- AI가 완성된 다섯 주사위를 모두 보관하면서도 재굴림 횟수만 소비하던 비효율을 제거했다.
+
+### 검증
+
+- `tests/yahtzee-ai-handoff.test.js`: PASS, 반복 5/5 PASS.
+- `yahtzee/tests/ai-decision-regression.test.js`: PASS.
+- 기존 회귀: smoke 169/169 + dice-render 55/55 + bot-smoke 25/25.
+- 신규·브라우저 8건과 기존 249건을 합쳐 Phase B 257/257 PASS.
+- Chromium 1280×720에서 사람 1 + AI 1 + 빈 슬롯 0, 내부 READY 비노출, page error 0건을 확인했다.
+- AD 모드 3 재검수 APPROVED.
+
+### 참고
+
+- 구현 리포트: `.Codex/specs/2026-07-27-minigames-phase-b-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-phase-b-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-phase-b-qa.md` (`PASS`)
+- 외부 에셋 추가·변경 없음.
+
 ## 2026-06-20 — 재굴림 애니메이션 미발동 버그 수정
 
 사용자 신고: "주사위 굴리기 해도 이미 나온 주사위가 다시 안 굴려지고 그대로 있는 문제가 여전히 있다." keep 안 한 다이스가 우연히 직전과 **전부 동일한 면**으로 굴려지면(non-kept 전부 같은 면, 확률 1/6~1/36) 컵 굴림 애니메이션이 아예 미발동해 "안 굴러갔다"로 보이던 버그. 컵 애니메이션 트리거가 "이전 프레임 대비 dice 값 변화(diceChanged)" 기준이라 값이 같으면 미진입했다. 서버 `game.js` 무결(클라 렌더 버그).

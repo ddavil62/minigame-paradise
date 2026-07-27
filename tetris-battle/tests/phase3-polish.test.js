@@ -126,19 +126,15 @@ async function run() {
     process.exit(1);
   }
 
-  // ── P1. MED-1: Single 클리어 (lines=0)도 ITEM_GRANT 시도 ─────
-  section('P1. MED-1 — lines=0 GARBAGE_SEND도 ITEM_GRANT 추첨 트리거');
+  // ── P1. 3콤보 이상인 Single 클리어도 확정 지급 ───────────────
+  section('P1 — lines=0이어도 3콤보 고유 이벤트면 ITEM_GRANT 확정');
   {
     const { a, b } = await joinTwo();
-    // lines=0을 100번 보내면 50% 확률 × 100 = 평균 50회 시도 → 슬롯 3개 채워질 가능성 매우 높음
-    for (let i = 0; i < 100; i++) {
-      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 0 });
-    }
-    await sleep(400);
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 1 });
+    await sleep(150);
     const grants = a.received.filter((m) => m.type === 'ITEM_GRANT');
     const garbages = b.received.filter((m) => m.type === 'GARBAGE_RECV');
-    assert(grants.length >= 1, `lines=0 → 그래도 GRANT 도착 ${grants.length}건 (>=1 기대)`);
-    assert(grants.length <= 3, `슬롯 한도 3개 초과하지 않음 (실제: ${grants.length})`);
+    assert(grants.length === 1, `lines=0 + 3콤보 → GRANT 정확히 1건 (실제: ${grants.length})`);
     assert(garbages.length === 0, `lines=0이므로 GARBAGE_RECV는 0건 (실제: ${garbages.length})`);
     a.close(); b.close();
     await sleep(150);
@@ -237,8 +233,8 @@ async function run() {
     await sleep(150);
   }
 
-  // ── P7. MED-1 + LOW-2 통합: 재대결 후 lines=0 GRANT 재가동 ─
-  section('P7. 재대결 후에도 lines=0 GRANT가 정상 동작');
+  // ── P7. 재대결 후 이벤트 식별자와 슬롯 상태 초기화 ──────────
+  section('P7. 재대결 후에도 3콤보 확정 지급이 정상 동작');
   {
     const { a, b } = await joinTwo();
     // 첫 게임: A가 GAME_OVER
@@ -252,15 +248,12 @@ async function run() {
     await sleep(100);
     // 재대결 후 A의 GRANT 카운트를 별도로 측정하기 위해 그동안 받은 GRANT를 무시
     const grantsBefore = a.received.filter((m) => m.type === 'ITEM_GRANT').length;
-    // lines=0으로 50회 보냄
-    for (let i = 0; i < 50; i++) {
-      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 0 });
-    }
-    await sleep(400);
+    // 새 라운드의 clearEventId가 1부터 다시 시작해도 정상 수락해야 한다.
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 1 });
+    await sleep(150);
     const grantsAfter = a.received.filter((m) => m.type === 'ITEM_GRANT').length;
     const newGrants = grantsAfter - grantsBefore;
-    assert(newGrants >= 1, `재대결 후 새 GRANT가 도착 (신규: ${newGrants}건, >=1 기대)`);
-    assert(newGrants <= 3, `슬롯 한도 3 (신규: ${newGrants})`);
+    assert(newGrants === 1, `재대결 후 새 GRANT가 정확히 1건 도착 (신규: ${newGrants})`);
     a.close(); b.close();
     await sleep(150);
   }

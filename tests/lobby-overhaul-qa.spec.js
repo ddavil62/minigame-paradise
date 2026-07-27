@@ -568,25 +568,26 @@ test.describe('AI 봇 채우기', () => {
     await page.screenshot({ path: 'tests/screenshots/ai-slots-matgo.png' });
   });
 
-  test('AC-A-03 (코드 검증): botMaxPlayers < maxPlayers 게임(yutnori 4인)에서 FILL_WITH_AI → 안내 ERROR', async ({ page }) => {
-    // yutnori: botAvailable=true, maxPlayers=4, botMaxPlayers=2
-    // → 4인 AI채우기는 봇 미지원이므로 게임 진입 전 런처에서 안내 메시지로 막아야 한다.
+  test('AC-A-03: yutnori 4인 사람 정원을 유지하면서 AI 채우기는 정확히 2인으로 시작', async ({ page }) => {
+    // yutnori: 사람 대전 maxPlayers=4, AI 대전 aiFillTargetPlayers=2.
+    // 혼자 기다리는 호스트가 AI를 채우면 사람 1 + AI 1로 게임 서버 관리형 AI에 인계한다.
     // testWs가 방의 첫(=호스트) 클라이언트가 되도록 enterRoom 없이 단독 연결한다.
     // (enterRoom을 먼저 하면 page의 app.js가 호스트를 점유해 "호스트만" 에러가 먼저 온다.)
     await gotoPortal(page);
 
-    // 호스트 WS로 FILL_WITH_AI를 보내 안내 ERROR 응답을 직접 확인
-    const errorMsg = await page.evaluate(() => {
+    // 호스트 WS로 READY 1회 + FILL_WITH_AI를 보내 최종 REDIRECT를 직접 확인한다.
+    const redirect = await page.evaluate(() => {
       return new Promise((resolve) => {
         const testWs = new WebSocket(`ws://localhost:3111/lobby/ws?gameId=yutnori`);
         testWs.onopen = () => {
           testWs.send(JSON.stringify({ type: 'JOIN', name: 'attacker' }));
+          testWs.send(JSON.stringify({ type: 'READY' }));
           testWs.send(JSON.stringify({ type: 'FILL_WITH_AI' }));
         };
         testWs.onmessage = (event) => {
           const msg = JSON.parse(event.data);
-          if (msg.type === 'ERROR') {
-            resolve(msg.message);
+          if (msg.type === 'REDIRECT') {
+            resolve(msg);
             testWs.close();
           }
         };
@@ -597,9 +598,9 @@ test.describe('AI 봇 채우기', () => {
       });
     });
 
-    // 안내 메시지가 반환되어야 하고, "2인 AI 대전" 안내 문구를 포함해야 함
-    expect(errorMsg).not.toBeNull();
-    expect(errorMsg).toContain('2인 AI 대전');
+    expect(redirect).not.toBeNull();
+    expect(redirect.mode).toBe('ai');
+    expect(redirect.playerCount).toBe(2);
   });
 });
 

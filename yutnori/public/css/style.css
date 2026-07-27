@@ -953,9 +953,17 @@ body {
     flex-direction: column;
     padding: 8px;
     gap: 8px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
-  .board-area { flex: 1 1 auto; }
+  /* 인포바의 내용 높이가 보드 영역을 120px까지 압축하던 문제를 막는다.
+     모바일에서는 보드를 우선 정사각형으로 확보하고 나머지 패널을 내부 스크롤로 본다. */
+  .board-area {
+    flex: 0 0 auto;
+    min-height: min(calc(100vw - 16px), 56vh);
+  }
   .info-bar {
+    flex: 0 0 auto;
     flex-direction: row;
     flex-wrap: wrap;
     overflow-y: visible;

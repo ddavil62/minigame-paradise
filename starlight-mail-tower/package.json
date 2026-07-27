@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js --port 3015",
-    "test": "node --test tests/simulation.spec.js tests/world-expansion.unit.spec.js tests/coop-boost-reachability.spec.js",
+    "test": "node --test tests/interpolation.test.js tests/simulation.spec.js tests/world-expansion.unit.spec.js tests/coop-boost-reachability.spec.js",
     "test:e2e": "playwright test -c playwright.config.js"
   },
   "dependencies": {

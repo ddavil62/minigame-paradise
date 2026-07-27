@@ -7,6 +7,7 @@ import { ATTACK_ITEMS, ITEM_DEFINITIONS, chooseTargets, isKnownItemId, rollDrop 
 import { createPrng, deriveSeed } from './prng.js';
 
 const STORED_EFFECT_ITEMS = new Set(['lock', 'flip', 'fog', 'hint']);
+const DEADLOCK_WAIT_MS = 5_000;
 
 /** @param {string} id 플레이어 ID @param {string} name 표시 이름 @returns {object} 경기 플레이어 상태 */
 function createPlayer(id, name, isBot = false) {
@@ -97,7 +98,8 @@ export class SichuanGame {
     this.normalizeInventory(me); if (opponent) this.normalizeInventory(opponent);
     return { matchId: this.matchId, matchSeed: this.seed, phase: this.phase, startedAt: this.startedAt, deadlineAt: this.deadlineAt,
       me: { id: me.id, name: me.name, isBot: me.isBot, board: me.board ? serializeBoard(me.board) : null, removedPairs: me.removedPairs, inventory: me.inventory.map((slot) => ({ ...slot })),
-        inventoryRevision: me.inventoryRevision, effects: this.publicEffects(me, true), shieldActive: me.shieldActive, shuffleWarning: me.pendingAutoShuffle },
+        inventoryRevision: me.inventoryRevision, effects: this.publicEffects(me, true), shieldActive: me.shieldActive,
+        deadlock: me.pendingAutoShuffle ? structuredClone(me.pendingAutoShuffle) : null },
       opponent: opponent ? { id: opponent.id, name: opponent.name, isBot: opponent.isBot, board: opponent.board ? serializeBoard(opponent.board) : null, removedPairs: opponent.removedPairs,
         remaining: 96 - opponent.removedPairs * 2, effects: this.publicEffects(opponent, false), shieldActive: opponent.shieldActive, connected: true } : null,
       result: this.result };
@@ -119,10 +121,19 @@ export class SichuanGame {
   /** @returns {void} 만료 효과와 경기 시간을 정리한다. */
   tick() {
     const now = this.now(); if (this.phase === 'countdown' && now >= this.startedAt) this.phase = 'playing';
-    for (const player of this.players) if (player.pendingAutoShuffle?.executeAt <= now) { this.shufflePlayer(player); player.pendingAutoShuffle = null; }
     for (const player of this.players) {
       this.normalizeEffects(player);
       for (const [id, effect] of Object.entries(player.effects)) if (effect.endsAt <= now) this.endEffect(player, id);
+    }
+    for (const player of this.players) {
+      const pending = player.pendingAutoShuffle;
+      if (!pending) continue;
+      // 구버전 테스트/복구 상태의 executeAt 계약은 그대로 수용한다.
+      if (pending.executeAt <= now) { this.shufflePlayer(player); player.pendingAutoShuffle = null; continue; }
+      if (pending.phase !== 'waiting' || pending.unlockAt > now) continue;
+      // 5초 사이 방해 효과가 끝나 합법 수가 돌아왔으면 보드를 섞지 않는다.
+      if (!findAnyLegalPair(player.board.tiles)) this.shufflePlayer(player);
+      player.pendingAutoShuffle = null;
     }
     if (!this.result && this.phase === 'playing' && now >= this.deadlineAt) this.finishByTime();
   }
@@ -153,6 +164,52 @@ export class SichuanGame {
   /** @param {object} player 플레이어 @returns {void} 모든 셔플이 공유하는 힌트 정리와 재배치 진입점. */
   shufflePlayer(player) { this.clearHints(player); shuffleRemaining(player.board,this.seed); this.recomputeDisruptionFlags(player); }
 
+  /**
+   * 교착 선택을 서버 권위 상태로 만들고 본인 타일 입력을 잠근다.
+   * @param {object} player 플레이어
+   * @returns {object} 공개 가능한 교착 상태
+   */
+  beginDeadlock(player) {
+    const detectedAt = this.now();
+    const deadlock = { deadlockId: `${this.matchId}-deadlock-${player.id}-${detectedAt}-${player.board.revision}`, phase: 'choice', detectedAt, unlockAt: null };
+    player.pendingAutoShuffle = deadlock;
+    return structuredClone(deadlock);
+  }
+
+  /**
+   * 교착 상태에서 즉시 셔플 또는 정확히 5초 입력 잠금을 선택한다.
+   * @param {string} playerId 플레이어 ID
+   * @param {{requestId:string,matchId:string,deadlockId:string,action:string}} intent 선택 의도
+   * @returns {object} 처리 결과
+   */
+  resolveDeadlock(playerId, intent) {
+    this.tick();
+    const player = this.players.find((entry) => entry.id === playerId);
+    if (!player) return { ok: false, reason: 'NOT_JOINED', requestId: intent.requestId };
+    if (!intent.matchId || intent.matchId !== this.matchId) return { ok: false, reason: 'STALE_MATCH', requestId: intent.requestId };
+    const cacheKey = `${this.matchId}:deadlock:${intent.requestId}`;
+    if (player.requestCache.has(cacheKey)) return player.requestCache.get(cacheKey);
+    const pending = player.pendingAutoShuffle;
+    let result;
+    if (this.phase !== 'playing') result = { ok: false, reason: this.result ? 'MATCH_ENDED' : 'NOT_PLAYING' };
+    else if (!pending || pending.deadlockId !== intent.deadlockId) result = { ok: false, reason: 'STALE_DEADLOCK' };
+    else if (pending.phase !== 'choice') result = { ok: false, reason: 'DEADLOCK_ALREADY_RESOLVED' };
+    else if (intent.action === 'shuffle') {
+      this.shufflePlayer(player);
+      player.pendingAutoShuffle = null;
+      result = { ok: true, action: 'shuffle', revision: player.board.revision, deadlock: null };
+    } else if (intent.action === 'wait') {
+      pending.phase = 'waiting';
+      pending.unlockAt = this.now() + DEADLOCK_WAIT_MS;
+      result = { ok: true, action: 'wait', deadlock: structuredClone(pending) };
+    } else result = { ok: false, reason: 'INVALID_DEADLOCK_ACTION' };
+    result.requestId = intent.requestId;
+    result.matchId = this.matchId;
+    player.requestCache.set(cacheKey, result);
+    if (player.requestCache.size > 128) player.requestCache.delete(player.requestCache.keys().next().value);
+    return result;
+  }
+
   /** @param {string} playerId 플레이어 @param {object} intent 제거 의도 @returns {object} 처리 결과 */
   matchPair(playerId, intent) {
     this.tick(); const player = this.players.find((entry) => entry.id === playerId);
@@ -177,10 +234,10 @@ export class SichuanGame {
           const removedIds=new Set([a.tileId,b.tileId]);for(const [id,effect] of Object.entries(player.effects))if(effect.itemId==='hint'&&effect.targets?.some((targetId)=>removedIds.has(targetId)))delete player.effects[id];
           const drop = rollDrop(this.seed, player.dropOrdinal, player.pity); player.pity = drop.pity; let granted = null;
           if (drop.dropped) granted = this.grantItem(player.id, drop.itemId);
-          let shuffleWarning = null;
-          if (player.removedPairs < 48 && !findAnyLegalPair(player.board.tiles)) { const effectId=`${this.matchId}-auto-shuffle-${this.now()}`;shuffleWarning={effectId,executeAt:this.now()+450,reason:'auto'};player.pendingAutoShuffle=shuffleWarning; }
+          let deadlock = null;
+          if (player.removedPairs < 48 && !findAnyLegalPair(player.board.tiles)) deadlock = this.beginDeadlock(player);
           result = { ok: true, requestId: intent.requestId, removed: [a.tileId, b.tileId], path: route.path, revision: player.board.revision,
-            removedPairs: player.removedPairs, granted, inventoryRevision: player.inventoryRevision, shuffled:false, shuffleWarning };
+            removedPairs: player.removedPairs, granted, inventoryRevision: player.inventoryRevision, shuffled:false, deadlock };
           if (player.removedPairs === 48) this.finish(player.id, 'board_clear');
         }
       }
@@ -241,7 +298,7 @@ export class SichuanGame {
   /** @param {string|null} winnerId 승자 @param {string} reason 사유 @returns {void} */
   finish(winnerId, reason) {
     if (this.result) return;
-    this.players.forEach((player) => { this.clearHints(player); player.shieldActive = false; });
+    this.players.forEach((player) => { this.clearHints(player); player.shieldActive = false; player.pendingAutoShuffle = null; });
     this.phase = 'result'; this.result = { winnerId, reason, scores: this.players.map((player) => ({ id: player.id, removedPairs: player.removedPairs })) };
   }
 

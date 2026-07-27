@@ -296,6 +296,8 @@
   let lastJokerFlyActionKey = '';
   /** ppeok 토스트 지연 보관. 덱 뒤집기 fly의 DECK_LAND 전환 이후 flush. */
   let pendingPpeokToast = null;
+  /** 카드 포획이 끝난 뒤 표시할 액션 토스트. */
+  let pendingCaptureToast = null;
   /** 액션 토스트 DOM (지연 생성, 한 개만 유지) */
   let actionToastEl = null;
   /** 진행 중인 fly 애니메이션 */
@@ -385,11 +387,44 @@
   }
 
   /**
+   * 현재 상태가 사용자의 즉시 선택을 요구하는 차단 UI인지 판정한다.
+   * @param {object|null} state 게임 상태
+   * @returns {boolean} 선택 UI가 다른 연출보다 우선해야 하면 true
+   */
+  function hasBlockingDecision(state) {
+    if (!state) return false;
+    if (state.phase === 'round_end') return true;
+    if (state.phase === 'awaiting_go_stop') return state.turn === me;
+    if (state.phase === 'awaiting_floor_choice') return state.turn === me;
+    if (state.phase === 'awaiting_kkeut_choice') {
+      return state.pendingKkeutChoice?.player === me;
+    }
+    if (state.phase === 'awaiting_sangtong') {
+      return state.pendingSangtong?.player === me;
+    }
+    return false;
+  }
+
+  /**
+   * 진행 중인 액션 효과를 즉시 종료한다.
+   * 선택 모달과 고/스톱 버튼의 가독성 및 hit-test를 보장하는 데 사용한다.
+   * @returns {void}
+   */
+  function dismissActionToast() {
+    if (!actionToastEl) return;
+    actionToastEl.classList.remove('show');
+  }
+
+  /**
    * 특수 액션 발생 시 화면 중앙에 짧은 배너 토스트.
    * @param {object} la lastAction 객체
    */
   function maybeShowActionToast(la) {
     if (!la) return;
+    if (hasBlockingDecision(lastState)) {
+      dismissActionToast();
+      return;
+    }
     let text = null;
     switch (la.kind) {
       case 'jjok':            text = '쪽!'; break;
@@ -627,6 +662,9 @@
    * @param {object} s
    */
   function renderState(s) {
+    // 필수 선택 UI가 열리는 프레임에는 이전 액션 효과가 버튼과 제목을 가리지 않게 즉시 종료한다.
+    if (hasBlockingDecision(s)) dismissActionToast();
+
     // 9월 술잔 끗/쌍피 선택 모달 토글
     const needKkeutChoice = s.phase === 'awaiting_kkeut_choice'
       && s.pendingKkeutChoice && s.pendingKkeutChoice.player === me;
@@ -679,6 +717,13 @@
     for (const el of floorCardsEl.querySelectorAll('[data-card-id]')) {
       prevFloorRects.set(el.dataset.cardId, el.getBoundingClientRect());
     }
+    // 강탈 카드는 이번 렌더에서 상대 영역에서 사라지므로, 교체 전 실제 카드 좌표를 보존한다.
+    const prevCapturedRects = new Map();
+    for (const zone of [myCapturedZoneEl, oppCapturedZoneEl]) {
+      for (const el of zone.querySelectorAll('[data-card-id]')) {
+        prevCapturedRects.set(el.dataset.cardId, el.getBoundingClientRect());
+      }
+    }
     // 덱 뒤집기 fly 시작 좌표 — 더미 카드 DOM 위치
     const deckElForFly = floorCardsEl.querySelector('.deck-card');
     const deckRectForFly = deckElForFly ? deckElForFly.getBoundingClientRect() : null;
@@ -705,8 +750,13 @@
     const actionKey = s.lastAction ? JSON.stringify(s.lastAction) : '';
     if (actionKey && actionKey !== prevActionKey) {
       if (s.lastAction && s.lastAction.kind === 'ppeok') {
-        // 뻑: 덱 fly DECK_LAND 이후 표시. resolvePendingFlies가 flush 책임.
+        // 뻑: 카드가 바닥의 세 장 묶음에 완전히 붙은 뒤 표시한다.
         pendingPpeokToast = s.lastAction;
+      } else if (s.lastAction && new Set([
+        'jjok', 'ttadak', 'sseul', 'bomb', 'joker_play', 'joker_flip',
+        'sweep_from_hand', 'sweep_from_flip', 'bonus_ppeok_sweep',
+      ]).has(s.lastAction.kind)) {
+        pendingCaptureToast = s.lastAction;
       } else {
         maybeShowActionToast(s.lastAction);
       }
@@ -964,7 +1014,7 @@
     if (stolenPiIds.size > 0 && oppCapturedZoneEl) {
       const oppCapRect = oppCapturedZoneEl.getBoundingClientRect();
       for (const id of stolenPiIds) {
-        startFlyFromOppCaptured(id, oppCapRect);
+        startFlyFromOppCaptured(id, oppCapRect, prevCapturedRects.get(id));
       }
     }
 
@@ -1594,8 +1644,9 @@
    * 시작 좌표를 상대 captured zone 중앙으로 설정 — stoleFromOpp > 0 케이스 전용.
    * @param {string} cardId
    * @param {DOMRect} oppCapRect 상대 captured zone DOM의 viewport 좌표
+   * @param {DOMRect|null} [sourceCardRect] 렌더 교체 전 강탈 카드의 실제 좌표
    */
-  function startFlyFromOppCaptured(cardId, oppCapRect) {
+  function startFlyFromOppCaptured(cardId, oppCapRect, sourceCardRect = null) {
     const target =
       myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
       floorCardsEl.querySelector(`[data-card-id="${cardId}"]`);
@@ -1603,8 +1654,12 @@
     const targetRect = target.getBoundingClientRect();
     const w = targetRect.width || 60;
     const h = targetRect.height || 85;
-    const startLeft = oppCapRect.left + (oppCapRect.width / 2) - (w / 2);
-    const startTop  = oppCapRect.top  + (oppCapRect.height / 2) - (h / 2);
+    const startLeft = sourceCardRect
+      ? sourceCardRect.left
+      : oppCapRect.left + (oppCapRect.width / 2) - (w / 2);
+    const startTop = sourceCardRect
+      ? sourceCardRect.top
+      : oppCapRect.top + (oppCapRect.height / 2) - (h / 2);
     const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
@@ -1747,7 +1802,17 @@
       pairEntries.push({ cardId: id, clone, finalEl: target, origin: 'pair' });
     }
 
-    if (pendingFlies.length === 0 && pairEntries.length === 0) return;
+    if (pendingFlies.length === 0 && pairEntries.length === 0) {
+      if (pendingPpeokToast) {
+        maybeShowActionToast(pendingPpeokToast);
+        pendingPpeokToast = null;
+      }
+      if (pendingCaptureToast) {
+        maybeShowActionToast(pendingCaptureToast);
+        pendingCaptureToast = null;
+      }
+      return;
+    }
     isAnimating = true;
 
     // 카드 ID에서 month 추출 (m{NN}_... 패턴).
@@ -1938,11 +2003,6 @@
             const pairs = pairsByMonth.get(month) || [];
             for (const pe of pairs) flashMeet(pe.clone);
           }
-          // 뻑 토스트 지연 flush — 덱이 바닥에 쌓인 직후 표시.
-          if (pendingPpeokToast) {
-            maybeShowActionToast(pendingPpeokToast);
-            pendingPpeokToast = null;
-          }
           stateTimer = setTimeout(
             () => transition(hasCapMove ? 'RESOLVE' : 'CLEANUP'),
             T.DECK_LAND,
@@ -1961,11 +2021,14 @@
             if (e.finalEl) e.finalEl.style.visibility = '';
             e.clone.remove();
           }
-          // 안전망: DECK_LAND를 거치지 못한 채 CLEANUP에 진입한 경우(덱 empty 등)
-          // pendingPpeokToast가 남아 있으면 여기서 flush.
+          // 효과 문구는 카드 포획/부착과 클론 정리가 모두 끝난 뒤 전면에 표시한다.
           if (pendingPpeokToast) {
             maybeShowActionToast(pendingPpeokToast);
             pendingPpeokToast = null;
+          }
+          if (pendingCaptureToast) {
+            maybeShowActionToast(pendingCaptureToast);
+            pendingCaptureToast = null;
           }
           pendingFlies = [];
           isAnimating = false;
@@ -2242,6 +2305,7 @@
    */
   function showRoundResult(result) {
     if (!result) return;
+    dismissActionToast();
     // 게임 종료(잔고 음수 도달) — 라운드 결과 모달을 게임 종료 모달로 전환.
     const isGameOver = !!result.gameOver;
     if (isGameOver) {

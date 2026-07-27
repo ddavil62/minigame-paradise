@@ -4,6 +4,7 @@
 
 import { FINISH, MODULES, PLATFORMS, WORLD } from '../shared/level-data.js';
 import { getFinishCrossfadeAlpha } from './motion.js';
+import { createInterpolationBuffer } from './interpolation.js';
 
 const COLORS = Object.freeze({ skyDeep: '#0B1322', skyNavy: '#15213A', panel: '#1F2C47', steel: '#344B68', cream: '#F5E9C9', gold: '#FFD97A', brass: '#C68A3A', cyan: '#62D6E8', coral: '#FF8D78', green: '#64DC96', warning: '#FFB454', danger: '#FF7E7E', void: '#07101D', windTeal: '#3E91A3', windMist: '#B9E8E7', violet: '#786EA8', signalRose: '#D97FA5' });
 const STARS = Array.from({ length: 60 }, (_, index) => ({ x: (index * 211) % 1280, y: (index * 137) % 720, radius: index % 5 === 0 ? 2 : 1 }));
@@ -11,7 +12,7 @@ const STARS = Array.from({ length: 60 }, (_, index) => ({ x: (index * 211) % 128
 /**
  * Canvas 렌더러를 생성한다.
  * @param {HTMLCanvasElement} canvas 게임 Canvas
- * @returns {{setSnapshot:Function,setPlayerId:Function,playCoopBoost:Function,start:Function}}
+ * @returns {{setSnapshot:Function,resetInterpolation:Function,setPlayerId:Function,playCoopBoost:Function,start:Function}}
  */
 export function createRenderer(canvas) {
   const context = canvas.getContext('2d');
@@ -20,6 +21,7 @@ export function createRenderer(canvas) {
   const checkpointActivatedAt = new Map();
   const playedBoostEvents = new Set();
   const boostEffects = [];
+  const interpolationBuffer = createInterpolationBuffer();
   let snapshot = null;
   let playerId = 'p1';
   let cameraX = 0;
@@ -33,13 +35,17 @@ export function createRenderer(canvas) {
    * @param {object} value 스냅샷
    * @returns {void}
    */
-  function setSnapshot(value) {
+  function setSnapshot(value, receivedAt = performance.now()) {
+    interpolationBuffer.push(value, receivedAt);
     snapshot = value;
     if (value.checkpointId > previousCheckpointId) {
       for (let index = previousCheckpointId; index < value.checkpointId; index += 1) checkpointActivatedAt.set(index, performance.now());
       previousCheckpointId = value.checkpointId;
     }
   }
+
+  /** 다음 권위 스냅샷부터 새 보간 구간을 시작한다. @returns {void} */
+  function resetInterpolation() { interpolationBuffer.reset(); }
 
   /**
    * 로컬 플레이어 ID를 카메라 기준으로 설정한다.
@@ -704,6 +710,7 @@ export function createRenderer(canvas) {
    * @returns {void}
    */
   function render(elapsed) {
+    snapshot = interpolationBuffer.sample(elapsed) ?? snapshot;
     const localPlayer = snapshot?.players?.find((player) => player.id === playerId);
     if (localPlayer) {
       const finaleTarget = level().finish.launcher.y - canvas.height * 0.52;
@@ -729,6 +736,12 @@ export function createRenderer(canvas) {
     drawFinale();
     drawCoopBoostEffects(elapsed);
     snapshot?.players?.forEach((player) => drawRobot(player, elapsed));
+    if (localPlayer) {
+      canvas.dataset.renderPlayerX = String(localPlayer.x);
+      canvas.dataset.renderPlayerY = String(localPlayer.y);
+      canvas.dataset.renderCameraX = String(cameraX);
+      canvas.dataset.renderCameraY = String(cameraY);
+    }
     drawWorldFeedback(elapsed);
     context.restore();
     requestAnimationFrame(render);
@@ -740,5 +753,5 @@ export function createRenderer(canvas) {
    */
   function start() { requestAnimationFrame(render); }
 
-  return { setSnapshot, setPlayerId, playCoopBoost, start };
+  return { setSnapshot, resetInterpolation, setPlayerId, playCoopBoost, start };
 }

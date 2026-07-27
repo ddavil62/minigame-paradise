@@ -1,5 +1,160 @@
 # Changelog
 
+## [2026-07-27] - 미니게임 리포트 Phase E 윷놀이 모바일 보드·AI 채우기 수정
+
+### 변경
+
+- `yutnori/public/css/style.css`는 900px 이하에서 보드 영역을 인포바와 함께 축소하지 않고 정사각형으로 우선 확보한다. 390×844 Chromium에서 보드는 374×374px이며, 하단 윷가락·결과·말·룰 패널은 `.game-main` 내부 세로 스크롤로 탐색한다.
+- 데스크톱 1280×800에서는 기존 2단 레이아웃을 유지하며 보드는 694×694px, 우측 인포바는 320px 독립 스크롤 영역으로 표시한다.
+- `launcher/public/games.json`에 윷놀이 `aiFillTargetPlayers: 2`를 추가했다. 사람 대전 정원 2~4인은 유지하면서 AI 채우기만 사람 1명 + AI 1명의 2인 대전으로 제한한다.
+- `launcher/public/app.js`와 `launcher/server.js`는 게임별 AI 목표 인원을 기준으로 빈 슬롯과 시작 인원을 계산한다. 윷놀이는 런처 봇을 별도로 만들지 않고 게임 서버의 `mode=ai` 수명주기를 사용한다.
+
+### 수정
+
+- 모바일 인포바 높이가 보드를 약 120px까지 압축하던 반응형 flex 축소를 제거했다.
+- 런처에서 READY를 마친 사용자는 `lobbyReady=1`로 인계되며, `yutnori/public/js/main.js`는 게임 내부 READY 패널과 버튼을 다시 노출하지 않는다.
+- AI 채우기에서 4인 목표를 적용해 “4인 AI 대전 미지원” 오류로 멈추던 흐름을 2인 AI 목표로 수정했다.
+
+### 검증
+
+- Phase E 자동·예외·회귀 테스트 **136/136 PASS**.
+- AI 인계 E2E 3회 반복, 런처 세션 수명주기 2건, 윷놀이 단위·WS 104건, 로비 AI 목표 1건, 사람 2·3·4인/정원 초과 4건, N인 게임 회귀 22건을 통과했다.
+- 실제 Chromium 390×844와 1280×800에서 보드 정사각 비율, 스크롤 접근성, 1 human + 1 AI 시작, 내부 READY 비노출을 확인했다.
+- AD 모드 3 **APPROVED**, QA **PASS**.
+
+### 운영 참고
+
+- 실행 중인 3000번 런처가 변경 전 프로세스라면 과거 “4인 AI 대전 미지원” 오류가 계속 보일 수 있다. 최신 소스 반영을 위해 3000번 프로세스를 재시작해야 한다.
+- `assets/` 추가·변경이 없어 Mockup Sync는 생략했다.
+
+### 참고
+
+- 구현 리포트: `.Codex/specs/2026-07-27-minigames-phase-e-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-phase-e-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-phase-e-qa.md` (`PASS`)
+
+## [2026-07-27] - 미니게임 리포트 Phase B 야추 AI handoff·의사결정 수정
+
+### 변경
+
+- `launcher/public/games.json`의 야추 인원 계약을 실제 게임 구현과 같은 `minPlayers=2`, `maxPlayers=2`로 고정하고 카드에 한국어 `2인 대전`, 영어 `2-player battle`을 표시한다.
+- `launcher/public/app.js`는 실인원과 `aiSlots`를 합산해 남은 자리만 빈 슬롯으로 렌더한다. 야추 AI 채우기 후에는 사람 1장과 AI 1장만 표시되고 빈 친구 슬롯은 남지 않는다.
+
+### 수정
+
+- 야추 AI 채우기에서 3개 AI 슬롯이 생성되어 `Room Full 2/2` 또는 `게임 시작을 준비하는 중`에 고착되던 인원 계약 불일치를 제거했다.
+- 런처 READY는 이름·인원·역할과 `lobbyReady=1&fresh=1`을 야추에 인계한다. 게임 화면은 내부 READY를 다시 요구하지 않고 즉시 시작한다.
+- `yahtzee/bot.js`는 보관 대상으로 다섯 주사위를 모두 선택한 경우 굴림 횟수만 소비하지 않고 즉시 유효 점수 카테고리를 선택한다.
+
+### 검증
+
+- Phase B 신규·브라우저 8건과 기존 야추 회귀 249건을 합쳐 257/257 PASS.
+- 런처 AI handoff를 독립 임시 포트에서 5회 반복해 AI 슬롯 1개, `playerCount=2`, START를 5/5 확인했다.
+- 실제 Chromium 1280×720에서 사람 1 + AI 1 + 빈 슬롯 0, READY 1회 후 게임 화면 표시, 내부 READY 숨김과 page error 0건을 확인했다.
+- AD 모드 3 재검수 **APPROVED**.
+
+### 참고
+
+- 구현 리포트: `.Codex/specs/2026-07-27-minigames-phase-b-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-phase-b-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-phase-b-qa.md` (`PASS`)
+- `assets/` 추가·변경이 없어 Mockup Sync는 생략했다.
+
+## [2026-07-27] - 미니게임 리포트 Phase A 런처·세션·준비 인계 수정
+
+### 변경
+
+- `launcher/public/app.js`가 게임 카드의 `playersLabel`과 `botLabel` 중 현재 언어에 실제로 정의된 문자열만 조합한다. 일부 메타가 없는 별빛 우편탑 카드는 `2인 전용`만 표시하며 `undefined`를 노출하지 않는다.
+- 런처는 게임 진입 URL에 닉네임, 준비 완료, 신규 세션, 모드, 인원, 역할을 공통 인계한다. 각 게임의 자동 READY 중복 방지와 직접 진입의 수동 READY 흐름은 기존 계약을 유지한다.
+
+### 수정
+
+- `launcher/server.js`가 방 객체 동일성을 확인한 뒤에만 `rooms`에서 삭제하도록 변경했다. 구 대기실 소켓의 늦은 `close`가 같은 게임 ID로 생성된 새 대기실을 삭제하던 경합을 차단했다.
+- 신규 연결의 정원 판정 전에 이미 닫힌 대기실 소켓을 정리하고, 정리 과정에서 방이 삭제되면 현재 연결을 받을 방을 다시 등록한다.
+- `tetris-battle/server.js`는 종료된 경기 참가자의 늦은 `close`를 플레이어 ID가 아닌 참가자 객체 동일성으로 판별한다. 새 경기에서 재사용된 `p1`/`p2`와 새 봇 슬롯이 구 연결 종료로 제거되지 않는다.
+
+### 검증
+
+- Phase A 기능 테스트 44/44와 구문 검사 3/3 PASS.
+- 구 런처 방 지연 종료와 종료된 테트리스 방 직후 새 2인 입장을 각각 10회 반복해 새 세션 보존을 확인했다.
+- 별빛 우편탑 카드·준비 인계 Playwright 4/4, 기존 테트리스 입력 회귀 8/8, 사천성 준비/AI 4/4, 별빛 우편탑 준비/세션 7/7 PASS.
+- 데스크톱과 360px 모바일에서 카드 메타, 준비 화면, 게임 인계를 검수했으며 AD 모드 3 **APPROVED**.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-27-minigames-bug-report-batch-scope.md`
+- 실행 계획: `.Codex/specs/2026-07-27-minigames-bug-report-batch-plan.md`
+- 구현 리포트: `.Codex/specs/2026-07-27-minigames-phase-a-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-phase-a-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-phase-a-qa.md` (`PASS`)
+- 런처와 테트리스 서버의 게임별 단일 활성 방 구조는 유지한다. 이번 수정은 구 세션의 지연 정리가 다음 세션을 훼손하는 문제만 해결한다.
+- `assets/` 추가·변경이 없어 Mockup Sync는 생략했다.
+
+## [2026-07-26] - 별빛 우편탑 체크포인트 안전 리스폰 및 2P 결속 회귀 수정
+
+### 수정
+
+- `starlight-mail-tower/game/simulation.js`의 체크포인트 복원에서 각 플레이어 X 아래의 가장 가까운 고체 발판을 독립 탐색하고, 캐릭터 하단이 발판 상면 위에 오도록 Y 좌표를 보정한다.
+- 비고체 발판, 플레이어 수평 범위 밖 발판, 원본 복원 Y 위쪽 발판을 후보에서 제외하며, 유효한 지지면이 없거나 원본 Y가 더 안전하면 기존 좌표를 유지한다.
+- `cloud-cargo` 첫 체크포인트에서 발판 내부·아래로 생성된 뒤 추락하던 소프트락을 레벨 전용 예외 없이 모든 체크포인트에 적용되는 범용 계산으로 수정했다.
+- 리스폰 뒤 P2 입력은 P2 required module에 귀속되어 `POWERED`를 거쳐 P1 파트너 스위치 입력으로 `LATCHED`까지 정상 전이한다.
+
+### 검증
+
+- 체크포인트·결속·17개 레벨 실제 입력 완주·준비·재접속 자동 회귀 50/50 PASS를 확인했다.
+- `cloud-cargo` 체크포인트 1에서 P1/P2 개별·동시 사망과 6회 반복 복원, 전 17개 레벨 모든 체크포인트 후속 착지, 비고체·경계·fallback 예외를 확인했다.
+- 최신 코드로 포트 3000 서버를 재기동한 뒤 친구 2인과 AI 시작 Playwright 2/2 PASS, 준비 오버레이 해제와 서버 tick 진행을 확인했다.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-26-starlight-mail-tower-p2-bind.md` (`COMPLETED`)
+- 구현 리포트: `.Codex/specs/2026-07-26-starlight-mail-tower-p2-bind-report.md`
+- QA: `.Codex/specs/2026-07-26-starlight-mail-tower-p2-bind-qa.md` (`PASS`)
+- 기존 `world-expansion.unit.spec.js`의 레벨 수 기대값 5 대 현재 17 불일치는 이번 수정과 독립된 테스트 부채다.
+- UI·문구·에셋 변경이 없어 Art Director와 `studio-mockup` 동기화는 N/A다.
+
+## [2026-07-25] - 별빛 우편탑 오래된 재시작 토큰 슬롯 선점 차단
+
+### 수정
+
+- `starlight-mail-tower/server.js`에서 현재 서버의 유효한 재접속 예약과 일치하지 않는 비어 있지 않은 토큰을 신규 참가자로 처리하지 않고 슬롯 배정 전에 `RESUME_EXPIRED`로 거절한다.
+- 서버 재시작 전 토큰을 가진 오래된 탭이 자동 재접속해 `p1`/`p2` 슬롯을 점유하고 정상 런처 참가자에게 `ROOM_FULL`을 유발하던 문제를 차단했다.
+- 빈 토큰의 신규 입장, 양쪽 수동 준비, 로비에서 전달된 준비 완료, 같은 서버가 발급한 유효 토큰의 15초 내 역할·진행 상태 복구는 유지한다.
+
+### 검증
+
+- 실제 3000 포트 런처 UI에서 친구 2인과 AI 채우기 경로를 각각 실행해 2/2 PASS를 확인했다. 양 경로 모두 `readyFromLobby: true`, START 수신, 준비 오버레이 비노출, 대기 문구 제거와 서버 tick 증가를 충족했다.
+- 준비·재접속 Node 회귀 7/7 PASS를 확인했다. 오래된 토큰은 WELCOME 없이 거절되고, 직후 빈 토큰 신규 2명은 `p1`/`p2`로 정상 START했으며, 유효 토큰 재접속은 기존 역할과 진행 상태를 복구했다.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-25-starlight-mail-tower-live-followup.md` (`COMPLETED`)
+- 구현 리포트: `.Codex/specs/2026-07-25-starlight-mail-tower-live-followup-report.md`
+- QA: `.Codex/specs/2026-07-25-starlight-mail-tower-live-followup-qa.md` (`PASS`)
+- 서버는 프로세스당 단일 슬롯 집합을 사용하며 여러 독립 매치 동시 격리는 이번 최소 수정 범위에 포함하지 않았다.
+- UI·문구·에셋 변경이 없어 `studio-mockup` 동기화는 N/A다.
+
+## [2026-07-25] - 별빛 우편탑 로비 준비·세션 초기화 수정
+
+### 수정
+
+- `launcher/server.js`에서 별빛 우편탑을 게임 서버 관리형 AI 대상으로 분류했다. AI 채우기 시 런처의 레거시 봇 생성을 생략하고 `mode=ai`를 전달한다.
+- `starlight-mail-tower/server.js`에서 로비의 실제 참가자 2명이 모두 준비되면 게임 내부 추가 준비 없이 한 번만 시작하도록 연결했다.
+- 종료 뒤 참가자별 15초 재접속 유예를 독립적으로 유지하고, 모든 연결과 유효 예약이 사라진 뒤에만 슬롯·준비·투표·일시정지·레벨·시뮬레이션 상태를 새 대기 세션으로 초기화한다.
+- 쿼리 없이 직접 접속하는 기존 수동 준비 흐름과 유예 시간 내 역할·진행 상태 복구는 유지한다.
+
+### 검증
+
+- 핵심 WebSocket·런처 통합 회귀 8/8과 대상 구문·공백 검사를 통과했다.
+- 기존 단위 테스트는 43/44 통과했다. 실패 1건은 현재 17개 레벨을 과거 기대값 5개와 비교하는 기존 테스트 불일치로 이번 변경과 무관하다.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-25-starlight-mail-tower-ready-flow.md` (`COMPLETED`)
+- 구현 리포트: `.Codex/specs/2026-07-25-starlight-mail-tower-ready-flow-report.md`
+- QA: `.Codex/specs/2026-07-25-starlight-mail-tower-ready-flow-qa.md` (`PASS`)
+- UI·문구·에셋 변경이 없어 `studio-mockup` 동기화는 필요하지 않다.
+
 ## [2026-07-23] - 사천성 배틀 AI 대전 모드
 
 ### 추가

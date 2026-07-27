@@ -21,7 +21,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 
 // 각 게임 앱 import (createApp factory)
 import { createApp as createCodenamesApp } from '../codenames-duet/server.js';
@@ -135,6 +135,9 @@ const GAME_APPS = {
     getBotUrl: () => `ws://localhost:${PORT}/sichuan-battle/ws?mode=bot`,
   }),
 };
+
+// 게임 서버가 mode=ai 진입을 받아 자체 봇을 구성하는 게임은 런처 봇을 중복 생성하지 않는다.
+const GAME_MANAGED_AI_IDS = new Set(['sichuan-battle', 'starlight-mail-tower', 'yutnori']);
 
 /**
  * 안전한 런처 정적 파일 경로 해석 (디렉토리 트래버설 방지).
@@ -478,6 +481,31 @@ function getOrCreateRoom(gameId) {
 }
 
 /**
+ * 같은 게임 ID로 새 방이 만들어진 뒤 늦게 도착한 구 연결 정리가 새 방을 지우지 않도록 한다.
+ * @param {RoomState} room 제거하려는 방 인스턴스
+ * @returns {boolean} 현재 등록된 동일 인스턴스를 제거했는지 여부
+ */
+function deleteRoomIfCurrent(room) {
+  if (rooms.get(room.gameId) !== room) return false;
+  return rooms.delete(room.gameId);
+}
+
+/**
+ * close 이벤트가 지연된 소켓을 정원 계산 전에 제거한다.
+ * @param {RoomState} room 검사할 대기실
+ * @returns {number} 제거한 연결 수
+ */
+function sweepClosedLobbyClients(room) {
+  let removed = 0;
+  for (const [client] of room.clients) {
+    if (client.readyState === WebSocket.OPEN) continue;
+    cleanupClient(client, room);
+    removed += 1;
+  }
+  return removed;
+}
+
+/**
  * 특정 클라이언트에게 ROOM_STATE를 보낸다.
  * 수신자별로 myId/myReady 필드가 달라지므로 개별 전송한다.
  * @param {import('ws').WebSocket} ws 대상 클라이언트
@@ -568,9 +596,8 @@ function checkReady(room, game) {
     }
   }
 
-  // 사천성은 게임 서버가 일회성 토큰을 발급한 뒤 REQUEST_AI로 봇을 생성한다.
-  // 런처의 레거시 무토큰 봇 spawn을 사용하면 정상적인 보안 게이트에 거부된다.
-  const usesGameManagedAi = room.gameId === 'sichuan-battle' && room.aiSlotCount > 0;
+  // 게임 서버 관리형 AI는 mode=ai 진입 뒤 각 게임의 고유한 봇 수명주기를 시작한다.
+  const usesGameManagedAi = GAME_MANAGED_AI_IDS.has(room.gameId) && room.aiSlotCount > 0;
 
   // 2. AI 봇 spawn (aiSlotCount > 0 && botAvailable)
   if (room.aiSlotCount > 0 && game.botAvailable && !usesGameManagedAi) {
@@ -597,7 +624,7 @@ function checkReady(room, game) {
   }
 
   // 4. 대기실 정리
-  rooms.delete(room.gameId);
+  deleteRoomIfCurrent(room);
   console.log(`[launcher] REDIRECT → gameId=${room.gameId}, path=${redirectPath}, mode=${usesGameManagedAi ? 'ai' : 'human'}, playerCount=${playerCount}`);
 }
 
@@ -621,7 +648,7 @@ function cleanupClient(ws, room) {
 
   // 빈 방 제거
   if (room.clients.size === 0) {
-    rooms.delete(room.gameId);
+    deleteRoomIfCurrent(room);
     console.log(`[launcher] 빈 방 제거: ${room.gameId}`);
     return;
   }
@@ -730,27 +757,31 @@ function handleMessage(ws, msg, room) {
         return;
       }
 
-      // botMaxPlayers 검증: AI 봇이 지원하는 최대 인원보다 방 정원이 크면 AI 채우기 불가.
-      // (예: 윷놀이는 maxPlayers=4지만 봇은 2인 대전만 지원 → 4인 AI채우기 시 게임 서버가
-      //  봇 spawn을 스킵해 방이 채워지지 않고 멈춘다. 게임 진입 전에 안내로 막는다.)
-      // AI 채우기는 빈 슬롯을 전부 채워 항상 maxPlayers명으로 시작하므로 maxPlayers 기준으로 판정.
-      if (typeof game.botMaxPlayers === 'number' && game.maxPlayers > game.botMaxPlayers) {
+      // 사람 대전 정원과 AI 대전 정원이 다른 게임은 전용 목표 인원까지만 채운다.
+      // 윷놀이는 사람 2~4인을 유지하면서 혼자 대기할 때는 2인(사람 1 + AI 1)으로 시작한다.
+      const aiFillTargetPlayers = Math.min(
+        game.maxPlayers,
+        Number.isInteger(game.aiFillTargetPlayers) ? game.aiFillTargetPlayers : game.maxPlayers,
+      );
+
+      // botMaxPlayers 검증: 실제 AI 목표 인원이 봇 지원 범위를 넘으면 진입 전에 안내한다.
+      if (typeof game.botMaxPlayers === 'number' && aiFillTargetPlayers > game.botMaxPlayers) {
         sendJson(ws, {
           type: 'ERROR',
-          message: `${game.name} ${game.maxPlayers}인 AI 대전은 지원하지 않습니다. ${game.botMaxPlayers}인 AI 대전만 가능합니다.`,
+          message: `${game.name} ${aiFillTargetPlayers}인 AI 대전은 지원하지 않습니다. ${game.botMaxPlayers}인 AI 대전만 가능합니다.`,
         });
-        console.log(`[launcher] FILL_WITH_AI 거부: ${room.gameId} (maxPlayers=${game.maxPlayers} > botMaxPlayers=${game.botMaxPlayers})`);
+        console.log(`[launcher] FILL_WITH_AI 거부: ${room.gameId} (target=${aiFillTargetPlayers} > botMaxPlayers=${game.botMaxPlayers})`);
         return;
       }
 
-      // 빈 슬롯 전체를 AI로 채움
-      const emptySlots = game.maxPlayers - room.clients.size - room.aiSlotCount;
+      // AI 대전 목표까지 남은 슬롯만 채운다. 이미 목표 이상 사람이 있으면 AI를 추가하지 않는다.
+      const emptySlots = aiFillTargetPlayers - room.clients.size - room.aiSlotCount;
       if (emptySlots <= 0) {
-        sendJson(ws, { type: 'ERROR', message: '이미 정원이 채워져 있습니다.' });
+        sendJson(ws, { type: 'ERROR', message: 'AI 대전 인원이 이미 채워져 있습니다.' });
         return;
       }
 
-      room.aiSlotCount = game.maxPlayers - room.clients.size;
+      room.aiSlotCount = aiFillTargetPlayers - room.clients.size;
       console.log(`[launcher] FILL_WITH_AI: ${meta.id} → aiSlotCount=${room.aiSlotCount} (방=${room.gameId})`);
 
       // 게임 시작 조건 즉시 평가
@@ -785,10 +816,17 @@ roomWss.on('connection', (ws, req) => {
     return;
   }
 
-  const room = getOrCreateRoom(gameId);
+  let room = getOrCreateRoom(gameId);
   if (!room) {
     try { ws.close(1008, 'INVALID_GAME'); } catch (_) { /* noop */ }
     return;
+  }
+
+  // close 이벤트보다 신규 입장이 먼저 도착할 수 있으므로 죽은 슬롯을 정원 계산에서 제외한다.
+  sweepClosedLobbyClients(room);
+  // sweep 과정에서 마지막 죽은 슬롯이 빠지면 방도 삭제되므로 신규 연결용 방을 다시 등록한다.
+  if (rooms.get(gameId) !== room) {
+    room = getOrCreateRoom(gameId);
   }
 
   // 정원 검사: 실인원 + AI 슬롯 >= maxPlayers

@@ -11,6 +11,7 @@ const canvas = document.querySelector('#game-canvas');
 const renderer = createRenderer(canvas);
 const readyOverlay = document.querySelector('#ready-overlay');
 const readyButton = document.querySelector('#ready-button');
+const aiStartButton = document.querySelector('#ai-start-button');
 const readyNote = document.querySelector('#ready-note');
 const connectionLabel = document.querySelector('#connection-label');
 const connectionPanel = document.querySelector('.connection-panel');
@@ -39,6 +40,7 @@ const lobbyConfirmOverlay = document.querySelector('#lobby-confirm-overlay');
 const continueButton = document.querySelector('#continue-button');
 const input = { left: false, right: false, jump: false, interact: false };
 const parameters = new URLSearchParams(location.search);
+let pendingLobbyReadyHandoff = parameters.get('lobbyReady') === '1';
 const RESUME_TOKEN_KEY = 'starlight-resume-token';
 const MUTE_KEY = 'starlight-muted';
 let socket = null;
@@ -57,6 +59,11 @@ let levelCatalog = [];
 let levelRecords = {};
 let selectedLevelId = 'starlight-tower';
 let hasSeenCoopBoost = false;
+
+// HTML은 READY 버튼을 숨긴 채 시작해 런처 인계 화면의 순간 노출을 막고, 직접 진입에서만 복구한다.
+readyOverlay.hidden = pendingLobbyReadyHandoff;
+readyButton.hidden = pendingLobbyReadyHandoff;
+if (aiStartButton) aiStartButton.hidden = pendingLobbyReadyHandoff;
 
 // 런처의 신규 세션 진입에서만 이전 토큰을 비우고, 새로고침은 재접속으로 처리한다.
 if (parameters.get('fresh') === '1') {
@@ -106,7 +113,7 @@ function renderLevelCards() {
 /** @param {object} message 서버 메뉴 상태 @returns {void} */
 function updateMenu(message) {
   levelCatalog = message.levels ?? levelCatalog; levelRecords = message.records ?? levelRecords; selectedLevelId = message.selectedLevelId ?? selectedLevelId; renderLevelCards();
-  if (message.phase === 'waiting') { readyOverlay.hidden = false; resultOverlay.hidden = true; }
+  if (message.phase === 'waiting' && !pendingLobbyReadyHandoff) { readyOverlay.hidden = false; resultOverlay.hidden = true; }
 }
 
 /** @param {string} message 사용자 문구 @returns {void} */
@@ -220,13 +227,13 @@ function handleServerMessage(message) {
     playerId = message.playerId; localStorage.setItem(RESUME_TOKEN_KEY, message.resumeToken); renderer.setPlayerId(playerId); connectionState = 'online'; updateConnectionLabel(); document.body.dataset.playerId = playerId; updateMenu(message);
   } else if (message.type === SERVER_MESSAGE.READY_STATE) updateReadyState(message.players);
   else if (message.type === SERVER_MESSAGE.MENU_STATE) updateMenu(message);
-  else if (message.type === 'START') { readyOverlay.hidden = true; resultOverlay.hidden = true; rematchButton.disabled = false; sessionPaused = false; hasSeenCoopBoost = false; }
+  else if (message.type === 'START') { pendingLobbyReadyHandoff = false; readyButton.hidden = false; if (aiStartButton) aiStartButton.hidden = false; renderer.resetInterpolation(); readyOverlay.hidden = true; resultOverlay.hidden = true; rematchButton.disabled = false; sessionPaused = false; hasSeenCoopBoost = false; }
   else if (message.type === SERVER_MESSAGE.SNAPSHOT) {
-    latestSnapshot = message; renderer.setSnapshot(message); const local = message.players.find((player) => player.id === playerId); document.body.dataset.serverTick = String(message.tick); document.body.dataset.levelId = message.levelId; document.body.dataset.checkpoint = String(message.checkpointId); document.body.dataset.finishPhase = message.finishState.phase; if (local) document.body.dataset.playerX = String(Math.round(local.x)); updateHud();
+    latestSnapshot = message; renderer.setSnapshot(message, performance.now()); const local = message.players.find((player) => player.id === playerId); document.body.dataset.serverTick = String(message.tick); document.body.dataset.levelId = message.levelId; document.body.dataset.checkpoint = String(message.checkpointId); document.body.dataset.finishPhase = message.finishState.phase; if (local) document.body.dataset.playerX = String(Math.round(local.x)); updateHud();
   } else if (message.type === SERVER_MESSAGE.EVENT) handleEvent(message);
   else if (message.type === SERVER_MESSAGE.GAME_OVER) showResult(message);
-  else if (message.type === SERVER_MESSAGE.PAUSED) showReconnect(message.reconnectDeadline);
-  else if (message.type === SERVER_MESSAGE.RESUMED) finishResume();
+  else if (message.type === SERVER_MESSAGE.PAUSED) { renderer.resetInterpolation(); showReconnect(message.reconnectDeadline); }
+  else if (message.type === SERVER_MESSAGE.RESUMED) { renderer.resetInterpolation(); finishResume(); }
   else if (message.type === SERVER_MESSAGE.SESSION_ENDED) showSessionEnded(message.reason);
   else if (message.type === SERVER_MESSAGE.RESULT_VOTE_STATE) {
     const votes = message.votes ?? {}; const mine = votes[playerId]; const values = Object.values(votes);
@@ -273,7 +280,6 @@ function openLobbyConfirm() { previousFocus = document.activeElement; lobbyConfi
 function closeLobbyConfirm() { lobbyConfirmOverlay.hidden = true; previousFocus?.focus?.(); }
 
 readyButton.addEventListener('click', () => send({ type: CLIENT_MESSAGE.READY }));
-const aiStartButton = document.querySelector('#ai-start-button');
 if (aiStartButton) {
   aiStartButton.addEventListener('click', () => {
     localStorage.removeItem(RESUME_TOKEN_KEY);

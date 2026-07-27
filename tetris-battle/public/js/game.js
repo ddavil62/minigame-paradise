@@ -44,7 +44,7 @@ export const STATE = Object.freeze({
  * @param {(hud: object) => void} deps.renderHUD
  * @param {(nexts: string[]) => void} deps.renderNext
  * @param {(holdType: string|null) => void} deps.renderHold
- * @param {(lines: number, combo: number) => void} deps.onAttack - 가비지 전송 콜백
+ * @param {(lines: number, combo: number, clearEventId: number) => void} deps.onAttack - 가비지 전송 콜백
  * @param {() => void} deps.onGameOver
  * @param {(payload: object) => void} [deps.onBoardChange] - 미니맵 동기화용 (선택)
  * @returns {object} 게임 컨트롤러
@@ -64,6 +64,7 @@ export function createGame(deps) {
   let level = 1;
   let totalLines = 0;
   let combo = -1;             // -1: 콤보 없음, 0 이상: 콤보 횟수
+  let clearEventId = 0;       // 라운드 내 라인 클리어 이벤트 식별자
   let state = STATE.WAITING;
   let isFrozenByItem = false; // Phase 2 프리즈 효과 (중력은 유지)
 
@@ -224,11 +225,10 @@ export function createGame(deps) {
       level = 1 + Math.floor(totalLines / LINES_PER_LEVEL);
       combo += 1;
       // 가비지 전송 (변환표 + 콤보 보너스).
-      // Phase 3 MED-1 수정: garbage 값이 0이어도 onAttack을 호출한다.
-      // 이유는 서버가 GARBAGE_SEND를 받아야 ITEM_GRANT 50% 추첨을 수행하기 때문.
-      // 서버는 lines==0이면 가비지 중계는 스킵하고 ITEM_GRANT만 시도한다.
+      // 가비지가 0이어도 서버가 콤보 아이템 조건을 판정할 수 있도록 전송한다.
       const garbage = garbageFromLines(cleared) + comboBonus(combo);
-      deps.onAttack(garbage, combo);
+      clearEventId += 1;
+      deps.onAttack(garbage, combo, clearEventId);
     } else {
       // 콤보 리셋
       combo = -1;
@@ -250,7 +250,7 @@ export function createGame(deps) {
     if (deps.onBoardChange) {
       const stack = getColumnHeights(grid);
       const height = Math.max(...stack);
-      deps.onBoardChange({ height, stack });
+      deps.onBoardChange({ height, stack, cells: grid.map((row) => row.slice()) });
     }
   }
 
@@ -260,6 +260,17 @@ export function createGame(deps) {
   function triggerGameOver() {
     state = STATE.GAME_OVER;
     piece = null;
+    // BOARD_STATE와 GAME_OVER를 같은 소켓에서 이 순서로 보내 최종 가비지/토프아웃
+    // 보드가 상대 화면에 먼저 반영되도록 한다.
+    if (deps.onBoardChange) {
+      const stack = getColumnHeights(grid);
+      deps.onBoardChange({
+        height: Math.max(...stack),
+        stack,
+        cells: grid.map((row) => row.slice()),
+        final: true,
+      });
+    }
     deps.onGameOver();
   }
 
@@ -337,6 +348,7 @@ export function createGame(deps) {
       level = 1;
       totalLines = 0;
       combo = -1;
+      clearEventId = 0;
       pendingGarbage = 0;
       gravityAcc = 0;
       lockDelayAcc = 0;
@@ -407,7 +419,7 @@ export function createGame(deps) {
       if (deps.onBoardChange) {
         const stack = getColumnHeights(grid);
         const height = Math.max(...stack);
-        deps.onBoardChange({ height, stack });
+        deps.onBoardChange({ height, stack, cells: grid.map((row) => row.slice()) });
       }
     },
 
@@ -422,7 +434,7 @@ export function createGame(deps) {
       if (deps.onBoardChange) {
         const stack = getColumnHeights(grid);
         const height = stack.length ? Math.max(...stack) : 0;
-        deps.onBoardChange({ height, stack });
+        deps.onBoardChange({ height, stack, cells: grid.map((row) => row.slice()) });
       }
     },
 

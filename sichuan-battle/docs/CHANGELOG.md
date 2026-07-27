@@ -1,5 +1,81 @@
 # Changelog
 
+## [2026-07-27] - 교착 선택과 5초 입력 대기
+
+### 추가
+
+- 연결 가능한 짝이 사라지면 `지금 셔플` 또는 `5초 기다리기`를 고르는 서버 권위 교착 선택 상태를 추가했다.
+- 선택·대기 상태와 해제 시각을 개인화 snapshot에 포함해 새로고침과 15초 연결 복구 뒤에도 남은 상태를 이어간다.
+- 교착 제목·설명·버튼·카운트다운을 ko/en과 `role="dialog"` UI로 제공하고 데스크톱·모바일 보드 안에 표시한다.
+
+### 변경
+
+- 기존 0.45초 강제 자동 셔플을 선택형 복구로 교체했다. 즉시 셔플은 한 번만 실행하고, 5초 대기 중에는 본인 보드 타일 입력만 잠근다.
+- 대기 중 경기 타이머, 상대 플레이와 서버 효과 만료는 계속 진행한다.
+- 정확히 5초 뒤 합법 수가 돌아왔으면 revision을 올리지 않고 입력만 복구하며, 여전히 교착이면 남은 타일을 완주 가능하게 셔플한 뒤 복구한다.
+- 같은 `requestId`는 멱등 처리하고, 이미 결정된 교착에 대한 다른 선택·stale match·stale deadlock·종료 후 요청은 거절한다.
+- 경기 종료와 재대결 초기화에서 교착 pending을 정리해 영구 입력 잠금을 방지한다.
+
+### 검증
+
+- Art Director 모드 3에서 1366×768·390×844·360×640, ko/en의 선택 패널·카운트다운·버튼·타일 잠금·READY/AI handoff를 검수해 `APPROVED` 판정을 받았다.
+- 집중 Node 22/22와 사천성 전체 Node 78/78을 통과했다. 4,999ms에는 잠금과 revision을 유지하고 5,000ms에는 조건에 따라 무셔플 복구 또는 fallback 셔플이 실행됨을 확인했다.
+- Phase F Chromium 1/1과 통합 런처 READY·AI Chromium 6/6을 통과했다.
+- 독립 QA에서 본인 잠금 중 상대의 실제 짝 제거와 timed effect 만료가 계속되고, 390×844 영어 모바일에서 타이머 진행·재접속 해제·가로 overflow 0·pageerror 0임을 확인했다.
+
+### 참고
+
+- 배치 목적 정의서: `../../../.Codex/specs/2026-07-27-minigames-bug-report-batch-scope.md`
+- 실행 계획: `../../../.Codex/specs/2026-07-27-minigames-bug-report-batch-plan.md`
+- 구현 리포트: `../../../.Codex/specs/2026-07-27-minigames-phase-f-report.md`
+- UI 검수: `../../../.Codex/specs/2026-07-27-minigames-phase-f-ui-review.md` (`APPROVED`)
+- QA: `../../../.Codex/specs/2026-07-27-minigames-phase-f-qa.md` (`PASS`)
+- 신규·변경 에셋이 없어 Mockup Sync와 `studio-mockup` 동기화를 생략했다.
+
+## [2026-07-27] - 런처 AI 새 경기 세션 인계 복구
+
+### 수정
+
+- 런처가 `mode=ai&lobbyReady=1&fresh=1`로 새 경기를 열면 첫 WebSocket 연결 전에 이전 `sichuan:token`을 제거하고, 주소에서는 일회성 `fresh`만 정리하도록 수정했다.
+- 서버의 `JOINED.reconnected`를 토큰 문자열의 존재 여부가 아니라 실제 기존 슬롯 복구 성공 여부로 판정하도록 수정했다.
+- 오래되거나 유효하지 않은 토큰이 있어도 신규 사람 슬롯이 AI를 한 번 요청해 자동 시작하며, 유효한 진행 중 경기 재접속은 기존 슬롯과 `matchId`를 복원하고 AI·`START`를 중복 생성하지 않는다.
+
+### 검증
+
+- stale 토큰 서버 계약과 유효 토큰 재접속 테스트 4/4, 런처 브라우저 인계 테스트 3/3, AI·재접속 회귀 테스트 6/6을 통과했다.
+- 브라우저에서 이전 토큰 교체, `fresh` 제거, `mode=ai`·`lobbyReady=1` 보존과 96개 타일 플레이 화면 진입을 확인했다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-27-sichuan-ai-handoff-stall.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-27-sichuan-ai-handoff-stall-coder-report.md`
+- QA: `../../../.Codex/specs/2026-07-27-sichuan-ai-handoff-stall-qa.md` (`PASS`)
+- `visual_change: none`이고 `assets/` 변경이 없어 Art Director와 Mockup Sync를 생략했다.
+
+## [2026-07-27] - 런처 준비 승계와 READY 멱등화
+
+### 변경
+
+- 게임 페이지의 `lobbyReady` 값을 WebSocket 연결에 전달하고 신규 참가자 슬롯의 준비 상태에 즉시 반영한다.
+- `READY` 메시지는 기존 토글 대신 항상 `ready=true`로 처리해 중복 송신이 준비 취소로 뒤집히지 않게 했다.
+- 런처 인계 진입에서는 READY·AI 버튼을 숨기고 “파트너 연결이 완료되면 자동으로 시작”하는 한·영 안내를 표시한다.
+- 직접 URL 진입은 기존 수동 READY를 유지하고, 게임 내 AI 요청은 준비 완료와 AI 요청을 함께 보내 기존 즉시 시작 흐름을 보존한다.
+- 진행 중 재접속은 기존 슬롯의 준비·경기 상태를 보존하며 READY 재요구나 새 START 없이 현재 경기를 동기화한다.
+
+### 검증
+
+- 런처 준비 2인, 직접 진입, READY 반복, AI와 재접속 focused 테스트 4/4를 통과했다.
+- 두 게임 공용 런처 인계·직접 진입 브라우저 UI 검증 2/2, 390×844 시각 검증을 통과했다.
+- AD 모드 3 `APPROVED`, 최종 QA `PASS`를 확인했다.
+
+### 참고
+
+- 스펙: `../../../.Codex/specs/2026-07-27-minigames-duplicate-ready.md` (`COMPLETED`)
+- 구현 리포트: `../../../.Codex/specs/2026-07-27-minigames-duplicate-ready-coder-report.md`
+- UI 검수: `../../../.Codex/specs/2026-07-27-minigames-duplicate-ready-ui-review.md` (`APPROVED`)
+- QA: `../../../.Codex/specs/2026-07-27-minigames-duplicate-ready-qa.md` (`PASS`)
+- 신규·변경 에셋이 없어 Mockup Sync와 `studio-mockup` 동기화를 생략했다.
+
 ## [2026-07-25] - 실플레이 힌트·뒤집기 분산·슬롯 정산 회귀 수정
 
 ### 변경

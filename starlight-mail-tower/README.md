@@ -34,6 +34,22 @@ npm start
 
 게임 화면의 언어·음소거·게임 선택 버튼은 Tab으로 이동하고 Enter 또는 Space로 실행할 수 있다.
 
+## 화면 구조
+
+게임 화면은 CSS Grid 3행 구조로 구성된다.
+
+```
+#game-shell (display: grid, grid-template-rows: 48px 1fr 52px)
+  ├─ <header id="topbar">      ← HUD 패널(분류 데크·타이머·연결 상태) + 툴바(언어·음소거·게임 선택)
+  ├─ <div id="play-viewport">   ← 캔버스(object-fit:contain, 16:9) + 오버레이(ready/result/reconnect 등)
+  └─ <footer id="bottombar">    ← 내 상태(△) + 행동 안내 + 파트너 상태(○)
+```
+
+- 이전의 `#viewport-frame`은 제거되었다. 모든 HUD 패널과 툴바에서 `position:absolute`가 제거되어 메타 UI가 플레이 캔버스 영역을 침범하지 않는다.
+- 캔버스는 `width:100%; height:100%; object-fit:contain`으로 play-viewport를 정확히 채우며, 내부 좌표계(`width="1280" height="720"`)는 불변이다.
+- `#hud` id는 `client.js`의 `setBackgroundInert()`가 `'#hud'` 셀렉터를 사용하므로 보존되어 있다.
+- 소형 뷰포트(max-width:1024px 또는 max-height:576px)에서는 topbar 40px / bottombar 44px으로 축소된다.
+
 ## 레벨
 
 | 레벨 | 특징 |

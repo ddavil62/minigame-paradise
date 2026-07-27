@@ -19,7 +19,7 @@ import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import {
-  createGame, startRound, playCard, chooseFloor, goStop, shakeDecision, bomb, selectKkeutType,
+  createGame, startRound, nextRoundStarter, playCard, chooseFloor, goStop, shakeDecision, bomb, selectKkeutType,
   playCardSteps, chooseFloorSteps, bombSteps, selectKkeutTypeSteps,
   sangtongSteps, bonusFlipSteps,
   snapshotForPlayer,
@@ -529,8 +529,8 @@ export function createApp(opts = {}) {
           if (!game) {
             game = createGame('p1');
           } else {
-            // 직전 라운드 패자가 선공 (없으면 p1)
-            const next = game.roundWinner ? (game.roundWinner === 'p1' ? 'p2' : 'p1') : 'p1';
+            // 직전 라운드 승자가 다음 판의 선공/딜러를 유지한다.
+            const next = nextRoundStarter(game);
             startRound(game, next);
           }
           console.log('[matgo] NEW_ROUND → 새 라운드 시작');
@@ -544,9 +544,7 @@ export function createApp(opts = {}) {
             sendTo(player, { type: 'ERROR', message: '상대방이 없어 새 게임을 시작할 수 없다' });
             break;
           }
-          const nextFirst = game && game.roundWinner
-            ? (game.roundWinner === 'p1' ? 'p2' : 'p1')
-            : 'p1';
+          const nextFirst = nextRoundStarter(game);
           const perPoint = game?.perPoint ?? 100;
           game = createGame(nextFirst, { perPoint });
           console.log(`[matgo] NEW_GAME → 잔고 리셋 새 게임 (선공: ${nextFirst})`);

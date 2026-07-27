@@ -53,6 +53,8 @@ export function createApp(opts = {}) {
  * @property {boolean} ready    - READY 메시지 수신 여부
  * @property {boolean} shieldActive - 방어막 활성 여부 (Phase 2)
  * @property {number} slotCount - 현재 보유 중인 아이템 슬롯 개수 (서버 추적)
+ * @property {(string|null)[]} itemSlots - 서버 권위 아이템 슬롯
+ * @property {number} lastClearEventId - 마지막으로 처리한 라인 클리어 이벤트
  * @property {boolean} rematchReady - 재대결 준비 여부
  * @property {boolean} gameOver  - 자기 토프아웃 발생 후 true (Phase 3 LOW-2: 사후 ITEM_USE 차단용)
  * @property {string} mode      - WS 접속 모드 ('human' | 'ai' | 'bot')
@@ -130,8 +132,8 @@ const ITEM_DURATIONS = {
   line_clear: 0,
   shield: 0,
 };
-/** 라인 클리어 시 아이템 지급 확률. */
-const ITEM_GRANT_PROB = 0.8;
+/** 아이템을 지급하기 시작하는 최소 콤보 값. */
+const ITEM_GRANT_COMBO = 3;
 const MAX_ITEM_SLOTS = 3;
 
 /**
@@ -151,6 +153,8 @@ function resetRoomFlags() {
     p.ready = false;
     p.shieldActive = false;
     p.slotCount = 0;
+    p.itemSlots = Array(MAX_ITEM_SLOTS).fill(null);
+    p.lastClearEventId = 0;
     p.rematchReady = false;
     p.gameOver = false;
   }
@@ -215,16 +219,21 @@ function broadcastReadyState() {
 }
 
 /**
- * 라인 클리어 시 확률(ITEM_GRANT_PROB)로 아이템을 지급한다.
- * 슬롯이 가득 차 있거나 확률 실패 시 무시한다.
+ * 3콤보 이상인 고유 라인 클리어 이벤트에 아이템을 확정 지급한다.
+ * 빈 슬롯 선택과 이벤트 중복 제거는 서버가 권위적으로 처리한다.
  * @param {Player} player 수혜자
+ * @param {number} combo 서버가 검증한 콤보
+ * @param {number} clearEventId 라운드 내 클리어 이벤트 식별자
  */
-function tryGrantItem(player) {
-  if (player.slotCount >= MAX_ITEM_SLOTS) return;
-  if (Math.random() >= ITEM_GRANT_PROB) return;
+function tryGrantItem(player, combo, clearEventId) {
+  if (combo < ITEM_GRANT_COMBO) return;
+  if (!Number.isInteger(clearEventId) || clearEventId <= player.lastClearEventId) return;
+  player.lastClearEventId = clearEventId;
+  const slotIndex = player.itemSlots.indexOf(null);
+  if (slotIndex < 0) return;
   const itemId = pickRandomItem();
-  const slotIndex = player.slotCount; // 0,1,2 순서대로 채움
-  player.slotCount += 1;
+  player.itemSlots[slotIndex] = itemId;
+  player.slotCount = player.itemSlots.filter(Boolean).length;
   sendTo(player, {
     type: 'ITEM_GRANT',
     itemId,
@@ -283,6 +292,8 @@ wss.on('connection', (ws, req) => {
     ready: false,
     shieldActive: false,
     slotCount: 0,
+    itemSlots: Array(MAX_ITEM_SLOTS).fill(null),
+    lastClearEventId: 0,
     rematchReady: false,
     gameOver: false,
     mode: wsMode,
@@ -350,14 +361,16 @@ wss.on('connection', (ws, req) => {
         const safeLines = Math.max(0, Math.min(20, rawLines));
         const rawCombo = Number.isFinite(msg.combo) ? Math.floor(msg.combo) : 0;
         const safeCombo = Math.max(0, Math.min(99, rawCombo));
+        const clearEventId = Number.isFinite(msg.clearEventId)
+          ? Math.floor(msg.clearEventId)
+          : 0;
 
         // Phase 3 LOW-2: GAME_OVER 후의 잔여 메시지는 무시.
         if (player.gameOver || !isRoomPlaying()) {
           break;
         }
 
-        // Phase 3 MED-1: lines>0일 때만 가비지를 상대에 중계.
-        // lines==0(Single 클리어)이라도 ITEM_GRANT 추첨은 매번 시도한다.
+        // lines>0일 때만 가비지를 상대에 중계한다.
         if (safeLines > 0) {
           broadcastOthers(player.id, {
             type: 'GARBAGE_RECV',
@@ -365,19 +378,31 @@ wss.on('connection', (ws, req) => {
             combo: safeCombo,
           });
         }
-        // 라인 클리어 시 확률로 아이템 지급 (송신자에게)
-        tryGrantItem(player);
+        // 3콤보 이상인 고유 클리어 이벤트에 확정 지급한다.
+        tryGrantItem(player, safeCombo, clearEventId);
         break;
       }
 
-      case 'BOARD_STATE':
-        // 상대 미니맵 동기화용: 가비지 높이만 간단히 전송
+      case 'BOARD_STATE': {
+        // 셀 값과 크기를 검증해 실제 구멍/블록 배치를 그대로 중계한다.
+        const safeCells = Array.isArray(msg.cells) && msg.cells.length === 22
+          ? msg.cells.map((row) => (
+              Array.isArray(row) && row.length === 10
+                ? row.map((value) => (
+                    Number.isInteger(value) && value >= 0 && value <= 8 ? value : 0
+                  ))
+                : Array(10).fill(0)
+            ))
+          : [];
         broadcastOthers(player.id, {
           type: 'OPPONENT_BOARD',
           height: msg.height || 0,
           stack: msg.stack || [],
+          cells: safeCells,
+          final: msg.final === true,
         });
         break;
+      }
 
       case 'ITEM_USE': {
         // Phase 2: 권위 처리 (방어막/슬롯 차감)
@@ -391,8 +416,12 @@ wss.on('connection', (ws, req) => {
           console.log(`[server] ITEM_USE 무시: ${player.id} (room not playing)`);
           break;
         }
-        // 송신자 슬롯 카운트 차감 (음수 방지)
-        if (player.slotCount > 0) player.slotCount -= 1;
+        // 서버 슬롯에서 실제 사용 위치를 비워 다음 지급이 그 빈칸을 재사용하게 한다.
+        const slotIndex = Number.isInteger(msg.slotIndex) ? msg.slotIndex : -1;
+        if (slotIndex >= 0 && slotIndex < MAX_ITEM_SLOTS) {
+          player.itemSlots[slotIndex] = null;
+          player.slotCount = player.itemSlots.filter(Boolean).length;
+        }
 
         const opp = players.find((p) => p.id !== player.id);
         if (!opp) break;
@@ -412,11 +441,11 @@ wss.on('connection', (ws, req) => {
         }
         // 공격형: garbage_bomb / dark / freeze
         if (opp.shieldActive) {
-          // 방어막에 차단됨 → 양쪽에 알림
+          // 방어막에 차단됨 → 수신자별 역할을 명시해 양쪽 방어막 동시 활성도 안전하게 구분한다.
           opp.shieldActive = false;
           console.log(`[server] ${opp.id} 방어막 발동: ${itemId} 차단`);
-          sendTo(player, { type: 'SHIELD_BLOCK', itemId });
-          sendTo(opp, { type: 'SHIELD_BLOCK', itemId });
+          sendTo(player, { type: 'SHIELD_BLOCK', itemId, isDefender: false });
+          sendTo(opp, { type: 'SHIELD_BLOCK', itemId, isDefender: true });
         } else {
           // 정상 전달
           sendTo(opp, {
@@ -486,8 +515,14 @@ wss.on('connection', (ws, req) => {
   // ── 연결 해제 ──
   ws.on('close', () => {
     console.log(`[server] ${player.id} 연결 해제`);
+    // 종료된 이전 방의 close 이벤트가 늦게 도착해 같은 ID를 재사용한 새 방 참가자를
+    // 제거하거나 새 봇을 종료하지 않도록 객체 동일성으로 현재 슬롯을 확인한다.
+    if (!players.includes(player)) {
+      console.log(`[server] ${player.id} 지연 close 무시 (이미 교체된 슬롯)`);
+      return;
+    }
     const leaverName = player.name || '(알 수 없음)';
-    players = players.filter((p) => p.id !== player.id);
+    players = players.filter((p) => p !== player);
     // 사람(비봇)이 끊긴 경우 봇 슬롯을 동기적으로 정리한다 (#13 좀비 봇 차단).
     if (!isBot) {
       // killBotChild()의 SIGTERM은 비동기라 봇 WS가 실제 close될 때까지 players에 좀비로 남는다.

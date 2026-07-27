@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.setStatus('상대방을 기다리는 중...');
         updateWaitingTitle(false);
       } else {
-        ui.setStatus('모두 입장. 준비 버튼을 눌러주세요.');
+        ui.setStatus('게임 시작을 준비하는 중...');
         updateWaitingTitle(true);
       }
       // READY 마크 초기화
@@ -174,11 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
       }
-      // 상대 입장 시 READY 패널 + 준비 버튼 표시
-      if (!waiting) {
-        if (els.readyPanel) els.readyPanel.classList.remove('hidden');
-        if (els.btnReady) els.btnReady.hidden = false;
-      }
+      // 런처에서 이미 준비를 마쳤고 게임 내부 READY는 자동 인계하므로
+      // 상대가 들어와도 중복 준비 버튼이나 패널을 다시 노출하지 않는다.
+      if (els.readyPanel) els.readyPanel.classList.add('hidden');
+      if (els.btnReady) els.btnReady.hidden = true;
       // 대기 화면 유지 (showScreen은 START에서 game으로 전환)
       showScreen('waiting');
     },

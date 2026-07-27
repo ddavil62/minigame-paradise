@@ -102,6 +102,9 @@ export function createGame(firstTurn = 'p1', opts = {}) {
     // 폭탄 보너스 뒤집기 권리. 폭탄 1회당 +2 누적, 자기 차례에 손 0이면 1씩 차감하며 자동 뒤집기.
     // "기회 보존의 법칙": 손 + bombDeckCredit 합이 매 턴 -1로 진행 (양쪽 동기).
     bombDeckCredit: { p1: 0, p2: 0 },
+    // 폭탄을 낸 턴 안에서 즉시 해결해야 하는 추가 뒤집기 횟수와 진행 주체.
+    pendingBombFlips: { p1: 0, p2: 0 },
+    bombResolvingPlayer: null,
     // ── 5건 룰 보강 (2026-05-31) ──
     pendingSangtong: null,
     shakeAsked: { p1: false, p2: false },
@@ -158,6 +161,8 @@ export function startRound(game, firstTurn) {
   // 폭탄 보너스 뒤집기 권리. 폭탄 1회당 +2 누적, 자기 차례에 손 0이면 1씩 차감하며 자동 뒤집기.
   // "기회 보존의 법칙": 손 + bombDeckCredit 합이 매 턴 -1로 진행 (양쪽 동기).
   game.bombDeckCredit = { p1: 0, p2: 0 };
+  game.pendingBombFlips = { p1: 0, p2: 0 };
+  game.bombResolvingPlayer = null;
   // 라운드 첫 뻑을 만든 사람 — applyFinalMultipliers에서 첫뻑 보너스 판정에 사용.
   game.firstPpeokBy = null;
   // ── 바닥 조커 → 선공자 자동 획득 (2026-06-03 룰 정정) ──
@@ -320,10 +325,10 @@ export function* playCardSteps(g, playerId, cardId) {
       stoleFromOpp: 1, refilled,
     };
     yield { step: 'hand_played', card };
-    // B4 수정 (2026-06-16 확정 룰): 매치/덱 뒤집기 스킵 + 턴 유지(finishTurn 미호출).
-    // 조커는 '내가 한 번 더 낼 수 있는 특권'이므로 turn = playerId 유지.
-    // 단, 점수 평가 + 9월 술잔 + 고/스톱 + 3뻑 분기는 그대로 수행한다.
-    finishTurnKeepTurn(g, playerId);
+    // 손 조커는 턴의 본 행동이 아니다. 점수·고/스톱·라운드 종료 평가는
+    // 일반 카드를 내고 덱 뒤집기까지 모두 끝난 뒤 한 번만 수행한다.
+    g.phase = 'awaiting_play';
+    g.pendingChoiceSrcCardId = null;
     yield { step: 'turn_finished' };
     return;
   }
@@ -394,6 +399,14 @@ export function* chooseFloorSteps(g, playerId, cardId) {
   g.phase = 'awaiting_play';
   g.lastAction = { kind: 'choice_made', player: playerId, srcCard: pending.srcCard, chosen };
   yield { step: 'choice_made' };
+
+  // 폭탄의 통상/추가 뒤집기 도중 발생한 선택이면 남은 추가 뒤집기를
+  // 같은 턴 안에서 계속 해결한다. 마지막 추가 카드의 선택이어도
+  // bombResolvingPlayer가 남아 있으므로 여기서 턴 마무리까지 이어진다.
+  if (g.bombResolvingPlayer === playerId) {
+    yield* continueBombResolution(g, playerId);
+    return;
+  }
 
   if (wasFromHand) {
     // 단계 2: 덱 뒤집기 (손패에서 온 매칭이었던 경우만)
@@ -504,16 +517,21 @@ function drawAndResolve(g, playerId, handCard) {
 
   // ── 케이스 B: 더미 뒤집은 게 조커 (2026-06-03) ─────────────
   // 1) 상대 피 1장 → 본인 captured (상대 피 0장이면 스킵)
-  // 2) 조커 → 본인 손 (다음 턴에 케이스 A로 사용 가능)
+  // 2) 조커 → 본인 captured
   // 3) 더미에서 한 번 더 뒤집기 (재귀 — 그 카드는 평소대로 처리, 또 조커면 또 케이스 B)
   if (flipped.type === 'joker') {
     stealPi(g, playerId, opp, 1);
-    g.hands[playerId].push(flipped);
-    g.lastAction = {
-      kind: 'joker_flip', player: playerId, card: flipped, stoleFromOpp: 1,
-    };
+    g.captured[playerId].push(flipped);
     // 재귀: 한 번 더 뒤집기 (handCard는 그대로 유지 — 첫 뒤집기 의도와 같이 동일 컨텍스트)
     drawAndResolve(g, playerId, handCard);
+    // 재귀의 최종 매칭 액션을 유지하되, 조커 강탈 메타데이터를 합쳐 클라이언트가
+    // 실제 상대 captured 영역에서 출발하는 fly를 만들 수 있게 한다.
+    g.lastAction = {
+      ...(g.lastAction || {}),
+      player: playerId,
+      stoleFromOpp: (g.lastAction?.stoleFromOpp || 0) + 1,
+      jokerFlips: [...(g.lastAction?.jokerFlips || []), flipped],
+    };
     return;
   }
 
@@ -670,10 +688,11 @@ function stealPi(g, taker, victim, count) {
       remaining--;
     }
   }
-  // 부족하면 쌍피
+  // 부족하면 쌍피와 조커를 카드 단위로 가져온다. 둘 다 피 2장 가치지만
+  // 강탈 횟수는 피 가치가 아니라 실제 카드 한 장을 기준으로 소모한다.
   for (let i = g.captured[victim].length - 1; i >= 0 && remaining > 0; i--) {
     const c = g.captured[victim][i];
-    if (c.type === 'pi') {
+    if ((c.type === 'pi' && c.subtype === 'ssangpi') || c.type === 'joker') {
       g.captured[victim].splice(i, 1);
       g.captured[taker].push(c);
       remaining--;
@@ -1155,10 +1174,9 @@ export function bomb(g, playerId, month) {
  * bomb의 단계별 generator 버전.
  * yield: { step: 'bomb_played' }, { step: 'deck_flipped' }, { step: 'turn_finished' }
  *
- * 표준 룰 (2026-05-31 정정): 폭탄 발동 시 같은 월 4장(손 3 + 바닥 1) + 상대 피 1장
- * 가져가기 + 통상 뒤집기 1회. 추가로 보너스 뒤집기 권리 +2 누적 (g.bombDeckCredit).
- * 보너스 뒤집기는 자기 차례에 손 0일 때 자동 발동 (bonusFlipSteps).
- * "기회 보존의 법칙": 손 -3 + 보너스 +2 = 순 -1 (정상 1턴과 동등).
+ * 최신 사용자 규칙 (2026-07-27): 폭탄 발동 시 같은 월 4장(손 3 + 바닥 1)과
+ * 상대 피 1장을 가져가고, 통상 뒤집기 1회 뒤 추가 뒤집기 2회를 같은 턴에 해결한다.
+ * 중간에 바닥 선택이 생기면 남은 횟수와 진행 주체를 보존한다.
  */
 export function* bombSteps(g, playerId, month) {
   if (g.phase !== 'awaiting_play') { yield { error: '지금은 폭탄을 낼 수 없다' }; return; }
@@ -1173,13 +1191,15 @@ export function* bombSteps(g, playerId, month) {
     yield { error: `${month}월 카드 1장이 바닥에 있어야 한다` }; return;
   }
 
-  // 단계 1: 폭탄 실행 (손 3장 + 바닥 1장 모두 captured + 상대 피 1장 + 보너스 권리 +2)
+  // 단계 1: 폭탄 실행 (손 3장 + 바닥 1장 모두 captured + 상대 피 1장)
   g.hands[playerId] = hand.filter((c) => c.month !== month);
   g.floor          = g.floor.filter((c) => c.month !== month);
   g.captured[playerId].push(...handSame, ...floorSame);
   const opp = playerId === 'p1' ? 'p2' : 'p1';
   stealPi(g, playerId, opp, 1);
-  g.bombDeckCredit[playerId] = (g.bombDeckCredit[playerId] || 0) + 2;
+  g.pendingBombFlips = g.pendingBombFlips || { p1: 0, p2: 0 };
+  g.pendingBombFlips[playerId] += 2;
+  g.bombResolvingPlayer = playerId;
   // 손 origin 추적 — 폭탄은 손에서 3장 + 바닥 1장 모두 가져감. handSame이 손 origin.
   g.lastHandPlayed = { player: playerId, card: handSame[0], cards: handSame, month };
   g.lastAction = { kind: 'bomb', player: playerId, month, stoleFromOpp: 1 };
@@ -1190,7 +1210,40 @@ export function* bombSteps(g, playerId, month) {
   yield { step: 'deck_flipped' };
   if (g.phase === 'awaiting_floor_choice') return;
 
-  // 단계 3: 점수 평가 + 턴 마무리
+  // 단계 3: 추가 뒤집기 2회를 같은 턴에서 모두 해결한 뒤 한 번만 점수 평가.
+  yield* continueBombResolution(g, playerId);
+}
+
+/**
+ * 직전 라운드 결과를 기준으로 다음 선공자를 정한다.
+ * 승자는 다음 라운드에서도 선공/딜러를 유지하며, 무승부면 p1로 돌아간다.
+ *
+ * @param {GameState|null|undefined} game
+ * @returns {'p1'|'p2'}
+ */
+export function nextRoundStarter(game) {
+  return game?.roundWinner || 'p1';
+}
+
+/**
+ * 폭탄의 남은 추가 뒤집기를 같은 턴 안에서 해결한다.
+ * 선택 대기가 생기면 진행 주체와 남은 횟수를 보존하고, chooseFloorSteps가 재개한다.
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ * @yields {{step:string}}
+ */
+function* continueBombResolution(g, playerId) {
+  while ((g.pendingBombFlips?.[playerId] || 0) > 0 && g.deck.length > 0) {
+    g.pendingBombFlips[playerId]--;
+    flipDeckBonus(g, playerId);
+    yield { step: 'bomb_bonus_flipped' };
+    if (g.phase === 'awaiting_floor_choice') return;
+  }
+
+  // 덱이 먼저 소진된 경우 남은 권리를 유령 상태로 남기지 않는다.
+  g.pendingBombFlips[playerId] = 0;
+  g.bombResolvingPlayer = null;
   finishTurn(g, playerId);
   yield { step: 'turn_finished' };
 }
@@ -1243,13 +1296,16 @@ function flipDeckBonus(g, playerId) {
   // 단 deck 빈 경우 안전 가드 필요.
   if (flipped.type === 'joker') {
     stealPi(g, playerId, opp, 1);
-    g.hands[playerId].push(flipped);
-    g.lastAction = {
-      kind: 'joker_flip', player: playerId, card: flipped, stoleFromOpp: 1,
-    };
+    g.captured[playerId].push(flipped);
     if (g.deck.length > 0) {
       flipDeckBonus(g, playerId);
     }
+    g.lastAction = {
+      ...(g.lastAction || { kind: 'joker_flip', card: flipped }),
+      player: playerId,
+      stoleFromOpp: (g.lastAction?.stoleFromOpp || 0) + 1,
+      jokerFlips: [...(g.lastAction?.jokerFlips || []), flipped],
+    };
     return;
   }
 

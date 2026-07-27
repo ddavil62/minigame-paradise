@@ -52,7 +52,11 @@ function createHarness() {
     renderItemSlots() { calls.slotRenders++; },
     setDarkOverlay() {},
     setFreezeFeedback(value) { calls.freezeFeedback.push(value); },
-    flashShield() {},
+    setShieldFrameActive() {},
+    clearShieldFrame() {},
+    flashShieldBlock() {},
+    showBoardNotice() {},
+    setOppShieldBadge() {},
     setStatus() {},
     shakeBoard() {},
   };

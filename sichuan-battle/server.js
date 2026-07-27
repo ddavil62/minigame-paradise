@@ -100,12 +100,17 @@ export function createApp(options = {}) {
   /** @param {object} slot 요청자 @param {object} message 메시지 @returns {void} */
   function handleMessage(slot, message) {
     if (!message || Array.isArray(message) || typeof message !== 'object' || typeof message.type !== 'string') { send(slot.ws, { type: 'ERROR', code: 'INVALID_MESSAGE' }); return; }
-    if (message.type === 'READY') { slot.ready = !slot.ready; broadcastRoom(); maybeStart(); return; }
+    if (message.type === 'READY') { slot.ready = true; broadcastRoom(); maybeStart(); return; }
     if (message.type === 'REQUEST_AI') { if (slot.isBot) { send(slot.ws, { type: 'ERROR', code: 'AI_UNAVAILABLE' }); return; } requestAiOpponent(slot); return; }
     if (message.type === 'PING') { send(slot.ws, { type: 'PONG', clientTime: message.clientTime, serverNow: Date.now() }); return; }
     if (message.type === 'RETURN_LOBBY' || message.type === 'LEAVE_MATCH') { if (room.slots.some((entry) => entry.isBot)) disposeAiSession('human left', true); else slot.ws.close(); return; }
     if (!room.game) { send(slot.ws, { type: 'ERROR', code: 'NOT_PLAYING' }); return; }
     if(options.testing&&message.type==='TEST_FINISH_MATCH'){room.game.finish(slot.id,'test');syncAll();return;}
+    if (options.testing && message.type === 'TEST_TRIGGER_DEADLOCK') {
+      const player = room.game.players.find((entry) => entry.id === slot.id);
+      if (!player?.pendingAutoShuffle) room.game.beginDeadlock(player);
+      syncAll(); return;
+    }
     if (options.testing && message.type === 'TEST_GRANT_ITEM') {
       if (!isKnownItemId(message.itemId)) { send(slot.ws, { type: 'ERROR', code: 'INVALID_ITEM' }); return; }
       // E2E가 운영에서 생성되는 s-* 슬롯 ID도 동일한 경로로 검증할 수 있게 한다.
@@ -117,7 +122,12 @@ export function createApp(options = {}) {
     if (message.type === 'MATCH_PAIR') {
       const result = room.game.matchPair(slot.id, message);
       send(slot.ws, { type: result.ok ? 'PAIR_ACCEPTED' : 'PAIR_REJECTED', ...result, requestId: message.requestId, matchId: room.game.matchId });
-      if(result.ok&&result.shuffleWarning)send(slot.ws,{type:'SHUFFLE_WARNING',targetId:slot.id,...result.shuffleWarning});syncAll(); return;
+      syncAll(); return;
+    }
+    if (message.type === 'DEADLOCK_DECISION') {
+      const result = room.game.resolveDeadlock(slot.id, message);
+      send(slot.ws, { type: 'DEADLOCK_RESOLVED', ...result });
+      syncAll(); return;
     }
     if (message.type === 'USE_ITEM') {
       const result = room.game.useItem(slot.id, message);
@@ -136,16 +146,17 @@ export function createApp(options = {}) {
   }
 
   wss.on('connection', (ws, request) => {
-    const url = new URL(request.url || '/', 'http://localhost'); const token = url.searchParams.get('sessionToken'); const botMode = url.searchParams.get('mode') === 'bot';
+    const url = new URL(request.url || '/', 'http://localhost'); const token = url.searchParams.get('sessionToken'); const botMode = url.searchParams.get('mode') === 'bot'; const lobbyReady = url.searchParams.get('lobbyReady') === '1';
     if (botMode && (!aiSession || aiSession.authorized || url.searchParams.get('botToken') !== aiSession.token)) { send(ws, { type: 'ERROR', code: 'BOT_UNAUTHORIZED' }); ws.close(1008, 'bot unauthorized'); return; }
     let slot = token ? room.slots.find((entry) => entry.token === token && entry.graceUntil > Date.now()) : null;
+    const reconnected = Boolean(slot);
     if (!slot && room.slots.filter((entry) => entry.connected).length >= 2) { send(ws, { type: 'ERROR', code: 'ROOM_FULL' }); ws.close(); return; }
     if (slot) { slot.ws = ws; slot.connected = true; clearTimeout(slot.disconnectTimer); room.slots.filter((entry) => entry.isBot && entry.connected).forEach((entry) => send(entry.ws, { type: 'CONNECTION_STATE', opponentConnected: true })); }
     else {
-      const id = room.slots.some((entry) => entry.id === 'p1') ? 'p2' : 'p1'; slot = { id, token: crypto.randomUUID(), name: botMode ? '사천 현자 AI' : normalizeName(url.searchParams.get('name')), isBot: botMode, ready: false, ws, connected: true, graceUntil: 0, disconnectTimer: null, rateEvents: [], rateViolations: 0, oversizeEvents: [] }; room.slots.push(slot); if (botMode) aiSession.authorized = true;
+      const id = room.slots.some((entry) => entry.id === 'p1') ? 'p2' : 'p1'; slot = { id, token: crypto.randomUUID(), name: botMode ? '사천 현자 AI' : normalizeName(url.searchParams.get('name')), isBot: botMode, ready: lobbyReady, ws, connected: true, graceUntil: 0, disconnectTimer: null, rateEvents: [], rateViolations: 0, oversizeEvents: [] }; room.slots.push(slot); if (botMode) aiSession.authorized = true;
     }
-    send(ws, { type: 'JOINED', playerId: slot.id, sessionToken: slot.token, hostUrl, reconnected: Boolean(token), waiting: !room.game, isBot: Boolean(slot.isBot), aiAvailable: Boolean(getBotUrl()) });
-    if (room.game) sendState(slot); else broadcastRoom();
+    send(ws, { type: 'JOINED', playerId: slot.id, sessionToken: slot.token, hostUrl, reconnected, waiting: !room.game, isBot: Boolean(slot.isBot), aiAvailable: Boolean(getBotUrl()) });
+    if (room.game) sendState(slot); else { broadcastRoom(); maybeStart(); }
     ws.on('message', (raw) => {
       if (raw.length > 8192) {const now=Date.now();slot.oversizeEvents=slot.oversizeEvents.filter((at)=>at>now-10000);slot.oversizeEvents.push(now);send(ws,{type:'ERROR',code:'MESSAGE_TOO_LARGE'});if(slot.oversizeEvents.length>=3)ws.close(1009,'repeated oversized messages');return;}
       try {const message=JSON.parse(raw.toString());if(message&&typeof message==='object'&&!Array.isArray(message)&&typeof message.type==='string'&&!allowMessage(slot,message.type))return;handleMessage(slot,message);} catch { send(ws, { type: 'ERROR', code: 'INVALID_JSON' }); }

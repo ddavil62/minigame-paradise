@@ -40,7 +40,7 @@ export function createUI(els) {
   const boardWrapEl = els.boardCanvas ? els.boardCanvas.parentElement : null;
   const darkOverlayEl = document.getElementById('dark-overlay');
   const freezeBadgeEl = document.getElementById('freeze-badge');
-  const shieldBadgeEl = document.getElementById('shield-badge');
+  const shieldFrameEl = document.getElementById('shield-frame');
   const oppShieldBadgeEl = document.getElementById('opp-shield-badge');
   // 토스트 DOM
   const toastEl = document.getElementById('toast');
@@ -243,10 +243,10 @@ export function createUI(els) {
   }
 
   /**
-   * 상대방 미니맵 렌더링: 가비지 높이 + 컬럼별 스택 막대 시각화.
-   * Phase 5: visible 영역(20줄)만 표시. stack[c]는 board.getColumnHeights에서 이미 visible 기준으로 산출됨.
+   * 상대방 미니맵 렌더링: 실제 셀 배열을 우선 사용하고 레거시 높이 배열은
+   * 구형 서버와의 호환을 위한 폴백으로만 사용한다.
    *
-   * @param {{height: number, stack: number[]}} state
+   * @param {{height: number, stack: number[], cells?: number[][]}} state
    */
   function renderOpponent(state) {
     if (!oppCtx) return;
@@ -263,15 +263,29 @@ export function createUI(els) {
       oppCtx.lineTo(w, r * MINIMAP_CELL);
       oppCtx.stroke();
     }
-    // 컬럼별 스택 막대 (가비지 색상으로 통일하여 간소화)
-    // stack[c]는 visible 영역 기준 높이(0~VISIBLE_HEIGHT)
-    const stack = state.stack || [];
-    for (let c = 0; c < BOARD_WIDTH; c++) {
-      // 미니맵 캔버스 한계를 넘지 않도록 클램프 (이론상 stack[c] <= VISIBLE_HEIGHT)
-      const colHeight = Math.min(stack[c] || 0, VISIBLE_HEIGHT);
-      for (let i = 0; i < colHeight; i++) {
-        const y = (VISIBLE_HEIGHT - 1 - i) * MINIMAP_CELL;
-        drawCell(oppCtx, c * MINIMAP_CELL, y, MINIMAP_CELL, COLOR_HEX[8]);
+    const cells = Array.isArray(state.cells) ? state.cells : [];
+    const visibleCells = cells.length === BOARD_HEIGHT
+      ? cells.slice(VANISH_ZONE)
+      : cells.slice(-VISIBLE_HEIGHT);
+    if (visibleCells.length === VISIBLE_HEIGHT) {
+      for (let r = 0; r < VISIBLE_HEIGHT; r++) {
+        const row = Array.isArray(visibleCells[r]) ? visibleCells[r] : [];
+        for (let c = 0; c < BOARD_WIDTH; c++) {
+          const value = Number.isInteger(row[c]) ? row[c] : 0;
+          if (value > 0 && COLOR_HEX[value]) {
+            drawCell(oppCtx, c * MINIMAP_CELL, r * MINIMAP_CELL, MINIMAP_CELL, COLOR_HEX[value]);
+          }
+        }
+      }
+    } else {
+      // 구형 높이 기반 payload는 기존처럼 연속 막대로 표시한다.
+      const stack = state.stack || [];
+      for (let c = 0; c < BOARD_WIDTH; c++) {
+        const colHeight = Math.min(stack[c] || 0, VISIBLE_HEIGHT);
+        for (let i = 0; i < colHeight; i++) {
+          const y = (VISIBLE_HEIGHT - 1 - i) * MINIMAP_CELL;
+          drawCell(oppCtx, c * MINIMAP_CELL, y, MINIMAP_CELL, COLOR_HEX[8]);
+        }
       }
     }
     // 테두리
@@ -366,14 +380,37 @@ export function createUI(els) {
     }
   }
 
+  /** @type {number} 차단 소멸 애니메이션 폴백 타이머 */
+  let shieldBreakTimer = 0;
+
+  /** @type {((event: AnimationEvent) => void)|null} 현재 차단 애니메이션 종료 리스너 */
+  let shieldBreakEndHandler = null;
+
   /**
-   * 방어막 장착/해제 배지를 보이거나 숨긴다 (차단 전까지 지속 표시).
+   * 방어막 테두리의 활성·소멸 상태와 대기 중인 정리 작업을 모두 제거한다.
+   */
+  function clearShieldFrame() {
+    if (shieldBreakTimer) {
+      clearTimeout(shieldBreakTimer);
+      shieldBreakTimer = 0;
+    }
+    if (!shieldFrameEl) return;
+    if (shieldBreakEndHandler) {
+      shieldFrameEl.removeEventListener('animationend', shieldBreakEndHandler);
+      shieldBreakEndHandler = null;
+    }
+    shieldFrameEl.classList.remove('active', 'breaking');
+  }
+
+  /**
+   * 내 보드의 지속형 방어막 테두리를 활성화하거나 즉시 정리한다.
+   * 반복 호출과 차단 애니메이션 도중 재활성화에도 안전하다.
+   *
    * @param {boolean} on
    */
-  function setShieldBadge(on) {
-    if (!shieldBadgeEl) return;
-    if (on) shieldBadgeEl.classList.add('active');
-    else shieldBadgeEl.classList.remove('active');
+  function setShieldFrameActive(on) {
+    clearShieldFrame();
+    if (on && shieldFrameEl) shieldFrameEl.classList.add('active');
   }
 
   /**
@@ -387,38 +424,23 @@ export function createUI(els) {
   }
 
   /**
-   * 방어막 발동 시 보드 외곽에 짧은 글로우 효과 (Phase 3: 알림 텍스트 동시 표시).
-   * @param {boolean} on
-   * @param {string} [message] 표시할 알림 텍스트 (예: "방어막 장착!")
-   */
-  function flashShield(on, message) {
-    if (!boardWrapEl) return;
-    if (on) {
-      boardWrapEl.classList.add('shield-flash');
-      // Phase 3: 보드 상단에 알림 (1초 후 자동 사라짐)
-      if (message) {
-        showBoardNotice(message, 'shield');
-      }
-    } else {
-      boardWrapEl.classList.remove('shield-flash');
-    }
-  }
-
-  /**
-   * 방어막 차단 성공 시 강화 연출 (장착 글로우보다 강한 펄스 + 알림).
+   * 방어막 차단 성공 시 지속 글로우를 끄고 짧은 소멸 연출을 재생한다.
    * @param {string} [message] 표시할 알림 텍스트 (예: "방어막 차단!")
    */
   function flashShieldBlock(message) {
-    if (!boardWrapEl) return;
-    boardWrapEl.classList.remove('shield-block-flash');
-    void boardWrapEl.offsetWidth; // reflow로 애니메이션 재시작
-    boardWrapEl.classList.add('shield-block-flash');
+    clearShieldFrame();
+    if (!shieldFrameEl) return;
+    // 같은 프레임에 재차 차단되어도 애니메이션이 첫 키프레임부터 시작하게 한다.
+    void shieldFrameEl.offsetWidth;
+    shieldFrameEl.classList.add('breaking');
     if (message) showBoardNotice(message, 'shield', 1500);
-    const onEnd = () => {
-      boardWrapEl.classList.remove('shield-block-flash');
-      boardWrapEl.removeEventListener('animationend', onEnd);
+    shieldBreakEndHandler = (event) => {
+      if (event.target !== shieldFrameEl || !event.animationName.startsWith('shield-frame-pop')) return;
+      clearShieldFrame();
     };
-    boardWrapEl.addEventListener('animationend', onEnd);
+    shieldFrameEl.addEventListener('animationend', shieldBreakEndHandler);
+    // reduced-motion 또는 animationend 누락 환경에서도 1초 안에 반드시 idle로 복귀한다.
+    shieldBreakTimer = setTimeout(clearShieldFrame, 900);
   }
 
   // ── Phase 3: 보드 상단 알림 텍스트 ─────────────────────────────
@@ -529,9 +551,9 @@ export function createUI(els) {
     bindItemSlotClick,
     setDarkOverlay,
     setFreezeFeedback,
-    flashShield,
-    // 방어막 배지 + 차단 연출
-    setShieldBadge,
+    // 내 보드 방어막 테두리 + 차단 연출
+    setShieldFrameActive,
+    clearShieldFrame,
     flashShieldBlock,
     // 상대방 방어막 배지
     setOppShieldBadge,

@@ -1,6 +1,6 @@
 # Tetris Battle 기획서
 
-> 최종 업데이트: 2026-07-20 — 프리즈 중에는 블록 조작만 차단하고 아이템 키·슬롯 클릭은 허용. 라운드 종료·재대결 시작 시 프리즈 및 held 입력 상태를 완전히 초기화해 간헐적인 키보드 잠금을 수정. QA PASS(제품 결함 0건). 이전: 2026-06-28 봇 버그 2건 수정
+> 최종 업데이트: 2026-07-27 — 아이템 지급을 서버 권위 3콤보 확정 방식으로 변경하고, 상대 미니맵을 실제 전체 셀·가비지 구멍 렌더로 확장했다. 최종 보드는 결과보다 먼저 전달되며 Phase C QA PASS.
 
 ## 프로젝트 개요
 
@@ -24,7 +24,8 @@ LAN 환경에서 두 PC가 IP 접속으로 1:1 대결을 펼치는 한게임 테
 ```
 [클라이언트 A]                [서버]              [클라이언트 B]
   키 입력 → 로컬 즉시 반영
-  라인 제거 → GARBAGE_SEND ──→ 중계 ──→ GARBAGE_RECV → B 보드 하단
+  라인 제거 → GARBAGE_SEND(clearEventId) ──→ 중계/아이템 판정 ──→ GARBAGE_RECV
+  보드 변경 → BOARD_STATE(cells/final) ─────→ 중계 ──→ OPPONENT_BOARD → 실제 셀 미니맵
   아이템 사용 → ITEM_USE ────→ 권위처리 ─→ ITEM_EFFECT/SHIELD_BLOCK
   게임오버 → GAME_OVER ──────→ 브로드캐스트 ──→ GAME_RESULT
 ```
@@ -60,15 +61,15 @@ tetris-battle/
 
 | 모듈 | 파일 | 역할 |
 |---|---|---|
-| 서버 | `server.js` | 2인 1룸 중계, ITEM_USE 권위 처리(방어막/슬롯 차감), LAN IP 자동 감지, 포트 충돌 폴백, `mode=ai` 시 봇 spawn/kill |
+| 서버 | `server.js` | 2인 1룸 중계, 3콤보 고유 이벤트·아이템 슬롯 권위 처리, 전체 보드 검증·중계, LAN IP 감지, `mode=ai` 봇 관리 |
 | AI 봇 | `bot.js` | 독자 테트리스 엔진(board/tetromino 인라인 재구현) + WS 클라이언트. 1-look 전수 탐색 휴리스틱, 800~1200ms/피스, 라인 클리어 시 GARBAGE_SEND만 중계 |
 | 게임 루프 | `public/js/game.js` | rAF 기반 중력/Lock Delay/콤보, 상태 머신 (WAITING→COUNTDOWN→PLAYING→GAME_OVER) |
 | 보드 | `public/js/board.js` | 10×22 그리드 (visible 20 + hidden 2 vanish zone), 충돌·라인 제거·가비지(동일 hole)·고스트 |
 | 피스 | `public/js/tetromino.js` | I/O/T/S/Z/J/L 7종 + 4회전 행렬 + 7-bag (Fisher-Yates) |
 | 입력 | `public/js/input.js` | DAS 167ms + ARR 33ms, 프리즈 시 블록 조작만 차단하고 아이템 키는 허용 |
-| 아이템 | `public/js/items.js` | 슬롯 3개, 5종 효과 적용, 다크/프리즈 setTimeout 및 라운드 경계 상태 해제 |
-| 네트워크 | `public/js/network.js` | WS 송수신, hostUrl 라우팅, 3초 후 1회 재연결 |
-| UI | `public/js/ui.js` | Canvas 보드/NEXT/HOLD, HUD, 다크 오버레이, 초대 패널, 토스트 |
+| 아이템 | `public/js/items.js` | 슬롯 3개, 5종 효과 적용, 다크/프리즈 타이머·방어막 글로우 및 레거시 차단 역할 fallback |
+| 네트워크 | `public/js/network.js` | WS 송수신, 클리어 이벤트 ID·전체 보드·최종 상태 전달, 방어막 역할값 보존, 1회 재연결 |
+| UI | `public/js/ui.js` | Canvas 보드/NEXT/HOLD, 실제 셀 기반 상대 미니맵, HUD, 효과 오버레이·토스트 |
 
 ## 기능 목록
 
@@ -78,14 +79,14 @@ tetris-battle/
 | 입력 | DAS 167ms / ARR 33ms, 소프트 드롭, 하드 드롭 | 완료 (Phase 1) |
 | 점수/레벨 | Single 100/Double 300/Triple 500/Tetris 800 × 레벨, 10줄당 +1 | 완료 (Phase 1) |
 | 가비지 공격 | 변환표(0/1/2/4) + 콤보 +0.5/콤보, 동일 hole 칸 | 완료 (Phase 1) |
-| LAN 1:1 | WebSocket 중계, JOIN→READY→START(3초 카운트다운) | 완료 (Phase 1) |
-| 상대 미니맵 | 컬럼별 높이 막대 (가비지 회색) | 완료 (Phase 1) |
+| LAN 1:1 | WebSocket 중계, JOIN→READY→START(3초 카운트다운), 구 연결의 지연 종료로부터 새 참가자 슬롯 보호 | 완료 (2026-07-27 보정) |
+| 상대 미니맵 | 검증된 22×10 전체 셀로 블록 종류·가비지 구멍을 표시하고 구형 높이 payload는 폴백 처리 | 완료 (2026-07-27 보강) |
 | 게임오버/재대결 | 토프아웃 판정, 결과 오버레이, 양쪽 REMATCH → 재시작. 종료·시작 양쪽에서 프리즈/held 입력 초기화 | 완료 (2026-07-20 보정) |
 | 5종 아이템 | 가비지 폭탄 / 시야 가림(5초) / 프리즈(3초) / 라인 클리어 / 방어막 | 완료 (Phase 2) |
-| 아이템 지급 | 라인 클리어당 50% 확률, 최대 슬롯 3개 (서버 권위) | 완료 (Phase 2) |
-| 방어막 권위 | 서버가 shieldActive 추적, 공격 수신 시 차단 결정 후 양쪽 SHIELD_BLOCK | 완료 (Phase 2) |
+| 아이템 지급 | 3콤보 이상 고유 클리어 이벤트마다 확정 지급, 중복 차단·첫 빈 슬롯 재사용 (종류 선택은 무작위) | 완료 (2026-07-27 보강) |
+| 방어막 권위 | 최신 서버의 `isDefender`를 우선하고, 필드 없는 레거시 메시지는 로컬 활성 상태로 단독 방어자를 판별해 방어막을 소모 | 완료 (2026-07-22 호환 보정) |
 | 카운트다운 폴리시 | 3-2-1-GO 펄스 애니메이션 | 완료 (Phase 3) |
-| 시각 피드백 | 다크 오버레이 페이드 350ms, 방어막 글로우/알림, 가비지 폭탄 보드 흔들림 | 완료 (Phase 3) |
+| 시각 피드백 | 다크 페이드, 방어막 지속 외곽 글로우·차단 소멸, 프리즈 표시, 가비지 폭탄 보드 흔들림 | 완료 (2026-07-22 보강) |
 | 입력/FPS 측정 | `window.__perf.report()` 콘솔 노출 (capture keydown + rAF 샘플링) | 완료 (Phase 3) |
 | 런처 | `start.bat` 더블클릭 → 새 콘솔 + 브라우저 자동 오픈 / `stop.bat` 포트 기반 종료 | 완료 (Phase 4) |
 | 호스트 안내 | ANSI 컬러 박스 LAN URL, 가상 어댑터 후순위 정렬, JOINED hostUrl 필드 | 완료 (Phase 4) |
@@ -123,7 +124,7 @@ T-spin / Perfect Clear 보너스는 현재 미감지 (향후 확장 후보).
 | `dark` | 시야 가림 | 공격 | 상대 보드 위 검은 오버레이 (opacity 0.82, 페이드 350ms) | 5초 |
 | `freeze` | 프리즈 | 공격 | 상대 블록 조작 차단, 아이템 키·슬롯 클릭은 허용 (중력은 유지) | 3초 |
 | `line_clear` | 라인 클리어 | 방어 | 자기 보드 하단 2줄 즉시 제거 | 즉시 |
-| `shield` | 방어막 | 방어 | 서버 권위로 다음 공격 1회 차단, 양쪽에 SHIELD_BLOCK | 다음 공격까지 |
+| `shield` | 방어막 | 방어 | 다음 공격 1회 차단. 활성 중 보드 밖 금색 글로우, 실제 차단 시 짧은 팽창·수축 소멸 표시 | 다음 공격까지 |
 
 ## WebSocket 프로토콜 (요약)
 
@@ -131,18 +132,18 @@ T-spin / Perfect Clear 보너스는 현재 미감지 (향후 확장 후보).
 |---|---|---|
 | C→S | `JOIN` | `playerName` |
 | C→S | `READY` | - |
-| C→S | `GARBAGE_SEND` | `lines` (0~20 클램프), `combo` (0~99 클램프) |
-| C→S | `BOARD_STATE` | `height`, `stack` (미니맵용) |
+| C→S | `GARBAGE_SEND` | `lines` (0~20), `combo` (0~99), `clearEventId` |
+| C→S | `BOARD_STATE` | `height`, `stack`, `cells` (22×10), `final?` |
 | C→S | `ITEM_USE` | `itemId`, `slotIndex` |
 | C→S | `GAME_OVER` | - |
 | C→S | `REMATCH` | - |
 | S→C | `JOINED` | `playerId`, `waiting`, `hostUrl` (Phase 4 추가) |
 | S→C | `START` | `countdown: 3` |
 | S→C | `GARBAGE_RECV` | `lines`, `combo` |
-| S→C | `OPPONENT_BOARD` | `height`, `stack` |
+| S→C | `OPPONENT_BOARD` | `height`, `stack`, 검증된 `cells`, `final` |
 | S→C | `ITEM_GRANT` | `itemId`, `slotIndex` |
 | S→C | `ITEM_EFFECT` | `itemId`, `duration` (ms) |
-| S→C | `SHIELD_BLOCK` | `itemId` |
+| S→C | `SHIELD_BLOCK` | `itemId`, `isDefender?` (최신 서버는 실제 방어자 여부를 명시, 레거시는 생략 가능) |
 | S→C | `GAME_RESULT` | `winner`, `reason` (`topout` \| `disconnect`) |
 | S→C | `REMATCH_STATUS` | `p1Ready`, `p2Ready` |
 | S→C | `ERROR` | `message` (예: `Room is full`) |
@@ -164,12 +165,13 @@ npm start       # 또는 node server.js [--port 4000]
 ## 알려진 제약사항
 
 - LAN 전용 (WAN/인터넷 매치 미지원)
-- 2인 1룸 고정 (3번째 접속 거절)
+- 2인 1룸 고정 (3번째 접속 거절). 종료된 방의 지연 종료는 다음 경기 슬롯을 훼손하지 않지만 여러 활성 매치의 동시 격리는 미지원
 - SRS 벽킥 미구현 (단순 회전만)
 - T-spin / Perfect Clear 보너스 미감지
 - Windows 전용 런처 (`.bat`). macOS/Linux에서는 `node server.js` 수동 실행 필요
 - 모바일 반응형 미지원 (1080p PC 브라우저 기준)
 - 외부 클라이언트 라이브러리 0 (바닐라 JS)
+- 기존 `phase3-4-qa-edge.test.js` Q7b는 유니코드 콘솔 배너와 ASCII 전용 검사의 불일치로 실패하며 게임 기능과 무관한 문서화된 테스트 부채
 
 ## 향후 확장 후보 (미착수)
 

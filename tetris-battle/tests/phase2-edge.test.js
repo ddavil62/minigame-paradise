@@ -108,24 +108,20 @@ async function run() {
   }
 
   // ── E1. 슬롯 가득 → ITEM_GRANT 차단 ─────────────────
-  section('E1. 슬롯 가득(3개) 차면 GARBAGE_SEND 100회에도 GRANT는 최대 3개');
+  section('E1. 슬롯 가득(3개) 차면 후속 3콤보 이벤트에도 추가 지급 없음');
   {
     const { a, b } = await joinTwo();
-    for (let i = 0; i < 100; i++) {
-      a.send({ type: 'GARBAGE_SEND', lines: 1, combo: 0 });
+    for (let eventId = 1; eventId <= 3; eventId++) {
+      a.send({ type: 'GARBAGE_SEND', lines: 0, combo: eventId + 2, clearEventId: eventId });
     }
-    await sleep(400);
+    await sleep(200);
     const grants = a.received.filter((m) => m.type === 'ITEM_GRANT');
-    assert(grants.length <= 3, `최대 3개로 제한됨 (실제: ${grants.length})`);
-    assert(grants.length >= 1, `최소 1개는 지급됨 (실제: ${grants.length})`);
-    // 추가 200회 보내도 더 이상 안 옴
+    assert(grants.length === 3, `빈 슬롯 3개에 정확히 3개 지급 (실제: ${grants.length})`);
     const before = grants.length;
-    for (let i = 0; i < 200; i++) {
-      a.send({ type: 'GARBAGE_SEND', lines: 1, combo: 0 });
-    }
-    await sleep(400);
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 6, clearEventId: 4 });
+    await sleep(150);
     const after = a.received.filter((m) => m.type === 'ITEM_GRANT').length;
-    assert(after === before, `슬롯 가득 후 추가 200회는 GRANT 0건 (before=${before}, after=${after})`);
+    assert(after === before, `슬롯 가득 후 추가 이벤트는 GRANT 0건 (before=${before}, after=${after})`);
     a.close(); b.close();
     await sleep(150);
   }

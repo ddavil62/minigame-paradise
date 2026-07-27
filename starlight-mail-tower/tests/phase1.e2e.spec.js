@@ -40,9 +40,19 @@ test('두 LAN 클라이언트가 준비 후 같은 30Hz 세션에서 이동한�
   await pageA.screenshot({ path: 'tests/screenshots/phase1-ingame-1280x720.png' });
   const canvasBox = await pageA.locator('#game-canvas').boundingBox();
   const toolbarBox = await pageA.locator('.toolbar').boundingBox();
-  expect(canvasBox.width).toBe(1280);
-  expect(canvasBox.height).toBe(720);
-  expect(canvasBox.width / canvasBox.height).toBeCloseTo(16 / 9, 5);
+  // canvas 인트린식 속성이 1280x720 유지되는지
+  const intrinsicA = await pageA.evaluate(() => {
+    const c = document.querySelector('#game-canvas');
+    return { w: c.width, h: c.height, objectFit: getComputedStyle(c).objectFit };
+  });
+  expect(intrinsicA.w).toBe(1280);
+  expect(intrinsicA.h).toBe(720);
+  // object-fit 계산값이 contain인지
+  expect(intrinsicA.objectFit).toBe('contain');
+  // canvas CSS 박스가 #play-viewport를 정확히 채우는지
+  const pvBoxA = await pageA.locator('#play-viewport').boundingBox();
+  expect(Math.abs(canvasBox.width - pvBoxA.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(canvasBox.height - pvBoxA.height)).toBeLessThanOrEqual(1);
   expect(toolbarBox.y + toolbarBox.height).toBeLessThanOrEqual(94);
   await contextA.close();
   await contextB.close();
@@ -67,7 +77,19 @@ test('1024×576에서 Canvas와 기본 HUD가 화면 안에 유지된다', async
   const timerBox = await page.locator('#elapsed-time').boundingBox();
   expect(canvasBox.width).toBeLessThanOrEqual(1024);
   expect(canvasBox.height).toBeLessThanOrEqual(576);
-  expect(canvasBox.width / canvasBox.height).toBeCloseTo(16 / 9, 5);
+  // canvas 인트린식 속성이 1280x720 유지되는지
+  const intrinsicB = await page.evaluate(() => {
+    const c = document.querySelector('#game-canvas');
+    return { w: c.width, h: c.height, objectFit: getComputedStyle(c).objectFit };
+  });
+  expect(intrinsicB.w).toBe(1280);
+  expect(intrinsicB.h).toBe(720);
+  // object-fit 계산값이 contain인지
+  expect(intrinsicB.objectFit).toBe('contain');
+  // canvas CSS 박스가 #play-viewport를 정확히 채우는지
+  const pvBoxB = await page.locator('#play-viewport').boundingBox();
+  expect(Math.abs(canvasBox.width - pvBoxB.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(canvasBox.height - pvBoxB.height)).toBeLessThanOrEqual(1);
   expect(connectionBox.x + connectionBox.width).toBeLessThanOrEqual(1024);
   expect(await page.locator('.connection-panel').evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
   expect(readyButtonBox).toMatchObject({ width: 160, height: 44 });
@@ -81,9 +103,12 @@ test('1024×576에서 Canvas와 기본 HUD가 화면 안에 유지된다', async
   await expect(page).toHaveTitle('Starlight Mail Tower');
   await expect(page.locator('#game-canvas')).toHaveAttribute('aria-label', 'Starlight Mail Tower sorting deck');
   const toolbarBox = await page.locator('.toolbar').boundingBox();
-  expect(toolbarBox.y).toBeGreaterThanOrEqual(timerBox.y + timerBox.height + 8);
+  expect(toolbarBox && timerBox && (Math.abs(toolbarBox.y - timerBox.y) <= timerBox.height || toolbarBox.x + toolbarBox.width + 8 <= timerBox.x || timerBox.x + timerBox.width + 8 <= toolbarBox.x)).toBe(true);
   const hintBox = await page.locator('#action-hint').boundingBox();
-  expect(576 - (hintBox.y + hintBox.height)).toBeGreaterThanOrEqual(16);
+  // action-hint가 #bottombar 안에 완전히 포함되는지 (3행 Grid 전환 후)
+  const bbarBox = await page.locator('#bottombar').boundingBox();
+  expect(hintBox.y).toBeGreaterThanOrEqual(bbarBox.y);
+  expect(hintBox.y + hintBox.height).toBeLessThanOrEqual(bbarBox.y + bbarBox.height + 1);
   await fs.mkdir('tests/screenshots', { recursive: true });
   await page.screenshot({ path: 'tests/screenshots/phase1-ingame-1024x576.png' });
   await context.close();

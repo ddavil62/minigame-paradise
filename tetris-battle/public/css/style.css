@@ -351,6 +351,15 @@ body {
   justify-content: center;
 }
 
+.item-rule {
+  margin: -2px 0 7px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 /* width: 30px — AD3 2차 HIGH-1 수정. side-panel(120px) - panel-block padding(16px) = 104px 가용폭.
    슬롯 3개(30×3=90) + gap(6×2=12) = 102px ≤ 104px (2px 여유). 이전 34px는 114px로 10px 오버플로우 발생. */
 .item-slot {
@@ -469,41 +478,63 @@ body {
   opacity: 1;
 }
 
-/* ── 방어막 발동 글로우 ────────────────────────────────────────── */
-@keyframes shield-flash {
-  0%   { box-shadow: 0 0 0 0 rgba(240, 208, 0, 0.0), 0 0 0 rgba(240, 208, 0, 0.0); }
-  20%  { box-shadow: 0 0 0 6px rgba(240, 208, 0, 0.8), 0 0 40px rgba(240, 208, 0, 0.7); }
-  100% { box-shadow: 0 0 0 0 rgba(240, 208, 0, 0.0), 0 0 0 rgba(240, 208, 0, 0.0); }
-}
-
-.board-wrap.shield-flash #board-canvas {
-  animation: shield-flash 1s ease-out;
-}
-
-/* ── 방어막 활성 배지 (차단 전까지 지속) ──────────────────────── */
-.shield-badge {
+/* ── 방어막 보드 외곽 글로우 ─────────────────────────────────── */
+.shield-frame {
   position: absolute;
-  top: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 61;
-  padding: 3px 12px;
-  border-radius: 4px;
-  background: rgba(60, 50, 0, 0.88);
-  border: 1px solid var(--item-shield);
-  color: #fff5c8;
-  font-size: 12px;
-  font-weight: bold;
-  letter-spacing: 2px;
-  text-shadow: 0 0 6px rgba(240, 208, 0, 0.7);
+  inset: 0;
+  z-index: 55;
+  box-sizing: border-box;
+  border: 2px solid transparent;
+  border-radius: 3px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s;
-  white-space: nowrap;
+  transform: scale(1);
+  transform-origin: center;
 }
 
-.shield-badge.active {
+.shield-frame::before,
+.shield-frame::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* 네 모서리에 집중된 하이라이트로 하나의 보호막 형태를 만든다. */
+.shield-frame::before {
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 255, 236, 0.95) 0 2px, rgba(255, 222, 70, 0.55) 3px, transparent 10px),
+    radial-gradient(circle at 100% 0, rgba(255, 255, 236, 0.95) 0 2px, rgba(255, 222, 70, 0.55) 3px, transparent 10px),
+    radial-gradient(circle at 0 100%, rgba(255, 255, 236, 0.95) 0 2px, rgba(255, 222, 70, 0.55) 3px, transparent 10px),
+    radial-gradient(circle at 100% 100%, rgba(255, 255, 236, 0.95) 0 2px, rgba(255, 222, 70, 0.55) 3px, transparent 10px);
+  opacity: 0.85;
+}
+
+.shield-frame::after {
+  border: 1px solid rgba(255, 246, 184, 0.78);
+  box-shadow: 0 0 8px rgba(255, 235, 80, 0.75);
+}
+
+.shield-frame.active {
   opacity: 1;
+  border-color: rgba(255, 222, 54, 0.92);
+  box-shadow:
+    inset 0 0 3px rgba(255, 249, 202, 0.68),
+    0 0 8px rgba(255, 226, 54, 0.88),
+    0 0 20px rgba(240, 184, 0, 0.52);
+  animation: shield-frame-breathe 2.2s ease-in-out infinite;
+}
+
+@keyframes shield-frame-breathe {
+  0%, 100% {
+    filter: brightness(0.92);
+    box-shadow: inset 0 0 2px rgba(255, 249, 202, 0.55), 0 0 8px rgba(255, 226, 54, 0.76), 0 0 15px rgba(240, 184, 0, 0.42);
+  }
+  50% {
+    filter: brightness(1.12);
+    box-shadow: inset 0 0 3px rgba(255, 255, 230, 0.8), 0 0 12px rgba(255, 236, 100, 0.95), 0 0 20px rgba(240, 184, 0, 0.58);
+  }
 }
 
 /* ── 상대방 방어막 배지 (미니맵 위 작은 아이콘) ──────────────────── */
@@ -527,16 +558,18 @@ body {
   opacity: 1;
 }
 
-/* ── 방어막 차단 강화 연출 (장착보다 강한 펄스) ──────────────── */
-@keyframes shield-block {
-  0%   { box-shadow: 0 0 0 0   rgba(240, 208, 0, 0.0), 0 0 0   rgba(240, 208, 0, 0.0); }
-  10%  { box-shadow: 0 0 0 14px rgba(240, 208, 0, 1.0), 0 0 70px rgba(240, 208, 0, 0.8); }
-  60%  { box-shadow: 0 0 0 6px rgba(240, 208, 0, 0.5), 0 0 30px rgba(240, 208, 0, 0.3); }
-  100% { box-shadow: 0 0 0 0   rgba(240, 208, 0, 0.0), 0 0 0   rgba(240, 208, 0, 0.0); }
+/* 차단 순간 백색에 가까운 펄스가 바깥으로 튄 뒤 빠르게 수축·소멸한다. */
+.shield-frame.breaking {
+  opacity: 1;
+  border-color: rgba(255, 255, 238, 1);
+  animation: shield-frame-pop 0.76s cubic-bezier(0.18, 0.72, 0.25, 1) forwards;
 }
 
-.board-wrap.shield-block-flash #board-canvas {
-  animation: shield-block 1.2s ease-out;
+@keyframes shield-frame-pop {
+  0%   { opacity: 1; transform: scale(1); box-shadow: inset 0 0 4px rgba(255,255,255,0.9), 0 0 10px rgba(255,246,180,1), 0 0 28px rgba(255,210,30,0.9); filter: brightness(1.8); }
+  18%  { opacity: 1; transform: scale(1.035); box-shadow: inset 0 0 2px rgba(255,255,255,0.7), 0 0 16px rgba(255,255,225,1), 0 0 38px rgba(255,213,48,0.9); filter: brightness(2); }
+  55%  { opacity: 0.72; transform: scale(1.018); box-shadow: 0 0 10px rgba(255,244,170,0.75), 0 0 22px rgba(255,194,0,0.55); filter: brightness(1.25); }
+  100% { opacity: 0; transform: scale(0.985); box-shadow: 0 0 0 rgba(255,210,30,0); filter: brightness(0.8); }
 }
 
 /* ── 보드 ───────────────────────────────────────────────────────── */
@@ -918,6 +951,23 @@ body {
 .toast.error {
   border-color: var(--lose);
   color: #ffdddd;
+}
+
+/* ── 모션 감소 환경 ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .shield-frame.active {
+    animation: none;
+    filter: none;
+  }
+
+  .shield-frame.breaking {
+    animation: shield-frame-pop-reduced 0.16s linear forwards;
+  }
+}
+
+@keyframes shield-frame-pop-reduced {
+  0%   { opacity: 1; transform: none; filter: brightness(1.45); }
+  100% { opacity: 0; transform: none; filter: none; }
 }
 
 /* ── 푸터 ───────────────────────────────────────────────────────── */

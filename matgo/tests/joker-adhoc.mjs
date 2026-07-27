@@ -195,14 +195,14 @@ it('JOKER-002a: 케이스 A 턴 유지 — 조커 낸 후 p1이 연속으로 일
 });
 
 // ── JOKER-004: 케이스 B — 더미 뒤집은 게 조커 ──────────────
-it('JOKER-004: 케이스 B — 조커 뒤집힘 → p2 피 1 + 조커 손으로 + 한 번 더 뒤집기', () => {
+it('JOKER-004: 케이스 B — 조커 뒤집힘 → p2 피 1 + 조커 captured + 한 번 더 뒤집기', () => {
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
     floor:  ['m02_kkeut_godori'], // 1월 매치 없음 → 1매칭 안 됨
     // 1월 카드 손에서 냄 → 바닥 0매칭 → 바닥에 m01_gwang 놓임
     // 그다음 더미에서 m00_joker_a 뒤집힘 → 케이스 B
-    //   → p2 피 1장 빼앗기, joker_a 손으로, 더미 한 번 더 뒤집기 (m08_gwang)
+    //   → p2 피 1장 빼앗기, joker_a captured, 더미 한 번 더 뒤집기 (m08_gwang)
     //   → m08_gwang은 바닥에 같은 월(8월) 없으므로 그냥 바닥에 놓임
     deck:   ['m08_gwang', 'm00_joker_a'], // pop 순: joker_a 먼저, 그 다음 m08_gwang
   });
@@ -212,8 +212,7 @@ it('JOKER-004: 케이스 B — 조커 뒤집힘 → p2 피 1 + 조커 손으로 
   // 검증
   truthy(g.captured.p1.some((c) => c.id === 'm06_pi_a'), 'p2 피 1장 빼앗음');
   eq(g.captured.p2.length, 0, 'p2 피 0');
-  // 조커는 손에 들어와 있음 (다음 턴에 사용 가능)
-  truthy(g.hands.p1.some((c) => c.id === 'm00_joker_a'), '조커 손에 추가됨');
+  truthy(g.captured.p1.some((c) => c.id === 'm00_joker_a'), '조커 captured 추가됨');
   // 추가 뒤집힘 m08_gwang은 바닥에 (8월 매치 없음)
   truthy(g.floor.some((c) => c.id === 'm08_gwang'), 'm08_gwang 바닥 놓임');
   // 첫 손패 m01_gwang은 0매칭이라 바닥에 남음
@@ -223,7 +222,7 @@ it('JOKER-004: 케이스 B — 조커 뒤집힘 → p2 피 1 + 조커 손으로 
 });
 
 // ── JOKER-005: 케이스 B 재귀 — 더미 두 번 다 조커 ─────────
-it('JOKER-005: 케이스 B 재귀 — 더미 위 2장 모두 조커, p2 피 2장 빼앗기 + 조커 2장 손으로', () => {
+it('JOKER-005: 케이스 B 재귀 — 더미 위 2장 모두 조커, p2 피 2장 빼앗기 + 조커 2장 captured', () => {
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
@@ -235,9 +234,8 @@ it('JOKER-005: 케이스 B 재귀 — 더미 위 2장 모두 조커, p2 피 2장
   g.captured.p2 = [card('m06_pi_a'), card('m04_pi_a'), card('m05_pi_a')];
 
   playCard(g, 'p1', 'm01_gwang');
-  // 조커 2장 모두 손에
-  truthy(g.hands.p1.some((c) => c.id === 'm00_joker_a'), 'joker_a 손에');
-  truthy(g.hands.p1.some((c) => c.id === 'm00_joker_b'), 'joker_b 손에');
+  truthy(g.captured.p1.some((c) => c.id === 'm00_joker_a'), 'joker_a captured');
+  truthy(g.captured.p1.some((c) => c.id === 'm00_joker_b'), 'joker_b captured');
   // p2 피 2장 빼앗김 (조커당 1장씩)
   eq(g.captured.p1.filter((c) => c.type === 'pi').length, 2, 'p1이 p2 피 2장 가져옴');
   eq(g.captured.p2.length, 1, 'p2 피 1장 남음 (3 - 2)');
@@ -315,8 +313,7 @@ it('JOKER-008: bonusFlipSteps에서 조커 뒤집힘 → 케이스 B 동일 처�
   for (const step of bonusFlipSteps(g, 'p1')) {
     if (step && step.error) throw new Error(step.error);
   }
-  // 조커는 손으로
-  truthy(g.hands.p1.some((c) => c.id === 'm00_joker_a'), '조커 손에 추가');
+  truthy(g.captured.p1.some((c) => c.id === 'm00_joker_a'), '조커 captured 추가');
   // p2 피 빼앗김
   truthy(g.captured.p1.some((c) => c.id === 'm06_pi_a'), 'p2 피 빼앗음');
   // 재귀로 m08_gwang 뒤집힘 → 바닥에

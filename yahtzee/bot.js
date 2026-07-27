@@ -223,6 +223,12 @@ function act(s) {
 
   // 추가 굴림.
   const keep = decideKeep(dice);
+  // 풀하우스처럼 현재 전략이 다섯 주사위를 모두 보관하기로 결정했다면
+  // 같은 눈을 그대로 두고 굴림 횟수만 소비하지 말고 즉시 점수 칸을 선택한다.
+  if (keep.length === 5 && keep.every(Boolean)) {
+    pickAndScore(dice, sheet);
+    return;
+  }
   console.log(`[yahtzee-bot] ROLL_DICE ${rollCount + 1}차 keep=[${keep.map((k) => k ? 'K' : '_').join(',')}] dice=[${dice.join(',')}]`);
   send({ type: 'ROLL_DICE', keep });
 }

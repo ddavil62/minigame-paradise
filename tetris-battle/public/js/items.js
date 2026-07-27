@@ -9,7 +9,7 @@
  *  - shield        (방어): 다음 공격 1회 무효화
  *
  * 흐름:
- *  - 라인 클리어 → 서버가 50% 확률로 ITEM_GRANT 전송 → grantItem(slot, id) → 슬롯 채움
+ *  - 3콤보 이상 라인 클리어 → 서버가 ITEM_GRANT 확정 전송 → 첫 빈 슬롯 채움
  *  - Z/X/C → useItem(slot) → 방어형은 즉시 로컬 적용, 공격형은 서버 경유로 상대에게 전달
  *  - 상대로부터 ITEM_EFFECT 수신 → applyEffect(id, duration) → 다크/프리즈/가비지폭탄 처리
  *  - 공격을 받기 직전 서버가 shieldActive 확인 → 활성이면 SHIELD_BLOCK으로 양쪽 통보
@@ -94,7 +94,6 @@ export function createItems(deps) {
   /** 다크/프리즈 활성 타이머 핸들 (중복 적용 시 기존 타이머 정리). */
   let darkTimer = 0;
   let freezeTimer = 0;
-  let shieldFeedbackTimer = 0;
 
   // ── 슬롯 헬퍼 ─────────────────────────────────────────────────
 
@@ -177,17 +176,12 @@ export function createItems(deps) {
 
   /**
    * 방어막 발동 (자신에게 shieldActive 플래그 ON).
-   * 배지를 차단 시까지 지속 표시 + 장착 순간 1초 글로우 연출.
+   * 보드 외곽 보호 글로우는 차단 또는 reset 전까지 지속한다.
    */
   function triggerShield() {
     shieldActive = true;
-    deps.ui.setShieldBadge(true);  // 차단될 때까지 배지 유지
-    deps.ui.flashShield(true, '방어막 장착!');
-    if (shieldFeedbackTimer) clearTimeout(shieldFeedbackTimer);
-    shieldFeedbackTimer = setTimeout(() => {
-      deps.ui.flashShield(false);
-      shieldFeedbackTimer = 0;
-    }, 1000);
+    deps.ui.setShieldFrameActive(true);
+    deps.ui.showBoardNotice('방어막 장착!', 'shield');
   }
 
   /**
@@ -200,12 +194,7 @@ export function createItems(deps) {
     if (!shieldActive) return false;
     // 클라이언트 측 보조 차단 (서버 권위와 별개로 즉시 UI 표시 가능)
     shieldActive = false;
-    deps.ui.flashShield(true, '방어막 차단!');
-    if (shieldFeedbackTimer) clearTimeout(shieldFeedbackTimer);
-    shieldFeedbackTimer = setTimeout(() => {
-      deps.ui.flashShield(false);
-      shieldFeedbackTimer = 0;
-    }, 1000);
+    deps.ui.flashShieldBlock('방어막 차단!');
     console.log(`[items] 방어막 차단: ${itemId}`);
     return true;
   }
@@ -299,21 +288,20 @@ export function createItems(deps) {
 
   /**
    * 서버에서 SHIELD_BLOCK 수신.
-   * shieldActive 플래그로 방어자와 공격자를 구분한다:
-   * - shieldActive가 true → 나는 방어자 (내 방어막이 차단 성공)
-   * - shieldActive가 false → 나는 공격자 (공격이 막힘)
+   * 최신 서버가 명시한 역할을 우선하며, 역할 필드가 없는 레거시 메시지에서만
+   * 수신 직전의 로컬 shieldActive를 호환 판별 근거로 사용한다.
    * @param {string} itemId
+   * @param {boolean} [isDefender] 현재 클라이언트가 차단에 사용된 방어막의 소유자인지
    */
-  function onShieldBlocked(itemId) {
-    if (shieldActive) {
-      // 방어자: 배지 제거 + 강화 연출
+  function onShieldBlocked(itemId, isDefender) {
+    const resolvedIsDefender = typeof isDefender === 'boolean' ? isDefender : shieldActive;
+    if (resolvedIsDefender) {
+      // 방어자: 지속 글로우를 차단 소멸 연출로 전환
       shieldActive = false;
-      deps.ui.setShieldBadge(false);
-      if (shieldFeedbackTimer) { clearTimeout(shieldFeedbackTimer); shieldFeedbackTimer = 0; }
       deps.ui.flashShieldBlock('방어막 차단!');
       console.log(`[items] 내 방어막이 ${itemId} 차단 성공`);
     } else {
-      // 공격자: 상대 배지 제거 + 상태 표시
+      // 공격자: 내 방어막 상태는 유지하고 상대 배지와 상태 표시만 갱신한다.
       deps.ui.setOppShieldBadge(false);
       deps.ui.setStatus(`상대 방어막에 차단됨 (${ITEMS[itemId]?.name || itemId})`);
       console.log(`[items] 내 ${itemId} 공격이 상대 방어막에 차단됨`);
@@ -328,14 +316,12 @@ export function createItems(deps) {
     shieldActive = false;
     if (darkTimer) { clearTimeout(darkTimer); darkTimer = 0; }
     if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = 0; }
-    if (shieldFeedbackTimer) { clearTimeout(shieldFeedbackTimer); shieldFeedbackTimer = 0; }
     // 라운드 종료가 프리즈 타이머보다 먼저 와도 다음 재대결에 잠금이 남지 않게 한다.
     deps.input.setFrozen(false);
     deps.game.setFrozenByItem(false);
     deps.ui.setDarkOverlay(false);
     deps.ui.setFreezeFeedback(false);
-    deps.ui.flashShield(false);
-    deps.ui.setShieldBadge(false);    // 리셋 시 내 배지도 제거
+    deps.ui.clearShieldFrame();       // 리셋 시 활성/소멸 상태를 모두 즉시 제거
     deps.ui.setOppShieldBadge(false); // 리셋 시 상대 배지도 제거
     refreshSlots();
   }

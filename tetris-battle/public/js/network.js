@@ -12,13 +12,13 @@
  * @param {(payload: {playerId: string, waiting: boolean, hostUrl?: string}) => void} handlers.onJoined
  * @param {(countdown: number) => void} handlers.onStart
  * @param {(lines: number, combo: number) => void} handlers.onGarbage
- * @param {(payload: {height: number, stack: number[]}) => void} handlers.onOpponentBoard
+ * @param {(payload: {height: number, stack: number[], cells: number[][], final: boolean}) => void} handlers.onOpponentBoard
  * @param {(winner: string, reason: string) => void} handlers.onResult
  * @param {(payload: {p1Ready: boolean, p2Ready: boolean}) => void} handlers.onRematchStatus
  * @param {(message: string) => void} handlers.onError
  * @param {(payload: {itemId: string, slotIndex: number}) => void} [handlers.onItemGrant]
  * @param {(payload: {itemId: string, duration: number}) => void} [handlers.onItemEffect]
- * @param {(payload: {itemId: string}) => void} [handlers.onShieldBlock]
+ * @param {(payload: {itemId: string, isDefender: boolean|undefined}) => void} [handlers.onShieldBlock]
  * @param {() => void} [handlers.onShieldActive]
  * @returns {object} 네트워크 컨트롤러
  */
@@ -127,7 +127,12 @@ export function createNetwork(handlers) {
         handlers.onGarbage(msg.lines || 0, msg.combo || 0);
         break;
       case 'OPPONENT_BOARD':
-        handlers.onOpponentBoard({ height: msg.height || 0, stack: msg.stack || [] });
+        handlers.onOpponentBoard({
+          height: msg.height || 0,
+          stack: msg.stack || [],
+          cells: Array.isArray(msg.cells) ? msg.cells : [],
+          final: msg.final === true,
+        });
         break;
       case 'GAME_RESULT':
         handlers.onResult(msg.winner, msg.reason || 'topout');
@@ -173,7 +178,11 @@ export function createNetwork(handlers) {
         break;
       case 'SHIELD_BLOCK':
         if (handlers.onShieldBlock) {
-          handlers.onShieldBlock({ itemId: msg.itemId });
+          handlers.onShieldBlock({
+            itemId: msg.itemId,
+            // 최신 서버의 명시적 역할은 보존하고, 레거시/비정상 값은 미지정으로 넘긴다.
+            isDefender: typeof msg.isDefender === 'boolean' ? msg.isDefender : undefined,
+          });
         }
         break;
       case 'SHIELD_ACTIVE':
@@ -214,9 +223,14 @@ export function createNetwork(handlers) {
     /** 게임 준비 완료 메시지 전송. */
     ready() { send({ type: 'READY' }); },
     /** 가비지 전송. */
-    sendGarbage(lines, combo) { send({ type: 'GARBAGE_SEND', lines, combo }); },
-    /** 보드 상태(미니맵용) 전송. */
-    sendBoardState(height, stack) { send({ type: 'BOARD_STATE', height, stack }); },
+    sendGarbage(lines, combo, clearEventId) {
+      send({ type: 'GARBAGE_SEND', lines, combo, clearEventId });
+    },
+    /**
+     * 실제 셀을 포함한 보드 상태를 전송한다.
+     * @param {{height:number, stack:number[], cells:number[][], final?:boolean}} state
+     */
+    sendBoardState(state) { send({ type: 'BOARD_STATE', ...state }); },
     /** 게임 오버 선언. */
     sendGameOver() { send({ type: 'GAME_OVER' }); },
     /** 재대결 요청. */

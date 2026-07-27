@@ -95,6 +95,7 @@
         <!-- Phase 2 아이템 슬롯 자리 -->
         <div class="panel-block items-block">
           <div class="panel-label">ITEMS</div>
+          <div class="item-rule">3 COMBO+ · 지급</div>
           <div class="item-slots">
             <div class="item-slot" data-slot="0">Z</div>
             <div class="item-slot" data-slot="1">X</div>
@@ -111,8 +112,8 @@
         <div id="dark-overlay" class="dark-overlay"></div>
         <!-- Phase 2: 프리즈 배지 -->
         <div id="freeze-badge" class="freeze-badge">FROZEN</div>
-        <!-- 방어막 활성 배지 (차단 전까지 지속 표시) -->
-        <div id="shield-badge" class="shield-badge">◇ 방어막</div>
+        <!-- 방어막 장식 레이어: 캔버스 외곽만 감싸며 입력과 보드 판독을 방해하지 않는다. -->
+        <div id="shield-frame" class="shield-frame" aria-hidden="true"></div>
       </div>
 
       <!-- 우측 사이드: NEXT -->

@@ -243,6 +243,8 @@ async function runWsScenarios() {
     const bBlock = await b.waitMessage((m) => m.type === 'SHIELD_BLOCK');
     assert(aBlock.itemId === 'dark', 'A SHIELD_BLOCK itemId dark');
     assert(bBlock.itemId === 'dark', 'B SHIELD_BLOCK itemId dark');
+    assert(aBlock.isDefender === false, '공격자 A에는 isDefender=false 전달');
+    assert(bBlock.isDefender === true, '방어자 B에는 isDefender=true 전달');
     // B는 ITEM_EFFECT를 받지 않아야 함
     await sleep(200);
     const bEffect = b.received.find((m) => m.type === 'ITEM_EFFECT');
@@ -292,22 +294,63 @@ async function runWsScenarios() {
     await sleep(120);
   }
 
-  section('B. WS — 시나리오 9: GARBAGE_SEND 100회 시 ITEM_GRANT 다수 확인 (확률 50%)');
+  section('B. WS — 시나리오 9: 3콤보 이상 고유 이벤트에 확정 지급');
   {
     const { a, b } = await joinTwo();
-    let granted = 0;
-    let denied = 0;
-    // 100회 보냄 → 슬롯이 3개라 최대 3개만 채워짐. denied 카운트는 별도 검증 어려움.
-    // 대신 "여러 번 보내면 최소 1개 이상 GRANT가 도착"하는지 검증.
-    for (let i = 0; i < 100; i++) {
-      a.send({ type: 'GARBAGE_SEND', lines: 1, combo: 0 });
-    }
-    await sleep(400);
-    for (const m of a.received) {
-      if (m.type === 'ITEM_GRANT') granted++;
-    }
-    assert(granted >= 1, `100회 GARBAGE_SEND → GRANT ${granted}개 (>=1 기대, 50% × 100회 = 평균 50회 시도 중 슬롯 3개 한계까지)`);
-    assert(granted <= 3, `GRANT는 슬롯 한도 3개를 넘지 않음 (실제: ${granted})`);
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 2, clearEventId: 1 });
+    await sleep(120);
+    assert(!a.received.some((m) => m.type === 'ITEM_GRANT'), '2콤보에는 아이템 미지급');
+
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 2 });
+    const first = await a.waitMessage((m) => m.type === 'ITEM_GRANT');
+    assert(first.slotIndex === 0, '3콤보 고유 이벤트는 첫 빈 슬롯 0에 확정 지급');
+
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 3, clearEventId: 2 });
+    await sleep(120);
+    assert(
+      a.received.filter((m) => m.type === 'ITEM_GRANT').length === 1,
+      '동일 clearEventId 재전송은 중복 지급하지 않음',
+    );
+
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 4, clearEventId: 3 });
+    const second = await a.waitMessage((m) => (
+      m.type === 'ITEM_GRANT' && m.slotIndex === 1
+    ));
+    a.send({ type: 'ITEM_USE', itemId: first.itemId, slotIndex: first.slotIndex });
+    a.send({ type: 'GARBAGE_SEND', lines: 0, combo: 5, clearEventId: 4 });
+    await sleep(150);
+    const slotZeroGrants = a.received.filter((m) => (
+      m.type === 'ITEM_GRANT' && m.slotIndex === 0
+    ));
+    assert(second.slotIndex === 1, '연속 이벤트는 다음 빈 슬롯 1에 지급');
+    assert(slotZeroGrants.length === 2, '사용한 슬롯 0을 다음 지급이 재사용');
+    a.close(); b.close();
+    await sleep(120);
+  }
+
+  section('B. WS — 시나리오 10: 실제 셀/가비지 구멍 및 최종 보드 순서');
+  {
+    const { a, b } = await joinTwo();
+    const cells = Array.from({ length: BOARD_HEIGHT }, () => Array(BOARD_WIDTH).fill(0));
+    cells[BOARD_HEIGHT - 1] = Array(BOARD_WIDTH).fill(8);
+    cells[BOARD_HEIGHT - 1][4] = 0;
+    cells[BOARD_HEIGHT - 2][2] = 3;
+    a.send({
+      type: 'BOARD_STATE',
+      height: 2,
+      stack: [1, 1, 2, 1, 0, 1, 1, 1, 1, 1],
+      cells,
+      final: true,
+    });
+    a.send({ type: 'GAME_OVER' });
+    const board = await b.waitMessage((m) => m.type === 'OPPONENT_BOARD');
+    await b.waitMessage((m) => m.type === 'GAME_RESULT');
+    const boardIndex = b.received.findIndex((m) => m.type === 'OPPONENT_BOARD');
+    const resultIndex = b.received.findIndex((m) => m.type === 'GAME_RESULT');
+    assert(board.cells[BOARD_HEIGHT - 1][4] === 0, '가비지 행의 실제 구멍 셀 보존');
+    assert(board.cells[BOARD_HEIGHT - 2][2] === 3, '일반 블록 종류와 위치 보존');
+    assert(board.final === true, '최종 보드 플래그 보존');
+    assert(boardIndex >= 0 && boardIndex < resultIndex, '최종 OPPONENT_BOARD가 GAME_RESULT보다 먼저 도착');
     a.close(); b.close();
     await sleep(120);
   }

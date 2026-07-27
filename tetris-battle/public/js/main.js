@@ -118,9 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHUD: ui.renderHUD,
     renderNext: ui.renderNext,
     renderHold: ui.renderHold,
-    onAttack: (lines, combo) => {
+    onAttack: (lines, combo, clearEventId) => {
       // 라인 클리어 → 가비지 전송
-      if (net) net.sendGarbage(lines, combo);
+      if (net) net.sendGarbage(lines, combo, clearEventId);
     },
     onGameOver: () => {
       // 자기 토프아웃 → 서버에 알림
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 결과 오버레이는 서버 GAME_RESULT 수신 시 표시
     },
     onBoardChange: (payload) => {
-      if (net) net.sendBoardState(payload.height, payload.stack);
+      if (net) net.sendBoardState(payload);
     },
   });
 
@@ -259,9 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[main] 아이템 효과 수신: ${itemId} (${duration}ms)`);
       if (items) items.applyEffect(itemId, duration);
     },
-    onShieldBlock: ({ itemId }) => {
-      console.log(`[main] 방어막으로 ${itemId} 차단됨`);
-      if (items) items.onShieldBlocked(itemId);
+    onShieldBlock: ({ itemId, isDefender }) => {
+      console.log(`[main] 방어막으로 ${itemId} 차단됨 (방어자=${isDefender})`);
+      if (items) items.onShieldBlocked(itemId, isDefender);
     },
     onShieldActive: () => {
       // 상대방이 방어막 발동 — 상대 미니맵 위에 배지 표시

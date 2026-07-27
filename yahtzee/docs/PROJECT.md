@@ -1,5 +1,7 @@
 # Yahtzee (요트 다이스) — PROJECT
 
+> 최종 업데이트: 2026-07-27 — 런처 2인 계약·AI 1슬롯 handoff와 다섯 주사위 전부 보관 시 즉시 채점을 적용했다. Phase B QA 257/257, handoff 반복 5/5 PASS.
+
 ## 정체성
 
 - **장르**: LAN 1:1 턴 교대 점수표 다이스 게임 (Yahtzee 표준 룰).
@@ -49,6 +51,7 @@
 yahtzee/
 ├── game.js                  # 순수 게임 로직 (다이스, 점수, 카테고리, 턴, 종료)
 ├── server.js                # WS 서버 + createApp() factory (단독 3010 + launcher 통합)
+├── bot.js                   # AI 굴림·보관·점수 카테고리 의사결정
 ├── package.json             # type:module + ws
 ├── playwright.config.js     # 향후 브라우저 E2E 대비 스켈레톤
 ├── CLAUDE.md                # 본 게임 컨벤션
@@ -67,7 +70,10 @@ yahtzee/
 │       ├── scoreboard.js    # 13 카테고리 표
 │       └── ui.js            # HUD / 결과 / 토스트
 └── tests/
-    └── smoke.test.js        # YACHT-001~010 ad-hoc 노드 러너
+    ├── smoke.test.js        # 규칙·WS·재대결 회귀
+    ├── dice-render.test.js  # 다이스 keep·컵 렌더 회귀
+    ├── bot-smoke.test.js    # AI 전체 26턴 회귀
+    └── ai-decision-regression.test.js # 다섯 주사위 보관 즉시 채점
 ```
 
 ## WebSocket 프로토콜
@@ -113,14 +119,21 @@ yahtzee/
 - YACHT-012: rollDice 400회 통계 — keep=true 동결 + keep=false 재굴림 + rollCount 권위(2026-06-20)
 - YACHT-KEEP-006/007/008: 컵 굴림 애니메이션 트리거 rollCount 기준 — 값 동일 재굴림 발동(006, 버그 직격) / rollCount 불변 미발동(007, 무한 루프 방지) / 턴 리셋 후 첫 굴림 발동(008) (2026-06-20)
 - YACHT-BOT-001~005: 봇 시나리오 25건 (포트 3099)
+- Phase B: 런처 `maxPlayers=2`, AI 슬롯 1개, START handoff와 내부 READY 비노출
+- AI 의사결정: keep 5개가 모두 참이면 추가 `ROLL_DICE` 없이 즉시 `SCORE_CATEGORY`
 
-실행: `node tests/smoke.test.js` (169/169), `node tests/dice-render.test.js` (55/55), `node tests/bot-smoke.test.js` (25/25). 누적 **249 / 249 PASS**.
+기존 실행: `node tests/smoke.test.js` (169/169), `node tests/dice-render.test.js` (55/55), `node tests/bot-smoke.test.js` (25/25). 기존 회귀 **249 / 249 PASS**.
 
-## 현재 상태 (2026-06-20)
+Phase B는 런처·브라우저·AI 회귀를 더해 **257 / 257 PASS**, 독립 handoff 반복 **5 / 5 PASS**다.
+
+## 현재 상태 (2026-07-27)
 
 - 1차 코어 + AI 봇 + 효과음 + 실시간 keep 동기화 + 카테고리 강조 애니메이션 완료.
+- 런처는 야추를 2인 전용으로 표시하며 AI 채우기 후 사람 1명 + AI 1명만 배치한다.
+- 런처 READY 뒤 `lobbyReady=1&fresh=1`을 인계해 야추 내부 READY 재입력 없이 시작한다.
+- AI가 다섯 주사위를 모두 보관하면 재굴림 없이 즉시 점수 카테고리를 선택한다.
 - UX 개선: 점수표 가로줄 정렬·카테고리 색 3상태(F/G), 봇 지연 2배(N1), 총점 가독성(N2), 컵 굴림 중 미리보기 억제→착지 시 자동 노출(N3), 굴리기 연타 차단(N4), 재대결 버튼 고착 해소(N5).
 - 버그 수정: 재굴림 애니메이션 미발동(2026-06-20) — 컵 굴림 트리거를 dice 값 변화에서 서버 권위 rollCount 증가로 교체. 우연히 직전과 같은 면으로 굴려져도 정상 발동.
 - 단독/launcher 통합 양쪽 동작 확인.
-- 모든 회귀 PASS (249/249).
+- Phase B 포함 회귀 PASS (257/257 + handoff 반복 5/5).
 - launcher games.json에 yahtzee 카드(#E84A5F) 등록.

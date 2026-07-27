@@ -31,6 +31,16 @@
           <svg id="path-layer" class="path-layer" viewBox="0 0 12 8" preserveAspectRatio="none" aria-hidden="true"></svg>
           <div id="shuffle-warning-badge" class="shuffle-warning-badge hidden" role="status" aria-live="assertive"><span aria-hidden="true">⟳</span> <b data-i18n="autoShuffleWarning">막힘 자동 셔플</b></div>
           <div id="countdown" class="countdown hidden"></div>
+          <section id="deadlock-panel" class="deadlock-panel hidden" role="dialog" aria-modal="true" aria-labelledby="deadlock-title">
+            <span class="deadlock-icon" aria-hidden="true">⟳</span>
+            <h2 id="deadlock-title" data-i18n="deadlockTitle">연결 가능한 짝이 없습니다</h2>
+            <p id="deadlock-detail" data-i18n="deadlockChoiceDetail">지금 섞거나, 5초 동안 기다린 뒤 다시 확인할 수 있습니다.</p>
+            <strong id="deadlock-countdown" class="deadlock-countdown hidden" aria-live="polite">5.0</strong>
+            <div id="deadlock-actions" class="deadlock-actions">
+              <button id="deadlock-shuffle-button" type="button" class="primary" data-i18n="deadlockShuffle">지금 셔플</button>
+              <button id="deadlock-wait-button" type="button" class="quiet" data-i18n="deadlockWait">5초 기다리기</button>
+            </div>
+          </section>
         </div>
         <div id="hint-banner" class="hint-banner hidden" role="status" aria-live="polite" aria-hidden="true">
           <span aria-hidden="true">✦</span>

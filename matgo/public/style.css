@@ -825,7 +825,7 @@ body {
   border: 2px solid var(--gold-hi);
   border-radius: 12px;
   box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 0 28px rgba(255,209,102,0.6);
-  z-index: 90;
+  z-index: 10001;
   pointer-events: none;
   opacity: 0;
   letter-spacing: 2px;

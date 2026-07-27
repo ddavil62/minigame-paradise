@@ -123,9 +123,14 @@ function createCard(game) {
   desc.textContent = localizedDescription;
   body.appendChild(desc);
 
-  if (game.playersLabelKo || game.botLabelKo) {
+  if (game.playersLabelKo || game.playersLabelEn || game.botLabelKo || game.botLabelEn) {
     const meta = document.createElement('div'); meta.className = 'game-card-meta';
-    const suffix = getLauncherLocale() === 'en' ? 'En' : 'Ko'; meta.textContent = `${game[`playersLabel${suffix}`]} · ${game[`botLabel${suffix}`]}`; body.appendChild(meta);
+    const suffix = getLauncherLocale() === 'en' ? 'En' : 'Ko';
+    // 선택적 메타 필드는 존재하는 값만 조합해 카드에 "undefined"가 노출되지 않게 한다.
+    meta.textContent = [game[`playersLabel${suffix}`], game[`botLabel${suffix}`]]
+      .filter((label) => typeof label === 'string' && label.trim())
+      .join(' · ');
+    if (meta.textContent) body.appendChild(meta);
   }
 
   // 단일 포트 통합 라우터에서는 path(`/matgo/` 등)를 표시한다.
@@ -421,8 +426,10 @@ function updateWaitingRoomUI(msg) {
       playersEl.appendChild(card);
     }
 
-    // 서버가 정한 좌우 역할 위치를 유지하고 빈 슬롯도 명확하게 보여 준다.
-    for (let slotIndex = msg.players.length; slotIndex < msg.maxPlayers; slotIndex += 1) {
+    // AI도 정원을 점유하므로 실인원과 AI를 합친 뒤 남은 자리만 빈 슬롯으로 표시한다.
+    const aiSlots = Array.isArray(msg.aiSlots) ? msg.aiSlots : [];
+    const occupiedSlotCount = Math.min(msg.maxPlayers, msg.players.length + aiSlots.length);
+    for (let slotIndex = occupiedSlotCount; slotIndex < msg.maxPlayers; slotIndex += 1) {
       const role = slotIndex === 0 ? 'a' : 'b';
       const card = document.createElement('div');
       card.className = `player-ready-card role-${role} empty-slot`;
@@ -432,7 +439,7 @@ function updateWaitingRoomUI(msg) {
     }
 
     // AI 슬롯 카드
-    for (const ai of (msg.aiSlots || [])) {
+    for (const ai of aiSlots) {
       const card = document.createElement('div');
       card.className = 'player-ready-card ai-slot ready';
 
@@ -472,7 +479,13 @@ function updateWaitingRoomUI(msg) {
     const game = gamesCache.find(g => g.id === msg.gameId);
     const botAvailable = game ? game.botAvailable : false;
     // AI 슬롯이 아직 없고, 빈 자리가 있고, 봇 지원이면 표시
-    const hasEmptySlots = msg.totalCount < msg.maxPlayers;
+    // 일부 다인 게임은 사람 대전 정원과 AI 대전 정원이 다르다.
+    // 예: 윷놀이는 사람 2~4인을 유지하되 AI 채우기는 정확히 1 human + 1 AI로 시작한다.
+    const aiFillTargetPlayers = Math.min(
+      msg.maxPlayers,
+      Number.isInteger(game?.aiFillTargetPlayers) ? game.aiFillTargetPlayers : msg.maxPlayers,
+    );
+    const hasEmptySlots = msg.totalCount < aiFillTargetPlayers;
     fillAiBtn.hidden = !amIHost || !botAvailable || !hasEmptySlots || (msg.aiSlots && msg.aiSlots.length > 0);
   }
 

@@ -96,6 +96,30 @@ export function createApp(options = {}) {
   function cancelResultTransition() { if (resultTimer) { clearTimeout(resultTimer); resultTimer = null; } }
 
   /**
+   * 종료된 세션에 연결 또는 유효한 재접속 예약이 없으면 다음 매치용 초기 상태로 되돌린다.
+   * @returns {boolean} 초기화를 수행했는지 여부
+   */
+  function resetEndedSessionIfAbandoned() {
+    if (simulation.phase !== 'ended' || clients.size !== 0) return false;
+    const now = Date.now();
+    const hasReconnectReservation = [...slots.values()].some((slot) => !slot.ws && slot.disconnectDeadline && slot.disconnectDeadline > now);
+    if (hasReconnectReservation) return false;
+
+    if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
+    cancelResultTransition();
+    for (const slot of slots.values()) if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer);
+    slots.clear();
+    expiredTokens.clear();
+    ready.clear();
+    restartVotes.clear();
+    resultVotes.clear();
+    pauseState = null;
+    selectedLevelId = DEFAULT_LEVEL_ID;
+    simulation = createSimulation(selectedLevelId);
+    return true;
+  }
+
+  /**
    * 현재 연결된 두 역할의 최신 결과 표를 다시 평가해 유일한 전환을 예약한다.
    * @returns {void}
    */
@@ -131,8 +155,8 @@ export function createApp(options = {}) {
     cancelResultTransition();
     simulation.phase = 'ended';
     pauseState = null;
-    for (const remainingSlot of slots.values()) if (remainingSlot.disconnectTimer) { clearTimeout(remainingSlot.disconnectTimer); remainingSlot.disconnectTimer = null; }
     broadcast({ type: SERVER_MESSAGE.SESSION_ENDED, reason: 'reconnect_expired', playerId: missingPlayerId });
+    resetEndedSessionIfAbandoned();
   }
 
   /** @param {object} client 연결 메타 @returns {void} */
@@ -209,7 +233,9 @@ export function createApp(options = {}) {
       if (client.playerId) return;
       const resumeSlotEntry = [...slots.values()].find((slot) => message.sessionToken && slot.resumeToken === message.sessionToken && !slot.ws && slot.disconnectDeadline > Date.now());
       if (resumeSlotEntry) { resumeSlot(ws, client, resumeSlotEntry); return; }
-      if (message.sessionToken && expiredTokens.has(message.sessionToken)) {
+      if (message.sessionToken) {
+        // 서버 재시작 전 토큰이나 이미 사용 중인 토큰을 신규 참가자로 받아들이면
+        // 오래된 탭의 자동 재접속이 빈 역할을 선점하므로 유효한 예약 외에는 모두 만료 처리한다.
         send(ws, { type: SERVER_MESSAGE.ERROR, code: ERROR_CODE.RESUME_EXPIRED, messageKey: 'error.resumeExpired' });
         ws.close(1008, 'resume expired');
         return;
@@ -303,9 +329,17 @@ export function createApp(options = {}) {
         if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
       }
       if (client.playerId && !client.explicitLeave && simulation.phase !== 'ended') pauseForDisconnect(client);
-      else if (client.playerId) ready.delete(client.playerId);
+      else if (client.playerId) {
+        ready.delete(client.playerId);
+        const slot = slots.get(client.playerId);
+        if (slot?.ws === ws) {
+          slot.ws = null;
+          slot.disconnectDeadline = null;
+        }
+      }
       // 모든 클라이언트가 떠나면 봇 프로세스도 종료한다.
       if (clients.size === 0) killBot();
+      resetEndedSessionIfAbandoned();
       if (testing && clients.size === 0) {
         for (const slot of slots.values()) if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer);
         pauseState = null; slots.clear(); ready.clear(); restartVotes.clear(); resultVotes.clear(); cancelResultTransition(); selectedLevelId = DEFAULT_LEVEL_ID; simulation = createSimulation(selectedLevelId);

@@ -1,5 +1,37 @@
 # Yutnori — 변경 이력
 
+## [2026-07-27] — 모바일 정사각 보드 + 런처 AI 1:1 인계
+
+### 변경
+
+- `public/css/style.css`: 900px 이하에서 `.board-area`를 flex 축소 대상에서 제외하고 `min(100vw - 16px, 56vh)`의 정사각 영역을 우선 확보한다. `.game-main`은 세로 스크롤, 인포바는 2열 래핑으로 제공한다.
+- 모바일 390×844 보드: 374×374px. 데스크톱 1280×800 보드: 694×694px.
+- 통합 런처의 윷놀이 메타에 `aiFillTargetPlayers: 2`를 적용했다. 사람 대전의 `minPlayers=2`, `maxPlayers=4`는 유지하며 AI 채우기만 1 human + 1 AI로 시작한다.
+- 윷놀이를 게임 서버 관리형 AI로 분류해 런처의 레거시 봇 중복 spawn 없이 `mode=ai&players=2`로 진입한다.
+
+### 수정
+
+- 모바일 인포바가 보드 영역을 압축해 보드가 약 120px까지 작아지던 문제를 수정했다.
+- 런처 READY 완료 상태를 `lobbyReady=1`로 인계하고, 게임 내부 `#ready-panel`과 `#btn-ready`를 숨겨 중복 READY 요구를 제거했다.
+- 윷놀이 AI 채우기가 사람 정원 4인을 그대로 목표로 삼아 “4인 AI 대전 미지원” 오류를 내던 문제를 수정했다.
+
+### 검증
+
+- Phase E QA **136/136 PASS**: AI handoff 반복 3, 세션 수명주기 2, 단위·WS 104, 로비 AI 목표 1, 사람 2·3·4인 및 5번째 거부 4, N인 회귀 22.
+- Chromium 모바일·데스크톱에서 정사각 보드, 수평 오버플로 없음, 하단 패널 스크롤 접근, 내부 READY 비노출을 확인했다.
+- AD 모드 3 **APPROVED**, QA **PASS**.
+
+### 운영 참고
+
+- 실행 중인 3000번 통합 런처가 이전 코드라면 새 AI 목표 인원이 반영되지 않는다. 최신 소스로 서버를 재시작해야 한다.
+- 아트 에셋 변경 없음. Mockup Sync 생략.
+
+### 참고
+
+- 구현 리포트: `.Codex/specs/2026-07-27-minigames-phase-e-report.md`
+- UI 검수: `.Codex/specs/2026-07-27-minigames-phase-e-ui-review.md`
+- QA: `.Codex/specs/2026-07-27-minigames-phase-e-qa.md`
+
 ## [2026-06-18] — 시각 재디자인 (2단 레이아웃 + 한지/원목 테마 + 윷가락 재설계)
 
 룰/로직 무변경. 사용자 요청 "지금 룰 기반으로 훨씬 보기 좋은 레이아웃 + 아트/UI 컨셉 변경"을 시각 레이어에 한정해 구현. `visual_change: ui`, AD3 APPROVED.

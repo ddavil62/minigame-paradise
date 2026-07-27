@@ -371,15 +371,14 @@ test('M-12: 광박 미발동 — 패자 gwang=1', () => {
   expect(r.reasons).not.toContain('광박 ×2');
 });
 
-test('M-13: 멍박 발동 — 패자 kkeut=0 → ×2', () => {
-  // 룰북 §6.2: 멍박 기준 패자 끗 0장
-  const r = applyFinalMultipliers(mkW(), mkL({ kkeut: 0, piCount: 10 }), noF);
+test('M-13: 멍박 발동 — 승자 kkeut=7 → ×2', () => {
+  const r = applyFinalMultipliers(mkW({ kkeut: 7 }), mkL({ kkeut: 7, piCount: 10 }), noF);
   expect(r.multiplier).toBe(2);
   expect(r.reasons).toContain('멍박 ×2');
 });
 
-test('M-14: 멍박 미발동 — 패자 kkeut=1', () => {
-  const r = applyFinalMultipliers(mkW(), mkL({ kkeut: 1, piCount: 10 }), noF);
+test('M-14: 멍박 미발동 — 승자 kkeut=6', () => {
+  const r = applyFinalMultipliers(mkW({ kkeut: 6 }), mkL({ kkeut: 0, piCount: 10 }), noF);
   expect(r.reasons).not.toContain('멍박 ×2');
 });
 
@@ -400,15 +399,15 @@ test('M-16: 고박(gobakApplies) → ×2', () => {
 // ============================================================
 
 test('M-17: 피박+멍박 → ×4', () => {
-  // 패자 piCount=5(피박) + kkeut=0(멍박) → 2×2=4
-  const r = applyFinalMultipliers(mkW(), mkL({ piCount: 5, kkeut: 0 }), noF);
+  // 패자 piCount=5(피박) + 승자 kkeut=7(멍박) → 2×2=4
+  const r = applyFinalMultipliers(mkW({ kkeut: 7 }), mkL({ piCount: 5, kkeut: 7 }), noF);
   expect(r.multiplier).toBe(4);
 });
 
 test('M-18: 광박+피박+멍박 → ×8', () => {
   const r = applyFinalMultipliers(
-    mkW({ gwang: 3 }),
-    mkL({ gwang: 0, piCount: 5, kkeut: 0 }),
+    mkW({ gwang: 3, kkeut: 7 }),
+    mkL({ gwang: 0, piCount: 5, kkeut: 7 }),
     noF,
   );
   expect(r.multiplier).toBe(8);
@@ -435,8 +434,8 @@ test('M-20: 흔들기+고박 → ×4', () => {
 test('M-21: 모든 박(광+피+멍+흔들기+고박) 1고 → mult=32, finalScore=8×32=256', () => {
   // base=7+1=8 (1고+1), mult=광×피×멍×흔×고박=2^5=32
   const r = applyFinalMultipliers(
-    mkW({ score: 7, gwang: 3 }),
-    mkL({ gwang: 0, piCount: 5, kkeut: 0 }),
+    mkW({ score: 7, gwang: 3, kkeut: 7 }),
+    mkL({ gwang: 0, piCount: 5, kkeut: 7 }),
     { winnerGoCount: 1, winnerShake: true, loserShake: false, gobakApplies: true },
   );
   expect(r.multiplier).toBe(32);
