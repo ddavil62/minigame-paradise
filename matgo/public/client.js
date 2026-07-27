@@ -827,6 +827,14 @@
     // lastAction 캡처 — 아래의 choice_made 분기와 상대 손 origin 식별 양쪽에서 사용.
     // (선언이 사용 뒤에 있으면 TDZ ReferenceError로 첫 STATE 렌더 자체가 멈춘다.)
     const la = s.lastAction;
+    const timelineSteps = Array.isArray(s.turnAction?.steps) ? s.turnAction.steps : [];
+    const stagedJokerIds = new Set(
+      timelineSteps
+        .filter((step) => step.type === 'STAGE_DRAWN_JOKER' && step.jokerCard)
+        .map((step) => step.jokerCard.id),
+    );
+    const settleStep = timelineSteps.find((step) => step.type === 'SETTLE_CAPTURE_BATCH');
+    const settleBatchId = settleStep?.batchId || null;
 
     // chooseFloorSteps 단계 1 (choice_made): srcCard가 captured에 등장하는데, 이건
     // 사용자가 모달 선택 직전에 던진 자기 카드다. 덱 origin이 아니므로 drewIds에서 제외.
@@ -999,7 +1007,10 @@
     // 덱 뒤집기 fly 시작 — 도착지(floor 또는 captured) DOM이 그려진 후 클론
     if (deckRectForFly && drewIds.size > 0) {
       for (const id of drewIds) {
-        startFlyFromDeck(id, deckRectForFly);
+        startFlyFromDeck(id, deckRectForFly, {
+          timelineRole: stagedJokerIds.has(id) ? 'staged-joker' : 'drawn-card',
+          batchId: settleBatchId,
+        });
       }
     }
     // 상대 손에서 나온 카드 fly 시작
@@ -1014,7 +1025,10 @@
     if (stolenPiIds.size > 0 && oppCapturedZoneEl) {
       const oppCapRect = oppCapturedZoneEl.getBoundingClientRect();
       for (const id of stolenPiIds) {
-        startFlyFromOppCaptured(id, oppCapRect, prevCapturedRects.get(id));
+        startFlyFromOppCaptured(id, oppCapRect, prevCapturedRects.get(id), {
+          timelineRole: 'stolen-card',
+          batchId: settleBatchId,
+        });
       }
     }
 
@@ -1645,8 +1659,9 @@
    * @param {string} cardId
    * @param {DOMRect} oppCapRect 상대 captured zone DOM의 viewport 좌표
    * @param {DOMRect|null} [sourceCardRect] 렌더 교체 전 강탈 카드의 실제 좌표
+   * @param {{timelineRole?:string,batchId?:string}} [meta] 정산 타임라인 메타데이터
    */
-  function startFlyFromOppCaptured(cardId, oppCapRect, sourceCardRect = null) {
+  function startFlyFromOppCaptured(cardId, oppCapRect, sourceCardRect = null, meta = {}) {
     const target =
       myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
       floorCardsEl.querySelector(`[data-card-id="${cardId}"]`);
@@ -1678,7 +1693,14 @@
     void clone.offsetHeight;
     target.style.visibility = 'hidden';
     recordFlyOrigin(cardId, 'opp-captured', startLeft, startTop);
-    pendingFlies.push({ cardId, clone, startedAt: Date.now(), origin: 'opp-captured' });
+    pendingFlies.push({
+      cardId,
+      clone,
+      startedAt: Date.now(),
+      origin: 'opp-captured',
+      timelineRole: meta.timelineRole || null,
+      batchId: meta.batchId || null,
+    });
   }
 
   /**
@@ -1686,8 +1708,9 @@
    * 시작 좌표를 deckRect로 설정 → resolvePendingFlies가 도착지로 보간 이동.
    * @param {string} cardId
    * @param {DOMRect} deckRect 덱 카드의 viewport 좌표
+   * @param {{timelineRole?:string,batchId?:string}} [meta] 턴 타임라인 메타데이터
    */
-  function startFlyFromDeck(cardId, deckRect) {
+  function startFlyFromDeck(cardId, deckRect, meta = {}) {
     const target =
       floorCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
       myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
@@ -1715,7 +1738,14 @@
     void clone.offsetHeight;
     target.style.visibility = 'hidden';
     recordFlyOrigin(cardId, 'deck', deckRect.left, deckRect.top);
-    pendingFlies.push({ cardId, clone, startedAt: Date.now(), origin: 'deck' });
+    pendingFlies.push({
+      cardId,
+      clone,
+      startedAt: Date.now(),
+      origin: 'deck',
+      timelineRole: meta.timelineRole || null,
+      batchId: meta.batchId || null,
+    });
   }
 
   /**
@@ -1862,6 +1892,8 @@
       entries.push({
         clone: fly.clone, cardId: fly.cardId, origin: fly.origin || 'hand',
         midRect, finalEl: loc.el, finalRect, isCap,
+        timelineRole: fly.timelineRole || null,
+        batchId: fly.batchId || null,
       });
     }
     for (const pe of pairEntries) {
@@ -1894,9 +1926,24 @@
       RESOLVE:    320, CLEANUP:    220,
     };
     const hasCapMove = entries.some((e) => e.isCap);
-    const deckEntries = entries.filter((e) => e.origin === 'deck');
-    const handLikeEntries = entries.filter((e) => e.origin === 'hand' || e.origin === 'opp-hand' || e.origin === 'opp-captured');
+    const stagedJokerEntries = entries.filter(
+      (e) => e.origin === 'deck' && e.timelineRole === 'staged-joker',
+    );
+    const deckEntries = entries.filter(
+      (e) => e.origin === 'deck' && e.timelineRole !== 'staged-joker',
+    );
+    // 강탈 피는 손패 충돌 단계에 섞지 않는다. 최종 RESOLVE에서 포획 카드와 동시에 이동한다.
+    const handLikeEntries = entries.filter(
+      (e) => e.origin === 'hand' || e.origin === 'opp-hand',
+    );
     const pairOnlyEntries = entries.filter((e) => e.origin === 'pair');
+    const floorRect = floorZoneEl.getBoundingClientRect();
+    const jokerStageRect = {
+      left: floorRect.left + (floorRect.width / 2) + 82,
+      top: floorRect.top + (floorRect.height / 2) - 42,
+      width: 60,
+      height: 85,
+    };
 
     /**
      * clone을 rect 위치로 이동시킨다.
@@ -1957,10 +2004,42 @@
       e.clone.appendChild(back);
       e.flipBack = back;
     }
+    for (const e of stagedJokerEntries) {
+      e.clone.style.transformStyle = 'preserve-3d';
+      e.clone.style.perspective = '600px';
+      e.clone.style.backfaceVisibility = 'hidden';
+      e.clone.style.transform = 'rotateY(-180deg)';
+      const back = document.createElement('div');
+      back.style.cssText = 'position:absolute; inset:0; background: repeating-linear-gradient(45deg, #5a3a1a 0 6px, #4a2a0a 6px 12px); border-radius:6px; transform: rotateY(180deg); backface-visibility:hidden; border: 2px solid var(--gold);';
+      e.clone.appendChild(back);
+      e.flipBack = back;
+    }
 
     let stateTimer = null;
+    /**
+     * 브라우저 회귀 테스트가 단계 순서를 결정적으로 관찰하도록 선택적 계측을 남긴다.
+     * @param {string} name
+     * @returns {void}
+     */
+    function recordTimelineStage(name) {
+      if (!Array.isArray(window.__matgoTimelineEvents)) return;
+      let activeEntries = [];
+      if (name === 'HAND_THROW' || name === 'HAND_LAND') activeEntries = handLikeEntries;
+      if (name === 'JOKER_FLIP' || name === 'JOKER_STAGE') activeEntries = stagedJokerEntries;
+      if (name === 'DECK_FLIP' || name === 'DECK_THROW' || name === 'DECK_LAND') {
+        activeEntries = deckEntries;
+      }
+      if (name === 'RESOLVE') activeEntries = entries.filter((entry) => entry.isCap);
+      window.__matgoTimelineEvents.push({
+        name,
+        t: performance.now(),
+        batchIds: [...new Set(entries.map((e) => e.batchId).filter(Boolean))],
+        activeCardIds: activeEntries.map((entry) => entry.cardId),
+      });
+    }
     function transition(name) {
       console.log(`[turn-fly] state=${name} (hand=${handLikeEntries.length} deck=${deckEntries.length} pair=${pairOnlyEntries.length} cap=${hasCapMove})`);
+      recordTimelineStage(name);
       if (stateTimer) { clearTimeout(stateTimer); stateTimer = null; }
       switch (name) {
         case 'HAND_THROW': {
@@ -1982,7 +2061,34 @@
             const pairs = pairsByMonth.get(month) || [];
             for (const pe of pairs) flashMeet(pe.clone);
           }
-          stateTimer = setTimeout(() => transition('DECK_FLIP'), T.HAND_LAND);
+          stateTimer = setTimeout(
+            () => transition(stagedJokerEntries.length > 0 ? 'JOKER_FLIP' : 'DECK_FLIP'),
+            T.HAND_LAND,
+          );
+          break;
+        }
+        case 'JOKER_FLIP': {
+          // 공개된 조커를 먼저 앞면으로 보여 준 뒤 바닥 빈 공간에 잠시 스테이징한다.
+          for (const e of stagedJokerEntries) {
+            e.clone.style.visibility = 'visible';
+            e.clone.style.transition = `transform ${T.DECK_FLIP / 1000}s ease-in-out`;
+            e.clone.style.transform = 'rotateY(0deg)';
+          }
+          stateTimer = setTimeout(() => transition('JOKER_STAGE'), T.DECK_FLIP);
+          break;
+        }
+        case 'JOKER_STAGE': {
+          for (const e of stagedJokerEntries) {
+            if (e.flipBack) { e.flipBack.remove(); e.flipBack = null; }
+            e.clone.style.transition = 'none';
+            e.clone.style.transform = '';
+          }
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            for (const e of stagedJokerEntries) {
+              flyTo(e.clone, jokerStageRect, T.DECK_THROW);
+            }
+          }));
+          stateTimer = setTimeout(() => transition('DECK_FLIP'), T.DECK_THROW + T.DECK_LAND);
           break;
         }
         case 'DECK_FLIP': {
@@ -2029,7 +2135,7 @@
           break;
         }
         case 'RESOLVE': {
-          // 매칭 카드 captured로 이동.
+          // 포획 카드·스테이징 조커·강탈 피를 같은 정산 프레임에서 함께 이동한다.
           for (const e of entries) if (e.isCap) flyTo(e.clone, e.finalRect, T.RESOLVE);
           stateTimer = setTimeout(() => transition('CLEANUP'), T.RESOLVE);
           break;
