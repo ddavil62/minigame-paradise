@@ -78,7 +78,10 @@ readyButton.hidden = pendingLobbyReadyHandoff;
 if (aiStartButton) aiStartButton.hidden = pendingLobbyReadyHandoff;
 
 // 런처의 신규 세션 진입에서만 이전 토큰을 비우고, 새로고침은 재접속으로 처리한다.
-if (parameters.get('fresh') === '1') {
+// fresh=1은 1회성 플래그로, 서버에 "신규 진입"임을 알려 유령 슬롯을 정리하게 한다.
+// F5 새로고침 시에는 URL에 fresh가 없으므로 기존 15초 재접속 유예가 유지된다.
+let freshEntry = parameters.get('fresh') === '1';
+if (freshEntry) {
   localStorage.removeItem(RESUME_TOKEN_KEY);
   parameters.delete('fresh');
   const cleanUrl = `${location.pathname}?${parameters.toString()}`;
@@ -87,13 +90,22 @@ if (parameters.get('fresh') === '1') {
 
 for (let index = 0; index < 15; index += 1) reconnectTicks.appendChild(document.createElement('i'));
 
-/** @returns {string} 현재 경로의 WebSocket URL (mode 파라미터 포함) */
+/**
+ * 현재 경로의 WebSocket URL을 만든다.
+ * mode 파라미터를 항상 포함하고, freshEntry가 true이면 fresh=1을 1회만 덧붙인다.
+ * @returns {string} WebSocket URL
+ */
 function buildWebSocketUrl() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const basePath = location.pathname.replace(/\/[^/]*$/, '/');
   const mode = parameters.get('mode');
-  const modeQuery = mode ? `?mode=${mode}` : '';
-  return `${protocol}//${location.host}${basePath}ws${modeQuery}`;
+  const wsParams = new URLSearchParams();
+  if (mode) wsParams.set('mode', mode);
+  // freshEntry=true이면 서버에 신규 진입 신호를 보낸다 (유령 슬롯 정리용).
+  // 최초 open 핸들러에서 false로 내려 자동 재연결에는 실리지 않는다.
+  if (freshEntry) wsParams.set('fresh', '1');
+  const qs = wsParams.toString();
+  return `${protocol}//${location.host}${basePath}ws${qs ? `?${qs}` : ''}`;
 }
 
 /** @param {object} message 송신 메시지 @returns {void} */
@@ -308,7 +320,14 @@ function handleServerMessage(message) {
     const mineReady = message.ready.includes(playerId); rematchButton.disabled = mineReady; rematchStatus.textContent = t(message.status === 'partner_left' ? 'result.partnerLeft' : message.status === 'processing' ? 'result.processing' : message.ready.length === 2 ? 'result.bothReady' : mineReady ? 'result.ready' : 'result.waiting');
     resultOverlay.classList.toggle('solo-ready', message.ready.length === 1); resultOverlay.classList.toggle('solo-p1', message.ready.length === 1 && message.ready[0] === 'p1'); resultOverlay.classList.toggle('solo-p2', message.ready.length === 1 && message.ready[0] === 'p2'); resultOverlay.classList.toggle('both-ready', message.ready.length === 2);
     if (message.status === 'partner_left') resultOverlay.classList.add('partner-left'); if (message.status === 'processing') { resultOverlay.classList.add('processing'); resultOverlay.setAttribute('aria-busy', 'true'); }
-  } else if (message.type === SERVER_MESSAGE.ERROR) { showToast(t(message.messageKey)); if (message.code === 'RESUME_EXPIRED') showSessionEnded('reconnect_expired'); }
+  } else if (message.type === SERVER_MESSAGE.ERROR) {
+    showToast(t(message.messageKey));
+    if (message.code === 'RESUME_EXPIRED') showSessionEnded('reconnect_expired');
+    // ROOM_FULL 수신 시 재연결 루프를 차단한다.
+    // 서버가 ws.close(1008)을 함께 보내므로 close 이벤트가 발생하는데,
+    // intentionalClose = true가 없으면 350ms 재연결이 무한 반복된다.
+    if (message.code === 'ROOM_FULL') intentionalClose = true;
+  }
 }
 
 /** @returns {void} */
@@ -320,6 +339,10 @@ function connect() {
     connectionState = 'online'; updateConnectionLabel();
     const fallback = `${t('default.name')} ${Math.floor(Math.random() * 90 + 10)}`;
     send({ type: CLIENT_MESSAGE.JOIN, name: parameters.get('name')?.slice(0, 20) || fallback, sessionToken: localStorage.getItem(RESUME_TOKEN_KEY) ?? '', locale: getLocale(), requestedRole: parameters.get('role'), readyFromLobby: parameters.get('lobbyReady') === '1' });
+    // fresh=1 플래그는 최초 JOIN에서만 WS URL에 실린다.
+    // 이후 자동 재연결 시에는 buildWebSocketUrl()이 fresh를 포함하지 않아
+    // F5 새로고침의 15초 재접속 유예가 보존된다.
+    freshEntry = false;
   });
   socket.addEventListener('message', (event) => { try { handleServerMessage(JSON.parse(event.data)); } catch { showToast(t('error.invalidMessage')); } });
   socket.addEventListener('close', () => { connectionState = 'closed'; updateConnectionLabel(); if (!intentionalClose && !sessionEnded) window.setTimeout(connect, 350); });
@@ -357,8 +380,16 @@ document.querySelector('.level-tabs')?.addEventListener('keydown', (event) => {
 readyButton.addEventListener('click', () => send({ type: CLIENT_MESSAGE.READY }));
 if (aiStartButton) {
   aiStartButton.addEventListener('click', () => {
+    // AI 재진입 시 현재 세션을 명시적으로 종료한다.
+    // returnToLobby()와 동일한 패턴: intentionalClose → LEAVE_GAME → 소켓 close → 이동.
+    // intentionalClose를 먼저 설정해 자동 재연결(350ms)을 차단한다.
+    intentionalClose = true;
     localStorage.removeItem(RESUME_TOKEN_KEY);
-    location.href = `${location.pathname}?mode=ai&fresh=1`;
+    send({ type: CLIENT_MESSAGE.LEAVE_GAME });
+    window.setTimeout(() => {
+      socket?.close();
+      location.href = `${location.pathname}?mode=ai&fresh=1`;
+    }, 120);
   });
 }
 document.querySelectorAll('[data-result-action]').forEach((button) => button.addEventListener('click', () => send({ type: CLIENT_MESSAGE.RESULT_VOTE, action: button.dataset.resultAction })));

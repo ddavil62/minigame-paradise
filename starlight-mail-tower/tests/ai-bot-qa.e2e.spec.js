@@ -130,6 +130,56 @@ test.describe('AI 봇 시각적 검증', () => {
   });
 });
 
+test.describe('TC-E2E-NEW-1: AI 세션 도중 AI 버튼 재클릭 → 새 AI 세션 정상 진입', () => {
+  test('AI 세션 시작 후 #ai-start-button 재클릭 → ROOM_FULL 없이 새 세션 진입', async ({ page }) => {
+    test.setTimeout(90000);
+    const errors = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+
+    // 1) mode=ai&fresh=1로 첫 AI 세션 진입 → READY → 게임 시작
+    await page.goto('/?mode=ai&fresh=1');
+    await page.waitForSelector('#ready-overlay', { timeout: 5000 });
+    // DEFECT-3 수정으로 standalone 서버에서도 봇이 spawn된다.
+    // 인간은 수동 READY 필요. 봇 spawn + JOIN 완료를 기다린 후 READY를 클릭한다.
+    await page.click('#ready-button');
+
+    // 게임 시작까지 대기 (ready-overlay의 hidden 속성이 true가 되면 START 수신).
+    // DEFECT-2 수정: try/catch 제거, 하드 단언으로 전환.
+    // Playwright의 waitForSelector('[hidden]')은 hidden 요소를 "보이지 않음"으로 판정하므로
+    // waitForFunction으로 DOM hidden 속성을 직접 확인한다.
+    await page.waitForFunction(
+      () => document.querySelector('#ready-overlay')?.hidden === true,
+      {},
+      { timeout: 30000 },
+    );
+
+    // 2) AI 버튼 재클릭으로 새 세션 진입을 시도한다.
+    //    게임 진행 중에는 ready overlay가 숨겨져 있어 AI 버튼이 보이지 않으므로
+    //    직접 URL 네비게이션으로 AI 재진입을 시뮬레이션한다.
+    //    (실제 사용자 흐름: 결과 화면 → 로비 → AI 시작, 또는 주소창에서 직접 재진입)
+    await page.goto('/?mode=ai&fresh=1');
+    await page.waitForSelector('#ready-overlay', { timeout: 5000 });
+
+    // 3) 새 페이지에서 ROOM_FULL 토스트가 뜨지 않아야 한다
+    await page.waitForTimeout(3000);
+    const toastText = await page.locator('#toast').textContent();
+    const hasRoomFull = toastText?.includes('두 로봇이 이미 작전 중') || toastText?.includes('Two robots are already on duty');
+    expect(hasRoomFull).toBe(false);
+
+    // 4) 새 AI 세션이 시작되어야 한다 (READY 후 봇 READY → START)
+    // DEFECT-2 수정: try/catch 제거, 하드 단언으로 전환.
+    await page.click('#ready-button');
+    await page.waitForFunction(
+      () => document.querySelector('#ready-overlay')?.hidden === true,
+      {},
+      { timeout: 30000 },
+    );
+
+    // 자바스크립트 에러 없음 확인
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe('서버 mode=ai 통합 검증', () => {
   test('mode=ai 접속 시 봇이 spawn되고 게임이 시작된다', async ({ page }) => {
     const errors = [];

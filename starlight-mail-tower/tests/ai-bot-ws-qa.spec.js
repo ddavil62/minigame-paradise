@@ -205,9 +205,9 @@ describe('정적 검증', () => {
   test('TC-STATIC-13: client.js에 buildWebSocketUrl에 mode 파라미터가 포함된다', () => {
     const clientSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'public', 'js', 'client.js'), 'utf-8');
     assert.ok(clientSrc.includes('buildWebSocketUrl'), 'buildWebSocketUrl 함수가 있어야 한다');
-    // mode 파라미터 포함 확인
+    // mode 파라미터 포함 확인 (URLSearchParams 방식 또는 기존 modeQuery 방식)
     assert.ok(
-      clientSrc.includes("mode ? `?mode=${mode}`") || clientSrc.includes('modeQuery'),
+      clientSrc.includes("mode ? `?mode=${mode}`") || clientSrc.includes('modeQuery') || clientSrc.includes("wsParams.set('mode', mode)"),
       'buildWebSocketUrl에서 mode 파라미터를 포함해야 한다'
     );
   });
@@ -588,6 +588,151 @@ describe('코드 정적 분석 검증', () => {
     assert.ok(
       spawnBody.includes('!getBotUrl || botChild') || spawnBody.includes('botChild'),
       'spawnBot에 botChild 중복 방지 가드가 있어야 한다'
+    );
+  });
+});
+
+// ── ROOM_FULL 교착 버그 수정 검증 (TC-NEW-1 ~ TC-NEW-3) ──────────
+
+describe('동적 검증: TC-NEW-1 AI 세션 후 재진입 시 ROOM_FULL 없음', () => {
+  let server, app;
+
+  before(async () => {
+    const result = await startServer(3024);
+    server = result.server;
+    app = result.app;
+  });
+
+  after(async () => {
+    app.close();
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  test('LEAVE_GAME 전송 후 신규 JOIN → WELCOME 수신 (ROOM_FULL 없음)', async () => {
+    const port = 3024;
+
+    // 1) 인간 역할로 mode=ai 접속
+    const humanWs = await connectWs(`ws://127.0.0.1:${port}/ws?mode=ai`);
+    send(humanWs, { type: 'JOIN', name: 'QA-Reentry', sessionToken: '', locale: 'ko' });
+    const welcome1 = await waitForMessage(humanWs, 'WELCOME', 5000);
+    assert.ok(welcome1.playerId, 'WELCOME에 playerId가 있어야 한다');
+
+    // 2) READY → START
+    send(humanWs, { type: 'READY' });
+    await waitForMessage(humanWs, 'START', 15000);
+
+    // 3) LEAVE_GAME 전송 후 소켓 close (P-1 패턴)
+    send(humanWs, { type: 'LEAVE_GAME' });
+    await new Promise((r) => setTimeout(r, 200));
+    humanWs.close();
+
+    // 4) 봇 종료 대기 (서버가 clients.size === 0 시 killBot 호출)
+    await new Promise((r) => setTimeout(r, 1500));
+
+    // 5) 신규 WS로 재진입 (fresh=1 포함)
+    const newWs = await connectWs(`ws://127.0.0.1:${port}/ws?mode=ai&fresh=1`);
+    send(newWs, { type: 'JOIN', name: 'QA-NewEntry', sessionToken: '', locale: 'ko' });
+
+    // 6) WELCOME 수신 확인 (ROOM_FULL이 아닌 정상 진입)
+    const welcome2 = await waitForMessage(newWs, 'WELCOME', 5000);
+    assert.ok(welcome2.playerId, '신규 진입에서 WELCOME을 받아야 한다');
+
+    newWs.close();
+  });
+});
+
+describe('동적 검증: TC-NEW-2 LEAVE_GAME 없이 close 후 fresh=1 재진입 방어', () => {
+  let server, app;
+
+  before(async () => {
+    const result = await startServer(3025);
+    server = result.server;
+    app = result.app;
+  });
+
+  after(async () => {
+    app.close();
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  test('유령 슬롯이 있어도 fresh=1 재진입 시 서버가 정리 후 WELCOME을 보낸다', async () => {
+    const port = 3025;
+
+    // 1) 인간 역할로 mode=ai 접속
+    const humanWs = await connectWs(`ws://127.0.0.1:${port}/ws?mode=ai`);
+    send(humanWs, { type: 'JOIN', name: 'QA-Ghost', sessionToken: '', locale: 'ko' });
+    const welcome1 = await waitForMessage(humanWs, 'WELCOME', 5000);
+    assert.ok(welcome1.playerId);
+
+    // 2) READY → START
+    send(humanWs, { type: 'READY' });
+    await waitForMessage(humanWs, 'START', 15000);
+
+    // 3) LEAVE_GAME 없이 소켓 close → 서버가 pauseForDisconnect로 유령 슬롯 생성
+    humanWs.close();
+
+    // 4) 즉시(유령 슬롯이 살아 있는 동안) fresh=1로 재진입
+    await new Promise((r) => setTimeout(r, 300));
+    const newWs = await connectWs(`ws://127.0.0.1:${port}/ws?mode=ai&fresh=1`);
+    send(newWs, { type: 'JOIN', name: 'QA-NewAfterGhost', sessionToken: '', locale: 'ko' });
+
+    // 5) 서버가 유령 슬롯을 정리하고 WELCOME을 보내야 한다
+    const welcome2 = await waitForMessage(newWs, 'WELCOME', 5000);
+    assert.ok(welcome2.playerId, '유령 슬롯 정리 후 WELCOME을 받아야 한다');
+
+    newWs.close();
+  });
+});
+
+describe('정적 검증: TC-NEW-3 ROOM_FULL 재연결 루프 차단', () => {
+  test('client.js에서 ROOM_FULL 수신 시 intentionalClose = true가 설정된다', () => {
+    const clientSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'public', 'js', 'client.js'), 'utf-8');
+    // ROOM_FULL 처리 코드 내부에 intentionalClose = true 설정이 존재하는지 단언
+    const roomFullIdx = clientSrc.indexOf("'ROOM_FULL'");
+    assert.ok(roomFullIdx >= 0, "client.js에 'ROOM_FULL' 문자열이 있어야 한다");
+    const context = clientSrc.slice(roomFullIdx, roomFullIdx + 200);
+    assert.ok(
+      context.includes('intentionalClose = true'),
+      'ROOM_FULL 처리 블록 안에 intentionalClose = true가 있어야 한다'
+    );
+  });
+
+  test('server.js handleUpgrade에서 fresh=1일 때만 유령 슬롯을 정리한다', () => {
+    const serverSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'server.js'), 'utf-8');
+    // fresh === '1' 조건이 handleUpgrade 안에 존재하는지 확인
+    assert.ok(
+      serverSrc.includes("fresh === '1'"),
+      "handleUpgrade에 fresh === '1' 조건이 있어야 한다"
+    );
+    // mode === 'ai' && fresh === '1' 복합 조건 확인
+    const upgradeIdx = serverSrc.indexOf('function handleUpgrade');
+    assert.ok(upgradeIdx >= 0, 'handleUpgrade 함수가 있어야 한다');
+    const upgradeBody = serverSrc.slice(upgradeIdx, upgradeIdx + 1000);
+    assert.ok(
+      upgradeBody.includes("mode === 'ai' && fresh === '1'"),
+      "handleUpgrade에서 mode=ai와 fresh=1을 동시에 검사해야 한다"
+    );
+  });
+
+  test('client.js buildWebSocketUrl에서 freshEntry가 true일 때만 fresh=1을 포함한다', () => {
+    const clientSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'public', 'js', 'client.js'), 'utf-8');
+    const buildIdx = clientSrc.indexOf('function buildWebSocketUrl');
+    assert.ok(buildIdx >= 0, 'buildWebSocketUrl 함수가 있어야 한다');
+    const buildBody = clientSrc.slice(buildIdx, buildIdx + 500);
+    assert.ok(
+      buildBody.includes("if (freshEntry) wsParams.set('fresh', '1')"),
+      'freshEntry가 true일 때만 fresh=1을 WS URL에 추가해야 한다'
+    );
+  });
+
+  test('client.js open 핸들러에서 freshEntry를 false로 리셋한다', () => {
+    const clientSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'public', 'js', 'client.js'), 'utf-8');
+    const openIdx = clientSrc.indexOf("socket.addEventListener('open'");
+    assert.ok(openIdx >= 0, 'socket open 핸들러가 있어야 한다');
+    const afterOpen = clientSrc.slice(openIdx, openIdx + 700);
+    assert.ok(
+      afterOpen.includes('freshEntry = false'),
+      'open 핸들러에서 freshEntry를 false로 리셋해야 한다'
     );
   });
 });

@@ -8,7 +8,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import { advanceModuleForTesting, applyInput, createSimulation, snapshotSimulation, stepSimulation, triggerFinishForTesting } from './game/simulation.js';
 import { createRecordStore } from './game/records.js';
 import { WORLD } from './shared/level-data.js';
@@ -100,7 +100,11 @@ export function createApp(options = {}) {
    * @returns {boolean} 초기화를 수행했는지 여부
    */
   function resetEndedSessionIfAbandoned() {
-    if (simulation.phase !== 'ended' || clients.size !== 0) return false;
+    // playerId가 할당된 클라이언트(JOIN 완료 상태)가 없을 때만 초기화한다.
+    // 기존 clients.size !== 0 조건은 ROOM_FULL 재연결 소켓처럼
+    // JOIN 이전 상태로 clients에 있는 소켓까지 포함해 초기화를 막았다.
+    const hasJoinedClient = [...clients.values()].some((c) => c.playerId);
+    if (simulation.phase !== 'ended' || hasJoinedClient) return false;
     const now = Date.now();
     const hasReconnectReservation = [...slots.values()].some((slot) => !slot.ws && slot.disconnectDeadline && slot.disconnectDeadline > now);
     if (hasReconnectReservation) return false;
@@ -328,7 +332,10 @@ export function createApp(options = {}) {
         restartVotes.delete(client.playerId);
         if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
       }
-      if (client.playerId && !client.explicitLeave && simulation.phase !== 'ended') pauseForDisconnect(client);
+      // 봇 소켓(ws.isBot)은 pauseForDisconnect를 건너뛴다.
+      // killBot() → SIGTERM → 봇 process.exit(0) → close 이벤트가 비동기로 발생하는데,
+      // 이때 pauseForDisconnect가 실행되면 새 유령 슬롯이 만들어져 후속 진입을 막는다.
+      if (client.playerId && !client.explicitLeave && simulation.phase !== 'ended' && !ws.isBot) pauseForDisconnect(client);
       else if (client.playerId) {
         ready.delete(client.playerId);
         const slot = slots.get(client.playerId);
@@ -411,7 +418,56 @@ export function createApp(options = {}) {
   function handleUpgrade(req, socket, head) {
     const requestUrl = new URL(req.url ?? '/', 'http://local');
     const mode = requestUrl.searchParams.get('mode');
+    const fresh = requestUrl.searchParams.get('fresh');
+
+    // mode=ai & fresh=1 재진입 시 이전 세션의 잔존 슬롯을 강제 정리한다.
+    // P-1 수정(LEAVE_GAME 전송)이 정상 동작하면 이 경로는 거의 실행되지 않지만,
+    // 브라우저가 이미 교착 상태에 빠진 경우(P-1 이전 버전 클라이언트, 네트워크 이상 등)
+    // 서버가 스스로 회복할 수 있도록 최소 방어로 유지한다.
+    // fresh 없는 F5 새로고침은 이 경로를 타지 않아 15초 재접속 유예가 보존된다.
+    //
+    // 정리 대상 (DEFECT-1 보강):
+    // 1) 유령 슬롯: slot.ws === null && slot.disconnectDeadline (기존)
+    // 2) 죽어가는 슬롯: slot.ws !== null && readyState !== OPEN (CLOSING/CLOSED)
+    //    — ws.close() 호출 직후 close 이벤트가 아직 이벤트 루프에서 처리되지 않은 상태
+    // 3) 봇 슬롯: slot.ws?.isBot === true
+    //    — AI 세션을 새로 시작하므로 이전 봇 슬롯은 killBot으로 정리된다
+    if (mode === 'ai' && fresh === '1') {
+      let cleaned = false;
+      for (const [playerId, slot] of slots) {
+        const isGhost = !slot.ws && slot.disconnectDeadline;
+        const isDying = slot.ws && slot.ws.readyState !== WebSocket.OPEN;
+        const isBot = slot.ws && slot.ws.isBot === true;
+        if (isGhost || isDying || isBot) {
+          if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer);
+          if (slot.ws && slot.ws.readyState === WebSocket.OPEN) slot.ws.terminate();
+          slots.delete(playerId);
+          ready.delete(playerId);
+          restartVotes.delete(playerId);
+          resultVotes.delete(playerId);
+          cleaned = true;
+        }
+      }
+      if (cleaned) {
+        // 잔존하는 봇 프로세스도 함께 종료한다 (다음 spawnBot에서 새 봇이 기동됨)
+        killBot();
+        pauseState = null;
+        ready.clear();
+        restartVotes.clear();
+        resultVotes.clear();
+        cancelResultTransition();
+      }
+      // 슬롯이 모두 비면 시뮬레이션을 재초기화해 phase 불일치를 방지한다
+      if (slots.size === 0) {
+        simulation = createSimulation(selectedLevelId);
+      }
+    }
+
     wss.handleUpgrade(req, socket, head, (ws) => {
+      // mode=bot: 봇 프로세스에서 접속한 소켓에 플래그를 설정한다.
+      // close 핸들러에서 봇 소켓은 pauseForDisconnect를 건너뛰어
+      // killBot() 이후 비동기 close가 새 유령 슬롯을 만드는 것을 방지한다.
+      if (mode === 'bot') ws.isBot = true;
       wss.emit('connection', ws, req);
       // mode=ai: 인간이 접속한 것이므로 봇 spawn
       if (mode === 'ai' && !botChild) spawnBot();
@@ -430,8 +486,13 @@ export function createApp(options = {}) {
 function readPort() { const index = process.argv.indexOf('--port'); return index >= 0 ? Number(process.argv[index + 1]) || 3015 : Number(process.env.PORT) || 3015; }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const app = createApp();
+  const port = readPort();
+  // standalone 실행 시에도 getBotUrl을 주입해 AI 모드가 동작하도록 한다.
+  // 런처(3000 포트)는 별도로 getBotUrl을 주입하므로 프로덕션에는 무영향이다.
+  const app = createApp({
+    getBotUrl: () => `ws://127.0.0.1:${port}/ws?mode=bot`,
+  });
   const server = http.createServer(app.handleHttp);
   server.on('upgrade', app.handleUpgrade);
-  server.listen(readPort(), '0.0.0.0', () => { const address = server.address(); const port = typeof address === 'object' && address ? address.port : readPort(); console.log(`[starlight-mail-tower] http://0.0.0.0:${port}`); });
+  server.listen(port, '0.0.0.0', () => { const address = server.address(); const actualPort = typeof address === 'object' && address ? address.port : port; console.log(`[starlight-mail-tower] http://0.0.0.0:${actualPort}`); });
 }

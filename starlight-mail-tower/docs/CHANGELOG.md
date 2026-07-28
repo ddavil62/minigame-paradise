@@ -1,5 +1,38 @@
 # Changelog
 
+## [2026-07-28] - AI 진입 ROOM_FULL 교착 버그 수정
+
+### 수정
+
+- **P-1** `public/js/client.js` -- `#ai-start-button` 클릭 시 `intentionalClose=true` + `LEAVE_GAME` 전송 후 120ms 뒤 `socket.close()` + `location.href` 이동하도록 수정. 기존에는 LEAVE_GAME 없이 바로 이동해 서버가 비자발적 끊김으로 판단, p1 슬롯을 15초 유령 예약 상태로 남겼다.
+- **P-2** `public/js/client.js` + `server.js` -- 클라이언트가 1회성 `fresh=1` 플래그를 WS URL에 실어 보내고(`buildWebSocketUrl`에서 `freshEntry` 캡처, open 후 false로 리셋), 서버 `handleUpgrade`가 `mode=ai&fresh=1`일 때만 잔존 슬롯을 강제 정리. 정리 대상 3종: 유령 슬롯(`!ws && disconnectDeadline`), 죽어가는 슬롯(`ws.readyState !== OPEN`), 봇 슬롯(`ws.isBot`). 정리 시 `killBot()` + 시뮬레이션 재초기화. F5 새로고침은 `fresh` 없이 기존 15초 재접속 유예 동작 유지.
+- **P-3** `server.js` -- `resetEndedSessionIfAbandoned()` 조건을 `clients.size !== 0` 대신 `[...clients.values()].some(c => c.playerId)`(playerId가 할당된 client 존재)로 완화. JOIN 이전 상태의 재연결 소켓이 초기화를 막던 문제 해소.
+- **P-4** `public/js/client.js` -- ROOM_FULL ERROR 수신 시 `intentionalClose=true`로 350ms 자동 재연결 루프 차단.
+
+### 추가
+
+- `server.js` -- 봇 소켓에 `ws.isBot=true` 플래그 설정(`mode=bot` 접속 시). close 핸들러에서 봇은 `pauseForDisconnect` 스킵하여 유령 슬롯 생성 방지.
+- `server.js` -- standalone 진입점(`node server.js --port N`)에 `getBotUrl` 기본값 주입. Playwright E2E 환경에서도 AI 모드 동작.
+- `tests/ai-bot-ws-qa.spec.js` -- TC-NEW-1(LEAVE_GAME 후 재진입 WELCOME 확인), TC-NEW-2(유령 슬롯+fresh=1 방어), TC-NEW-3(ROOM_FULL 정적 단언 4건) 추가. 총 35건.
+- `tests/ai-bot-qa.e2e.spec.js` -- TC-E2E-NEW-1(AI 세션 도중 재진입 -> ROOM_FULL 없이 새 세션) 추가. `waitForFunction` 하드 단언 사용. 총 11건.
+- `tests/ai-entry-race-qa.spec.js` -- AI 재진입 레이스 컨디션 회귀 테스트 6건(0ms/50ms 재진입, 연속 3회 재진입, AC-4 F5 유예, AC-5 일반 LAN 재접속). 실행: `node --test tests/ai-entry-race-qa.spec.js`.
+
+### 검증
+
+- 1차 QA FAIL: DEFECT-1(0ms 레이스 -- handleUpgrade가 CLOSING/봇 슬롯 미정리), DEFECT-2(TC-E2E-NEW-1 try/catch 허위 PASS), DEFECT-3(standalone getBotUrl 미주입).
+- 2차 구현에서 3건 모두 해결: DEFECT-1은 정리 대상 3종 확장, DEFECT-2는 하드 단언 전환, DEFECT-3은 standalone getBotUrl 주입.
+- 2차 QA PASS: AC-1~AC-9 전체 충족. WS 35/35, E2E 11/11, QA 레이스 6/6, npm test 49/50(1건 기존 부채).
+- 보존 동작 확인: F5 재접속 유예(AC-4), 일반 LAN 2인 모드(AC-5), 런처 AI 채우기(AC-6).
+
+### 참고
+
+- 스펙: `.claude/specs/2026-07-28-starlight-ai-entry-roomfull-plan.md`
+- 구현 리포트 1차: `.claude/specs/2026-07-28-starlight-ai-entry-roomfull-coder-report.md`
+- 구현 리포트 2차: `.claude/specs/2026-07-28-starlight-ai-entry-roomfull-coder-report-2.md`
+- QA 1차: `.claude/specs/2026-07-28-starlight-ai-entry-roomfull-qa.md` (FAIL)
+- QA 2차: `.claude/specs/2026-07-28-starlight-ai-entry-roomfull-qa-2.md` (PASS)
+- 에셋 파일 변경이 없어 Mockup Sync를 생략했다.
+
 ## [2026-07-28] - 레디 화면 재설계 (UI 2단계)
 
 ### 추가
