@@ -463,18 +463,44 @@ test('M-23: 첫뻑 + 피박 → base=7+7=14, mult=2, final=28', () => {
   expect(r.finalScore).toBe(14 * 2);
 });
 
-test('M-24: 사통 보너스 +7 → base 가산, reasons에 "사통 +7"', () => {
-  const r = applyFinalMultipliers(mkW({ score: 0 }), mkL({ score: 0 }), { ...noF, sangtongBonus: true });
+test('M-24: 사통은 모든 일반 배수를 무시하고 고정 7점으로 정산한다', () => {
+  const r = applyFinalMultipliers(
+    mkW({ score: 12, gwang: 4, kkeut: 8 }),
+    mkL({ score: 0, gwang: 0, piCount: 0 }),
+    {
+      ...noF,
+      winnerGoCount: 4,
+      winnerShake: true,
+      gobakApplies: true,
+      winnerPpeokCount: 2,
+      firstPpeokBonus: true,
+      sangtongBonus: true,
+      settlementType: 'sangtong',
+    },
+  );
   expect(r.finalScore).toBe(7);
   expect(r.multiplier).toBe(1);
-  expect(r.reasons).toContain('사통 +7');
+  expect(r.reasons).toEqual(['사통 +7']);
+  expect(r.settlementType).toBe('sangtong');
+  expect(r.baseScore).toBe(0);
+  expect(r.bonusScore).toBe(7);
 });
 
-test('M-25: 첫뻑 + 사통 동시 → 둘 다 가산 (base = score+7+7)', () => {
-  const r = applyFinalMultipliers(mkW({ score: 0 }), mkL(), {
-    ...noF, firstPpeokBonus: true, sangtongBonus: true,
-  });
-  expect(r.finalScore).toBe(14);
-  expect(r.reasons).toContain('첫뻑 +7');
-  expect(r.reasons).toContain('사통 +7');
+test('M-25: 일반 승리는 기존 고·박·흔들기 배수를 그대로 적용한다', () => {
+  const r = applyFinalMultipliers(
+    mkW({ score: 7, gwang: 3 }),
+    mkL({ gwang: 0, piCount: 7 }),
+    { ...noF, winnerGoCount: 3, winnerShake: true },
+  );
+  expect(r.settlementType).toBe('normal');
+  expect(r.multiplier).toBe(16);
+  expect(r.finalScore).toBe(144);
+  expect(r.reasons).toEqual([
+    '1고 +1',
+    '2고 +1 (누적 +2)',
+    '3고 ×2',
+    '광박 ×2',
+    '피박 ×2',
+    '흔들기 ×2',
+  ]);
 });

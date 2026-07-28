@@ -50,6 +50,7 @@ import { calculateScore, applyFinalMultipliers } from './score.js';
  * @property {{p1:Card[], p2:Card[]}} captured          - 점수판
  * @property {Object.<number, 'p1'|'p2'>} ppeokFlags    - 뻑 만든 사람
  * @property {object|null} pendingFloorChoice           - 같은 월 2장 선택 대기 컨텍스트
+ * @property {object|null} pendingCaptureBatch          - 턴 종료 전 임시 정산 카드
  * @property {'p1'|'p2'} turn
  * @property {string} phase
  * @property {{p1:number, p2:number}} goCount
@@ -86,6 +87,7 @@ export function createGame(firstTurn = 'p1', opts = {}) {
     ppeokFlags: {},
     ppeokCount: { p1: 0, p2: 0 },
     pendingFloorChoice: null,
+    pendingCaptureBatch: null,
     turn: firstTurn,
     phase: 'awaiting_play',
     goCount: { p1: 0, p2: 0 },
@@ -137,6 +139,7 @@ export function startRound(game, firstTurn) {
   // 라운드 동안 누적된 뻑 개수 — 점수 multiplier(×2^N) 적용 + 3뻑 즉시 승리 판정에 사용
   game.ppeokCount = { p1: 0, p2: 0 };
   game.pendingFloorChoice = null;
+  game.pendingCaptureBatch = null;
   // B1 수정: chooseFloor srcCard 보존 필드 — 라운드 시작 시 반드시 초기화(라운드 간 누수 방지).
   game.pendingChoiceSrcCardId = null;
   game.turn = firstTurn;
@@ -337,6 +340,15 @@ export function* playCardSteps(g, playerId, cardId) {
       kind: 'joker_play', player: playerId, card,
       stoleFromOpp: 1, refilled,
     };
+    g.turnAction.steps.push({
+      type: 'PLAY_MATCH',
+      actor: playerId,
+      owner: playerId,
+      playedCard: card,
+      matchedFloorCards: [],
+      moves: [createTimelineMove(card, 'hand', 'staging', playerId, playerId, playerId, 'joker_play')],
+    });
+    finalizeTurnAction(g, playerId, captureBaseline);
     yield { step: 'hand_played', card };
     // 손 조커는 턴의 본 행동이 아니다. 점수·고/스톱·라운드 종료 평가는
     // 일반 카드를 내고 덱 뒤집기까지 모두 끝난 뒤 한 번만 수행한다.
@@ -350,9 +362,27 @@ export function* playCardSteps(g, playerId, cardId) {
   const handResolution = resolveCardOnFloor(g, playerId, card, true);
   g.turnAction.steps.push({
     type: 'PLAY_MATCH',
+    actor: playerId,
+    owner: playerId,
     playedCard: card,
     matchedFloorCards: handResolution.matchedCards || [],
+    moves: [
+      createTimelineMove(card, 'hand', 'staging', playerId, playerId, playerId, 'play'),
+      ...(handResolution.matchedCards || []).map((matchedCard) => (
+        createTimelineMove(matchedCard, 'floor', 'staging', playerId, null, playerId, 'hand_match')
+      )),
+    ],
   });
+  // 상대가 만든 뻑을 손패로 회수한 네 장은 후속 더미 결과가 확정될 때까지
+  // 점수판에 편입하지 않는다. 화면과 점수 모두 단일 정산 배치 시점에 갱신된다.
+  if (handResolution.matched === 3) {
+    stagePendingCaptures(
+      g,
+      playerId,
+      [card, ...(handResolution.matchedCards || [])],
+      'hand_sweep_waiting_for_draw',
+    );
+  }
   yield { step: 'hand_played', card };
 
   // awaiting_floor_choice로 빠지면 사용자 선택 대기 (chooseFloor에서 이어짐)
@@ -368,7 +398,12 @@ export function* playCardSteps(g, playerId, cardId) {
     handMatched: handResolution.matched === 1,
   });
   if (g.phase !== 'awaiting_floor_choice') {
+    commitPendingCaptures(g, playerId);
     finalizeTurnAction(g, playerId, captureBaseline);
+  } else {
+    // 더미 선택이 열리면 앞선 손패 매칭 결과까지 임시 컨텍스트로 되돌려
+    // 선택 전 captured 조기 편입을 막는다.
+    stageNewTurnCaptures(g, playerId, captureBaseline, 'floor_choice_waiting');
   }
   yield { step: 'deck_flipped' };
   if (g.phase === 'awaiting_floor_choice') return;
@@ -428,6 +463,11 @@ export function* chooseFloorSteps(g, playerId, cardId) {
     const playStep = g.turnAction.steps.find((step) => step.type === 'PLAY_MATCH');
     if (playStep) playStep.matchedFloorCards = [chosen];
   }
+  if (!wasFromHand) {
+    // 더미 선택 완료가 이 턴의 마지막 결정이면 앞선 보류 카드와 선택한 두 장을
+    // 같은 원자 커밋으로 점수판에 편입한다.
+    commitPendingCaptures(g, playerId);
+  }
   yield { step: 'choice_made' };
 
   // 폭탄의 통상/추가 뒤집기 도중 발생한 선택이면 남은 추가 뒤집기를
@@ -442,7 +482,10 @@ export function* chooseFloorSteps(g, playerId, cardId) {
     // 단계 2: 덱 뒤집기 (손패에서 온 매칭이었던 경우만)
     drawAndResolve(g, playerId, pending.srcCard, g.turnAction);
     if (g.phase !== 'awaiting_floor_choice') {
+      commitPendingCaptures(g, playerId);
       finalizeTurnAction(g, playerId, g._turnCaptureBaseline);
+    } else {
+      stageNewTurnCaptures(g, playerId, g._turnCaptureBaseline, 'floor_choice_waiting');
     }
     yield { step: 'deck_flipped' };
     if (g.phase === 'awaiting_floor_choice') return;
@@ -525,6 +568,81 @@ function resolveCardOnFloor(g, playerId, card, fromHand) {
 }
 
 /**
+ * 이미 actor captured에 들어간 카드를 턴 임시 정산 컨텍스트로 옮긴다.
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ * @param {Card[]} cards
+ * @param {string} reason
+ * @returns {void}
+ */
+function stagePendingCaptures(g, playerId, cards, reason) {
+  if (!cards.length) return;
+  const existing = g.pendingCaptureBatch;
+  if (existing && existing.player !== playerId) {
+    throw new Error('다른 플레이어의 임시 정산 배치가 남아 있다');
+  }
+  const context = existing || {
+    player: playerId,
+    batchId: `${g.turnAction?.turnId || playerId}:pending`,
+    reason,
+    cards: [],
+  };
+  const pendingIds = new Set(context.cards.map((card) => card.id));
+  const requestedIds = new Set();
+  for (const card of cards) {
+    if (pendingIds.has(card.id) || requestedIds.has(card.id)) {
+      throw new Error(`임시 정산 카드 중복: ${card.id}`);
+    }
+    if (!g.captured[playerId].some((captured) => captured.id === card.id)) {
+      throw new Error(`임시 정산 원본 누락: ${card.id}`);
+    }
+    requestedIds.add(card.id);
+  }
+  g.captured[playerId] = g.captured[playerId].filter((card) => !requestedIds.has(card.id));
+  context.cards.push(...cards);
+  g.pendingCaptureBatch = context;
+}
+
+/**
+ * 턴 시작 captured 기준으로 새로 획득한 카드를 모두 임시 정산으로 옮긴다.
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ * @param {{actor:Set<string>}|null} baseline
+ * @param {string} reason
+ * @returns {void}
+ */
+function stageNewTurnCaptures(g, playerId, baseline, reason) {
+  if (!baseline) return;
+  const alreadyPending = new Set((g.pendingCaptureBatch?.cards || []).map((card) => card.id));
+  const cards = g.captured[playerId].filter(
+    (card) => !baseline.actor.has(card.id) && !alreadyPending.has(card.id),
+  );
+  stagePendingCaptures(g, playerId, cards, reason);
+}
+
+/**
+ * 임시 정산 카드를 중복·기존 소유 여부를 검증한 뒤 한 번에 captured로 커밋한다.
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ * @returns {void}
+ */
+function commitPendingCaptures(g, playerId) {
+  const context = g.pendingCaptureBatch;
+  if (!context) return;
+  if (context.player !== playerId) throw new Error('임시 정산 주체가 일치하지 않는다');
+  const ids = context.cards.map((card) => card.id);
+  if (new Set(ids).size !== ids.length) throw new Error('임시 정산 배치에 중복 카드가 있다');
+  const capturedIds = new Set(g.captured[playerId].map((card) => card.id));
+  const duplicate = ids.find((id) => capturedIds.has(id));
+  if (duplicate) throw new Error(`이미 점수판에 있는 카드 정산 시도: ${duplicate}`);
+  g.captured[playerId].push(...context.cards);
+  g.pendingCaptureBatch = null;
+}
+
+/**
  * 현재 턴의 최종 점수판 변화를 하나의 정산 배치로 기록한다.
  * 클라이언트는 규칙 상태를 재계산하지 않고 이 배치만 이용해 카드 이동을 동기화한다.
  *
@@ -548,13 +666,43 @@ function finalizeTurnAction(g, playerId, baseline) {
     (card) => !baseline.opponent.has(card.id) && !stagedIds.has(card.id),
   );
   const stagedJokers = newlyCaptured.filter((card) => stagedIds.has(card.id));
+  const knownOrigins = new Map();
+  for (const step of g.turnAction.steps) {
+    for (const move of (step.moves || [])) {
+      if (!knownOrigins.has(move.cardId)) knownOrigins.set(move.cardId, move);
+    }
+  }
+  const opponentId = playerId === 'p1' ? 'p2' : 'p1';
+  const moves = newlyCaptured.map((card) => {
+    if (baseline.opponent.has(card.id)) {
+      return createTimelineMove(
+        card, 'captured', 'captured', playerId, opponentId, playerId, 'steal',
+      );
+    }
+    const origin = knownOrigins.get(card.id);
+    return createTimelineMove(
+      card,
+      origin?.sourceZone || (stagedIds.has(card.id) ? 'deck' : 'floor'),
+      'captured',
+      playerId,
+      origin?.ownerBefore ?? null,
+      playerId,
+      g.lastAction?.kind || 'capture',
+    );
+  });
+  if (new Set(moves.map((move) => move.cardId)).size !== moves.length) {
+    throw new Error('SETTLE_CAPTURE_BATCH 카드 ID가 중복되었다');
+  }
   const batchId = `${g.turnAction.turnId}:settle`;
   g.turnAction.steps.push({
     type: 'SETTLE_CAPTURE_BATCH',
     batchId,
+    actor: playerId,
+    owner: playerId,
     capturedCards,
     stagedJokers,
     stolenCards,
+    moves,
     reason: g.lastAction?.kind || 'normal',
   });
   g.stateVersion = (g.stateVersion || 0) + 1;
@@ -566,17 +714,58 @@ function finalizeTurnAction(g, playerId, baseline) {
  * 더미 카드의 공개·매칭 단계를 턴 타임라인에 추가한다.
  *
  * @param {object|null} timeline
+ * @param {'p1'|'p2'} actor
  * @param {Card} drawnCard
  * @param {Card[]} matchedFloorCards
  * @returns {void}
  */
-function recordDrawMatch(timeline, drawnCard, matchedFloorCards = []) {
+function recordDrawMatch(timeline, actor, drawnCard, matchedFloorCards = []) {
   if (!timeline) return;
   timeline.steps.push({
     type: 'DRAW_MATCH',
+    actor,
+    owner: null,
     drawnCard,
     matchedFloorCards,
+    moves: [
+      createTimelineMove(drawnCard, 'deck', 'staging', actor, null, actor, 'draw'),
+      ...matchedFloorCards.map((matchedCard) => (
+        createTimelineMove(matchedCard, 'floor', 'staging', actor, null, actor, 'draw_match')
+      )),
+    ],
   });
+}
+
+/**
+ * 카드 이동의 절대 출처·소유권 메타데이터를 만든다.
+ *
+ * @param {Card} card
+ * @param {'hand'|'deck'|'floor'|'captured'} sourceZone
+ * @param {'staging'|'floor'|'captured'} destinationZone
+ * @param {'p1'|'p2'} actor
+ * @param {'p1'|'p2'|null} ownerBefore
+ * @param {'p1'|'p2'|null} ownerAfter
+ * @param {string} reason
+ * @returns {{cardId:string,sourceZone:string,destinationZone:string,actor:string,ownerBefore:string|null,ownerAfter:string|null,reason:string}}
+ */
+function createTimelineMove(
+  card,
+  sourceZone,
+  destinationZone,
+  actor,
+  ownerBefore,
+  ownerAfter,
+  reason,
+) {
+  return {
+    cardId: card.id,
+    sourceZone,
+    destinationZone,
+    actor,
+    ownerBefore,
+    ownerAfter,
+    reason,
+  };
 }
 
 /**
@@ -603,8 +792,13 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
     if (timeline) {
       timeline.steps.push({
         type: 'STAGE_DRAWN_JOKER',
+        actor: playerId,
+        owner: null,
         jokerCard: flipped,
         floorSlot: 'deck-adjacent',
+        moves: [
+          createTimelineMove(flipped, 'deck', 'staging', playerId, null, playerId, 'joker_flip'),
+        ],
       });
     }
     stealPi(g, playerId, opp, 1);
@@ -640,7 +834,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
       g.captured[playerId].push(handCard, flipped);
       stealPi(g, playerId, opp, 1);
       g.lastAction = { kind: 'jjok', player: playerId, handCard, flipped, stoleFromOpp: 1 };
-      recordDrawMatch(timeline, flipped, [handCard]);
+      recordDrawMatch(timeline, playerId, flipped, [handCard]);
       return;
     }
 
@@ -665,13 +859,13 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
         // 첫뻑 트래킹: 라운드 최초 뻑 생성자 기록 (이후 뻑은 갱신하지 않음)
         if (g.firstPpeokBy == null) g.firstPpeokBy = playerId;
         g.lastAction = { kind: 'ppeok', player: playerId, month: handCard.month, count: g.ppeokCount[playerId] };
-        recordDrawMatch(timeline, flipped, [handCard, pair]);
+        recordDrawMatch(timeline, playerId, flipped, [handCard, pair]);
         return;
       }
       // 비정상(가져간 카드 못 찾음) — 안전망: flipped만 바닥에
       g.floor.push(flipped);
       g.lastAction = { kind: 'flip_place', player: playerId, card: flipped };
-      recordDrawMatch(timeline, flipped);
+      recordDrawMatch(timeline, playerId, flipped);
       return;
     }
 
@@ -682,7 +876,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
       g.captured[playerId].push(flipped, remaining);
       stealPi(g, playerId, opp, 1);
       g.lastAction = { kind: 'ttadak', player: playerId, flipped, pair: remaining, stoleFromOpp: 1 };
-      recordDrawMatch(timeline, flipped, [remaining]);
+      recordDrawMatch(timeline, playerId, flipped, [remaining]);
       return;
     }
 
@@ -695,7 +889,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
       // 첫뻑 트래킹
       if (g.firstPpeokBy == null) g.firstPpeokBy = playerId;
       g.lastAction = { kind: 'ppeok', player: playerId, month: flipped.month, count: g.ppeokCount[playerId] };
-      recordDrawMatch(timeline, flipped, sameMonthOnFloor);
+      recordDrawMatch(timeline, playerId, flipped, sameMonthOnFloor);
       return;
     }
   }
@@ -705,7 +899,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
   if (sameMonth.length === 0) {
     g.floor.push(flipped);
     g.lastAction = { kind: 'flip_place', player: playerId, card: flipped };
-    recordDrawMatch(timeline, flipped);
+    recordDrawMatch(timeline, playerId, flipped);
     return;
   }
   if (sameMonth.length === 1) {
@@ -720,7 +914,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
     } else {
       g.lastAction = { kind: 'pair_from_flip', player: playerId, card: flipped, pair };
     }
-    recordDrawMatch(timeline, flipped, [pair]);
+    recordDrawMatch(timeline, playerId, flipped, [pair]);
     return;
   }
   if (sameMonth.length === 2) {
@@ -734,7 +928,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
     };
     g.phase = 'awaiting_floor_choice';
     g.lastAction = { kind: 'flip_choice_pending', player: playerId, card: flipped, candidates: sameMonth.slice() };
-    recordDrawMatch(timeline, flipped);
+    recordDrawMatch(timeline, playerId, flipped);
     return;
   }
   // 3매칭 — 4장 모두 + 상대 피 1장
@@ -746,7 +940,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
   stealPi(g, playerId, opp, flipSweepCount);
   delete g.ppeokFlags[flipped.month];
   g.lastAction = { kind: 'sweep_from_flip', player: playerId, card: flipped, trio, stoleFromOpp: flipSweepCount };
-  recordDrawMatch(timeline, flipped, trio);
+  recordDrawMatch(timeline, playerId, flipped, trio);
 }
 
 /**
@@ -1019,7 +1213,10 @@ function endRoundWin(g, winnerId, extraFlags = {}) {
   const winnerGoCount = g.goCount[winnerId];
   const loserGoCount  = g.goCount[loserId];
   // 고박: 패자가 고를 부른 경우 (단순화) → 점수 ×2
-  const gobakApplies = loserGoCount > 0;
+  const settlementType = extraFlags.settlementType
+    || (extraFlags.sangtongBonus ? 'sangtong' : 'normal');
+  const isSangtong = settlementType === 'sangtong';
+  const gobakApplies = !isSangtong && loserGoCount > 0;
 
   const result = applyFinalMultipliers(winner, loser, {
     winnerGoCount,
@@ -1031,6 +1228,7 @@ function endRoundWin(g, winnerId, extraFlags = {}) {
     firstPpeokBonus: g.firstPpeokBy === winnerId,
     // 사통 보너스: 라운드 시작 시 사통 선언으로 종료된 경우 +7 가산.
     sangtongBonus: !!extraFlags.sangtongBonus,
+    settlementType,
   });
 
   const totalMoney = result.finalScore * g.perPoint;
@@ -1053,6 +1251,15 @@ function endRoundWin(g, winnerId, extraFlags = {}) {
     loser: loserId,
     winnerBreakdown: winner,
     loserBreakdown: loser,
+    settlementType: result.settlementType,
+    settlementBreakdown: {
+      cardScore: winner.score,
+      baseScore: result.baseScore,
+      bonusScore: result.bonusScore,
+      multiplier: result.multiplier,
+      finalScore: result.finalScore,
+      reasons: result.reasons,
+    },
     finalScore: result.finalScore,
     multiplier: result.multiplier,
     reasons: result.reasons,
@@ -1148,7 +1355,7 @@ export function* sangtongSteps(g, playerId, choice) {
   g.lastAction = { kind: 'sangtong', player: playerId, month };
   yield { step: 'sangtong_decided' };
 
-  endRoundWin(g, playerId, { sangtongBonus: true });
+  endRoundWin(g, playerId, { sangtongBonus: true, settlementType: 'sangtong' });
   yield { step: 'turn_finished' };
 }
 
@@ -1225,6 +1432,7 @@ export function* bombSteps(g, playerId, month) {
   }
 
   // 단계 1: 폭탄 실행 (손 3장 + 바닥 1장 모두 captured + 상대 피 1장)
+  g.phase = 'resolving_bomb';
   g.hands[playerId] = hand.filter((c) => c.month !== month);
   g.floor          = g.floor.filter((c) => c.month !== month);
   g.captured[playerId].push(...handSame, ...floorSame);
@@ -1267,8 +1475,10 @@ export function nextRoundStarter(game) {
  * @yields {{step:string}}
  */
 function* continueBombResolution(g, playerId) {
+  g.pendingBombFlips = g.pendingBombFlips || { p1: 0, p2: 0 };
   while ((g.pendingBombFlips?.[playerId] || 0) > 0 && g.deck.length > 0) {
     g.pendingBombFlips[playerId]--;
+    g.phase = 'resolving_bomb';
     flipDeckBonus(g, playerId);
     yield { step: 'bomb_bonus_flipped' };
     if (g.phase === 'awaiting_floor_choice') return;
@@ -1336,12 +1546,15 @@ export function* bonusFlipSteps(g, playerId) {
   }
 
   // 단계 1: 덱에서 한 장 뒤집기, 단순 매칭 처리
+  g.phase = 'resolving_bonus_flip';
+  g.bombResolvingPlayer = playerId;
   flipDeckBonus(g, playerId);
   g.bombDeckCredit[playerId]--;
   yield { step: 'bonus_flipped' };
   if (g.phase === 'awaiting_floor_choice') return;
 
   // 단계 2: 점수 평가 + 턴 마무리
+  g.bombResolvingPlayer = null;
   finishTurn(g, playerId);
   yield { step: 'turn_finished' };
 }
@@ -1461,6 +1674,14 @@ export function snapshotForPlayer(g, playerId) {
     turn: g.turn,
     phase: g.phase,
     pendingChoice: myChoice ? { month: myChoice.month, candidates: myChoice.candidates } : null,
+    // 서버 권위 captured와 분리된 클라이언트 임시 표시용 카드.
+    pendingCaptureBatch: g.pendingCaptureBatch
+      ? {
+        batchId: g.pendingCaptureBatch.batchId,
+        cards: g.pendingCaptureBatch.cards,
+      }
+      : null,
+    pendingChoiceSourceCard: g.pendingFloorChoice?.srcCard || null,
     pendingSangtong: mySangtong ? { player: mySangtong.player, month: mySangtong.month } : null,
     bombableMonths,
     firstPpeokBy: g.firstPpeokBy || null,
@@ -1477,5 +1698,44 @@ export function snapshotForPlayer(g, playerId) {
     money: { ...g.money },
     perPoint: g.perPoint,
     roundResult: g.roundResult,
+  };
+}
+
+/**
+ * 매치 로그가 규칙 상태를 재계산하지 않고 사용할 안전한 판별 문맥을 반환한다.
+ * 플레이어 이름·네트워크 정보는 포함하지 않는다.
+ *
+ * @param {GameState} g
+ * @returns {{turnId:string|null,batchId:string|null,stateVersion:number|null,phase:string,turn:string,settlement:object|null,roundResult:object|null}}
+ */
+export function matchLogContext(g) {
+  const settlement = [...(g.turnAction?.steps || [])].reverse().find(
+    (step) => step.type === 'SETTLE_CAPTURE_BATCH',
+  ) || null;
+  return {
+    turnId: g.turnAction?.turnId || null,
+    batchId: settlement?.batchId || null,
+    stateVersion: g.stateVersion ?? null,
+    phase: g.phase,
+    turn: g.turn,
+    settlement: settlement
+      ? {
+        batchId: settlement.batchId,
+        actor: settlement.actor,
+        reason: settlement.reason,
+        moves: settlement.moves,
+      }
+      : null,
+    roundResult: g.roundResult
+      ? {
+        winner: g.roundResult.winner,
+        loser: g.roundResult.loser,
+        settlementType: g.roundResult.settlementType || 'normal',
+        finalScore: g.roundResult.finalScore,
+        multiplier: g.roundResult.multiplier,
+        reasons: g.roundResult.reasons,
+        money: g.roundResult.money,
+      }
+      : null,
   };
 }

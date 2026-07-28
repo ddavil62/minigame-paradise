@@ -8,9 +8,9 @@ test('등장 애니메이션 끝난 뒤 초기 화면 스크린샷', async () =>
   const pageP1 = await ctxP1.newPage();
   const pageP2 = await ctxP2.newPage();
   try {
-    await pageP1.goto('http://localhost:3013');
+    await pageP1.goto(process.env.MATGO_BASE_URL || 'http://localhost:3013');
     await pageP1.waitForFunction(() => document.getElementById('you-tag')?.textContent?.includes('P1'), { timeout: 5000 });
-    await pageP2.goto('http://localhost:3013');
+    await pageP2.goto(process.env.MATGO_BASE_URL || 'http://localhost:3013');
     await pageP2.waitForFunction(() => document.getElementById('you-tag')?.textContent?.includes('P2'), { timeout: 5000 });
     await pageP1.waitForFunction(() =>
       document.querySelectorAll('#opp-hand-cards .card.back').length === 10, { timeout: 5000 });

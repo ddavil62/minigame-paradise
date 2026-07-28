@@ -108,9 +108,24 @@ export function calculateScore(captured, opts = {}) {
  * @param {number}  flags.winnerPpeokCount - 승자가 라운드 동안 만든 뻑 개수 (×2^N 배수)
  * @param {boolean} [flags.firstPpeokBonus] - 첫뻑 보너스: 라운드 첫 뻑 생성자가 승자이면 +7 가산.
  * @param {boolean} [flags.sangtongBonus]   - 사통 보너스: 사통 선언으로 라운드 종료 시 +7 가산.
- * @returns {{ finalScore:number, multiplier:number, reasons:string[] }}
+ * @param {'normal'|'sangtong'} [flags.settlementType='normal'] - 정산 유형.
+ * @returns {{ finalScore:number, multiplier:number, reasons:string[],baseScore:number,bonusScore:number,settlementType:string }}
  */
 export function applyFinalMultipliers(winner, loser, flags) {
+  const settlementType = flags.settlementType
+    || (flags.sangtongBonus ? 'sangtong' : 'normal');
+  // 사통은 라운드 시작 즉시 끝나는 독립 정산이다. captured 분포나 이전 상태의
+  // 고·흔들기·뻑·박 플래그를 일반 승리 계산에 흘려보내지 않는다.
+  if (settlementType === 'sangtong') {
+    return {
+      finalScore: 7,
+      multiplier: 1,
+      reasons: ['사통 +7'],
+      baseScore: 0,
+      bonusScore: 7,
+      settlementType,
+    };
+  }
   let base = winner.score;
   // 고 보너스(가산/배수 혼합):
   //   1고 +1, 2고 +2, 3고 이후 ×2 누적
@@ -183,5 +198,12 @@ export function applyFinalMultipliers(winner, loser, flags) {
   }
 
   const finalScore = base * mult;
-  return { finalScore, multiplier: mult, reasons };
+  return {
+    finalScore,
+    multiplier: mult,
+    reasons,
+    baseScore: base,
+    bonusScore: base - winner.score,
+    settlementType,
+  };
 }

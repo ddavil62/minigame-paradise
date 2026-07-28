@@ -1,5 +1,61 @@
 # Changelog
 
+## [2026-07-29] — 리포트 #35~#43 규칙·연출·매치 로그 수정
+
+카드 출처와 소유권, 폭탄 후 입력, 선택 대기 정산, 사통 점수, 사후 분석 로그를 서버 권위 계약으로 정리했다. QA에서 발견한 매치 경계 runner 간섭, #34 정산 fly 중복, 카드 이동 전 효과 토스트 노출도 후속 수정했다.
+
+### 카드 이동·정산 (#35, #38, #39, #40, #42)
+
+- `game.js`의 턴 타임라인 이동 항목에 카드별 `sourceZone`, `destinationZone`, `actor`, `ownerBefore`, `ownerAfter`를 추가했다.
+- `public/client.js`는 절대 소유권을 관전자 기준 `my/opp` DOM으로 변환한다. 조커 강탈은 피해자의 실제 captured, 상대 제출은 상대 hand, 흔들기 제출은 hand, 실제 뒤집힌 카드만 deck에서 출발한다.
+- 선택·후속 더미 전에 `pendingCaptureBatch`로 획득 예정 카드를 권위 captured와 분리한다. #39는 선택 뒤 네 장, #40은 타인 뻑 회수 네 장과 후속 두 장을 각각 한 `SETTLE_CAPTURE_BATCH`로 commit한다.
+- `batchId|cardId` 등록권으로 명시적 출처와 상태 diff 추론이 같은 카드를 중복 fly하지 않게 했다. 레거시 #34의 다섯 장도 한 batch에서 카드별 한 번만 이동한다.
+- 조커·쪽·쓸·따닥·폭탄 효과는 같은 turn/batch의 큐와 모든 fly clone이 끝난 뒤 한 번만 표시한다. fly 등록 완료 키와 토스트 완료 키를 분리해 동일 STATE 재전달도 멱등 처리한다.
+
+### 폭탄 입력·진행 안정성 (#36, #37)
+
+- 손패가 없고 `bombDeckCredit`이 남은 상태에서 더미를 한 번 눌러 보너스 패를 뒤집으며, 로컬 요청 잠금으로 이중 클릭의 서버 요청을 한 번으로 제한한다.
+- `resolving_bomb`·`resolving_bonus_flip`과 `bombResolvingPlayer`로 선택 대기 중 진행 주체와 남은 권리를 보존한다.
+- 서버 단계 watchdog은 2초, 클라이언트 단일 fly는 1초, turnAction 전체는 3초 상한을 사용한다. 사용자 선택 phase는 자동 상한에서 제외한다.
+- `finishAnimation()`이 timer, clone, visibility, pending fly, 입력 잠금을 한 경로에서 정리한다.
+- `server.js`는 runner가 시작된 게임 객체와 `gameGeneration`을 캡처하고 active runner 소유자만 전역 lock을 해제한다. 연결 종료, zombie 정리, reset, 새 라운드·게임, 서버 종료 시 이전 timer와 generator를 취소해 새 매치 broadcast와 입력을 보호한다.
+
+### 사통 독립 정산 (#41)
+
+- `score.js`와 `game.js`에 `settlementType`을 추가했다.
+- 사통은 일반 카드 점수와 고·광박·피박·멍박·고박·흔들기·뻑 배수를 평가하지 않고 `7점 ×1`, 사유 `사통 +7`로 정산한다.
+- 결과 모달은 승자·패자 모두 사통 전용 제목, 정산 유형, 기본 7점, 최종 7점×1, 이동 금액을 같은 서버 권위 값으로 표시한다.
+
+### 판별 가능한 매치 로그 (#43)
+
+- `match-log.js`를 추가해 `MATCH_START/END`, `ROUND_START/END`, 입력·거절, phase·action, 선택, capture, 점수, 복구, 오류를 시간순 JSONL로 기록한다.
+- 각 줄은 `schemaVersion`, `ts`, 단조 증가 `seq`, `matchId`, `roundId`, `turnId`, `batchId`, `event`, `actor`, `stateVersion`, `phase`, `payload`를 사용한다.
+- 기본 경로는 `logs/matches/matgo-YYYY-MM-DD.jsonl`이며 `logs/`는 Git에서 제외한다. 날짜·10MiB 크기 회전, 14일 이내 또는 최신 20개 보존, 총 200MiB 상한과 활성 파일 보호를 적용한다.
+- append는 단일 Promise 큐로 순서를 보장하고 실패를 stderr 경고로 격리한다. 이름·IP·소켓·원문·stack 등 민감 키를 재귀 제거하고 문자열·배열 길이를 제한한다.
+
+### 검증
+
+- 최종 QA: **PASS**
+- unit/rules/log/runner: **117/117 PASS**
+- 조커·쓸·폭탄 직접 규칙: **42/42 PASS**
+- #35~#43 browser+timing 동일 서버 3회: **33/33 PASS**
+- #33~#34 browser 3회: **6/6 PASS**
+- 조커·쪽·쓸·따닥·폭탄 toast timing 3회: **15/15 PASS**, fly/toast 동시 존재 0, 최종 clone 0
+- runner 종료·reset·새 게임 세대 격리: **3/3 PASS**
+- 1707×1067·1920×1080 화면과 페이즈 1~4 및 토스트 변경 AD 모드 3: 모두 `APPROVED`
+- 새 이미지·사운드·폰트 및 런타임 에셋 변경 없음. Mockup Sync 대상 없음.
+
+### 참고
+
+- 목적 정의: `.Codex/specs/2026-07-29-minigames-reports-35-43-scope.md`
+- 실행 계획: `.Codex/specs/2026-07-29-minigames-reports-35-43-plan.md`
+- 구현: `.Codex/specs/2026-07-29-minigames-reports-35-43-phase1-report.md` ~ `phase5-report.md`
+- 후속 수정: `.Codex/specs/2026-07-29-minigames-reports-35-43-qa-fix-report.md`, `.Codex/specs/2026-07-29-minigames-reports-35-43-legacy34-fix-report.md`, `.Codex/specs/2026-07-29-minigames-reports-35-43-toast-fix-report.md`
+- UI 검수: `.Codex/specs/2026-07-29-minigames-reports-35-43-phase1-ui-review.md` ~ `.Codex/specs/2026-07-29-minigames-reports-35-43-phase4-ui-review.md`, `.Codex/specs/2026-07-29-minigames-reports-35-43-toast-ui-review.md`
+- QA: `.Codex/specs/2026-07-29-minigames-reports-35-43-qa.md`
+
+---
+
 ## [2026-07-27] — 리포트 33·34 카드 정산 타임라인 동기화
 
 더미 조커 추가 드로우와 따닥에서 규칙상 사건 순서와 화면 카드 이동 순서가 달라지던 문제를 수정했다.

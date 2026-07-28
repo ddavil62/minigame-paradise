@@ -520,10 +520,8 @@ test('G-27: 고박 — 고를 부른 패자 → roundResult.reasons에 고박 �
 // §10 사통(같은 월 4장 손) — 2026-05-31 신규
 // ============================================================
 
-test('G-28: 사통 선언 → endRoundWin + 7점 보너스, reasons에 "사통 +7"', () => {
-  // 사통 선언은 라운드 시작 시점이므로 양쪽 captured=비어 있음 → 피박/멍박 발동.
-  // 그 결과 base=7 × mult(피박×멍박=4) = 28점.
-  // 즉 사통 보너스가 가산되었음을 reasons + sangtongBonusApplied로만 확인한다.
+test('G-28: 사통 선언 → 일반 배수 없는 독립 7점 정산', () => {
+  // 사통은 일반 승리와 분리된 고정 7점 정산이므로 빈 captured의 피박도 적용하지 않는다.
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm01_tti_hong', 'm01_pi_a', 'm01_pi_b', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
@@ -532,15 +530,29 @@ test('G-28: 사통 선언 → endRoundWin + 7점 보너스, reasons에 "사통 +
   });
   g.phase = 'awaiting_sangtong';
   g.pendingSangtong = { player: 'p1', month: 1 };
+  g.goCount = { p1: 4, p2: 3 };
+  g.shaking = { p1: true, p2: true };
+  g.ppeokCount = { p1: 2, p2: 1 };
+  g.firstPpeokBy = 'p1';
 
   const r = sangtongDecision(g, 'p1', 'declare');
   expect(r.ok).toBe(true);
   expect(g.phase).toBe('round_end');
   expect(g.roundWinner).toBe('p1');
-  expect(g.roundResult.reasons).toContain('사통 +7');
+  expect(g.roundResult.settlementType).toBe('sangtong');
+  expect(g.roundResult.reasons).toEqual(['사통 +7']);
   expect(g.roundResult.sangtongBonusApplied).toBe(true);
-  // 라운드 시작 시 빈 captured라 피박/멍박 발동 → 7×4=28 (현 구현 기준)
-  expect(g.roundResult.finalScore).toBeGreaterThanOrEqual(7);
+  expect(g.roundResult.finalScore).toBe(7);
+  expect(g.roundResult.multiplier).toBe(1);
+  expect(g.roundResult.gobakApplies).toBe(false);
+  expect(g.roundResult.settlementBreakdown).toEqual({
+    cardScore: 0,
+    baseScore: 0,
+    bonusScore: 7,
+    multiplier: 1,
+    finalScore: 7,
+    reasons: ['사통 +7'],
+  });
 });
 
 test('G-29: 사통 포기 → awaiting_play 복귀, pendingSangtong=null', () => {

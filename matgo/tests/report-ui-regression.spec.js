@@ -5,7 +5,7 @@
 import { test, expect, chromium } from '@playwright/test';
 import { buildDeck } from '../cards.js';
 
-const BASE_URL = 'http://localhost:3013';
+const BASE_URL = process.env.MATGO_BASE_URL || 'http://localhost:3013';
 const BY_ID = Object.fromEntries(buildDeck().map((card) => [card.id, card]));
 
 /**
@@ -62,7 +62,15 @@ test('R16/R24 UI: 강탈 카드는 실제 상대 피 위치에서 출발하고 �
     await expect(source).toBeVisible();
     const sourceBox = await source.boundingBox();
     expect(sourceBox).toBeTruthy();
-    await p1.evaluate(() => { window.__matgoFlies = []; });
+    // 초기 랜덤 분배의 바닥 조커 fly/toast가 대상 조커 액션 계측에 섞이지 않게 한다.
+    await p1.waitForFunction(
+      () => document.querySelectorAll('#fly-overlay .flying-card').length === 0,
+      { timeout: 10000 },
+    );
+    await p1.evaluate(() => {
+      window.__matgoFlies = [];
+      document.querySelector('.action-toast')?.classList.remove('show');
+    });
 
     await p1.click('#my-hand-cards [data-card-id="m00_joker_a"]');
     await p1.waitForFunction(

@@ -18,7 +18,7 @@
 
 import { test, expect, chromium } from 'playwright/test';
 
-const BASE_URL = 'http://localhost:3013';
+const BASE_URL = process.env.MATGO_BASE_URL || 'http://localhost:3013';
 const VIEWPORT = { width: 1280, height: 800 };
 
 // ── 유틸 ──────────────────────────────────────────────

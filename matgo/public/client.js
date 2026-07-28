@@ -294,10 +294,24 @@
    * 라운드 시작(GAME_START/ROUND_START) 시 리셋해 다음 라운드 조커 fly를 허용한다.
    */
   let lastJokerFlyActionKey = '';
+  /**
+   * 정산 batch 안에서 이미 등록한 카드 fly 키.
+   * 동일 STATE 재렌더나 명시적 move/바닥 diff 추론이 겹쳐도 카드당 한 번만 시각화한다.
+   *
+   * @type {Set<string>}
+   */
+  const registeredSettlementFlyKeys = new Set();
   /** ppeok 토스트 지연 보관. 덱 뒤집기 fly의 DECK_LAND 전환 이후 flush. */
   let pendingPpeokToast = null;
-  /** 카드 포획이 끝난 뒤 표시할 액션 토스트. */
+  /** 같은 turn/batch의 모든 큐·fly가 끝난 뒤 표시할 액션 토스트 문맥. */
   let pendingCaptureToast = null;
+  /**
+   * 이미 표시를 완료한 capture toast 키.
+   * fly 등록 완료 키와 분리해 동일 STATE 재전달에도 문구를 한 번만 표시한다.
+   *
+   * @type {Set<string>}
+   */
+  const completedCaptureToastKeys = new Set();
   /** 액션 토스트 DOM (지연 생성, 한 개만 유지) */
   let actionToastEl = null;
   /** 진행 중인 fly 애니메이션 */
@@ -307,8 +321,14 @@
    *  바로 "상대 차례"로 바뀌어 부자연스러워 보였다. fly 끝날 때 큐에서 꺼내
    *  마지막 STATE만 적용한다 (중간 STATE는 어차피 누적 결과만 의미가 있음). */
   let isAnimating = false;
+  /** 보너스 더미 클릭 요청을 서버 첫 STATE까지 한 번만 허용하는 입력 잠금. */
+  let bonusFlipRequestPending = false;
   /** fly 중에 도착한 STATE 메시지 큐 */
   const stateQueue = [];
+  /** 단일 fly/transition 완료 상한(ms). */
+  const SINGLE_FLY_TIMEOUT_MS = 1000;
+  /** 한 turnAction 전체 연출 완료 상한(ms). */
+  const TURN_ACTION_TIMEOUT_MS = 3000;
 
   // ── 5건 룰 보강 (2026-05-31) ──
   /**
@@ -459,6 +479,105 @@
     actionToastEl.classList.add('show');
   }
 
+  /**
+   * STATE에서 현재 turn과 최종 정산 batch 문맥을 추출한다.
+   *
+   * @param {object|null} state
+   * @returns {{turnId:string|null,batchId:string|null}}
+   */
+  function captureToastContext(state) {
+    const turnId = state?.turnAction?.turnId || null;
+    const settleStep = state?.turnAction?.steps?.find(
+      (step) => step.type === 'SETTLE_CAPTURE_BATCH',
+    );
+    return { turnId, batchId: settleStep?.batchId || null };
+  }
+
+  /**
+   * capture toast의 중복 방지 키를 만든다.
+   *
+   * @param {{action:object,turnId:string|null,batchId:string|null}} pending
+   * @returns {string|null}
+   */
+  function captureToastKey(pending) {
+    if (!pending?.turnId || !pending?.batchId) return null;
+    const action = pending.action || {};
+    const detail = action.card?.id || action.month || action.player || '';
+    return `${pending.turnId}|${pending.batchId}|${action.kind}|${detail}`;
+  }
+
+  /**
+   * 특수 capture toast를 현재 turn/batch의 최종 fly 완료까지 보류한다.
+   *
+   * @param {object} action
+   * @param {object} state
+   * @returns {void}
+   */
+  function queueCaptureToast(action, state) {
+    const context = captureToastContext(state);
+    if (!context.turnId) {
+      // 조커·폭탄 일부 경로는 현재 turnAction 계약 밖에서 STATE를 만든다.
+      // 액션 시작 stateVersion으로 안정된 합성 turn 키를 만들며, 폭탄만 resolving_bomb 종료를 기다린다.
+      context.turnId = `legacy:${action.player || state.turn}:${action.kind}:${state.stateVersion ?? 'na'}`;
+      if (action.kind !== 'bomb') context.batchId = `${context.turnId}:complete`;
+    }
+    const candidate = { action, ...context };
+    const key = captureToastKey(candidate);
+    if (key && completedCaptureToastKeys.has(key)) return;
+    pendingCaptureToast = candidate;
+  }
+
+  /**
+   * 후속 STATE에서 확인된 최종 batch를 보류 중 toast 문맥에 연결한다.
+   *
+   * @param {object} state
+   * @returns {void}
+   */
+  function updatePendingCaptureToastContext(state) {
+    if (!pendingCaptureToast) return;
+    const context = captureToastContext(state);
+    if (pendingCaptureToast.turnId.startsWith('legacy:')) {
+      const action = pendingCaptureToast.action;
+      if (action.kind === 'bomb'
+          && state.phase !== 'resolving_bomb') {
+        pendingCaptureToast.batchId = `${pendingCaptureToast.turnId}:complete`;
+      }
+      return;
+    }
+    if (!context.turnId || context.turnId !== pendingCaptureToast.turnId) return;
+    if (context.batchId) pendingCaptureToast.batchId = context.batchId;
+  }
+
+  /**
+   * 모든 큐·fly·clone이 끝난 최종 정산 toast를 정확히 한 번 표시한다.
+   *
+   * @returns {boolean} 이번 호출에서 toast 표시를 시도했는지 여부
+   */
+  function flushPendingCaptureToast() {
+    if (!pendingCaptureToast || !pendingCaptureToast.batchId) return false;
+    if (isAnimating || pendingFlies.length > 0) return false;
+    if (flyOverlay.querySelectorAll('.flying-card').length > 0) return false;
+
+    const hasQueuedSameSettlement = stateQueue.some((message) => {
+      if (message.type !== 'STATE') return false;
+      const context = captureToastContext(message);
+      return context.turnId === pendingCaptureToast.turnId
+        || (context.batchId && context.batchId === pendingCaptureToast.batchId);
+    });
+    if (hasQueuedSameSettlement || stateQueue.length > 0) return false;
+
+    const key = captureToastKey(pendingCaptureToast);
+    if (!key || completedCaptureToastKeys.has(key)) {
+      pendingCaptureToast = null;
+      return false;
+    }
+    const action = pendingCaptureToast.action;
+    pendingCaptureToast = null;
+    completedCaptureToastKeys.add(key);
+    maybeShowActionToast(action);
+    return true;
+  }
+
   // ── WebSocket 연결 ───────────────────────────────────────────
   /**
    * WebSocket 연결을 시작한다. 페이지 host:port 그대로 사용.
@@ -588,8 +707,11 @@
         bombCheckSkipOnce = false;
         // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
         pendingPpeokToast = null;
+        pendingCaptureToast = null;
         // 조커 fly 중복 가드 키 리셋 — 다음 라운드 조커 fly 정상 동작.
         lastJokerFlyActionKey = '';
+        registeredSettlementFlyKeys.clear();
+        completedCaptureToastKeys.clear();
         // READY 상태 초기화(다음 리매치 대비).
         myReady = false;
         opponentReady = false;
@@ -605,11 +727,15 @@
         bombCheckSkipOnce = false;
         // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
         pendingPpeokToast = null;
+        pendingCaptureToast = null;
         // 조커 fly 중복 가드 키 리셋 — 다음 라운드 조커 fly 정상 동작.
         lastJokerFlyActionKey = '';
+        registeredSettlementFlyKeys.clear();
+        completedCaptureToastKeys.clear();
         break;
       case 'STATE':
         lastState = msg;
+        bonusFlipRequestPending = false;
         if (isAnimating) {
           // fly 진행 중이면 큐잉. 중간 STATE는 무시하고 마지막만 적용해도 무방.
           stateQueue.push(msg);
@@ -618,6 +744,7 @@
         }
         break;
       case 'ROUND_END':
+        bonusFlipRequestPending = false;
         if (isAnimating) {
           // fly가 끝난 뒤 결과 모달을 띄워야 자연스럽다.
           stateQueue.push(msg);
@@ -626,12 +753,14 @@
         }
         break;
       case 'OPPONENT_LEFT':
+        bonusFlipRequestPending = false;
         hideRoundModal();
         readySent = false;
         // 자동 redirect 제거 — 배너 + "로비로 돌아가기" 버튼만 표시(사용자가 직접 이동).
         showOpponentLeftBanner(msg.name || '상대방');
         break;
       case 'ERROR':
+        bonusFlipRequestPending = false;
         if (msg.message && msg.message.includes('가득')) {
           autoReconnect = false;
           if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
@@ -662,6 +791,26 @@
    * @param {object} s
    */
   function renderState(s) {
+    // 서버 captured에 아직 편입되지 않은 턴 임시 정산 카드는 바닥의 시각적
+    // 대기 상태로만 합성한다. 권위 snapshot 객체와 실제 zone은 변경하지 않는다.
+    const pendingVisualCards = [
+      ...(s.pendingCaptureBatch?.cards || []),
+      ...(s.pendingChoiceSourceCard ? [s.pendingChoiceSourceCard] : []),
+    ];
+    if (pendingVisualCards.length > 0) {
+      const floorIds = new Set(s.floor.map((card) => card.id));
+      s = {
+        ...s,
+        floor: [
+          ...s.floor,
+          ...pendingVisualCards.filter((card) => {
+            if (floorIds.has(card.id)) return false;
+            floorIds.add(card.id);
+            return true;
+          }),
+        ],
+      };
+    }
     // 필수 선택 UI가 열리는 프레임에는 이전 액션 효과가 버튼과 제목을 가리지 않게 즉시 종료한다.
     if (hasBlockingDecision(s)) dismissActionToast();
 
@@ -747,6 +896,7 @@
 
     // 액션 토스트 (특수 룰 발생 시 화면 중앙에 한 번 띄움)
     // ppeok 종류는 덱 뒤집기 연출이 완료된 후 표시 — DECK_LAND 전환에서 flush.
+    updatePendingCaptureToastContext(s);
     const actionKey = s.lastAction ? JSON.stringify(s.lastAction) : '';
     if (actionKey && actionKey !== prevActionKey) {
       if (s.lastAction && s.lastAction.kind === 'ppeok') {
@@ -756,7 +906,7 @@
         'jjok', 'ttadak', 'sseul', 'bomb', 'joker_play', 'joker_flip',
         'sweep_from_hand', 'sweep_from_flip', 'bonus_ppeok_sweep',
       ]).has(s.lastAction.kind)) {
-        pendingCaptureToast = s.lastAction;
+        queueCaptureToast(s.lastAction, s);
       } else {
         maybeShowActionToast(s.lastAction);
       }
@@ -828,6 +978,9 @@
     // (선언이 사용 뒤에 있으면 TDZ ReferenceError로 첫 STATE 렌더 자체가 멈춘다.)
     const la = s.lastAction;
     const timelineSteps = Array.isArray(s.turnAction?.steps) ? s.turnAction.steps : [];
+    const timelineMoves = timelineSteps.flatMap((step) => (
+      Array.isArray(step.moves) ? step.moves : []
+    ));
     const stagedJokerIds = new Set(
       timelineSteps
         .filter((step) => step.type === 'STAGE_DRAWN_JOKER' && step.jokerCard)
@@ -855,8 +1008,22 @@
     // 단계 2 (deck_flipped): flip_place / pair_from_flip / jjok / ttadak / ppeok → 덱
     // 폭탄(bomb)도 손에서 3장 + 바닥 1장 captured → 상대 손 origin으로 묶음
     const oppHandOriginIds = new Set();
+    const explicitHandSourceIds = new Set(
+      timelineMoves
+        .filter((move) => move.sourceZone === 'hand')
+        .map((move) => move.cardId),
+    );
     const HAND_ORIGIN_KINDS = new Set(['place_on_floor', 'pair_from_hand', 'sweep_from_hand', 'choice_made', 'choice_pending']);
-    // 1) server snapshot의 lastHandPlayed로 단계 1 손 origin 식별 (defer 통합 STATE 대응)
+    // 1) 서버 타임라인의 절대 sourceZone/owner를 우선 사용한다. 관전자 시점과
+    // actor가 달라도 ownerBefore를 로컬/상대 DOM으로 변환하므로 내 손에서 출발하지 않는다.
+    for (const move of timelineMoves) {
+      if (move.sourceZone === 'hand'
+          && move.ownerBefore === oppId
+          && newCardIds.has(move.cardId)) {
+        oppHandOriginIds.add(move.cardId);
+      }
+    }
+    // 2) 구형 snapshot의 lastHandPlayed 폴백 (타임라인 없는 상태 주입 호환)
     const lhp = s.lastHandPlayed;
     if (lhp && lhp.player === oppId && la?.kind !== 'round_start') {
       if (lhp.card && newCardIds.has(lhp.card.id)) oppHandOriginIds.add(lhp.card.id);
@@ -864,7 +1031,7 @@
         for (const c of lhp.cards) if (newCardIds.has(c.id)) oppHandOriginIds.add(c.id);
       }
     }
-    // 2) lastAction 기반 fallback (chooseFloor 등 별도 broadcast 케이스)
+    // 3) lastAction 기반 fallback (chooseFloor 등 별도 broadcast 케이스)
     if (la && la.player === oppId && la.kind !== 'round_start') {
       if (HAND_ORIGIN_KINDS.has(la.kind)) {
         if (la.card && newCardIds.has(la.card.id)) oppHandOriginIds.add(la.card.id);
@@ -878,6 +1045,10 @@
         }
       }
     }
+    // 절대 타임라인이 손 출처로 확정한 카드는 로컬/상대 여부와 무관하게 더미 추론에서
+    // 제외한다. 상대 카드는 위 oppHandOriginIds로 1회 등록하고, 로컬 카드는 클릭 시점의
+    // startFlyFromHand가 이미 담당하므로 STATE에서 deck fly를 중복 생성하지 않는다.
+    for (const id of explicitHandSourceIds) newCardIds.delete(id);
     // 라운드/게임 시작 STATE — 손 8장 분배 + floor 8장 초기 등장. 이 카드들에 대해
     // 덱 fly를 발동하면 "더미에서 나오는" 인상이 되어 어색하다 (사용자 보고).
     // lastAction.kind === 'round_start'이면 fly 보류.
@@ -890,13 +1061,31 @@
     // prevCapIds[opp]에 있었고 newCapIds[me]에 새로 등장한 카드만 강탈 피다.
     // 이 카드들은 oppCapturedZoneEl에서 fly 출발해야 하므로 drewIds(덱 출발)에서 제외한다.
     // (게이트 없이 교집합만으로도 견고하나, 스펙 지정대로 la.stoleFromOpp > 0 게이트를 둔다.)
-    const stolenPiIds = new Set();
-    if (la && la.stoleFromOpp > 0) {
+    const capturedTransferMoves = timelineMoves.filter((move) => (
+      move.sourceZone === 'captured'
+      && move.destinationZone === 'captured'
+      && move.ownerBefore
+      && move.ownerAfter
+      && move.ownerBefore !== move.ownerAfter
+      && newCapIds[move.ownerAfter]?.has(move.cardId)
+    ));
+    // 구형 이벤트 폴백: actor(현재 관전자) 기준 강탈만 식별한다.
+    if (capturedTransferMoves.length === 0 && la && la.stoleFromOpp > 0) {
       for (const id of newCapIds[me]) {
-        if (prevCapSnapshot[oppId].has(id)) stolenPiIds.add(id);
+        if (prevCapSnapshot[oppId].has(id)) {
+          capturedTransferMoves.push({
+            cardId: id,
+            sourceZone: 'captured',
+            destinationZone: 'captured',
+            actor: me,
+            ownerBefore: oppId,
+            ownerAfter: me,
+          });
+        }
       }
-      for (const id of stolenPiIds) newCardIds.delete(id);
     }
+    const stolenPiIds = new Set(capturedTransferMoves.map((move) => move.cardId));
+    for (const id of stolenPiIds) newCardIds.delete(id);
 
     // ── R8 수정 (2026-06-16): joker_play 조커 손패 HAND_THROW 등록 ──
     // 손에서 낸 조커(케이스 A)는 서버가 captured로 옮기고 손에서 제거한다. 통합 STATE에서
@@ -946,7 +1135,9 @@
     let _choiceSrcFlyId = null; // R5: choice srcCard HAND_THROW 등록용 임시 변수
     if (s.choiceFloorSrcCardId && !isRoundStart) {
       const already = pendingFlies.some((f) => f.cardId === s.choiceFloorSrcCardId);
-      if (!already) _choiceSrcFlyId = s.choiceFloorSrcCardId;
+      if (!already && claimSettlementFly(s.choiceFloorSrcCardId, settleBatchId)) {
+        _choiceSrcFlyId = s.choiceFloorSrcCardId;
+      }
     }
 
     const drewIds = new Set();
@@ -1007,6 +1198,7 @@
     // 덱 뒤집기 fly 시작 — 도착지(floor 또는 captured) DOM이 그려진 후 클론
     if (deckRectForFly && drewIds.size > 0) {
       for (const id of drewIds) {
+        if (!claimSettlementFly(id, settleBatchId)) continue;
         startFlyFromDeck(id, deckRectForFly, {
           timelineRole: stagedJokerIds.has(id) ? 'staged-joker' : 'drawn-card',
           batchId: settleBatchId,
@@ -1017,15 +1209,17 @@
     if (oppHandOriginIds.size > 0) {
       const oppHandRect = oppCardsEl.getBoundingClientRect();
       for (const id of oppHandOriginIds) {
+        if (!claimSettlementFly(id, settleBatchId)) continue;
         startFlyFromOppHand(id, oppHandRect);
       }
     }
 
     // 강탈 피 fly 시작 — oppCapturedZoneEl에서 내 captured로 날아옴
-    if (stolenPiIds.size > 0 && oppCapturedZoneEl) {
-      const oppCapRect = oppCapturedZoneEl.getBoundingClientRect();
-      for (const id of stolenPiIds) {
-        startFlyFromOppCaptured(id, oppCapRect, prevCapturedRects.get(id), {
+    if (capturedTransferMoves.length > 0) {
+      for (const move of capturedTransferMoves) {
+        const id = move.cardId;
+        if (!claimSettlementFly(id, settleBatchId)) continue;
+        startFlyFromCaptured(move, prevCapturedRects.get(id), {
           timelineRole: 'stolen-card',
           batchId: settleBatchId,
         });
@@ -1513,11 +1707,24 @@
 
     switch (s.phase) {
       case 'awaiting_play':
-        actionDisplay.textContent = '손에서 카드 1장을 클릭해라.';
+        if (bonusFlipRequestPending) {
+          actionDisplay.textContent = '더미 패를 뒤집는 중…';
+        } else if (
+          s.yourHand.length === 0
+          && (s.bombDeckCredit?.[me] || 0) > 0
+          && s.deckCount > 0
+        ) {
+          actionDisplay.textContent = '더미를 눌러 보너스 패를 뒤집어라.';
+        } else {
+          actionDisplay.textContent = '손에서 카드 1장을 클릭해라.';
+        }
         if (s.bombableMonths && s.bombableMonths.length > 0) {
           bombMonthsEl.textContent = s.bombableMonths.join(', ');
           bombPanel.classList.remove('hidden');
         }
+        break;
+      case 'resolving_bonus_flip':
+        actionDisplay.textContent = '더미 패를 뒤집는 중…';
         break;
       case 'awaiting_floor_choice':
         actionDisplay.textContent = '바닥에서 가져갈 카드를 선택해라 (강조된 카드).';
@@ -1532,6 +1739,21 @@
   }
 
   // ── 입력 핸들러 ─────────────────────────────────────────────
+  /**
+   * 정산 batch의 카드 fly 등록권을 한 번만 획득한다.
+   * batch가 없는 클릭 시점 fly는 아직 정산을 식별할 수 없으므로 제한하지 않는다.
+   *
+   * @param {string} cardId
+   * @param {string|null|undefined} batchId
+   * @returns {boolean}
+   */
+  function claimSettlementFly(cardId, batchId) {
+    if (!batchId) return true;
+    const key = `${batchId}|${cardId}`;
+    if (registeredSettlementFlyKeys.has(key)) return false;
+    registeredSettlementFlyKeys.add(key);
+    return true;
+  }
   /**
    * 손패 카드 DOM을 클론해 body에 fixed로 띄우고, 다음 STATE에서
    * 그 카드가 어디로 갔는지 측정해 보간 이동시킨다.
@@ -1654,27 +1876,39 @@
   }
 
   /**
-   * 상대 먹은 패 영역에서 강탈된 피 카드의 fly 클론 생성.
-   * 시작 좌표를 상대 captured zone 중앙으로 설정 — stoleFromOpp > 0 케이스 전용.
-   * @param {string} cardId
-   * @param {DOMRect} oppCapRect 상대 captured zone DOM의 viewport 좌표
+   * 절대 플레이어 ID를 현재 클라이언트의 먹은 패 DOM 영역으로 변환한다.
+   *
+   * @param {'p1'|'p2'} playerId
+   * @returns {HTMLElement}
+   */
+  function capturedZoneForPlayer(playerId) {
+    return playerId === me ? myCapturedZoneEl : oppCapturedZoneEl;
+  }
+
+  /**
+   * 한 플레이어의 먹은 패에서 다른 플레이어의 먹은 패로 이동한 카드 fly를 만든다.
+   * 서버의 절대 ownerBefore/ownerAfter를 현재 관전자의 my/opp DOM으로 변환한다.
+   *
+   * @param {{cardId:string,ownerBefore:'p1'|'p2',ownerAfter:'p1'|'p2'}} move
    * @param {DOMRect|null} [sourceCardRect] 렌더 교체 전 강탈 카드의 실제 좌표
    * @param {{timelineRole?:string,batchId?:string}} [meta] 정산 타임라인 메타데이터
+   * @returns {void}
    */
-  function startFlyFromOppCaptured(cardId, oppCapRect, sourceCardRect = null, meta = {}) {
-    const target =
-      myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
-      floorCardsEl.querySelector(`[data-card-id="${cardId}"]`);
+  function startFlyFromCaptured(move, sourceCardRect = null, meta = {}) {
+    const sourceZoneEl = capturedZoneForPlayer(move.ownerBefore);
+    const destinationZoneEl = capturedZoneForPlayer(move.ownerAfter);
+    const target = destinationZoneEl.querySelector(`[data-card-id="${move.cardId}"]`);
     if (!target) return;
+    const sourceZoneRect = sourceZoneEl.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
     const w = targetRect.width || 60;
     const h = targetRect.height || 85;
     const startLeft = sourceCardRect
       ? sourceCardRect.left
-      : oppCapRect.left + (oppCapRect.width / 2) - (w / 2);
+      : sourceZoneRect.left + (sourceZoneRect.width / 2) - (w / 2);
     const startTop = sourceCardRect
       ? sourceCardRect.top
-      : oppCapRect.top + (oppCapRect.height / 2) - (h / 2);
+      : sourceZoneRect.top + (sourceZoneRect.height / 2) - (h / 2);
     const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
     clone.classList.remove('clickable');
@@ -1692,12 +1926,13 @@
     flyOverlay.appendChild(clone);
     void clone.offsetHeight;
     target.style.visibility = 'hidden';
-    recordFlyOrigin(cardId, 'opp-captured', startLeft, startTop);
+    const relativeOrigin = move.ownerBefore === me ? 'my-captured' : 'opp-captured';
+    recordFlyOrigin(move.cardId, relativeOrigin, startLeft, startTop);
     pendingFlies.push({
-      cardId,
+      cardId: move.cardId,
       clone,
       startedAt: Date.now(),
-      origin: 'opp-captured',
+      origin: relativeOrigin,
       timelineRole: meta.timelineRole || null,
       batchId: meta.batchId || null,
     });
@@ -1796,6 +2031,7 @@
         showRoundResult(next.result);
       }
     }
+    flushPendingCaptureToast();
   }
 
   /**
@@ -1814,6 +2050,9 @@
    * @param {Map<string, DOMRect>} prevFloorRects 직전 STATE의 floor 카드 viewport 좌표
    */
   function resolvePendingFlies(s, removedFloorIds = [], prevFloorRects = new Map()) {
+    const settlementBatchId = s.turnAction?.steps?.find(
+      (step) => step.type === 'SETTLE_CAPTURE_BATCH',
+    )?.batchId || null;
     // 짝 카드 클론 생성 — cur captured에 있는 removedFloorIds (매칭으로 captured 간 짝)
     const pairEntries = [];
     for (const id of removedFloorIds) {
@@ -1825,11 +2064,20 @@
         .querySelector(`[data-card-id="${id}"]`);
       const startRect = prevFloorRects.get(id);
       if (!target || !startRect) continue;
+      // choice src처럼 명시적 hand fly와 floor diff 추론이 같은 카드를 가리키면
+      // batch+card 등록권을 먼저 얻은 경로만 클론을 만든다.
+      if (!claimSettlementFly(id, settlementBatchId)) continue;
       const clone = spawnCardClone(target, startRect);
       clone.style.visibility = 'visible';
       // 짝(가만 있는 카드)은 던지는 카드보다 아래. 부딪힐 때 손/덱이 위로 와야 자연스럽다.
       clone.style.zIndex = '1';
-      pairEntries.push({ cardId: id, clone, finalEl: target, origin: 'pair' });
+      pairEntries.push({
+        cardId: id,
+        clone,
+        finalEl: target,
+        origin: 'pair',
+        batchId: settlementBatchId,
+      });
     }
 
     if (pendingFlies.length === 0 && pairEntries.length === 0) {
@@ -1837,10 +2085,7 @@
         maybeShowActionToast(pendingPpeokToast);
         pendingPpeokToast = null;
       }
-      if (pendingCaptureToast) {
-        maybeShowActionToast(pendingCaptureToast);
-        pendingCaptureToast = null;
-      }
+      flushPendingCaptureToast();
       return;
     }
     isAnimating = true;
@@ -1903,6 +2148,8 @@
       entries.push({
         clone: pe.clone, cardId: pe.cardId, origin: 'pair',
         midRect, finalEl: pe.finalEl, finalRect, isCap: true,
+        timelineRole: 'settled-card',
+        batchId: pe.batchId || null,
       });
     }
 
@@ -1980,17 +2227,123 @@
       }
       return null;
     }
+
+    let stateTimer = null;
+    let actionTimer = null;
+    let completed = false;
+    const auxiliaryTimers = new Set();
+    const animationStartedAt = performance.now();
+
+    /**
+     * 테스트 계측 객체에 현재 타이머·입력 잠금 상태를 반영한다.
+     *
+     * @param {object} [extra]
+     * @returns {void}
+     */
+    function syncAnimationDiagnostics(extra = {}) {
+      if (!window.__matgoDiagnostics || typeof window.__matgoDiagnostics !== 'object') return;
+      Object.assign(window.__matgoDiagnostics, {
+        activeTimers: Number(stateTimer !== null)
+          + Number(actionTimer !== null)
+          + auxiliaryTimers.size,
+        inputLocked: isAnimating,
+        pendingFlyCount: pendingFlies.length,
+        ...extra,
+      });
+    }
+
+    /**
+     * 보조 시각 타이머를 추적해 전체 완료 시 남김없이 정리한다.
+     *
+     * @param {Function} callback
+     * @param {number} delayMs
+     * @returns {number}
+     */
+    function scheduleAuxiliary(callback, delayMs) {
+      const timer = setTimeout(() => {
+        auxiliaryTimers.delete(timer);
+        syncAnimationDiagnostics();
+        if (!completed) callback();
+      }, Math.min(delayMs, SINGLE_FLY_TIMEOUT_MS));
+      auxiliaryTimers.add(timer);
+      syncAnimationDiagnostics();
+      return timer;
+    }
+
+    /**
+     * 다음 fly 상태를 단일 타이머로 예약한다.
+     *
+     * @param {Function} callback
+     * @param {number} delayMs
+     * @returns {void}
+     */
+    function scheduleState(callback, delayMs) {
+      if (stateTimer !== null) clearTimeout(stateTimer);
+      stateTimer = setTimeout(() => {
+        stateTimer = null;
+        syncAnimationDiagnostics();
+        if (!completed) callback();
+      }, Math.min(delayMs, SINGLE_FLY_TIMEOUT_MS));
+      syncAnimationDiagnostics();
+    }
+
+    /**
+     * turnAction 연출을 정확히 한 번 완료하고 clone·타이머·입력 잠금을 정리한다.
+     *
+     * @param {'complete'|'timeout'} reason
+     * @returns {boolean} 이번 호출이 실제 완료 처리를 수행했는지 여부
+     */
+    function finishAnimation(reason) {
+      if (completed) {
+        if (window.__matgoDiagnostics) {
+          window.__matgoDiagnostics.duplicateCompletionAttempts =
+            (window.__matgoDiagnostics.duplicateCompletionAttempts || 0) + 1;
+        }
+        return false;
+      }
+      completed = true;
+      if (stateTimer !== null) clearTimeout(stateTimer);
+      if (actionTimer !== null) clearTimeout(actionTimer);
+      stateTimer = null;
+      actionTimer = null;
+      for (const timer of auxiliaryTimers) clearTimeout(timer);
+      auxiliaryTimers.clear();
+      for (const entry of entries) {
+        if (entry.finalEl) entry.finalEl.style.visibility = '';
+        entry.clone.remove();
+      }
+      for (const entry of fadeEntries) entry.clone.remove();
+      if (pendingPpeokToast) {
+        maybeShowActionToast(pendingPpeokToast);
+        pendingPpeokToast = null;
+      }
+      pendingFlies = [];
+      isAnimating = false;
+      syncAnimationDiagnostics({
+        activeTimers: 0,
+        inputLocked: false,
+        pendingFlyCount: 0,
+        completionReason: reason,
+        completionCount: (window.__matgoDiagnostics?.completionCount || 0) + 1,
+        lastDurationMs: performance.now() - animationStartedAt,
+        remainingClones: flyOverlay.querySelectorAll('.flying-card').length,
+      });
+      flushStateQueue();
+      flushPendingCaptureToast();
+      return true;
+    }
+
     function flashMeet(clone) {
       const orig = clone.style.boxShadow;
       clone.style.boxShadow = '0 0 18px 5px rgba(255, 209, 102, 0.85), 0 0 32px 10px rgba(255, 209, 102, 0.45)';
-      setTimeout(() => { clone.style.boxShadow = orig; }, 220);
+      scheduleAuxiliary(() => { clone.style.boxShadow = orig; }, 220);
     }
 
     // fadeEntries: 도착지 못 찾은 경우 — opacity 0 후 제거
     for (const f of fadeEntries) {
       f.clone.style.transition = 'opacity 0.3s';
       f.clone.style.opacity = '0';
-      setTimeout(() => f.clone.remove(), 350);
+      scheduleAuxiliary(() => f.clone.remove(), 350);
     }
 
     // 덱 클론 뒷면 표시 준비 — DECK_FLIP에서 앞면으로 회전
@@ -2015,7 +2368,6 @@
       e.flipBack = back;
     }
 
-    let stateTimer = null;
     /**
      * 브라우저 회귀 테스트가 단계 순서를 결정적으로 관찰하도록 선택적 계측을 남긴다.
      * @param {string} name
@@ -2038,6 +2390,7 @@
       });
     }
     function transition(name) {
+      if (completed) return;
       console.log(`[turn-fly] state=${name} (hand=${handLikeEntries.length} deck=${deckEntries.length} pair=${pairOnlyEntries.length} cap=${hasCapMove})`);
       recordTimelineStage(name);
       if (stateTimer) { clearTimeout(stateTimer); stateTimer = null; }
@@ -2049,7 +2402,7 @@
               flyTo(e.clone, e.midRect, T.HAND_THROW, attachmentPose(e));
             }
           }));
-          stateTimer = setTimeout(() => transition('HAND_LAND'), T.HAND_THROW);
+          scheduleState(() => transition('HAND_LAND'), T.HAND_THROW);
           break;
         }
         case 'HAND_LAND': {
@@ -2061,7 +2414,7 @@
             const pairs = pairsByMonth.get(month) || [];
             for (const pe of pairs) flashMeet(pe.clone);
           }
-          stateTimer = setTimeout(
+          scheduleState(
             () => transition(stagedJokerEntries.length > 0 ? 'JOKER_FLIP' : 'DECK_FLIP'),
             T.HAND_LAND,
           );
@@ -2074,7 +2427,7 @@
             e.clone.style.transition = `transform ${T.DECK_FLIP / 1000}s ease-in-out`;
             e.clone.style.transform = 'rotateY(0deg)';
           }
-          stateTimer = setTimeout(() => transition('JOKER_STAGE'), T.DECK_FLIP);
+          scheduleState(() => transition('JOKER_STAGE'), T.DECK_FLIP);
           break;
         }
         case 'JOKER_STAGE': {
@@ -2088,7 +2441,7 @@
               flyTo(e.clone, jokerStageRect, T.DECK_THROW);
             }
           }));
-          stateTimer = setTimeout(() => transition('DECK_FLIP'), T.DECK_THROW + T.DECK_LAND);
+          scheduleState(() => transition('DECK_FLIP'), T.DECK_THROW + T.DECK_LAND);
           break;
         }
         case 'DECK_FLIP': {
@@ -2098,7 +2451,7 @@
             e.clone.style.transition = `transform ${T.DECK_FLIP / 1000}s ease-in-out`;
             e.clone.style.transform = 'rotateY(0deg)';
           }
-          stateTimer = setTimeout(() => transition('DECK_THROW'), T.DECK_FLIP);
+          scheduleState(() => transition('DECK_THROW'), T.DECK_FLIP);
           break;
         }
         case 'DECK_THROW': {
@@ -2116,7 +2469,7 @@
               flyTo(e.clone, e.midRect, T.DECK_THROW, attachmentPose(e));
             }
           }));
-          stateTimer = setTimeout(() => transition('DECK_LAND'), T.DECK_THROW);
+          scheduleState(() => transition('DECK_LAND'), T.DECK_THROW);
           break;
         }
         case 'DECK_LAND': {
@@ -2128,7 +2481,7 @@
             const pairs = pairsByMonth.get(month) || [];
             for (const pe of pairs) flashMeet(pe.clone);
           }
-          stateTimer = setTimeout(
+          scheduleState(
             () => transition(hasCapMove ? 'RESOLVE' : 'CLEANUP'),
             T.DECK_LAND,
           );
@@ -2137,32 +2490,21 @@
         case 'RESOLVE': {
           // 포획 카드·스테이징 조커·강탈 피를 같은 정산 프레임에서 함께 이동한다.
           for (const e of entries) if (e.isCap) flyTo(e.clone, e.finalRect, T.RESOLVE);
-          stateTimer = setTimeout(() => transition('CLEANUP'), T.RESOLVE);
+          scheduleState(() => transition('CLEANUP'), T.RESOLVE);
           break;
         }
         case 'CLEANUP': {
-          // 정리.
-          for (const e of entries) {
-            if (e.finalEl) e.finalEl.style.visibility = '';
-            e.clone.remove();
-          }
-          // 효과 문구는 카드 포획/부착과 클론 정리가 모두 끝난 뒤 전면에 표시한다.
-          if (pendingPpeokToast) {
-            maybeShowActionToast(pendingPpeokToast);
-            pendingPpeokToast = null;
-          }
-          if (pendingCaptureToast) {
-            maybeShowActionToast(pendingCaptureToast);
-            pendingCaptureToast = null;
-          }
-          pendingFlies = [];
-          isAnimating = false;
-          flushStateQueue();
+          finishAnimation('complete');
           break;
         }
       }
     }
 
+    actionTimer = setTimeout(() => finishAnimation('timeout'), TURN_ACTION_TIMEOUT_MS);
+    syncAnimationDiagnostics({
+      completionReason: null,
+      duplicateCompletionAttempts: 0,
+    });
     transition('HAND_THROW');
   }
 
@@ -2220,7 +2562,12 @@
     if (!ws || ws.readyState !== 1) return;
     if (!lastState || lastState.turn !== me || lastState.phase !== 'awaiting_play') return;
     if ((lastState.bombDeckCredit?.[me] || 0) <= 0) return;
-    if (isAnimating) return;
+    if (isAnimating || bonusFlipRequestPending) return;
+    bonusFlipRequestPending = true;
+    const deckCard = floorCardsEl.querySelector('.deck-card');
+    if (deckCard) deckCard.classList.remove('bonus-available');
+    // 서버의 첫 STATE가 도착하기 전에도 중복 입력 불가 상태를 즉시 알린다.
+    updateActionPanel(lastState);
     ws.send(JSON.stringify({ type: 'BONUS_FLIP' }));
   }
 
@@ -2433,6 +2780,7 @@
     dismissActionToast();
     // 게임 종료(잔고 음수 도달) — 라운드 결과 모달을 게임 종료 모달로 전환.
     const isGameOver = !!result.gameOver;
+    const isSangtong = result.settlementType === 'sangtong';
     if (isGameOver) {
       const won = result.gameWinner === me;
       roundModalTitle.textContent = won ? '게임 승리!' : '게임 패배';
@@ -2440,16 +2788,23 @@
       roundModalTitle.textContent = '무승부';
     } else {
       const won = result.winner === me;
-      roundModalTitle.textContent = won ? '라운드 승리!' : '라운드 패배';
+      roundModalTitle.textContent = isSangtong
+        ? (won ? '사통 승리!' : '사통 패배')
+        : (won ? '라운드 승리!' : '라운드 패배');
     }
     const winnerName = result.winner === me ? '나' : '상대';
     const wb = result.winnerBreakdown;
     let html = '';
     if (result.winner !== null && wb) {
       html += `<div class="row"><span>승자</span><span>${winnerName}</span></div>`;
-      html += `<div class="row"><span>광 / 띠 / 끗 / 피</span><span>${wb.gwang} / ${wb.tti} / ${wb.kkeut} / ${wb.piCount}</span></div>`;
-      html += `<div class="row"><span>기본 점수</span><span>${wb.score}점</span></div>`;
-      html += `<div class="row"><span>고 횟수</span><span>${result.goCount[result.winner]}고</span></div>`;
+      if (isSangtong) {
+        html += '<div class="row"><span>정산 유형</span><span>사통</span></div>';
+        html += `<div class="row"><span>사통 기본 점수</span><span>${result.settlementBreakdown?.finalScore ?? result.finalScore}점</span></div>`;
+      } else {
+        html += `<div class="row"><span>광 / 띠 / 끗 / 피</span><span>${wb.gwang} / ${wb.tti} / ${wb.kkeut} / ${wb.piCount}</span></div>`;
+        html += `<div class="row"><span>기본 점수</span><span>${wb.score}점</span></div>`;
+        html += `<div class="row"><span>고 횟수</span><span>${result.goCount[result.winner]}고</span></div>`;
+      }
       html += `<div class="row"><span>최종 점수</span><span>${result.finalScore}점 (×${result.multiplier})</span></div>`;
       html += `<div class="row"><span>이동 금액</span><span>${formatMoney(result.money)}원</span></div>`;
     }

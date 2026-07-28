@@ -5,7 +5,7 @@
 import { test, expect, chromium } from '@playwright/test';
 import { buildDeck } from '../cards.js';
 
-const BASE_URL = 'http://localhost:3013';
+const BASE_URL = process.env.MATGO_BASE_URL || 'http://localhost:3013';
 const BY_ID = Object.fromEntries(buildDeck().map((card) => [card.id, card]));
 
 /**

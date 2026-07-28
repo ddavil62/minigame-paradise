@@ -10,7 +10,7 @@
 import { test, expect, chromium } from 'playwright/test';
 import { buildDeck } from '../cards.js';
 
-const BASE_URL = 'http://localhost:3013';
+const BASE_URL = process.env.MATGO_BASE_URL || 'http://localhost:3013';
 const INJECT_URL = `${BASE_URL}/test/inject`;
 const RESET_URL = `${BASE_URL}/test/reset`;
 const VIEWPORT = { width: 1280, height: 800 };

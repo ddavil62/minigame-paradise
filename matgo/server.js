@@ -22,8 +22,9 @@ import {
   createGame, startRound, nextRoundStarter, playCard, chooseFloor, goStop, shakeDecision, bomb, selectKkeutType,
   playCardSteps, chooseFloorSteps, bombSteps, selectKkeutTypeSteps,
   sangtongSteps, bonusFlipSteps,
-  snapshotForPlayer,
+  snapshotForPlayer, matchLogContext,
 } from './game.js';
+import { MatchLogger } from './match-log.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -47,13 +48,20 @@ const MIME = {
  *
  * @param {object} [opts]
  * @param {() => string} [opts.getBotUrl]
+ * @param {MatchLogger} [opts.matchLogger] 테스트 또는 통합 런타임에서 주입할 로거.
+ * @param {string} [opts.logDirectory] 기본 매치 로그 디렉터리 재정의.
  *   봇이 접속할 WS URL을 반환하는 함수 (mode=ai 사용자 진입 시 호출).
  *   launcher 통합 모드에서는 launcher가 `ws://localhost:{PORT}/matgo/ws?mode=bot` 를 넘기고,
  *   standalone 모드에서는 listen 포트로 자동 구성.
- * @returns {{ handleHttp: Function, handleUpgrade: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, flushLogs: Function, close: Function }}
  */
 export function createApp(opts = {}) {
   const getBotUrl = opts.getBotUrl || (() => null);
+  const matchLogger = opts.matchLogger || new MatchLogger({
+    directory: opts.logDirectory
+      || process.env.MATGO_LOG_DIR
+      || path.join(__dirname, 'logs', 'matches'),
+  });
   // ── 룸 상태 (closure로 격리, 2인 1룸 고정) ──────────────────────
   /**
    * @typedef {Object} Player
@@ -70,10 +78,95 @@ export function createApp(opts = {}) {
    * @type {Set<string>}
    */
   let readySet = new Set();
+  let previousLoggedPhase = null;
+  let loggedRoundEnd = false;
+  let matchActive = false;
+  const loggedBatchIds = new Set();
+
+  /**
+   * 현재 게임의 안전한 규칙 문맥과 함께 로그 이벤트를 비동기 큐에 추가한다.
+   *
+   * @param {string} event
+   * @param {'p1'|'p2'|'system'} actor
+   * @param {object} [payload]
+   * @returns {void}
+   */
+  function logMatchEvent(event, actor, payload = {}) {
+    if (!game || !matchActive) return;
+    const context = matchLogContext(game);
+    void matchLogger.log(event, {
+      actor,
+      turnId: context.turnId,
+      batchId: context.batchId,
+      stateVersion: context.stateVersion,
+      phase: context.phase,
+      payload,
+    });
+  }
+
+  /**
+   * 클라이언트 메시지에서 판별에 필요한 허용 필드만 추린다.
+   *
+   * @param {object} msg
+   * @returns {object}
+   */
+  function safeInputPayload(msg) {
+    const payload = { type: msg.type };
+    for (const key of ['cardId', 'month', 'decision', 'choice', 'value']) {
+      if (typeof msg[key] === 'string' || typeof msg[key] === 'number') payload[key] = msg[key];
+    }
+    return payload;
+  }
+
+  /**
+   * broadcast 시점에 phase·정산 batch·점수 결과를 중복 없이 기록한다.
+   *
+   * @returns {void}
+   */
+  function logStateMilestones() {
+    if (!game) return;
+    const context = matchLogContext(game);
+    if (previousLoggedPhase !== context.phase) {
+      logMatchEvent('PHASE_CHANGED', 'system', {
+        from: previousLoggedPhase,
+        to: context.phase,
+        turn: context.turn,
+      });
+      previousLoggedPhase = context.phase;
+      if (new Set([
+        'awaiting_floor_choice',
+        'awaiting_kkeut_choice',
+        'awaiting_go_stop',
+        'awaiting_sangtong',
+      ]).has(context.phase)) {
+        logMatchEvent('CHOICE_REQUIRED', context.turn, {
+          choiceType: context.phase,
+        });
+      }
+    }
+    if (context.settlement && !loggedBatchIds.has(context.settlement.batchId)) {
+      loggedBatchIds.add(context.settlement.batchId);
+      logMatchEvent('CAPTURE_SETTLED', context.settlement.actor, context.settlement);
+    }
+    if (context.roundResult && !loggedRoundEnd) {
+      loggedRoundEnd = true;
+      logMatchEvent('SCORE_EVALUATED', 'system', context.roundResult);
+      logMatchEvent('ROUND_END', 'system', context.roundResult);
+      if (game.gameOver && matchActive) {
+        void matchLogger.endMatch('completed', {
+          reasonCode: 'BALANCE_BELOW_ZERO',
+          winner: context.roundResult.winner,
+        });
+        matchActive = false;
+      }
+    }
+  }
 
   // ── 단계별 STATE 송신 (generator runner) ─────────────────────────
   // 단계 사이 지연(ms). 클라이언트 카드 fly(0.32s) + 약간의 여유.
   const STEP_DELAY_MS = 800;
+  // 단일 서버 단계가 다음 단계 또는 입력 대기로 전환되어야 하는 상한.
+  const SERVER_STEP_TIMEOUT_MS = 2000;
   // 사용자 입력 대기 phase — 단계 시퀀스를 여기서 끊고 다음 메시지를 기다린다.
   // shake_decision은 2026-05-31에 제거 (흔들기는 클라이언트 모달이 카드 클릭 시점에 처리).
   // awaiting_sangtong은 라운드 시작 시 같은 월 4장 보유자 모달 대기.
@@ -85,6 +178,45 @@ export function createApp(opts = {}) {
   }
   // 단계 진행 중이면 새 액션 메시지를 거부하는 락. fly 중 중복 입력 방지.
   let stepInProgress = false;
+  let stepRecoveryCount = 0;
+  let activeStepTimerCount = 0;
+  let bonusFlipRequestCount = 0;
+  let gameGeneration = 0;
+  let runnerSequence = 0;
+  let activeRunner = null;
+
+  /**
+   * 현재 runner를 취소하고 generator와 타이머를 정리한다.
+   *
+   * @param {string} reason
+   * @returns {void}
+   */
+  function cancelActiveRunner(reason) {
+    if (activeRunner) activeRunner.cancel(reason);
+  }
+
+  /**
+   * 현재 게임 세대를 폐기해 이전 비동기 작업의 접근을 차단한다.
+   *
+   * @param {string} reason
+   * @returns {void}
+   */
+  function invalidateGameGeneration(reason) {
+    cancelActiveRunner(reason);
+    gameGeneration++;
+  }
+
+  /**
+   * 게임 인스턴스를 교체하면서 기존 세대 runner를 먼저 취소한다.
+   *
+   * @param {object|null} nextGame
+   * @param {string} reason
+   * @returns {void}
+   */
+  function replaceGame(nextGame, reason) {
+    invalidateGameGeneration(reason);
+    game = nextGame;
+  }
 
   /**
    * 현재 단계의 broadcastState를 보류하고 다음 단계까지 결과를 본 뒤 통합 송신해야
@@ -134,36 +266,154 @@ export function createApp(opts = {}) {
    * @param {object} player  ERROR 메시지를 돌려줄 대상
    */
   function runSteps(gen, player) {
+    const runnerGame = game;
+    const runnerGeneration = gameGeneration;
+    const runner = {
+      id: ++runnerSequence,
+      game: runnerGame,
+      generation: runnerGeneration,
+      cancel: () => {},
+    };
+    activeRunner = runner;
     stepInProgress = true;
-    // 안전망: 단계가 무한 보류되면 락이 풀리지 않아 다음 입력이 영구 차단된다.
-    // 5초 후 강제 해제 + 경고. 정상 흐름에선 단계 사이 600ms × N + 응답 STATE라
-    // 5초면 매우 여유. 이 타임아웃이 작동했다는 건 로직 버그 신호.
-    const safetyTimer = setTimeout(() => {
-      if (stepInProgress) {
-        console.warn('[matgo] runSteps 안전망 발동 — stepInProgress 강제 해제. phase=', game?.phase, 'lastAction=', game?.lastAction?.kind);
-        stepInProgress = false;
-        // 현재 phase가 사용자 입력 대기였다면 STATE를 한 번 더 송신해 클라 동기화.
-        if (game && isPauseForUserInput(game.phase)) {
-          broadcastState();
-        }
-      }
-    }, 5000);
+    let released = false;
+    let nextTimer = null;
+    let watchdogTimer = null;
 
+    /**
+     * runner가 현재 게임 세대와 active lock을 모두 소유하는지 확인한다.
+     *
+     * @returns {boolean}
+     */
+    function isCurrentOwner() {
+      return activeRunner === runner
+        && game === runnerGame
+        && gameGeneration === runnerGeneration;
+    }
+
+    /**
+     * 현재 runner가 소유한 타이머 수를 진단 상태에 반영한다.
+     *
+     * @returns {void}
+     */
+    function updateTimerCount() {
+      if (activeRunner === runner) {
+        activeStepTimerCount = Number(nextTimer !== null) + Number(watchdogTimer !== null);
+      }
+    }
+
+    /**
+     * runner를 정확히 한 번 종료하고 모든 타이머와 입력 잠금을 정리한다.
+     *
+     * @returns {boolean} 이번 호출이 실제 종료를 수행했는지 여부
+     */
     function release() {
-      clearTimeout(safetyTimer);
-      stepInProgress = false;
+      if (released) return false;
+      released = true;
+      if (nextTimer !== null) clearTimeout(nextTimer);
+      if (watchdogTimer !== null) clearTimeout(watchdogTimer);
+      nextTimer = null;
+      watchdogTimer = null;
+      if (activeRunner === runner) {
+        activeRunner = null;
+        activeStepTimerCount = 0;
+        stepInProgress = false;
+      }
+      return true;
+    }
+
+    /**
+     * 외부 게임 수명 경계에서 runner를 강제 취소한다.
+     *
+     * @param {string} reason
+     * @returns {void}
+     */
+    runner.cancel = (reason) => {
+      if (released) return;
+      if (nextTimer !== null) clearTimeout(nextTimer);
+      if (watchdogTimer !== null) clearTimeout(watchdogTimer);
+      nextTimer = null;
+      watchdogTimer = null;
+      try {
+        if (typeof gen.return === 'function') gen.return();
+      } catch (error) {
+        console.warn(`[matgo] runner 취소 중 generator 오류 (${reason}):`, error?.message || error);
+      }
+      release();
+    };
+
+    /**
+     * 다음 generator 단계를 예약하고 2초 단계 상한을 함께 건다.
+     * 사용자 선택 phase는 예약 전에 release되므로 상한 적용 대상이 아니다.
+     *
+     * @param {number} delayMs
+     * @returns {void}
+     */
+    function scheduleNext(delayMs) {
+      if (released || !isCurrentOwner()) {
+        runner.cancel('stale-before-schedule');
+        return;
+      }
+      if (nextTimer !== null) clearTimeout(nextTimer);
+      if (watchdogTimer !== null) clearTimeout(watchdogTimer);
+      nextTimer = setTimeout(() => {
+        if (!isCurrentOwner()) {
+          runner.cancel('stale-next-timer');
+          return;
+        }
+        nextTimer = null;
+        updateTimerCount();
+        next();
+      }, delayMs);
+      watchdogTimer = setTimeout(() => {
+        if (released || !isCurrentOwner()) {
+          runner.cancel('stale-watchdog');
+          return;
+        }
+        stepRecoveryCount++;
+        console.warn(
+          '[matgo] runSteps 단계 상한 복구 — phase=',
+          runnerGame?.phase,
+          'lastAction=',
+          runnerGame?.lastAction?.kind,
+        );
+        try {
+          if (typeof gen.return === 'function') gen.return();
+        } catch (error) {
+          console.warn('[matgo] generator 종료 중 오류:', error?.message || error);
+        }
+        logMatchEvent('STATE_RECOVERED', 'system', {
+          reason: 'SERVER_STEP_TIMEOUT',
+          recoveryCount: stepRecoveryCount,
+        });
+        release();
+        if (game === runnerGame && gameGeneration === runnerGeneration) broadcastState();
+      }, SERVER_STEP_TIMEOUT_MS);
+      updateTimerCount();
     }
 
     function next() {
+      if (released || !isCurrentOwner()) {
+        runner.cancel('stale-before-next');
+        return;
+      }
+      if (watchdogTimer !== null) {
+        clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+        updateTimerCount();
+      }
       try {
         const r = gen.next();
         if (r.done) {
-          console.log(`[matgo:STEP] gen done — release (phase=${game?.phase} turn=${game?.turn} hands=p1:${game?.hands?.p1?.length}/p2:${game?.hands?.p2?.length} credit=${JSON.stringify(game?.bombDeckCredit)})`);
+          console.log(`[matgo:STEP] gen done — release (phase=${runnerGame?.phase} turn=${runnerGame?.turn} hands=p1:${runnerGame?.hands?.p1?.length}/p2:${runnerGame?.hands?.p2?.length} credit=${JSON.stringify(runnerGame?.bombDeckCredit)})`);
           release();
           // 안전망: generator 종료 후 STATE를 한 번 더 broadcast해서 봇/클라가
           // 최신 상태로 동기화되도록 한다. release 직후 stepInProgress=false이므로
           // 봇이 stepInProgress 거절로 stuck됐어도 이 STATE로 재시도 가능.
-          if (game && !isPauseForUserInput(game.phase) && game.phase !== 'round_end') {
+          if (game === runnerGame
+              && gameGeneration === runnerGeneration
+              && !isPauseForUserInput(runnerGame.phase)
+              && runnerGame.phase !== 'round_end') {
             broadcastState();
           }
           return;
@@ -171,32 +421,57 @@ export function createApp(opts = {}) {
         const step = r.value || {};
         if (step.error) {
           console.log(`[matgo:STEP] yield error="${step.error}" — release`);
+          logMatchEvent('INPUT_REJECTED', player.id, {
+            code: 'RULE_REJECTED',
+            message: step.error,
+          });
           release();
           sendTo(player, { type: 'ERROR', message: step.error });
           return;
         }
-        const lastKind = game?.lastAction?.kind;
-        const defer = shouldDeferBroadcast(game, step);
-        console.log(`[matgo:STEP] yield step=${step.step} lastAction=${lastKind} phase=${game?.phase} turn=${game?.turn} defer=${defer}`);
+        const lastKind = runnerGame?.lastAction?.kind;
+        const defer = shouldDeferBroadcast(runnerGame, step);
+        logMatchEvent('ACTION_STEP', player.id, {
+          step: step.step || 'unknown',
+          cardId: step.card?.id || null,
+          lastAction: lastKind || null,
+          deferredBroadcast: defer,
+        });
+        console.log(`[matgo:STEP] yield step=${step.step} lastAction=${lastKind} phase=${runnerGame?.phase} turn=${runnerGame?.turn} defer=${defer}`);
         if (defer) {
-          setImmediate(next);
+          scheduleNext(0);
+          return;
+        }
+        if (!isCurrentOwner()) {
+          runner.cancel('stale-before-broadcast');
           return;
         }
         broadcastState();
-        if (game && game.phase === 'round_end') {
+        if (runnerGame.phase === 'round_end') {
           console.log(`[matgo:STEP] round_end → ROUND_END broadcast`);
-          broadcastAll({ type: 'ROUND_END', result: game.roundResult });
+          broadcastAll({ type: 'ROUND_END', result: runnerGame.roundResult });
           release();
           return;
         }
-        if (!game || isPauseForUserInput(game.phase)) {
-          console.log(`[matgo:STEP] pause for user input (phase=${game?.phase}) — release`);
+        if (isPauseForUserInput(runnerGame.phase)) {
+          console.log(`[matgo:STEP] pause for user input (phase=${runnerGame.phase}) — release`);
           release();
           return;
         }
-        setTimeout(next, STEP_DELAY_MS);
+        // turn_finished는 이미 최종 STATE를 송신했으므로 추가 STEP_DELAY 없이 generator를
+        // 즉시 닫아 입력 잠금을 해제한다. 마지막 800ms 지연이 #37 간헐 정체의 원인이었다.
+        if (step.step === 'turn_finished') {
+          scheduleNext(0);
+          return;
+        }
+        scheduleNext(STEP_DELAY_MS);
       } catch (e) {
         console.error('[matgo] runSteps next 에러:', e);
+        logMatchEvent('ERROR', 'system', {
+          code: 'STEP_RUNNER_ERROR',
+          message: e?.message || 'internal error',
+          recovered: true,
+        });
         release();
         sendTo(player, { type: 'ERROR', message: '내부 오류 — 다시 시도해주세요' });
       }
@@ -234,7 +509,13 @@ export function createApp(opts = {}) {
    */
   function maybeStartGame() {
     if (players.length === 2 && readySet.size === 2 && !game) {
-      game = createGame('p1');
+      replaceGame(createGame('p1'), 'READY_NEW_GAME');
+      matchLogger.startMatch({ mode: 'two-player' });
+      matchLogger.startRound({ firstTurn: game.turn });
+      matchActive = true;
+      previousLoggedPhase = null;
+      loggedRoundEnd = false;
+      loggedBatchIds.clear();
       console.log('[matgo] 양쪽 READY 완료 → 새 게임 시작');
       broadcastAll({ type: 'GAME_START' });
       broadcastState();
@@ -246,6 +527,7 @@ export function createApp(opts = {}) {
    */
   function broadcastState() {
     if (!game) return;
+    logStateMilestones();
     for (const p of players) {
       if (p.ws.readyState === 1) {
         p.ws.send(JSON.stringify(snapshotForPlayer(game, p.id)));
@@ -339,7 +621,7 @@ export function createApp(opts = {}) {
         for (const z of dead) { try { z.ws.terminate(); } catch (e) {} }
         players = players.filter((p) => p.ws.readyState === WebSocket.OPEN);
         console.log(`[matgo] 죽은(좀비) 슬롯 ${dead.length}개 선제 제거`);
-        if (players.length === 0) game = null;
+        if (players.length === 0) replaceGame(null, 'ZOMBIE_CLEANUP');
       }
     }
 
@@ -401,6 +683,10 @@ export function createApp(opts = {}) {
         msg = JSON.parse(data.toString());
       } catch (e) {
         console.warn('[matgo] JSON 파싱 실패:', data.toString());
+        logMatchEvent('INPUT_REJECTED', player.id, {
+          code: 'INVALID_JSON',
+          message: 'JSON 파싱 실패',
+        });
         return;
       }
       console.log(`[matgo:RECV] ${player.id}(isBot=${ws._mode === 'bot'}) ${JSON.stringify(msg)} (phase=${game?.phase} turn=${game?.turn} stepInProgress=${stepInProgress})`);
@@ -408,10 +694,17 @@ export function createApp(opts = {}) {
       // JSON.parse('null')은 null, 'true'/'0' 등은 원시값으로 정상 파싱된다.
       // 그 후 msg.type 접근 시 TypeError로 서버 프로세스가 죽으므로 객체+type 검증을 거친다. (P0-A fix)
       if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') {
+        logMatchEvent('INPUT_REJECTED', player.id, {
+          code: 'INVALID_MESSAGE',
+          message: '잘못된 메시지 형식',
+        });
         try {
           sendTo(player, { type: 'ERROR', message: '잘못된 메시지 형식입니다.' });
         } catch (e) { /* 송신 실패는 무시 */ }
         return;
+      }
+      if (game && !new Set(['JOIN', 'READY']).has(msg.type)) {
+        logMatchEvent('PLAYER_INPUT', player.id, safeInputPayload(msg));
       }
 
       switch (msg.type) {
@@ -448,7 +741,10 @@ export function createApp(opts = {}) {
 
         case 'PLAY_CARD': {
           if (!game) break;
-          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          if (stepInProgress) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'STEP_IN_PROGRESS', type: msg.type });
+            sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break;
+          }
           console.log(`[matgo] PLAY_CARD: ${player.id} → ${msg.cardId}`);
           runSteps(playCardSteps(game, player.id, msg.cardId), player);
           break;
@@ -456,8 +752,15 @@ export function createApp(opts = {}) {
 
         case 'CHOOSE_FLOOR': {
           if (!game) break;
-          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          if (stepInProgress) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'STEP_IN_PROGRESS', type: msg.type });
+            sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break;
+          }
           console.log(`[matgo] CHOOSE_FLOOR: ${player.id} → ${msg.cardId}`);
+          logMatchEvent('CHOICE_MADE', player.id, {
+            choiceType: 'floor',
+            cardId: msg.cardId,
+          });
           runSteps(chooseFloorSteps(game, player.id, msg.cardId), player);
           break;
         }
@@ -465,8 +768,15 @@ export function createApp(opts = {}) {
         case 'GO_STOP': {
           if (!game) break;
           const r = goStop(game, player.id, msg.decision);
-          if (!r.ok) { sendTo(player, { type: 'ERROR', message: r.error }); break; }
+          if (!r.ok) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'RULE_REJECTED', message: r.error });
+            sendTo(player, { type: 'ERROR', message: r.error }); break;
+          }
           console.log(`[matgo] GO_STOP: ${player.id} → ${msg.decision}`);
+          logMatchEvent('CHOICE_MADE', player.id, {
+            choiceType: 'go_stop',
+            decision: msg.decision,
+          });
           broadcastState();
           if (game.phase === 'round_end') {
             broadcastAll({ type: 'ROUND_END', result: game.roundResult });
@@ -478,7 +788,10 @@ export function createApp(opts = {}) {
           if (!game) break;
           // 흔들기는 클라이언트 모달에서 카드 클릭 시점에 결정한다. msg.month는 카드 월 (lastAction 기록용).
           const r = shakeDecision(game, player.id, msg.decision, msg.month);
-          if (!r.ok) { sendTo(player, { type: 'ERROR', message: r.error }); break; }
+          if (!r.ok) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'RULE_REJECTED', message: r.error });
+            sendTo(player, { type: 'ERROR', message: r.error }); break;
+          }
           console.log(`[matgo] SHAKE: ${player.id} → ${msg.decision} (month=${msg.month})`);
           broadcastState();
           break;
@@ -486,31 +799,52 @@ export function createApp(opts = {}) {
 
         case 'SELECT_SANGTONG': {
           if (!game) break;
-          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          if (stepInProgress) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'STEP_IN_PROGRESS', type: msg.type });
+            sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break;
+          }
           console.log(`[matgo] SELECT_SANGTONG: ${player.id} → ${msg.choice}`);
+          logMatchEvent('CHOICE_MADE', player.id, {
+            choiceType: 'sangtong',
+            choice: msg.choice,
+          });
           runSteps(sangtongSteps(game, player.id, msg.choice), player);
           break;
         }
 
         case 'SELECT_KKEUT_TYPE': {
           if (!game) break;
-          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          if (stepInProgress) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'STEP_IN_PROGRESS', type: msg.type });
+            sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break;
+          }
           console.log(`[matgo] SELECT_KKEUT_TYPE: ${player.id} → ${msg.choice}`);
+          logMatchEvent('CHOICE_MADE', player.id, {
+            choiceType: 'kkeut',
+            choice: msg.choice,
+          });
           runSteps(selectKkeutTypeSteps(game, player.id, msg.choice), player);
           break;
         }
 
         case 'BOMB': {
           if (!game) break;
-          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          if (stepInProgress) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'STEP_IN_PROGRESS', type: msg.type });
+            sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break;
+          }
           console.log(`[matgo] BOMB: ${player.id} → month=${msg.month}`);
           runSteps(bombSteps(game, player.id, msg.month), player);
           break;
         }
 
         case 'BONUS_FLIP': {
+          bonusFlipRequestCount++;
           if (!game) break;
-          if (stepInProgress) { sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break; }
+          if (stepInProgress) {
+            logMatchEvent('INPUT_REJECTED', player.id, { code: 'STEP_IN_PROGRESS', type: msg.type });
+            sendTo(player, { type: 'ERROR', message: '단계 진행 중' }); break;
+          }
           console.log(`[matgo] BONUS_FLIP: ${player.id}`);
           runSteps(bonusFlipSteps(game, player.id), player);
           break;
@@ -527,12 +861,19 @@ export function createApp(opts = {}) {
             break;
           }
           if (!game) {
-            game = createGame('p1');
+            replaceGame(createGame('p1'), 'NEW_ROUND_WITHOUT_GAME');
+            matchLogger.startMatch({ mode: 'two-player' });
+            matchActive = true;
           } else {
             // 직전 라운드 승자가 다음 판의 선공/딜러를 유지한다.
             const next = nextRoundStarter(game);
+            invalidateGameGeneration('NEW_ROUND');
             startRound(game, next);
           }
+          matchLogger.startRound({ firstTurn: game.turn });
+          previousLoggedPhase = null;
+          loggedRoundEnd = false;
+          loggedBatchIds.clear();
           console.log('[matgo] NEW_ROUND → 새 라운드 시작');
           broadcastAll({ type: 'ROUND_START' });
           broadcastState();
@@ -546,7 +887,14 @@ export function createApp(opts = {}) {
           }
           const nextFirst = nextRoundStarter(game);
           const perPoint = game?.perPoint ?? 100;
-          game = createGame(nextFirst, { perPoint });
+          if (matchActive) void matchLogger.endMatch('completed', { reasonCode: 'NEW_GAME' });
+          replaceGame(createGame(nextFirst, { perPoint }), 'NEW_GAME');
+          matchLogger.startMatch({ mode: 'two-player' });
+          matchLogger.startRound({ firstTurn: game.turn });
+          matchActive = true;
+          previousLoggedPhase = null;
+          loggedRoundEnd = false;
+          loggedBatchIds.clear();
           console.log(`[matgo] NEW_GAME → 잔고 리셋 새 게임 (선공: ${nextFirst})`);
           broadcastAll({ type: 'GAME_START' });
           broadcastState();
@@ -568,14 +916,29 @@ export function createApp(opts = {}) {
 
         default:
           console.warn(`[matgo] 알 수 없는 메시지 타입: ${msg.type}`);
+          logMatchEvent('INPUT_REJECTED', player.id, {
+            code: 'UNKNOWN_INPUT_TYPE',
+            type: msg.type,
+          });
       }
     });
 
     ws.on('close', (code, reason) => {
       console.log(`[matgo] ${player.id} 연결 해제 (mode=${ws._mode} code=${code} reason="${reason?.toString() || ''}" phase=${game?.phase} turn=${game?.turn})`);
+      // reset/zombie 정리에서 이미 명단에서 빠진 소켓의 지연 close는 새 게임을 건드리면 안 된다.
+      const wasRegistered = players.includes(player);
       const disconnectedName = player.name || '(알 수 없음)';
+      if (wasRegistered && matchActive && game) {
+        void matchLogger.endMatch('interrupted', {
+          actor: player.id,
+          reasonCode: 'PLAYER_LEFT',
+          closeCode: code,
+        });
+        matchActive = false;
+      }
       readySet.delete(player.id);
       players = players.filter((p) => p.id !== player.id);
+      if (!wasRegistered) return;
       // 사람(mode=ai)이 끊긴 경우: 봇 자식 프로세스도 같이 종료.
       // 새 사용자가 다시 들어오면 새 봇이 spawn된다.
       if (!isBot) {
@@ -588,19 +951,24 @@ export function createApp(opts = {}) {
         killBotChild();
       }
       if (players.length === 0) {
-        game = null;
+        replaceGame(null, 'LAST_PLAYER_DISCONNECTED');
       } else {
         broadcastAll({
           type: 'OPPONENT_LEFT',
           name: disconnectedName,
           message: `${disconnectedName}님이 나갔습니다.`,
         });
-        game = null;
+        replaceGame(null, 'PLAYER_DISCONNECTED');
       }
     });
 
     ws.on('error', (err) => {
       console.error(`[matgo] ${player.id} WS 에러:`, err.message);
+      logMatchEvent('ERROR', player.id, {
+        code: 'WS_ERROR',
+        message: err.message,
+        recovered: true,
+      });
     });
   });
 
@@ -618,7 +986,14 @@ export function createApp(opts = {}) {
     }
   }, HEARTBEAT_INTERVAL_MS);
 
-  wss.on('close', () => { clearInterval(heartbeatTimer); });
+  wss.on('close', () => {
+    clearInterval(heartbeatTimer);
+    invalidateGameGeneration('SERVER_CLOSED');
+    if (matchActive && game) {
+      void matchLogger.endMatch('interrupted', { reasonCode: 'SERVER_SHUTDOWN' });
+      matchActive = false;
+    }
+  });
 
   // ── HTTP 핸들러 (정적 파일 서빙) ──────────────────────────────
   /**
@@ -658,12 +1033,21 @@ export function createApp(opts = {}) {
           if (cfg.captured !== undefined) game.captured     = cfg.captured;
           if (cfg.goCount  !== undefined) game.goCount      = cfg.goCount;
           if (cfg.shaking  !== undefined) game.shaking      = cfg.shaking;
+          if (cfg.bombDeckCredit !== undefined) game.bombDeckCredit = cfg.bombDeckCredit;
+          if (cfg.pendingBombFlips !== undefined) game.pendingBombFlips = cfg.pendingBombFlips;
+          if (cfg.bombResolvingPlayer !== undefined) {
+            game.bombResolvingPlayer = cfg.bombResolvingPlayer;
+          }
           if (cfg.kkeutAsSsangpi  !== undefined) game.kkeutAsSsangpi  = cfg.kkeutAsSsangpi;
           if (cfg.kkeutChoiceMade !== undefined) game.kkeutChoiceMade = cfg.kkeutChoiceMade;
+          if (cfg.pendingSangtong !== undefined) game.pendingSangtong = cfg.pendingSangtong;
+          if (cfg.ppeokCount !== undefined) game.ppeokCount = cfg.ppeokCount;
+          if (cfg.firstPpeokBy !== undefined) game.firstPpeokBy = cfg.firstPpeokBy;
           if (cfg.roundResult !== undefined) game.roundResult = cfg.roundResult;
           // 항상 초기화 — 이전 대기 상태 잔류 방지
           game.ppeokFlags         = cfg.ppeokFlags || {};
           game.pendingFloorChoice = null;
+          game.pendingCaptureBatch = null;
           game.pendingKkeutChoice = cfg.pendingKkeutChoice || null;
           game.lastAction         = { kind: 'test_inject' };
           broadcastState();
@@ -681,6 +1065,34 @@ export function createApp(opts = {}) {
       return;
     }
 
+    // ── 테스트 전용 엔드포인트: GET /test/status ───────────────────────────────
+    // 단계 runner의 잠금·타이머가 정상 해제됐는지 결정론적으로 검증한다.
+    if (req.method === 'GET' && reqPath === '/test/status') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true,
+        stepInProgress,
+        activeStepTimerCount,
+        gameGeneration,
+        activeRunnerId: activeRunner?.id || null,
+        activeRunnerGeneration: activeRunner?.generation ?? null,
+        stepRecoveryCount,
+        bonusFlipRequestCount,
+        phase: game?.phase || null,
+        turn: game?.turn || null,
+        capturedCount: game
+          ? { p1: game.captured.p1.length, p2: game.captured.p2.length }
+          : { p1: 0, p2: 0 },
+        pendingCaptureCount: game?.pendingCaptureBatch?.cards?.length || 0,
+        pendingCaptureCardIds: game?.pendingCaptureBatch?.cards?.map((card) => card.id) || [],
+        settlementBatch: game?.turnAction?.steps?.find(
+          (step) => step.type === 'SETTLE_CAPTURE_BATCH',
+        ) || null,
+        roundResult: game?.roundResult || null,
+      }));
+      return;
+    }
+
     // ── 테스트 전용 엔드포인트: POST /test/reset ──────────────────────────────
     // 룸 상태를 강제 초기화한다 (테스트 전용, beforeEach에서 호출).
     // browser.close() 후 ws close 이벤트가 비동기로 처리되는 레이스를 제거하기 위해
@@ -690,9 +1102,10 @@ export function createApp(opts = {}) {
       // 1단계: close 이벤트 재진입 방지 — game/players를 선제 초기화한다.
       //   close 핸들러는 players = players.filter(...) / game = null 을 수행하므로
       //   먼저 비워두면 이벤트가 발화해도 filter 대상이 없어 noop이 된다.
-      game = null;
+      replaceGame(null, 'TEST_RESET');
       const snapshot = players.slice(); // 강제 종료할 ws 목록 확보
       players = [];                     // 선제 초기화 (close 이벤트 재진입 시 splice 대상 없음)
+      readySet.clear();
 
       // 2단계: 스냅샷의 ws를 강제 close. 이미 닫혔으면(readyState >= CLOSING) skip.
       for (const p of snapshot) {
@@ -740,7 +1153,22 @@ export function createApp(opts = {}) {
     });
   }
 
-  return { handleHttp, handleUpgrade };
+  /**
+   * 활성 러너를 먼저 취소한 뒤 WebSocket 서버를 닫는다.
+   *
+   * @returns {Promise<void>}
+   */
+  function closeApp() {
+    invalidateGameGeneration('SERVER_CLOSE_REQUESTED');
+    return new Promise((resolve) => wss.close(resolve));
+  }
+
+  return {
+    handleHttp,
+    handleUpgrade,
+    flushLogs: () => matchLogger.flush(),
+    close: closeApp,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────
