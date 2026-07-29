@@ -1,5 +1,38 @@
 # Changelog
 
+## [2026-07-29] — 절차형 효과음 시스템
+
+외부 음원 파일이나 신규 런타임 의존성 없이 Web Audio API로 카드 진행과 특수 상황의 청각 피드백을 추가했다. UI, CSS, 게임 규칙과 서버 프로토콜은 변경하지 않았다.
+
+### 추가
+
+- `public/audio-engine.js`: oscillator, gain, filter와 짧은 noise buffer를 조합한 맞고 전용 합성 효과음 엔진을 추가했다.
+- 카드 제출·안착·더미 공개·포획·피 강탈을 실제 fly 단계에 연결했다.
+- 쪽·뻑·따닥·쓸·폭탄·조커·흔들기·사통·9월 술잔 선택, 고/스톱과 승리·패배·무승부에 의미별 효과음을 연결했다.
+- `tests/matgo-audio-engine.test.js`, `tests/matgo-sfx.e2e.spec.js`, `tests/matgo-sfx-qa.spec.js`로 엔진과 브라우저 연동을 검증했다.
+
+### 안정성
+
+- 첫 `pointerdown` 또는 `keydown` 뒤에만 AudioContext를 생성·재개한다.
+- 이벤트 키 중복 억제 저장소를 256개, 동시 voice를 12개로 제한하고 효과음별 cooldown을 적용했다.
+- 탭 비가시화 시 예약 재생을 정리하고 `pagehide`에서 엔진을 종료한다.
+- Web Audio 미지원이나 Context 생성·재개 실패 시 기존 게임을 무음으로 계속한다.
+
+### 검증
+
+- 오디오 단위 테스트 6/6, 제품 효과음 E2E 3/3, QA 보강 E2E 3/3, 점수·게임 규칙 100/100 통과.
+- 기능 수용 게이트 총 112/112 통과, 최종 QA `PASS`.
+- 추가 레거시 회귀 11건 중 2건은 현행 폭탄 정산과 fly 구현을 반영하지 못한 기존 기대값 문제로 실패했으며 이번 효과음 변경과 무관하다.
+- `assets/` 변경이 없어 Mockup Sync 대상이 아니다.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-29-matgo-sfx.md`
+- 구현: `.Codex/specs/2026-07-29-matgo-sfx-report.md`
+- QA: `.Codex/specs/2026-07-29-matgo-sfx-qa.md`
+
+---
+
 ## [2026-07-29] — 리포트 #51~#53 쪽 메시지·폭탄 정산·GO 권리 수정
 
 실제 쪽과 뻑 풀이의 이벤트·번역 키를 분리하고 폭탄의 관련 카드 정산과 후속 보너스 뒤집기 권리를 서버 권위 상태로 확정했다.

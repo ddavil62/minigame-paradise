@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test:audio": "node --test tests/matgo-audio-engine.test.js",
+    "test:sfx:e2e": "playwright test tests/matgo-sfx.e2e.spec.js"
   },
   "keywords": [
     "matgo",

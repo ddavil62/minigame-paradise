@@ -277,6 +277,64 @@
   let reconnectAttempts = 0;
   let toastTimer = null;
 
+  // ── 절차형 효과음 ────────────────────────────────────────────
+  /**
+   * 테스트에서는 전역 팩토리를 주입하고, 실제 실행에서는 MatgoAudio를 사용한다.
+   * Web Audio 미지원·초기화 실패 시 null 엔진으로 자연스럽게 폴백한다.
+   */
+  const audioFactory = window.__MATGO_AUDIO_ENGINE_FACTORY__
+    || window.MatgoAudio?.createAudioEngine;
+  let audioEngine = null;
+  try {
+    audioEngine = typeof audioFactory === 'function' ? audioFactory() : null;
+  } catch {
+    audioEngine = null;
+  }
+  const audioDiagnostics = {
+    calls: [],
+    unlockAttempts: 0,
+    get engine() {
+      try { return audioEngine?.getDiagnostics?.() || null; } catch { return null; }
+    },
+  };
+  window.__matgoAudioDiagnostics = audioDiagnostics;
+  let audioRoundSerial = 0;
+
+  /**
+   * 효과음 실패가 게임 입력과 렌더링에 전파되지 않도록 격리한다.
+   * @param {string} key semantic 효과음 키
+   * @param {string} eventKey 서버 이벤트 단위 중복 방지 키
+   * @returns {boolean} 엔진이 재생 요청을 수락했는지 여부
+   */
+  function playMatgoSfx(key, eventKey) {
+    let accepted = false;
+    try {
+      accepted = !!audioEngine?.playSfx?.(key, { eventKey });
+    } catch {
+      accepted = false;
+    }
+    audioDiagnostics.calls.push({ key, eventKey, accepted });
+    if (audioDiagnostics.calls.length > 256) audioDiagnostics.calls.shift();
+    return accepted;
+  }
+
+  /**
+   * 첫 사용자 제스처에서만 AudioContext를 활성화한다.
+   * @returns {void}
+   */
+  let audioUnlockRequested = false;
+  function unlockMatgoAudio() {
+    if (audioUnlockRequested) return;
+    audioUnlockRequested = true;
+    audioDiagnostics.unlockAttempts += 1;
+    try { void audioEngine?.unlock?.(); } catch { /* 무음 폴백 */ }
+  }
+  window.addEventListener('pointerdown', unlockMatgoAudio, { once: true, passive: true });
+  window.addEventListener('keydown', unlockMatgoAudio, { once: true });
+  document.addEventListener('visibilitychange', () => {
+    try { audioEngine?.handleVisibility?.(document.hidden); } catch { /* 무음 폴백 */ }
+  });
+
   // ── 애니메이션 diff용 상태 ───────────────────────────────
   /** 이전 STATE의 카드 ID 집합 (등장 애니메이션 트리거용) */
   let prevFloorIds = new Set();
@@ -585,6 +643,34 @@
     return true;
   }
 
+  /**
+   * 서버 lastAction을 맞고 의미 단위 효과음으로 변환한다.
+   * @param {object|null} action
+   * @returns {string|null}
+   */
+  function soundForLastAction(action) {
+    if (!action) return null;
+    const map = {
+      jjok: 'special.jjok',
+      ppeok: 'special.ppeok',
+      three_ppeok: 'special.ppeok',
+      ttadak: 'special.ttadak',
+      sseul: 'special.sweep',
+      sweep_from_hand: 'special.sweep',
+      sweep_from_flip: 'special.sweep',
+      bonus_ppeok_sweep: 'special.sweep',
+      bomb: 'special.bomb',
+      joker_play: 'special.joker',
+      joker_flip: 'special.joker',
+      floor_joker_to_first: 'special.joker',
+      shake: 'special.shake',
+      sangtong: 'special.sangtong',
+      go: 'decision.go',
+      kkeut_choice: 'decision.kkeut',
+    };
+    return map[action.kind] || null;
+  }
+
   // ── WebSocket 연결 ───────────────────────────────────────────
   /**
    * WebSocket 연결을 시작한다. 페이지 host:port 그대로 사용.
@@ -647,6 +733,7 @@
 
   window.addEventListener('pagehide', () => {
     autoReconnect = false;
+    try { audioEngine?.destroy?.(); } catch { /* 페이지 종료 중 오류는 무시한다. */ }
     if (ws && ws.readyState === WebSocket.OPEN) {
       try { ws.close(1000, 'page hide'); } catch { /* noop */ }
     }
@@ -707,6 +794,7 @@
         autoReady();
         break;
       case 'GAME_START':
+        audioRoundSerial += 1;
         hideRoundModal();
         // 5건 룰 보강: 바닥 슬롯 캐시 + 흔들기 모달 1회 제한 초기화
         floorSlotMap.clear();
@@ -719,6 +807,7 @@
         lastJokerFlyActionKey = '';
         registeredSettlementFlyKeys.clear();
         completedCaptureToastKeys.clear();
+        prevActionKey = '';
         // READY 상태 초기화(다음 리매치 대비).
         myReady = false;
         opponentReady = false;
@@ -727,6 +816,7 @@
         showScreen('game');
         break;
       case 'ROUND_START':
+        audioRoundSerial += 1;
         hideRoundModal();
         // 5건 룰 보강: 바닥 슬롯 캐시 + 흔들기 모달 1회 제한 초기화
         floorSlotMap.clear();
@@ -739,6 +829,7 @@
         lastJokerFlyActionKey = '';
         registeredSettlementFlyKeys.clear();
         completedCaptureToastKeys.clear();
+        prevActionKey = '';
         break;
       case 'STATE':
         lastState = msg;
@@ -760,6 +851,10 @@
         break;
       case 'ROUND_END':
         bonusFlipRequestPending = false;
+        // 사통과 무승부는 스톱 결정이 아니므로 별도 결정음을 재생하지 않는다.
+        if (msg.result?.winner != null && msg.result?.settlementType !== 'sangtong') {
+          playMatgoSfx('decision.stop', `round:${audioRoundSerial}:stop:${msg.result.winner}`);
+        }
         if (isAnimating) {
           // fly가 끝난 뒤 결과 모달을 띄워야 자연스럽다.
           stateQueue.push(msg);
@@ -914,6 +1009,20 @@
     updatePendingCaptureToastContext(s);
     const actionKey = s.lastAction ? JSON.stringify(s.lastAction) : '';
     if (actionKey && actionKey !== prevActionKey) {
+      const actionSound = soundForLastAction(s.lastAction);
+      if (actionSound) {
+        const context = captureToastContext(s);
+        const detail = s.lastAction.card?.id
+          || s.lastAction.flipped?.id
+          || s.lastAction.month
+          || s.lastAction.choice
+          || s.lastAction.count
+          || '';
+        playMatgoSfx(
+          actionSound,
+          `round:${audioRoundSerial}:action:${context.turnId || s.stateVersion || 'na'}:${context.batchId || 'na'}:${s.lastAction.kind}:${detail}`,
+        );
+      }
       if (s.lastAction && s.lastAction.kind === 'ppeok') {
         // 뻑: 카드가 바닥의 세 장 묶음에 완전히 붙은 뒤 표시한다.
         pendingPpeokToast = s.lastAction;
@@ -2449,6 +2558,30 @@
       if (completed) return;
       console.log(`[turn-fly] state=${name} (hand=${handLikeEntries.length} deck=${deckEntries.length} pair=${pairOnlyEntries.length} cap=${hasCapMove})`);
       recordTimelineStage(name);
+      const activeIds = name === 'HAND_THROW' || name === 'HAND_LAND'
+        ? handLikeEntries.map((entry) => entry.cardId)
+        : name === 'DECK_FLIP' || name === 'DECK_LAND'
+          ? deckEntries.map((entry) => entry.cardId)
+          : entries.filter((entry) => entry.isCap).map((entry) => entry.cardId);
+      const timelineEventKey = [
+        `round-${audioRoundSerial}`,
+        'fly',
+        s.turnAction?.turnId || s.stateVersion || 'na',
+        settlementBatchId || 'na',
+        name,
+        [...new Set(activeIds)].sort().join(','),
+      ].join(':');
+      if (name === 'HAND_THROW') playMatgoSfx('card.throw', timelineEventKey);
+      if (name === 'HAND_LAND' || name === 'DECK_LAND') {
+        playMatgoSfx('card.land', timelineEventKey);
+      }
+      if (name === 'DECK_FLIP') playMatgoSfx('deck.flip', timelineEventKey);
+      if (name === 'RESOLVE') {
+        playMatgoSfx('capture', timelineEventKey);
+        if (entries.some((entry) => entry.timelineRole === 'stolen-card')) {
+          playMatgoSfx('pi.steal', `${timelineEventKey}:steal`);
+        }
+      }
       if (stateTimer) { clearTimeout(stateTimer); stateTimer = null; }
       switch (name) {
         case 'HAND_THROW': {
@@ -2843,6 +2976,14 @@
     // 게임 종료(잔고 음수 도달) — 라운드 결과 모달을 게임 종료 모달로 전환.
     const isGameOver = !!result.gameOver;
     const isSangtong = result.settlementType === 'sangtong';
+    const winner = isGameOver ? result.gameWinner : result.winner;
+    const resultSound = winner === null
+      ? 'round.draw'
+      : winner === me ? 'round.win' : 'round.loss';
+    playMatgoSfx(
+      resultSound,
+      `round:${audioRoundSerial}:result:${winner || 'draw'}`,
+    );
     if (isGameOver) {
       const won = result.gameWinner === me;
       roundModalTitle.textContent = won ? '게임 승리!' : '게임 패배';
