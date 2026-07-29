@@ -6,9 +6,15 @@ import { CLIENT_MESSAGE, SERVER_MESSAGE } from '../shared/protocol.js';
 import { applyLocale, getLocale, t, toggleLocale } from './i18n.js';
 import { createRenderer } from './renderer.js';
 import { isNativeKeyboardTarget } from './keyboard.js';
+import { createAudioEngine } from './audio-engine.js';
 
 const canvas = document.querySelector('#game-canvas');
 const renderer = createRenderer(canvas);
+const audio = typeof window.__STARLIGHT_AUDIO_FACTORY__ === 'function'
+  ? window.__STARLIGHT_AUDIO_FACTORY__()
+  : createAudioEngine();
+// 브라우저 QA는 합성 노드가 아니라 의미 이벤트와 수명 주기 상태를 관찰한다.
+window.__starlightAudioDiagnostics = () => audio.getDiagnostics?.() ?? {};
 const readyOverlay = document.querySelector('#ready-overlay');
 const readyButton = document.querySelector('#ready-button');
 const aiStartButton = document.querySelector('#ai-start-button');
@@ -43,6 +49,15 @@ const parameters = new URLSearchParams(location.search);
 let pendingLobbyReadyHandoff = parameters.get('lobbyReady') === '1';
 const RESUME_TOKEN_KEY = 'starlight-resume-token';
 const MUTE_KEY = 'starlight-muted';
+const audioPanel = document.querySelector('#audio-panel');
+const audioSettingsButton = document.querySelector('#audio-settings-button');
+const audioStatus = document.querySelector('#audio-status');
+const muteButton = document.querySelector('#mute-button');
+const volumeInputs = {
+  master: document.querySelector('#master-volume'),
+  bgm: document.querySelector('#bgm-volume'),
+  sfx: document.querySelector('#sfx-volume')
+};
 let socket = null;
 let playerId = null;
 let sequence = 0;
@@ -169,6 +184,7 @@ function setActiveTab(tabId) {
 
 /** @param {object} message 서버 메뉴 상태 @returns {void} */
 function updateMenu(message) {
+  audio.setScene('menu');
   levelCatalog = message.levels ?? levelCatalog; levelRecords = message.records ?? levelRecords; selectedLevelId = message.selectedLevelId ?? selectedLevelId;
 
   // 선택된 레벨이 현재 탭에 없으면 해당 레벨이 속한 탭으로 자동 전환
@@ -246,6 +262,29 @@ function updateReadyState(players) {
 
 /** @param {{kind:string,eventId?:number,payload?:object}} event 서버 이벤트 @returns {void} */
 function handleEvent(event) {
+  const eventSfx = {
+    DEVICE_POWERED: 'device.powered',
+    DEVICE_LATCHED: 'device.latched',
+    CHECKPOINT: 'checkpoint',
+    FALL: 'fall',
+    RESPAWN: 'connection',
+    COOP_BOOST: 'boost',
+    FINISH_STARTED: 'finish.start',
+    FINISH_EXPIRED: 'finish.expired',
+    DELIVERY: 'checkpoint',
+    MAIL_DELIVERED: 'checkpoint',
+    HAZARD: 'fall',
+    LIGHTNING: 'fall',
+    DAMAGE: 'fall'
+  };
+  const sfxKey = eventSfx[event.kind];
+  const actorId = event.payload?.playerId ?? event.payload?.receiverId;
+  // 개인 동작 이벤트는 로컬 플레이어만 강조하고, 팀 진행 이벤트는 양쪽에서 재생한다.
+  const localOnly = new Set(['DAMAGE', 'HAZARD', 'LIGHTNING']);
+  if (sfxKey && (!localOnly.has(event.kind) || !actorId || String(actorId) === String(playerId))) {
+    audio.playSfx(sfxKey, { eventId: event.eventId, resumed: event.kind === 'RESPAWN' });
+  }
+  if (event.kind === 'FINISH_STARTED') audio.setScene('finale');
   if (event.kind === 'COOP_BOOST') {
     hasSeenCoopBoost = true;
     renderer.playCoopBoost({ eventId: event.eventId, ...event.payload });
@@ -259,6 +298,8 @@ function handleEvent(event) {
 
 /** @param {{elapsedMs:number,falls:number,roleSwaps:number}} result 결과 @returns {void} */
 function showResult(result) {
+  audio.setScene('result');
+  audio.playSfx('result', { eventId: result.eventId ?? `result-${result.elapsedMs}` });
   document.querySelector('#result-time').textContent = formatTime(result.elapsedMs); document.querySelector('#result-best').textContent = formatTime(result.bestMs ?? result.elapsedMs); document.querySelector('#result-falls').textContent = String(result.falls); document.querySelector('#result-swaps').textContent = String(result.roleSwaps);
   document.querySelector('#new-best-badge').hidden = !result.newBest;
   levelRecords = result.records ?? levelRecords; const level = findLevel(result.levelId ?? selectedLevelId); resultLevelName.textContent = level ? t(level.nameKey) : '';
@@ -275,18 +316,21 @@ function updateReconnectCountdown() {
 
 /** @param {number} deadline 서버 유예 마감 시각 @returns {void} */
 function showReconnect(deadline) {
+  audio.setScene('silent'); audio.playSfx('reconnect', { eventId: `paused-${deadline}`, resumed: false });
   reconnectDeadline = deadline; sessionPaused = true; reconnectOverlay.classList.remove('recovered'); reconnectOverlay.hidden = false; lobbyConfirmOverlay.hidden = true; updateReconnectCountdown();
   setBackgroundInert(true); clearInterval(reconnectTimer); reconnectTimer = window.setInterval(updateReconnectCountdown, 200); reconnectOverlay.focus(); updateHud();
 }
 
 /** @param {'reconnect_expired'|'agreed_exit'|'network_failed'} reason 종료 사유 @returns {void} */
 function showSessionEnded(reason) {
+  audio.setScene('silent');
   sessionEnded = true; sessionPaused = true; clearInterval(reconnectTimer); reconnectOverlay.hidden = true; lobbyConfirmOverlay.hidden = true; resultOverlay.classList.toggle('network-failed', reason === 'network_failed');
   setBackgroundInert(true); endedMessage.removeAttribute('data-i18n'); endedMessage.textContent = t(reason === 'agreed_exit' ? 'session.agreed' : 'session.expired'); endedOverlay.hidden = false; endedOverlay.querySelector('button').focus();
 }
 
 /** @returns {void} */
 function finishResume() {
+  audio.setScene('play'); audio.playSfx('resume', { eventId: `resumed-${reconnectDeadline}`, resumed: true });
   sessionPaused = false; readyOverlay.hidden = true; connectionState = 'recovered'; updateConnectionLabel(); reconnectOverlay.classList.add('recovered'); reconnectStatus.removeAttribute('data-i18n'); reconnectStatus.textContent = t('reconnect.recovered'); reconnectTicks.querySelectorAll('i').forEach((tick) => tick.classList.add('active'));
   window.setTimeout(() => { reconnectOverlay.hidden = true; reconnectOverlay.classList.remove('recovered'); reconnectStatus.textContent = t('reconnect.paused'); connectionState = 'online'; updateConnectionLabel(); setBackgroundInert(false); }, 240); updateHud();
 }
@@ -297,9 +341,9 @@ function handleServerMessage(message) {
     playerId = message.playerId; localStorage.setItem(RESUME_TOKEN_KEY, message.resumeToken); renderer.setPlayerId(playerId); connectionState = 'online'; updateConnectionLabel(); document.body.dataset.playerId = playerId; updateMenu(message);
   } else if (message.type === SERVER_MESSAGE.READY_STATE) updateReadyState(message.players);
   else if (message.type === SERVER_MESSAGE.MENU_STATE) updateMenu(message);
-  else if (message.type === 'START') { pendingLobbyReadyHandoff = false; readyButton.hidden = false; if (aiStartButton) aiStartButton.hidden = false; renderer.resetInterpolation(); readyOverlay.hidden = true; resultOverlay.hidden = true; rematchButton.disabled = false; sessionPaused = false; hasSeenCoopBoost = false; }
+  else if (message.type === 'START') { audio.setScene('play'); audio.playSfx('ui.confirm', { eventId: message.eventId ?? `start-${message.levelId ?? selectedLevelId}` }); pendingLobbyReadyHandoff = false; readyButton.hidden = false; if (aiStartButton) aiStartButton.hidden = false; renderer.resetInterpolation(); readyOverlay.hidden = true; resultOverlay.hidden = true; rematchButton.disabled = false; sessionPaused = false; hasSeenCoopBoost = false; }
   else if (message.type === SERVER_MESSAGE.SNAPSHOT) {
-    latestSnapshot = message; renderer.setSnapshot(message, performance.now()); const local = message.players.find((player) => player.id === playerId); document.body.dataset.serverTick = String(message.tick); document.body.dataset.levelId = message.levelId; document.body.dataset.checkpoint = String(message.checkpointId); document.body.dataset.finishPhase = message.finishState.phase; if (local) document.body.dataset.playerX = String(Math.round(local.x)); updateHud();
+    latestSnapshot = message; renderer.setSnapshot(message, performance.now()); audio.observeSnapshot(message, playerId); const local = message.players.find((player) => player.id === playerId); document.body.dataset.serverTick = String(message.tick); document.body.dataset.levelId = message.levelId; document.body.dataset.checkpoint = String(message.checkpointId); document.body.dataset.finishPhase = message.finishState.phase; if (local) document.body.dataset.playerX = String(Math.round(local.x)); updateHud();
   } else if (message.type === SERVER_MESSAGE.EVENT) handleEvent(message);
   else if (message.type === SERVER_MESSAGE.GAME_OVER) showResult(message);
   else if (message.type === SERVER_MESSAGE.PAUSED) { renderer.resetInterpolation(); showReconnect(message.reconnectDeadline); }
@@ -314,7 +358,7 @@ function handleServerMessage(message) {
     });
     rematchStatus.textContent = t(values.length === 0 ? 'result.waitingChoice' : values.length === 1 ? 'result.partnerChoice' : values[0] === values[1] ? 'result.processing' : 'result.choiceMismatch');
     resultOverlay.classList.toggle('processing', message.status === 'processing'); if (message.status === 'processing') resultOverlay.setAttribute('aria-busy', 'true'); else resultOverlay.removeAttribute('aria-busy');
-    if (message.status === 'menu') { resultOverlay.hidden = true; readyOverlay.hidden = false; }
+    if (message.status === 'menu') { audio.setScene('menu'); resultOverlay.hidden = true; readyOverlay.hidden = false; }
   }
   else if (message.type === SERVER_MESSAGE.REMATCH_STATE) {
     const mineReady = message.ready.includes(playerId); rematchButton.disabled = mineReady; rematchStatus.textContent = t(message.status === 'partner_left' ? 'result.partnerLeft' : message.status === 'processing' ? 'result.processing' : message.ready.length === 2 ? 'result.bothReady' : mineReady ? 'result.ready' : 'result.waiting');
@@ -352,7 +396,7 @@ function connect() {
 function mapKey(code) { if (code === 'KeyA' || code === 'ArrowLeft') return 'left'; if (code === 'KeyD' || code === 'ArrowRight') return 'right'; if (code === 'Space') return 'jump'; if (code === 'KeyE' || code === 'Enter') return 'interact'; return null; }
 
 /** @returns {void} */
-function returnToLobby() { intentionalClose = true; localStorage.removeItem(RESUME_TOKEN_KEY); send({ type: CLIENT_MESSAGE.LEAVE_GAME }); window.setTimeout(() => { socket?.close(); location.href = '/'; }, 120); }
+function returnToLobby() { audio.setScene('silent'); intentionalClose = true; localStorage.removeItem(RESUME_TOKEN_KEY); send({ type: CLIENT_MESSAGE.LEAVE_GAME }); window.setTimeout(() => { socket?.close(); location.href = '/'; }, 120); }
 
 /** @returns {void} */
 function openLobbyConfirm() { previousFocus = document.activeElement; lobbyConfirmOverlay.hidden = false; continueButton.focus(); }
@@ -362,7 +406,7 @@ function closeLobbyConfirm() { lobbyConfirmOverlay.hidden = true; previousFocus?
 
 // 월드 탭 클릭 이벤트
 levelTabs.forEach((tab) => {
-  tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
+  tab.addEventListener('click', () => { audio.playSfx('ui.select'); setActiveTab(tab.dataset.tab); });
 });
 
 // 탭 키보드 내비게이션 (좌우 화살표로 탭 이동, aria-pattern 준수)
@@ -377,7 +421,7 @@ document.querySelector('.level-tabs')?.addEventListener('keydown', (event) => {
   event.preventDefault();
 });
 
-readyButton.addEventListener('click', () => send({ type: CLIENT_MESSAGE.READY }));
+readyButton.addEventListener('click', () => { audio.playSfx('ui.confirm'); send({ type: CLIENT_MESSAGE.READY }); });
 if (aiStartButton) {
   aiStartButton.addEventListener('click', () => {
     // AI 재진입 시 현재 세션을 명시적으로 종료한다.
@@ -392,13 +436,54 @@ if (aiStartButton) {
     }, 120);
   });
 }
-document.querySelectorAll('[data-result-action]').forEach((button) => button.addEventListener('click', () => send({ type: CLIENT_MESSAGE.RESULT_VOTE, action: button.dataset.resultAction })));
+document.querySelectorAll('[data-result-action]').forEach((button) => button.addEventListener('click', () => { audio.playSfx('ui.confirm'); send({ type: CLIENT_MESSAGE.RESULT_VOTE, action: button.dataset.resultAction }); }));
 document.querySelector('#session-lobby-button').addEventListener('click', returnToLobby);
 document.querySelector('#toolbar-lobby-button').addEventListener('click', openLobbyConfirm);
 continueButton.addEventListener('click', closeLobbyConfirm);
 document.querySelector('#confirm-lobby-button').addEventListener('click', returnToLobby);
-document.querySelector('#locale-button').addEventListener('click', (event) => { const locale = toggleLocale(); event.currentTarget.setAttribute('aria-pressed', String(locale === 'en')); updateConnectionLabel(); updateHud(); renderLevelCards(); });
-document.querySelector('#mute-button').addEventListener('click', (event) => { const muted = event.currentTarget.getAttribute('aria-pressed') !== 'true'; event.currentTarget.setAttribute('aria-pressed', String(muted)); localStorage.setItem(MUTE_KEY, String(muted)); });
+document.querySelector('#locale-button').addEventListener('click', (event) => { const locale = toggleLocale(); event.currentTarget.setAttribute('aria-pressed', String(locale === 'en')); updateConnectionLabel(); updateHud(); renderLevelCards(); refreshAudioControls(); });
+
+/**
+ * 저장된 엔진 설정을 접근 가능한 컨트롤에 반영한다.
+ * @returns {void}
+ */
+function refreshAudioControls() {
+  const state = audio.getDiagnostics?.() ?? {};
+  const muted = state.muted ?? localStorage.getItem(MUTE_KEY) === 'true';
+  muteButton.setAttribute('aria-pressed', String(muted));
+  muteButton.setAttribute('aria-label', t(muted ? 'audio.unmute' : 'aria.mute'));
+  audioStatus.textContent = t(muted ? 'audio.muted' : state.unlocked ? 'audio.active' : 'audio.locked');
+  const values = {
+    master: state.volume ?? Number(localStorage.getItem('starlight-volume') ?? 1),
+    bgm: state.bgmVolume ?? Number(localStorage.getItem('starlight-bgm-volume') ?? 1),
+    sfx: state.sfxVolume ?? Number(localStorage.getItem('starlight-sfx-volume') ?? 1)
+  };
+  for (const [channel, input] of Object.entries(volumeInputs)) {
+    const percent = Math.round((Number.isFinite(values[channel]) ? values[channel] : 1) * 100);
+    input.value = String(percent);
+    input.setAttribute('aria-valuetext', `${percent}%`);
+    input.previousElementSibling.textContent = `${percent}%`;
+  }
+}
+
+audioSettingsButton.addEventListener('click', () => {
+  const expanded = audioSettingsButton.getAttribute('aria-expanded') !== 'true';
+  audioSettingsButton.setAttribute('aria-expanded', String(expanded));
+  audioPanel.hidden = !expanded;
+  if (expanded) volumeInputs.master.focus();
+});
+muteButton.addEventListener('click', () => {
+  audio.setMuted(muteButton.getAttribute('aria-pressed') !== 'true');
+  refreshAudioControls();
+});
+for (const [channel, input] of Object.entries(volumeInputs)) {
+  input.addEventListener('input', () => {
+    const value = Number(input.value) / 100;
+    if (channel === 'master') audio.setVolume(value);
+    else audio.setChannelVolume?.(channel, value);
+    refreshAudioControls();
+  });
+}
 window.addEventListener('keydown', (event) => {
   if (!lobbyConfirmOverlay.hidden) {
     if (event.key === 'Escape') { event.preventDefault(); closeLobbyConfirm(); return; }
@@ -407,10 +492,15 @@ window.addEventListener('keydown', (event) => {
   if (isNativeKeyboardTarget(event.target)) return;
   const key = mapKey(event.code); if (!key || sessionPaused) return; input[key] = true; event.preventDefault();
 });
+// 자동 재생 정책을 지키며 첫 실제 사용자 제스처에서만 Context를 활성화한다.
+const unlockAudio = async () => { await audio.unlock(); refreshAudioControls(); };
+window.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
+window.addEventListener('keydown', unlockAudio, { once: true, capture: true });
+window.addEventListener('pagehide', () => void audio.destroy(), { once: true });
 window.addEventListener('keyup', (event) => { if (isNativeKeyboardTarget(event.target)) return; const key = mapKey(event.code); if (!key) return; input[key] = false; event.preventDefault(); });
-document.querySelector('#mute-button').setAttribute('aria-pressed', localStorage.getItem(MUTE_KEY) === 'true' ? 'true' : 'false');
 document.querySelector('#locale-button').setAttribute('aria-pressed', String(getLocale() === 'en'));
 window.setInterval(() => { if (!sessionPaused) send({ type: CLIENT_MESSAGE.INPUT, seq: sequence++, ...input }); }, 1000 / 30);
 applyLocale();
+refreshAudioControls();
 connect();
 renderer.start();

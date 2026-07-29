@@ -27,6 +27,13 @@
       <div class="toolbar" role="toolbar" data-i18n-aria-label="aria.toolbar">
         <button id="locale-button" type="button" aria-label="언어 전환" aria-pressed="false" data-i18n-aria-label="aria.locale">KO / EN</button>
         <button id="mute-button" type="button" aria-label="음소거" aria-pressed="false" data-i18n-aria-label="aria.mute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12-1a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/><path class="mute-slash" d="M3 3l18 18"/></svg></button>
+        <button id="audio-settings-button" type="button" aria-expanded="false" aria-controls="audio-panel" data-i18n-aria-label="audio.settings">♫</button>
+        <div id="audio-panel" class="audio-panel" hidden>
+          <div id="audio-status" role="status" aria-live="polite" data-i18n="audio.locked">소리는 첫 입력 후 시작됩니다</div>
+          <label><span data-i18n="audio.master">전체</span><output for="master-volume">100%</output><input id="master-volume" type="range" min="0" max="100" step="5" value="100"></label>
+          <label><span data-i18n="audio.bgm">배경음</span><output for="bgm-volume">100%</output><input id="bgm-volume" type="range" min="0" max="100" step="5" value="100"></label>
+          <label><span data-i18n="audio.sfx">효과음</span><output for="sfx-volume">100%</output><input id="sfx-volume" type="range" min="0" max="100" step="5" value="100"></label>
+        </div>
         <button id="toolbar-lobby-button" type="button" data-i18n-aria-label="aria.lobby"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M7 3h8v12H7M10 9H2m0 0 3-3M2 9l3 3"/></svg><span data-i18n="toolbar.lobby">게임 선택</span></button>
       </div>
     </header>

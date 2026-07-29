@@ -231,9 +231,18 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  position: relative;
 }
 .toolbar button { height: 36px; border: 1px solid rgba(245, 233, 201, 0.35); border-radius: 9px; color: var(--cream); background: rgba(31, 44, 71, 0.88); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 #locale-button { width: 72px; }#mute-button { width: 40px; }#toolbar-lobby-button { width: 116px; padding: 0 8px; font-size: 13px; font-weight: 700; }
+#audio-settings-button { width: 40px; font-size: 18px; }
+.audio-panel { position: absolute; z-index: 260; right: 0; top: 42px; width: 248px; padding: 12px; border: 1px solid rgba(255,217,122,.45); border-radius: 12px; color: var(--cream); background: rgba(11,19,34,.98); box-shadow: 0 10px 28px rgba(0,0,0,.48); }
+.audio-panel[hidden] { display: none; }
+.audio-panel > div { margin-bottom: 8px; color: var(--gold); font-size: 12px; }
+.audio-panel label { min-height: 42px; display: grid; grid-template-columns: 62px 1fr 42px; align-items: center; gap: 7px; font-size: 13px; }
+.audio-panel output { grid-column: 3; grid-row: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.audio-panel input { grid-column: 2; grid-row: 1; width: 100%; min-height: 36px; accent-color: var(--gold); cursor: pointer; }
+.audio-panel input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .toolbar svg, .confirm-actions svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }.toolbar #mute-button svg { width: 24px; height: 24px; }.mute-slash { display: none; }#mute-button[aria-pressed="true"] .mute-slash { display: block; }
 
 /* ── 세션 오버레이 ── */
@@ -332,8 +341,8 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
   .ready-card { overflow-y: auto; justify-content: flex-start; }
 }
 @media (max-width: 520px) {
-  body { overflow: auto; }
-  #game-shell { width: 100vw; min-height: 100dvh; grid-template-rows: 40px 1fr 44px; }
+  body { overflow-y: auto; overflow-x: hidden; }
+  #game-shell { width: 100%; max-width: 100%; min-height: 100dvh; grid-template-rows: 40px 1fr 44px; }
   .overlay { position: fixed; overflow-y: auto; align-items: start; padding: 16px; }
   .ready-card { width: 100%; max-height: none; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
   .level-list { grid-template-columns: 1fr; gap: 12px; }.level-card { min-height: 80px; }
@@ -349,7 +358,36 @@ h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.1; }
 
 /* ── AD 수정 라운드: 메타 레이어·카드 모티프·투표 상태 ── */
 #ready-overlay, #result-overlay { position: fixed; inset: 0; min-height: 100dvh; z-index: 210; overflow-y: auto; }
-body:has(#ready-overlay:not([hidden])) .toolbar, body:has(#result-overlay:not([hidden])) .toolbar { display: none; }
+body:has(#result-overlay:not([hidden])) .toolbar { display: none; }
+body:has(#ready-overlay:not([hidden])) #topbar { position: relative; z-index: 230; }
+@media (max-width: 620px) {
+  #topbar { padding: 0 6px; }
+  .hud-top { gap: 4px; }
+  .connection-panel, .section-panel { padding: 3px 5px; }
+  #locale-button { width: 52px; font-size: 11px; }
+  #toolbar-lobby-button { width: 40px; }
+  #toolbar-lobby-button span { display: none; }
+  .toolbar { gap: 4px; }
+  .audio-panel { position: fixed; top: 44px; right: 6px; width: min(248px, calc(100vw - 12px)); }
+}
+@media (max-width: 560px) {
+  #topbar { width: 100%; max-width: 100%; min-width: 0; padding-left: 6px; padding-right: 6px; }
+  #bottombar { min-width: 0; overflow: hidden; padding: 0 6px; }
+  .player-status { display: none; }
+  .action-hint { min-width: 0; max-height: 42px; overflow: hidden; padding: 2px 4px; font-size: 10px; line-height: 13px; overflow-wrap: anywhere; }
+  #action-hint-text { display: -webkit-box; max-height: 39px; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+}
+@media (max-width: 420px) {
+  html, body { max-width: 100vw; overflow-x: hidden; }
+  #game-shell, #topbar, #play-viewport { width: 100%; max-width: 100vw; min-width: 0; }
+  #topbar { justify-content: space-between; overflow: visible; }
+  .hud-top { flex: 1 1 auto; min-width: 0; justify-content: flex-start; }
+  .hud-top .section-panel, .hud-top .connection-panel { display: none; }
+  .timer { min-width: 58px; padding: 3px 5px; font-size: 13px; }
+  .toolbar { flex: 0 0 auto; min-width: 0; }
+  #toast { left: 5vw; right: 5vw; width: auto; max-width: 90vw; transform: none; }
+  #toast.visible { transform: translateY(0); }
+}
 .selection-seal { display: none; position: absolute; right: 8px; top: 8px; padding: 3px 6px; border: 1px solid var(--green); border-radius: 6px; color: var(--green); background: var(--void); font-size: 10px; }
 .level-card { position: relative; }.level-card[aria-selected="true"] .selection-seal { display: inline-flex; gap: 4px; align-items: center; }
 .guest-lock { display: none; position: absolute; right: 10px; bottom: 10px; width: 12px; height: 10px; border: 2px solid var(--cream); border-radius: 2px; opacity: .65; }
