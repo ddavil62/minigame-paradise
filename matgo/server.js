@@ -1086,6 +1086,7 @@ export function createApp(opts = {}) {
           : { p1: 0, p2: 0 },
         pendingCaptureCount: game?.pendingCaptureBatch?.cards?.length || 0,
         pendingCaptureCardIds: game?.pendingCaptureBatch?.cards?.map((card) => card.id) || [],
+        bombDeckCredit: { ...(game?.bombDeckCredit || { p1: 0, p2: 0 }) },
         settlementBatch: game?.turnAction?.steps?.find(
           (step) => step.type === 'SETTLE_CAPTURE_BATCH',
         ) || null,

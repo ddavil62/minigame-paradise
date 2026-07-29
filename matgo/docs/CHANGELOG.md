@@ -1,5 +1,31 @@
 # Changelog
 
+## [2026-07-29] — 리포트 #51~#53 쪽 메시지·폭탄 정산·GO 권리 수정
+
+실제 쪽과 뻑 풀이의 이벤트·번역 키를 분리하고 폭탄의 관련 카드 정산과 후속 보너스 뒤집기 권리를 서버 권위 상태로 확정했다.
+
+### 변경
+
+- 실제 쪽은 `action.jjok`으로 ko `쪽!`, en `Jjok!`을 마지막 fly 뒤 한 번 표시하고, 뻑 풀이는 `action.ppeokSweep`을 유지한다.
+- 폭탄 관련 카드는 최종 확정 전 `pendingCaptureBatch`에 유지해 기본 4장 또는 매칭 포함 6장을 한 settlement batch로 정산한다.
+- 폭탄으로 소비한 손패 3장의 후속 행동 기회 2회를 `bombDeckCredit`에 누적한다. 손패가 없어도 GO 뒤 더미 입력 1회당 권리를 1회 소모하고 연속 입력은 한 번만 처리한다.
+
+### 검증
+
+- 신규 #51~#53 및 #45/#49/#50, toast 계약: PASS
+- runner 독립 재실행: 3/3 PASS
+- Phase A/B AD 모드 3: APPROVED
+- 최종 QA: PASS
+- 에셋 변경 없음, Mockup Sync 대상 없음
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-29-minigames-reports-51-53-scope.md`
+- 계획: `.Codex/specs/2026-07-29-minigames-reports-51-53-plan.md`
+- QA: `.Codex/specs/2026-07-29-minigames-reports-51-53-qa.md`
+
+---
+
 ## [2026-07-29] — 리포트 #44~#50 카드 연속 재생·특수 정산 수정
 
 카드 이동의 actor 출처와 재생 순서를 보강하고, 폭탄·조커·손뻑 회수를 서버 타임라인의 단일 정산 계약으로 통합했다. Phase A/B/C UI 검수는 모두 `APPROVED`, 최종 QA는 `PASS`다.

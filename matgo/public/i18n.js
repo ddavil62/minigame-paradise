@@ -5,9 +5,11 @@
 (() => {
   const messages = {
     ko: {
+      'action.jjok': '쪽!',
       'action.ppeokSweep': '뻑 풀이!',
     },
     en: {
+      'action.jjok': 'Jjok!',
       'action.ppeokSweep': 'Ppeok cleared!',
     },
   };

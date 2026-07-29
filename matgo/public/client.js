@@ -448,7 +448,7 @@
     let text = null;
     switch (la.kind) {
       case 'jjok':
-        text = window.MatgoI18n?.t?.(la.messageKey || 'action.ppeokSweep') || '뻑 풀이!';
+        text = window.MatgoI18n?.t?.(la.messageKey || 'action.jjok') || '쪽!';
         break;
       case 'ppeok':           text = `${la.month}월 뻑!`; break;
       case 'ttadak':          text = '따닥!'; break;
@@ -508,7 +508,8 @@
     if (!pending?.turnId || !pending?.batchId) return null;
     const action = pending.action || {};
     const detail = action.card?.id || action.month || action.player || '';
-    return `${pending.turnId}|${pending.batchId}|${action.kind}|${detail}`;
+    const messageKey = action.messageKey || action.kind;
+    return `${pending.turnId}|${pending.batchId}|${messageKey}|${detail}`;
   }
 
   /**
@@ -746,6 +747,7 @@
             phase: msg.phase,
             turn: msg.turn,
             turnAction: msg.turnAction || null,
+            bombDeckCredit: { ...(msg.bombDeckCredit || {}) },
           };
         }
         bonusFlipRequestPending = false;

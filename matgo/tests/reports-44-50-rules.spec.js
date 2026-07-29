@@ -103,7 +103,7 @@ test('#46 쪽은 뻑 풀이 메시지 키를 구조화한다', () => {
   expect(steps.next().value.step).toBe('deck_flipped');
   expect(game.lastAction).toMatchObject({
     kind: 'jjok',
-    messageKey: 'action.ppeokSweep',
+    messageKey: 'action.jjok',
   });
 });
 

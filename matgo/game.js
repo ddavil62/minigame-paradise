@@ -846,7 +846,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
       stealPi(g, playerId, opp, 1);
       g.lastAction = {
         kind: 'jjok',
-        messageKey: 'action.ppeokSweep',
+        messageKey: 'action.jjok',
         player: playerId,
         handCard,
         flipped,
@@ -1193,7 +1193,9 @@ export function goStop(g, playerId, decision) {
     g.lastGoScore[playerId] = calculateScore(g.captured[playerId], { kkeutAsSsangpi: g.kkeutAsSsangpi[playerId] }).score;
     g.lastAction = { kind: 'go', player: playerId, count: g.goCount[playerId] };
     // 다음 턴으로
-    g.turn = playerId === 'p1' ? 'p2' : 'p1';
+    const opp = playerId === 'p1' ? 'p2' : 'p1';
+    const oppHasAction = g.hands[opp].length + (g.bombDeckCredit?.[opp] || 0) > 0;
+    g.turn = oppHasAction ? opp : playerId;
     g.phase = 'awaiting_play';
     return { ok: true };
   }
@@ -1503,6 +1505,11 @@ export function* bombSteps(g, playerId, month) {
   g.captured[playerId].push(...handSame, ...floorSame);
   stagePendingCaptures(g, playerId, [...handSame, ...floorSame], 'bomb_waiting_for_draw');
   stealPi(g, playerId, opp, 1);
+  // 폭탄과 함께 발생한 강탈도 마지막 더미 결과가 확정될 때까지 같은 batch에 보류한다.
+  stageNewTurnCaptures(g, playerId, captureBaseline, 'bomb_waiting_for_draw');
+  // 손패 3장을 한 턴에 사용했으므로 이후 두 턴의 행동 기회를 보너스 뒤집기로 보존한다.
+  g.bombDeckCredit = g.bombDeckCredit || { p1: 0, p2: 0 };
+  g.bombDeckCredit[playerId] = (g.bombDeckCredit[playerId] || 0) + handSame.length - 1;
   g.pendingBombFlips = g.pendingBombFlips || { p1: 0, p2: 0 };
   g.pendingBombFlips[playerId] += 2;
   g.bombResolvingPlayer = playerId;
@@ -1527,6 +1534,8 @@ export function* bombSteps(g, playerId, month) {
 
   // 단계 2: 통상 덱 뒤집기 1회 (폭탄 당 턴의 통상 뒤집기)
   drawAndResolve(g, playerId, handSame[0], g.turnAction);
+  // 통상 더미 매칭 결과도 추가 폭탄 뒤집기가 끝날 때까지 captured에 노출하지 않는다.
+  stageNewTurnCaptures(g, playerId, captureBaseline, 'bomb_waiting_for_bonus_draws');
   yield { step: 'deck_flipped' };
   if (g.phase === 'awaiting_floor_choice') return;
 
@@ -1559,6 +1568,8 @@ function* continueBombResolution(g, playerId) {
     g.pendingBombFlips[playerId]--;
     g.phase = 'resolving_bomb';
     flipDeckBonus(g, playerId);
+    // 각 추가 뒤집기 결과를 보류해 중간 STATE의 조기 fly와 점수 반영을 막는다.
+    stageNewTurnCaptures(g, playerId, g._turnCaptureBaseline, 'bomb_waiting_for_bonus_draws');
     yield { step: 'bomb_bonus_flipped' };
     if (g.phase === 'awaiting_floor_choice') return;
   }

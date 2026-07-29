@@ -35,7 +35,7 @@ async function openMatch(lang = 'ko') {
 }
 
 test('#46 쪽 정산 완료 뒤 ko/en 뻑 풀이 메시지를 1회 표시한다', async () => {
-  for (const [lang, expected] of [['ko', '뻑 풀이!'], ['en', 'Ppeok cleared!']]) {
+  for (const [lang, expected] of [['ko', '쪽!'], ['en', 'Jjok!']]) {
     const { browser, p1, p2 } = await openMatch(lang);
     try {
       await inject({
@@ -118,7 +118,7 @@ test('#50 강탈 피 선행 없이 7장이 동일 batch RESOLVE에서 이동한�
       () => window.__matgoDiagnostics.lastState.turnAction.turnId,
     );
     const targetToastKey =
-      `${targetTurnId}|${resolveEvent.batchIds[0]}|sweep_from_hand|m01_gwang`;
+      `${targetTurnId}|${resolveEvent.batchIds[0]}|action.ppeokSweep|m01_gwang`;
     await expect(p1.locator(
       `.action-toast.show[data-toast-key="${targetToastKey}"]`,
     )).toHaveCount(0);

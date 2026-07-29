@@ -698,7 +698,7 @@ test('G-36: 폭탄 통상 뒤집기에서 같은 월 2장 → 선택 동안 추�
   // 첫 번째 뒤집기에서 멈춤(바닥 선택 대기).
   expect(g.phase).toBe('awaiting_floor_choice');
   expect(g.pendingBombFlips.p1).toBe(2);
-  expect(g.bombDeckCredit.p1).toBe(0);
+  expect(g.bombDeckCredit.p1).toBe(2);
 });
 
 test('G-37: 폭탄 선택 해소 후 남은 추가 뒤집기를 같은 턴에 이어서 처리', () => {
@@ -719,7 +719,7 @@ test('G-37: 폭탄 선택 해소 후 남은 추가 뒤집기를 같은 턴에 �
   expect(r.ok).toBe(true);
   // 남은 덱을 즉시 뒤집고, 덱이 비면 추가 권리를 정리한다.
   expect(g.pendingBombFlips.p1).toBe(0);
-  expect(g.bombDeckCredit.p1).toBe(0);
+  expect(g.bombDeckCredit.p1).toBe(2);
   // 바닥 선택 해소 후 정상적으로 턴 교대 또는 round_end
   expect(['awaiting_play', 'round_end', 'awaiting_go_stop'].includes(g.phase)).toBe(true);
 });
