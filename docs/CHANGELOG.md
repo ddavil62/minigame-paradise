@@ -1,5 +1,64 @@
 # Changelog
 
+## [2026-07-30] - 맞고 버그 리포트 #54~#59 일괄 수정
+
+### 수정
+
+- **#54 바닥 2장 선택 시 중복 fly 제거** (`client.js`): 바닥에 같은 월 2장이 깔려 선택 모달이 뜰 때, 이미 낸 카드가 손에서 한 번 더 날아가던 중복 fly 연출을 제거했다. `lastChoiceSrcFlyActionKey` 액션 키 가드를 도입하고(`lastJokerFlyActionKey`와 동일 패턴), `sendPlay` 클릭 시점에 `claimChoiceSrcFly()` 전용 함수로 키를 선점해 `awaiting_floor_choice` STATE와 통합 STATE 양쪽에서 재등록을 차단한다. GAME_START/ROUND_START에서 키를 리셋해 다음 라운드 오탐을 방지한다.
+- **#55 뻑 발생 후 딜레이 삽입** (`client.js`): 뻑 발생 시 연출이 너무 빨라 인지가 안 되던 문제를 해결했다. `finishAnimation` 내 `wasPpeok` 분기에서 `ppeokDelayActive` 플래그를 설정하고 `flushStateQueue` 호출을 500ms 지연한다. STATE/ROUND_END WS 핸들러의 큐잉 조건을 `isAnimating || ppeokDelayActive`로 확장해 딜레이 중 도착하는 STATE도 큐잉을 유지한다. GAME_START/ROUND_START/ERROR에서 플래그를 리셋한다. 뻑 외 이벤트(쪽/따닥/폭탄)에는 지연이 적용되지 않는다.
+- **#56 상대 손 영역 하단 카드 잘림** (`style.css`): `.opp-hand-zone`과 `.opp-hand-zone .hand-cards`에 `overflow: visible`을 추가해 `.my-hand-zone`과 동일 패턴을 적용했다. `.opp-hand-zone .hand-cards`에 `min-height: 176px`(85px x 2행 + 6px gap)과 `grid-template-rows: repeat(2,auto)`를 적용해 카드 수가 줄어도 영역 높이가 흔들리지 않게 했다. 3개 해상도(1920x1080/1366x768/1280x720) x 4개 핸드 사이즈(2/5/7/10장) = 12조합 전부 zone height 동일, clipped 0장, floorGap >= 13.5px.
+- **#57 따닥 토스트 미표시** (`client.js`): `flushPendingCaptureToast`의 `stateQueue.length > 0` 무조건 차단을 제거하고 `hasQueuedSameSettlement`(같은 turnId/batchId의 STATE만 차단)로 좁혀 따닥 토스트가 fly 완료 직후 즉시 표시되도록 했다. `queueCaptureToast` 대상 kind 집합에 `'ttadak'`을 포함하고, `soundForLastAction`에 `ttadak: 'special.ttadak'`을 등록했다.
+- **#58 쪽 토스트 다음 턴 지연** (`client.js`): #57과 동일한 `stateQueue.length > 0` 가드 제거로 해결. fly 완료에서 토스트 표시까지 시간차 0.0ms(AC-58-1 기준 100ms 이내). `pendingPpeokToast`(뻑 전용 별도 경로)에는 영향 없다.
+- **#59 고 버튼 비활성화 누락** (`client.js`, `style.css`): `awaiting_go_stop` 렌더 시 `yourHand.length === 0 && bombDeckCredit[me] === 0` 조건에서 `btnGo.disabled = true`를 설정하고 안내 문구 "남은 패가 없다 -- 스톱만 가능"을 표시한다. `.big-go:disabled` CSS(opacity 0.4, grayscale 0.6, cursor not-allowed)를 추가했다. `updateActionPanel` 상단에서 `btnGo.disabled = false`로 복원한다. AC-59-4(서버 측 자동 스톱)는 회귀 위험으로 별도 발주 처리.
+
+### 변경
+
+- `matgo/tests/e2e-scenarios.spec.js` E-31의 기존 기댓값이 #54가 버그로 지목한 중복 fly 재등록을 정상 동작으로 박제하고 있었다. 재등록 기대를 제거하고 `origin === 'hand'` fly 1회 단언을 회귀 가드로 추가했다.
+
+### 추가
+
+- `matgo/tests/reports-54-59-browser.spec.js` 신규 7건(Phase B 4건 + Phase C 3건): T-54-fly-dedup, T-55-ppeok-delay, T-56-opp-hand-stable, T-57-ttadak-toast, T-58-jjok-toast-timing, T-59-btngo-disabled, T-59-btngo-enabled.
+- `matgo/tests/ad-phaseC-measure.spec.js` 신규 10건: 따닥/쪽 토스트 geometry + Phase A/B CSS 회귀 검증.
+
+### 검증
+
+- QA PASS: AC-54-1~3, AC-55-1~2, AC-56-1~4, AC-57-1~4, AC-58-1~4, AC-59-1~3 전부 충족.
+- 자동화 테스트 163/163 PASS(단위 100 + E2E 32 + Phase B/C 7 + ad-phaseC-measure 10 + capture-toast-timing 5 + reports-51-53 9).
+- 선재 실패 4건(fly-stack-qa QA-STACK, report-regression R17/R16/R24, reports-35-43 #40)은 HEAD 베이스라인과 동일하며 이번 변경과 무관.
+- AD 모드 3: Phase A/B/C 각각 APPROVED.
+
+### 참고
+
+- 스펙: `.claude/specs/2026-07-29-minigames-reports-54-59-plan.md`
+- QA: `.claude/specs/2026-07-29-minigames-reports-54-59-qa.md` (PASS)
+
+## [2026-07-29] - 별빛 우편탑 협동 파트너 AI 봇 재설계
+
+### 변경
+
+- `starlight-mail-tower/bot.js`를 셀프 플레이스루 테스트 드라이버에서 인간과 함께 플레이하는 협동 파트너 AI로 전면 재설계했다.
+- 전역 lockstep 페이즈 상태 기계(`BOT_PHASE`/`BOOST_SUB` enum, `transitionTo()`, 8종 `runModule*` 함수)를 폐기하고 슬롯 단위 독립 에이전트(`agentState` Map + `computeGoal`/`executeGoal`)로 전환했다.
+- BFS 발판 그래프 기반 수직 내비게이션을 구현했다: `buildPlatformGraph`, `canReachByJump`/`canReachByFall`(물리 상수 기반), `hasInterceptingPlatform`(중간 발판 차단), `navigateTo` 단일 진입점.
+- 부스트 striker 점프를 receiver 하강 중(`vy >= 0`)일 때만 시도하도록 변경했다(FIX-5v2).
+- 교착 감지의 `unconditionalExclude`에 `BOOST_STRIKER`/`BOOST_RECEIVER`/`WAIT_NEAR_SWITCH`를 추가하고 별도 25초 장기 타임아웃으로 무한 대기를 방어했다.
+- `process.exit(1)` 자살 로직을 완전 제거했다.
+- `starlight-mail-tower/tests/ai-bot-ws-qa.spec.js`의 TC-STATIC-10/11을 신규 GOAL enum/교착 해제 로직에 맞게 갱신했다.
+
+### 추가
+
+- `starlight-mail-tower/tests/coop-ai-bot.spec.js`를 신규 생성했다(TC-COOP-001/002/004/006/007/008/009, 7건).
+
+### 검증
+
+- QA 3차 PASS: AC-1~AC-9 전부 충족. checkpointId >= 1 달성 3/3(100%), FALL 0건.
+- 회귀 104/104 PASS(simulation 16 + checkpoint-respawn 3 + ai-bot-ws-qa 35 + coop-boost-reachability 18 + coop-boost-independent-qa 19 + ai-entry-race-qa 6 + coop-ai-bot 7).
+- 발판 그래프 연결성: 5개 레벨 40개 모듈, 도달 불가 0건.
+
+### 참고
+
+- 스펙: `.claude/specs/2026-07-29-starlight-coop-ai-plan.md`
+- QA: `.claude/specs/2026-07-29-starlight-coop-ai-qa-3.md` (PASS)
+
 ## [2026-07-28] - 별빛 우편탑 레디 화면 재설계 (UI 2단계)
 
 ### 추가

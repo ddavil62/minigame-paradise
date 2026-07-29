@@ -1,0 +1,94 @@
+{
+  "go_disabled_1920x1080": {
+    "found": true,
+    "go": {
+      "disabled": true,
+      "opacity": 0.4,
+      "filter": "grayscale(0.6)",
+      "cursor": "not-allowed"
+    },
+    "stop": {
+      "disabled": false,
+      "opacity": 1
+    },
+    "text": "남은 패가 없다 — 스톱만 가능",
+    "adRect": {
+      "top": 1035,
+      "bottom": 1058
+    },
+    "ovRect": {
+      "top": 459,
+      "bottom": 552
+    },
+    "overlayVisible": true
+  },
+  "go_disabled_1280x720": {
+    "found": true,
+    "go": {
+      "disabled": true,
+      "opacity": 0.4,
+      "filter": "grayscale(0.6)",
+      "cursor": "not-allowed"
+    },
+    "stop": {
+      "disabled": false,
+      "opacity": 1
+    },
+    "text": "남은 패가 없다 — 스톱만 가능",
+    "adRect": {
+      "top": 690,
+      "bottom": 706
+    },
+    "ovRect": {
+      "top": 306,
+      "bottom": 368
+    },
+    "overlayVisible": true
+  },
+  "go_enabled_1920x1080": {
+    "found": true,
+    "go": {
+      "disabled": false,
+      "opacity": 1,
+      "filter": "none",
+      "cursor": "pointer"
+    },
+    "stop": {
+      "disabled": false,
+      "opacity": 1
+    },
+    "text": "7점 이상 — 가운데 큰 버튼으로 고/스톱 결정",
+    "adRect": {
+      "top": 1035,
+      "bottom": 1058
+    },
+    "ovRect": {
+      "top": 459,
+      "bottom": 552
+    },
+    "overlayVisible": true
+  },
+  "go_disabled_1366x768": {
+    "found": true,
+    "go": {
+      "disabled": true,
+      "opacity": 0.4,
+      "filter": "grayscale(0.6)",
+      "cursor": "not-allowed"
+    },
+    "stop": {
+      "disabled": false,
+      "opacity": 1
+    },
+    "text": "남은 패가 없다 — 스톱만 가능",
+    "adRect": {
+      "top": 736,
+      "bottom": 753
+    },
+    "ovRect": {
+      "top": 326,
+      "bottom": 393
+    },
+    "overlayVisible": true
+  }
+}

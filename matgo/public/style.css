@@ -64,7 +64,10 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: 6.5fr 3.5fr 270px;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr) minmax(210px, 1fr);
+  /* row 1: auto — 상대 손 2행 카드(85px×2 + gap + label + padding)를 잘림 없이 수용.
+     기존 minmax(0,1fr)은 1fr 비례 배분(≈169px)으로 2행 카드(176px+)를 담지 못했다.
+     auto로 전환해 콘텐츠 기반 최소 높이를 확보하고, 남은 공간은 row 2/3가 흡수한다. */
+  grid-template-rows: auto minmax(0, 2fr) minmax(210px, 1fr);
   gap: 8px;
   padding: 8px 12px;
 }
@@ -258,6 +261,13 @@ body {
   padding-top: 12px;
   overflow: visible;
 }
+.opp-hand-zone {
+  /* .hand-zone의 min-height:0을 해제해 auto로 전환 — 그리드 auto row가
+     콘텐츠 최소 높이를 계산할 수 있게 한다.
+     overflow:visible은 호버 등 미세 넘침 안전망으로 유지. */
+  min-height: auto;
+  overflow: visible;
+}
 .hand-zone-label {
   font-size: 11px;
   color: var(--grey-soft);
@@ -283,6 +293,20 @@ body {
 .my-hand-zone .hand-cards {
   box-sizing: border-box;
   padding-top: 6px;
+  overflow: visible;
+}
+.opp-hand-zone .hand-cards {
+  /* 5×2 그리드 행이 카드 실제 높이(85px)를 수용하도록 auto로 전환.
+     부모 .hand-zone .hand-cards의 repeat(2, 1fr)은 부족한 높이를 균등 분배해
+     카드가 셀 밖으로 넘쳐 잘리거나 하단 영역을 침범했다.
+     flex: 0 0 auto로 전환해 콘텐츠 기반 크기를 유지한다.
+     min-height: 항상 2행 분량(85px×2 + gap 6px = 176px)을 확보해
+     카드가 6장→5장으로 줄어 1행이 되어도 영역 높이가 변하지 않게 한다.
+     이를 통해 grid-template-rows:auto 기반 row1 높이가 안정화되어
+     매 턴 바닥 영역이 세로로 흔들리는 현상을 방지한다. */
+  grid-template-rows: repeat(2, auto);
+  flex: 0 0 auto;
+  min-height: 176px;
   overflow: visible;
 }
 .hand-zone .hand-cards .card {
@@ -550,6 +574,12 @@ body {
 .big-stop {
   background: linear-gradient(180deg, #a07248 0%, #6a4624 55%, #3a2010 100%);
   color: #f5deb3;
+}
+/* AC-59: 고 버튼 비활성화 — 남은 패가 없을 때 시각적으로 비활성 상태를 명시 */
+.big-go:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
 }
 @keyframes gostop-pulse {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }

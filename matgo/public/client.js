@@ -353,6 +353,15 @@
    */
   let lastJokerFlyActionKey = '';
   /**
+   * 이미 손→captured fly를 등록한 choice srcCard(바닥 2장 선택) 액션 키.
+   * joker_play의 lastJokerFlyActionKey와 동일 패턴.
+   * awaiting_floor_choice STATE(1차)와 통합 STATE(2차)가 순서대로 도착할 때,
+   * 1차에서 fly #1이 등록→완료→pendingFlies 제거된 뒤 2차에서 pendingFlies.some()이
+   * false를 반환해 fly #2가 재등록되는 것을 방지한다.
+   * 라운드 시작(GAME_START/ROUND_START) 시 리셋해 다음 라운드 choice fly를 허용한다.
+   */
+  let lastChoiceSrcFlyActionKey = '';
+  /**
    * 정산 batch 안에서 이미 등록한 카드 fly 키.
    * 동일 STATE 재렌더나 명시적 move/바닥 diff 추론이 겹쳐도 카드당 한 번만 시각화한다.
    *
@@ -379,6 +388,11 @@
    *  바로 "상대 차례"로 바뀌어 부자연스러워 보였다. fly 끝날 때 큐에서 꺼내
    *  마지막 STATE만 적용한다 (중간 STATE는 어차피 누적 결과만 의미가 있음). */
   let isAnimating = false;
+  /** AC-55-1: 뻑 후 500ms 딜레이 중 STATE 큐잉을 유지하는 플래그.
+   *  finishAnimation에서 isAnimating=false 후 wasPpeok이면 true로 설정하고,
+   *  setTimeout 콜백에서 flushStateQueue 직전에 false로 해제한다.
+   *  이 플래그가 true인 동안 도착하는 STATE는 stateQueue에 큐잉된다. */
+  let ppeokDelayActive = false;
   /** 보너스 더미 클릭 요청을 서버 첫 STATE까지 한 번만 허용하는 입력 잠금. */
   let bonusFlipRequestPending = false;
   /** fly 중에 도착한 STATE 메시지 큐 */
@@ -628,7 +642,10 @@
       return context.turnId === pendingCaptureToast.turnId
         || (context.batchId && context.batchId === pendingCaptureToast.batchId);
     });
-    if (hasQueuedSameSettlement || stateQueue.length > 0) return false;
+    // #57/#58 수정: stateQueue.length > 0 무조건 차단을 제거하고 hasQueuedSameSettlement만 남긴다.
+    // 다른 turnId의 STATE가 큐에 있어도 현재 toast의 정산이 완료됐으면 flush를 진행한다.
+    // 이전 무조건 차단이 jjok/ttadak 토스트가 다음 내 턴까지 지연되는 원인이었다.
+    if (hasQueuedSameSettlement) return false;
 
     const key = captureToastKey(pendingCaptureToast);
     if (!key || completedCaptureToastKeys.has(key)) {
@@ -800,11 +817,13 @@
         floorSlotMap.clear();
         shakeAskedThisRound = false;
         bombCheckSkipOnce = false;
-        // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
+        // 지연 보관 중이던 뻑 토스트·딜레이 플래그를 라운드 시작 시 폐기.
         pendingPpeokToast = null;
+        ppeokDelayActive = false;
         pendingCaptureToast = null;
-        // 조커 fly 중복 가드 키 리셋 — 다음 라운드 조커 fly 정상 동작.
+        // 조커·choice fly 중복 가드 키 리셋 — 다음 라운드 fly 정상 동작.
         lastJokerFlyActionKey = '';
+        lastChoiceSrcFlyActionKey = '';
         registeredSettlementFlyKeys.clear();
         completedCaptureToastKeys.clear();
         prevActionKey = '';
@@ -822,11 +841,13 @@
         floorSlotMap.clear();
         shakeAskedThisRound = false;
         bombCheckSkipOnce = false;
-        // 지연 보관 중이던 뻑 토스트를 라운드 시작 시 폐기(불용 토스트 잔존 방지).
+        // 지연 보관 중이던 뻑 토스트·딜레이 플래그를 라운드 시작 시 폐기.
         pendingPpeokToast = null;
+        ppeokDelayActive = false;
         pendingCaptureToast = null;
-        // 조커 fly 중복 가드 키 리셋 — 다음 라운드 조커 fly 정상 동작.
+        // 조커·choice fly 중복 가드 키 리셋 — 다음 라운드 fly 정상 동작.
         lastJokerFlyActionKey = '';
+        lastChoiceSrcFlyActionKey = '';
         registeredSettlementFlyKeys.clear();
         completedCaptureToastKeys.clear();
         prevActionKey = '';
@@ -842,8 +863,9 @@
           };
         }
         bonusFlipRequestPending = false;
-        if (isAnimating) {
-          // fly 진행 중이면 큐잉. 중간 STATE는 무시하고 마지막만 적용해도 무방.
+        if (isAnimating || ppeokDelayActive) {
+          // fly 진행 중 또는 뻑 딜레이 중이면 큐잉. 중간 STATE는 무시하고
+          // 마지막만 적용해도 무방.
           stateQueue.push(msg);
         } else {
           renderState(msg);
@@ -855,8 +877,8 @@
         if (msg.result?.winner != null && msg.result?.settlementType !== 'sangtong') {
           playMatgoSfx('decision.stop', `round:${audioRoundSerial}:stop:${msg.result.winner}`);
         }
-        if (isAnimating) {
-          // fly가 끝난 뒤 결과 모달을 띄워야 자연스럽다.
+        if (isAnimating || ppeokDelayActive) {
+          // fly 또는 뻑 딜레이가 끝난 뒤 결과 모달을 띄워야 자연스럽다.
           stateQueue.push(msg);
         } else {
           showRoundResult(msg.result);
@@ -887,6 +909,7 @@
             }
             pendingFlies = [];
             isAnimating = false;
+            ppeokDelayActive = false;
           }
         }
         break;
@@ -1269,18 +1292,28 @@
       newCardIds.delete(la.card.id);
     }
 
-    // ── R5 수정 (2026-06-16): choice 흐름 손패 HAND_THROW 등록 ──
+    // ── R5 수정 (2026-06-16) + #54 멱등 가드 (2026-07-29): choice 흐름 손패 fly ──
     // B1 수정이 s.choiceFloorSrcCardId를 newCardIds에서 제외해 잘못된 덱 fly는 막았으나,
     // 손에서 낸 srcCard의 올바른 손 fly(HAND_THROW)를 등록하지 않아 순간이동이 남아 있었다.
     // (클릭 시점에 등록된 fly는 awaiting_floor_choice STATE에서 도착지를 못 찾아 fade됨.)
     // 통합 STATE에서 srcCard가 captured에 안착하므로 렌더 후 startFlyFromHand로 재등록한다.
     // 라운드 시작 fly 억제(isRoundStart) 시엔 등록하지 않는다 (오프닝 appear 유지).
-    // 이미 pendingFlies에 같은 ID가 있으면 중복 등록을 피한다.
+    //
+    // #54 수정: awaiting_floor_choice STATE(1차)에서 fly #1이 등록→완료→pendingFlies
+    // 제거된 뒤, 통합 STATE(2차)에서 pendingFlies.some()이 false로 fly #2를 재등록하던
+    // 버그를 lastChoiceSrcFlyActionKey 액션 키 가드로 차단한다
+    // (lastJokerFlyActionKey와 동일 패턴).
     let _choiceSrcFlyId = null; // R5: choice srcCard HAND_THROW 등록용 임시 변수
     if (s.choiceFloorSrcCardId && !isRoundStart) {
-      const already = pendingFlies.some((f) => f.cardId === s.choiceFloorSrcCardId);
-      if (!already && claimSettlementFly(s.choiceFloorSrcCardId, settleBatchId)) {
-        _choiceSrcFlyId = s.choiceFloorSrcCardId;
+      const choiceKey = 'choice|' + s.choiceFloorSrcCardId + '|' + (s.lastAction?.player || s.turn);
+      if (choiceKey !== lastChoiceSrcFlyActionKey) {
+        // 이 choice srcCard fly를 아직 처리하지 않았다.
+        const alreadyFlying = pendingFlies.some((f) => f.cardId === s.choiceFloorSrcCardId);
+        if (!alreadyFlying && claimSettlementFly(s.choiceFloorSrcCardId, settleBatchId)) {
+          _choiceSrcFlyId = s.choiceFloorSrcCardId;
+        }
+        // fly 등록 여부와 무관하게 키를 기록해 후속 동일 STATE 재렌더가 재등록하지 못하게 함.
+        lastChoiceSrcFlyActionKey = choiceKey;
       }
     }
 
@@ -1837,6 +1870,7 @@
    */
   function updateActionPanel(s) {
     goStopOverlay.classList.add('hidden');
+    btnGo.disabled = false;   // AC-59-3: 오버레이를 숨길 때 disabled 복원
     // 흔들기/폭탄 모달은 카드 클릭 시점에 띄우므로 phase 기반으로 강제 hide하지 않는다.
     // 다만 사통 모달은 renderState에서 토글한다.
     bombPanel.classList.add('hidden');
@@ -1889,6 +1923,15 @@
       case 'awaiting_go_stop':
         actionDisplay.textContent = '7점 이상 — 가운데 큰 버튼으로 고/스톱 결정';
         goStopOverlay.classList.remove('hidden');
+        // AC-59-1: 손패가 없고 보너스 뒤집기 권리도 없으면 고 불가 — 버튼 비활성화
+        {
+          const noHandNoCredit = s.yourHand.length === 0
+            && (s.bombDeckCredit?.[me] || 0) === 0;
+          btnGo.disabled = noHandNoCredit;
+          if (noHandNoCredit) {
+            actionDisplay.textContent = '남은 패가 없다 — 스톱만 가능';
+          }
+        }
         break;
       default:
         actionDisplay.textContent = '';
@@ -2478,6 +2521,10 @@
         entry.clone.remove();
       }
       for (const entry of fadeEntries) entry.clone.remove();
+      // AC-55-1: 뻑 토스트가 있었는지 flush 이전에 캡처한다.
+      // 뻑 발생 턴이면 상대 턴 전환(flushStateQueue)을 500ms 지연시켜
+      // 사용자가 뻑 발생을 인지할 시간을 확보한다.
+      const wasPpeok = !!pendingPpeokToast;
       if (pendingPpeokToast) {
         maybeShowActionToast(pendingPpeokToast);
         pendingPpeokToast = null;
@@ -2493,8 +2540,19 @@
         lastDurationMs: performance.now() - animationStartedAt,
         remainingClones: flyOverlay.querySelectorAll('.flying-card').length,
       });
-      flushStateQueue();
-      flushPendingCaptureToast();
+      if (wasPpeok) {
+        // AC-55-1: 뻑 발생 턴 — 500ms 동안 도착하는 STATE도 큐잉 유지.
+        // isAnimating=false이므로 ppeokDelayActive 플래그로 큐잉을 연장한다.
+        ppeokDelayActive = true;
+        setTimeout(() => {
+          ppeokDelayActive = false;
+          flushStateQueue();
+          flushPendingCaptureToast();
+        }, 500);
+      } else {
+        flushStateQueue();
+        flushPendingCaptureToast();
+      }
       return true;
     }
 
@@ -2720,6 +2778,7 @@
     if (!card) {
       // 카드를 찾을 수 없으면 안전하게 그대로 전송 (서버가 검증)
       startFlyFromHand(cardId);
+      claimChoiceSrcFly(cardId);
       ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
       return;
     }
@@ -2748,7 +2807,23 @@
     bombCheckSkipOnce = false;
 
     startFlyFromHand(cardId);
+    claimChoiceSrcFly(cardId);
     ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
+  }
+
+  /**
+   * 클릭 시점에 이미 손 fly를 등록한 카드를 "choice srcCard fly 처리 완료"로 선점한다.
+   *
+   * #54: 바닥에 같은 월 2장이 깔려 있으면 서버가 `awaiting_floor_choice`를 보내고,
+   * 선택 확정 후 통합 STATE를 한 번 더 보낸다. 이 두 STATE 모두 `choiceFloorSrcCardId`를
+   * 담고 있어 renderState가 손 fly를 재등록했고, 그 결과 "이미 바닥에 있는 카드가
+   * 다시 손에서 날아가는" 중복 연출이 발생했다. 클릭 시점에 액션 키를 미리 기록해
+   * renderState의 가드(1309행)가 재등록을 건너뛰게 한다.
+   *
+   * @param {string} cardId 클릭으로 낸 카드 ID
+   */
+  function claimChoiceSrcFly(cardId) {
+    lastChoiceSrcFlyActionKey = 'choice|' + cardId + '|' + me;
   }
 
   /**

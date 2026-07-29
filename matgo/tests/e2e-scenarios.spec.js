@@ -40,12 +40,14 @@ async function setupTwoPlayers() {
 
 /** 두 페이지 모두 게임 참가 후 손패 10장씩 수신 대기. */
 async function joinAndStartGame(pageP1, pageP2) {
-  await pageP1.goto(BASE_URL);
+  // name gate 우회: ?name= 파라미터로 닉네임을 전달해 sessionStorage 없이도
+  // JOIN이 즉시 송신되도록 한다 (entry-ui Phase 3 이후 필수).
+  await pageP1.goto(`${BASE_URL}?name=TestP1`);
   await pageP1.waitForFunction(
     () => document.getElementById('you-tag')?.textContent?.includes('P1'),
     { timeout: 8000 },
   );
-  await pageP2.goto(BASE_URL);
+  await pageP2.goto(`${BASE_URL}?name=TestP2`);
   await pageP2.waitForFunction(
     () => document.getElementById('you-tag')?.textContent?.includes('P2'),
     { timeout: 8000 },
@@ -1339,17 +1341,17 @@ test('E-31: 바닥 2장 선택 흐름에서 낸 손패 fly가 myCards에서 출�
       () => !document.getElementById('floor-choice-modal')?.classList.contains('hidden'),
       { timeout: 5000 },
     );
-    // 클릭 시점 fly 기록을 비운다 — 통합 STATE 재등록 fly만 검증한다.
-    await pageP1.evaluate(() => { window.__matgoFlies = []; });
+    // 리포트 #54 수정(2026-07-29) 이후: 낸 손패 fly는 클릭 시점 1회만 등록된다.
+    // 이전에는 통합 STATE에서 한 번 더 등록돼 "이미 바닥에 있는 카드가 다시 손에서
+    // 날아가는" 중복 연출이 발생했고, 이 테스트가 그 재등록을 기댓값으로 박제했었다.
+    // R5의 본래 의도(낸 손패 fly 출처가 'deck'이 아니라 'hand')는 그대로 검증하되,
+    // 기록을 비우지 않고 클릭 시점 fly를 대상으로 판정한다.
 
     // 바닥 후보 1장 선택
     await pageP1.click('#floor-choice-cards .card');
 
-    // 낸 손패(m01_gwang) fly가 hand origin으로 재등록될 때까지 대기
-    await pageP1.waitForFunction(
-      () => (window.__matgoFlies || []).some((f) => f.cardId === 'm01_gwang'),
-      { timeout: 6000 },
-    );
+    // 덱 뒤집기까지 포함한 전체 fly 시퀀스가 끝날 때까지 대기
+    await waitForFlyIdle(pageP1);
 
     const flies = await pageP1.evaluate(() => window.__matgoFlies.slice());
     const played = flies.find((f) => f.cardId === 'm01_gwang');
@@ -1357,6 +1359,8 @@ test('E-31: 바닥 2장 선택 흐름에서 낸 손패 fly가 myCards에서 출�
     // 핵심: 낸 손패는 hand origin (더미 'deck'이 아님)
     expect(played.origin).toBe('hand');
     expect(flies.some((f) => f.cardId === 'm01_gwang' && f.origin === 'deck')).toBe(false);
+    // #54 회귀 가드: 손 출발 fly는 정확히 1회만 등록된다.
+    expect(flies.filter((f) => f.cardId === 'm01_gwang' && f.origin === 'hand').length).toBe(1);
 
     // 시작 좌표가 my-hand-cards rect 범위 안인지 검증
     const myHandBox = await pageP1.locator('#my-hand-cards').boundingBox();

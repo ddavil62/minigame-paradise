@@ -1,0 +1,225 @@
+{
+  "ttadak@1920x1080": {
+    "text": "따닥!",
+    "rect": {
+      "left": 871.46,
+      "top": 410.4,
+      "width": 177.08,
+      "height": 87.75,
+      "centerX": 960,
+      "centerY": 454.27
+    },
+    "viewport": {
+      "w": 1920,
+      "h": 1080
+    },
+    "centerOffsetX": 0,
+    "style": {
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "fontFamily": "\"Segoe UI\"",
+      "color": "rgb(255, 209, 102)",
+      "background": "rgba(0, 0, 0, 0.78)",
+      "borderRadius": "12px",
+      "padding": "12px 28px",
+      "zIndex": "10001",
+      "opacity": "1",
+      "textShadow": "rgba(0, 0, 0, 0.8) 0px 1px 3px"
+    },
+    "overlap": {
+      "floorZone": 15539,
+      "oppHandZone": 0,
+      "myHandZone": 0,
+      "goStopOverlay": 0
+    },
+    "shownCount": 1
+  },
+  "ttadak@1366x768": {
+    "text": "따닥!",
+    "rect": {
+      "left": 620.04,
+      "top": 291.84,
+      "width": 125.92,
+      "height": 62.4,
+      "centerX": 683,
+      "centerY": 323.04
+    },
+    "viewport": {
+      "w": 1366,
+      "h": 768
+    },
+    "centerOffsetX": 0,
+    "style": {
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "fontFamily": "\"Segoe UI\"",
+      "color": "rgb(255, 209, 102)",
+      "background": "rgba(0, 0, 0, 0.78)",
+      "borderRadius": "12px",
+      "padding": "12px 28px",
+      "zIndex": "10001",
+      "opacity": "1",
+      "textShadow": "rgba(0, 0, 0, 0.8) 0px 1px 3px"
+    },
+    "overlap": {
+      "floorZone": 7858,
+      "oppHandZone": 0,
+      "myHandZone": 0,
+      "goStopOverlay": 0
+    },
+    "shownCount": 1
+  },
+  "ttadak@1280x720": {
+    "text": "따닥!",
+    "rect": {
+      "left": 580.97,
+      "top": 273.6,
+      "width": 118.05,
+      "height": 58.5,
+      "centerX": 640,
+      "centerY": 302.85
+    },
+    "viewport": {
+      "w": 1280,
+      "h": 720
+    },
+    "centerOffsetX": 0,
+    "style": {
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "fontFamily": "\"Segoe UI\"",
+      "color": "rgb(255, 209, 102)",
+      "background": "rgba(0, 0, 0, 0.78)",
+      "borderRadius": "12px",
+      "padding": "12px 28px",
+      "zIndex": "10001",
+      "opacity": "1",
+      "textShadow": "rgba(0, 0, 0, 0.8) 0px 1px 3px"
+    },
+    "overlap": {
+      "floorZone": 6906,
+      "oppHandZone": 0,
+      "myHandZone": 0,
+      "goStopOverlay": 0
+    },
+    "shownCount": 1
+  },
+  "jjok@1920x1080": {
+    "text": "쪽!",
+    "rect": {
+      "left": 891.71,
+      "top": 410.4,
+      "width": 136.58,
+      "height": 87.75,
+      "centerX": 960,
+      "centerY": 454.27
+    },
+    "viewport": {
+      "w": 1920,
+      "h": 1080
+    },
+    "centerOffsetX": 0,
+    "style": {
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "fontFamily": "\"Segoe UI\"",
+      "color": "rgb(255, 209, 102)",
+      "background": "rgba(0, 0, 0, 0.78)",
+      "borderRadius": "12px",
+      "padding": "12px 28px",
+      "zIndex": "10001",
+      "opacity": "1",
+      "textShadow": "rgba(0, 0, 0, 0.8) 0px 1px 3px"
+    },
+    "overlap": {
+      "floorZone": 11985,
+      "oppHandZone": 0,
+      "myHandZone": 0,
+      "goStopOverlay": 0
+    },
+    "shownCount": 1
+  },
+  "jjok@1366x768": {
+    "text": "쪽!",
+    "rect": {
+      "left": 634.44,
+      "top": 291.84,
+      "width": 97.13,
+      "height": 62.4,
+      "centerX": 683,
+      "centerY": 323.04
+    },
+    "viewport": {
+      "w": 1366,
+      "h": 768
+    },
+    "centerOffsetX": 0,
+    "style": {
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "fontFamily": "\"Segoe UI\"",
+      "color": "rgb(255, 209, 102)",
+      "background": "rgba(0, 0, 0, 0.78)",
+      "borderRadius": "12px",
+      "padding": "12px 28px",
+      "zIndex": "10001",
+      "opacity": "1",
+      "textShadow": "rgba(0, 0, 0, 0.8) 0px 1px 3px"
+    },
+    "overlap": {
+      "floorZone": 6061,
+      "oppHandZone": 0,
+      "myHandZone": 0,
+      "goStopOverlay": 0
+    },
+    "shownCount": 1
+  },
+  "jjok@1280x720": {
+    "text": "쪽!",
+    "rect": {
+      "left": 594.47,
+      "top": 273.6,
+      "width": 91.05,
+      "height": 58.5,
+      "centerX": 640,
+      "centerY": 302.85
+    },
+    "viewport": {
+      "w": 1280,
+      "h": 720
+    },
+    "centerOffsetX": 0,
+    "style": {
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "fontFamily": "\"Segoe UI\"",
+      "color": "rgb(255, 209, 102)",
+      "background": "rgba(0, 0, 0, 0.78)",
+      "borderRadius": "12px",
+      "padding": "12px 28px",
+      "zIndex": "10001",
+      "opacity": "1",
+      "textShadow": "rgba(0, 0, 0, 0.8) 0px 1px 3px"
+    },
+    "overlap": {
+      "floorZone": 5327,
+      "oppHandZone": 0,
+      "myHandZone": 0,
+      "goStopOverlay": 0
+    },
+    "shownCount": 1
+  },
+  "flySequence": [
+    "m01_gwang:hand",
+    "m01_pi_b:deck",
+    "m06_pi_a:opp-captured"
+  ],
+  "phaseABCss": {
+    "oppZoneOverflow": "visible",
+    "oppCardsOverflow": "visible",
+    "oppCardsMinHeight": "176px",
+    "bigGoDisabledOpacity": "0.4",
+    "bigGoDisabledCursor": "not-allowed",
+    "bigGoDisabledFilter": "grayscale(0.6)"
+  }
+}

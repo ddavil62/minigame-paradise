@@ -1,0 +1,1580 @@
+{
+  "1920x1080": {
+    "2": {
+      "zone": {
+        "top": 10.8,
+        "bottom": 292.95,
+        "left": 974.17,
+        "right": 1432.5,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 2,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 74.59,
+          "bottom": 189.34,
+          "left": 987.34,
+          "right": 1068.34,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 74.59,
+          "bottom": 189.34,
+          "left": 1076.44,
+          "right": 1157.44,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 303.75,
+        "bottom": 707.4,
+        "left": 112.2,
+        "right": 1432.5
+      },
+      "floorCardsTop": 303.75,
+      "maxCardBottom": 189.34,
+      "floorGap": 114.41,
+      "zones": {
+        "oppCap": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 112.2,
+          "right": 963.37
+        },
+        "oppHand": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "floor": {
+          "top": 303.75,
+          "bottom": 707.4,
+          "left": 112.2,
+          "right": 1432.5
+        },
+        "myHand": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "myCap": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 112.2,
+          "right": 963.37
+        }
+      }
+    },
+    "5": {
+      "zone": {
+        "top": 10.8,
+        "bottom": 292.95,
+        "left": 974.17,
+        "right": 1432.5,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 5,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 74.59,
+          "bottom": 189.34,
+          "left": 987.34,
+          "right": 1068.34,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 74.59,
+          "bottom": 189.34,
+          "left": 1076.44,
+          "right": 1157.44,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 74.59,
+          "bottom": 189.34,
+          "left": 1165.54,
+          "right": 1246.54,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 74.59,
+          "bottom": 189.34,
+          "left": 1254.64,
+          "right": 1335.64,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 74.59,
+          "bottom": 189.34,
+          "left": 1343.74,
+          "right": 1424.74,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 303.75,
+        "bottom": 707.4,
+        "left": 112.2,
+        "right": 1432.5
+      },
+      "floorCardsTop": 303.75,
+      "maxCardBottom": 189.34,
+      "floorGap": 114.41,
+      "zones": {
+        "oppCap": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 112.2,
+          "right": 963.37
+        },
+        "oppHand": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "floor": {
+          "top": 303.75,
+          "bottom": 707.4,
+          "left": 112.2,
+          "right": 1432.5
+        },
+        "myHand": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "myCap": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 112.2,
+          "right": 963.37
+        }
+      }
+    },
+    "7": {
+      "zone": {
+        "top": 10.8,
+        "bottom": 292.95,
+        "left": 974.17,
+        "right": 1432.5,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 7,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 987.34,
+          "right": 1068.34,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1076.44,
+          "right": 1157.44,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1165.54,
+          "right": 1246.54,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1254.64,
+          "right": 1335.64,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1343.74,
+          "right": 1424.74,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 5,
+          "top": 168.75,
+          "bottom": 283.5,
+          "left": 987.34,
+          "right": 1068.34,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 6,
+          "top": 168.75,
+          "bottom": 283.5,
+          "left": 1076.44,
+          "right": 1157.44,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 303.75,
+        "bottom": 707.4,
+        "left": 112.2,
+        "right": 1432.5
+      },
+      "floorCardsTop": 303.75,
+      "maxCardBottom": 283.5,
+      "floorGap": 20.25,
+      "zones": {
+        "oppCap": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 112.2,
+          "right": 963.37
+        },
+        "oppHand": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "floor": {
+          "top": 303.75,
+          "bottom": 707.4,
+          "left": 112.2,
+          "right": 1432.5
+        },
+        "myHand": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "myCap": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 112.2,
+          "right": 963.37
+        }
+      }
+    },
+    "10": {
+      "zone": {
+        "top": 10.8,
+        "bottom": 292.95,
+        "left": 974.17,
+        "right": 1432.5,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 10,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 987.34,
+          "right": 1068.34,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1076.44,
+          "right": 1157.44,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1165.54,
+          "right": 1246.54,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1254.64,
+          "right": 1335.64,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 45.9,
+          "bottom": 160.65,
+          "left": 1343.74,
+          "right": 1424.74,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 5,
+          "top": 168.75,
+          "bottom": 283.5,
+          "left": 987.34,
+          "right": 1068.34,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 6,
+          "top": 168.75,
+          "bottom": 283.5,
+          "left": 1076.44,
+          "right": 1157.44,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 7,
+          "top": 168.75,
+          "bottom": 283.5,
+          "left": 1165.54,
+          "right": 1246.54,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 8,
+          "top": 168.75,
+          "bottom": 283.5,
+          "left": 1254.64,
+          "right": 1335.64,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 9,
+          "top": 168.75,
+          "bottom": 283.5,
+          "left": 1343.74,
+          "right": 1424.74,
+          "width": 81,
+          "height": 114.75,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 303.75,
+        "bottom": 707.4,
+        "left": 112.2,
+        "right": 1432.5
+      },
+      "floorCardsTop": 303.75,
+      "maxCardBottom": 283.5,
+      "floorGap": 20.25,
+      "zones": {
+        "oppCap": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 112.2,
+          "right": 963.37
+        },
+        "oppHand": {
+          "top": 10.8,
+          "bottom": 292.95,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "floor": {
+          "top": 303.75,
+          "bottom": 707.4,
+          "left": 112.2,
+          "right": 1432.5
+        },
+        "myHand": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 974.17,
+          "right": 1432.5
+        },
+        "myCap": {
+          "top": 718.2,
+          "bottom": 1001.7,
+          "left": 112.2,
+          "right": 963.37
+        }
+      }
+    }
+  },
+  "1366x768": {
+    "2": {
+      "zone": {
+        "top": 7.68,
+        "bottom": 208.32,
+        "left": 693.08,
+        "right": 1019,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 2,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 53.04,
+          "bottom": 134.64,
+          "left": 702.44,
+          "right": 760.04,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 53.04,
+          "bottom": 134.64,
+          "left": 765.8,
+          "right": 823.4,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 216,
+        "bottom": 503.04,
+        "left": 80.12,
+        "right": 1019
+      },
+      "floorCardsTop": 216,
+      "maxCardBottom": 134.64,
+      "floorGap": 81.36,
+      "zones": {
+        "oppCap": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 80.12,
+          "right": 685.4
+        },
+        "oppHand": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "floor": {
+          "top": 216,
+          "bottom": 503.04,
+          "left": 80.12,
+          "right": 1019
+        },
+        "myHand": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "myCap": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 80.12,
+          "right": 685.4
+        }
+      }
+    },
+    "5": {
+      "zone": {
+        "top": 7.68,
+        "bottom": 208.32,
+        "left": 693.08,
+        "right": 1019,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 5,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 53.04,
+          "bottom": 134.64,
+          "left": 702.44,
+          "right": 760.04,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 53.04,
+          "bottom": 134.64,
+          "left": 765.8,
+          "right": 823.4,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 53.04,
+          "bottom": 134.64,
+          "left": 829.16,
+          "right": 886.76,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 53.04,
+          "bottom": 134.64,
+          "left": 892.52,
+          "right": 950.12,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 53.04,
+          "bottom": 134.64,
+          "left": 955.88,
+          "right": 1013.48,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 216,
+        "bottom": 503.04,
+        "left": 80.12,
+        "right": 1019
+      },
+      "floorCardsTop": 216,
+      "maxCardBottom": 134.64,
+      "floorGap": 81.36,
+      "zones": {
+        "oppCap": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 80.12,
+          "right": 685.4
+        },
+        "oppHand": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "floor": {
+          "top": 216,
+          "bottom": 503.04,
+          "left": 80.12,
+          "right": 1019
+        },
+        "myHand": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "myCap": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 80.12,
+          "right": 685.4
+        }
+      }
+    },
+    "7": {
+      "zone": {
+        "top": 7.68,
+        "bottom": 208.32,
+        "left": 693.08,
+        "right": 1019,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 7,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 702.44,
+          "right": 760.04,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 765.8,
+          "right": 823.4,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 829.16,
+          "right": 886.76,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 892.52,
+          "right": 950.12,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 955.88,
+          "right": 1013.48,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 5,
+          "top": 120,
+          "bottom": 201.6,
+          "left": 702.44,
+          "right": 760.04,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 6,
+          "top": 120,
+          "bottom": 201.6,
+          "left": 765.8,
+          "right": 823.4,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 216,
+        "bottom": 503.04,
+        "left": 80.12,
+        "right": 1019
+      },
+      "floorCardsTop": 216,
+      "maxCardBottom": 201.6,
+      "floorGap": 14.4,
+      "zones": {
+        "oppCap": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 80.12,
+          "right": 685.4
+        },
+        "oppHand": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "floor": {
+          "top": 216,
+          "bottom": 503.04,
+          "left": 80.12,
+          "right": 1019
+        },
+        "myHand": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "myCap": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 80.12,
+          "right": 685.4
+        }
+      }
+    },
+    "10": {
+      "zone": {
+        "top": 7.68,
+        "bottom": 208.32,
+        "left": 693.08,
+        "right": 1019,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 10,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 702.44,
+          "right": 760.04,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 765.8,
+          "right": 823.4,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 829.16,
+          "right": 886.76,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 892.52,
+          "right": 950.12,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 32.64,
+          "bottom": 114.24,
+          "left": 955.88,
+          "right": 1013.48,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 5,
+          "top": 120,
+          "bottom": 201.6,
+          "left": 702.44,
+          "right": 760.04,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 6,
+          "top": 120,
+          "bottom": 201.6,
+          "left": 765.8,
+          "right": 823.4,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 7,
+          "top": 120,
+          "bottom": 201.6,
+          "left": 829.16,
+          "right": 886.76,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 8,
+          "top": 120,
+          "bottom": 201.6,
+          "left": 892.52,
+          "right": 950.12,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 9,
+          "top": 120,
+          "bottom": 201.6,
+          "left": 955.88,
+          "right": 1013.48,
+          "width": 57.6,
+          "height": 81.6,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 216,
+        "bottom": 503.04,
+        "left": 80.12,
+        "right": 1019
+      },
+      "floorCardsTop": 216,
+      "maxCardBottom": 201.6,
+      "floorGap": 14.4,
+      "zones": {
+        "oppCap": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 80.12,
+          "right": 685.4
+        },
+        "oppHand": {
+          "top": 7.68,
+          "bottom": 208.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "floor": {
+          "top": 216,
+          "bottom": 503.04,
+          "left": 80.12,
+          "right": 1019
+        },
+        "myHand": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 693.08,
+          "right": 1019
+        },
+        "myCap": {
+          "top": 510.72,
+          "bottom": 712.32,
+          "left": 80.12,
+          "right": 685.4
+        }
+      }
+    }
+  },
+  "1280x720": {
+    "2": {
+      "zone": {
+        "top": 7.2,
+        "bottom": 195.3,
+        "left": 649.45,
+        "right": 955,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 2,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 49.72,
+          "bottom": 126.22,
+          "left": 658.22,
+          "right": 712.22,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 49.72,
+          "bottom": 126.22,
+          "left": 717.63,
+          "right": 771.63,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 202.5,
+        "bottom": 471.6,
+        "left": 74.8,
+        "right": 955
+      },
+      "floorCardsTop": 202.5,
+      "maxCardBottom": 126.22,
+      "floorGap": 76.28,
+      "zones": {
+        "oppCap": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 74.8,
+          "right": 642.25
+        },
+        "oppHand": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 649.45,
+          "right": 955
+        },
+        "floor": {
+          "top": 202.5,
+          "bottom": 471.6,
+          "left": 74.8,
+          "right": 955
+        },
+        "myHand": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 649.45,
+          "right": 955
+        },
+        "myCap": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 74.8,
+          "right": 642.25
+        }
+      }
+    },
+    "5": {
+      "zone": {
+        "top": 7.2,
+        "bottom": 195.3,
+        "left": 649.45,
+        "right": 955,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 5,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 49.72,
+          "bottom": 126.22,
+          "left": 658.22,
+          "right": 712.22,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 49.72,
+          "bottom": 126.22,
+          "left": 717.63,
+          "right": 771.63,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 49.72,
+          "bottom": 126.22,
+          "left": 777.02,
+          "right": 831.02,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 49.72,
+          "bottom": 126.22,
+          "left": 836.42,
+          "right": 890.42,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 49.72,
+          "bottom": 126.22,
+          "left": 895.82,
+          "right": 949.82,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 202.5,
+        "bottom": 471.6,
+        "left": 74.8,
+        "right": 955
+      },
+      "floorCardsTop": 202.5,
+      "maxCardBottom": 126.22,
+      "floorGap": 76.28,
+      "zones": {
+        "oppCap": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 74.8,
+          "right": 642.25
+        },
+        "oppHand": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 649.45,
+          "right": 955
+        },
+        "floor": {
+          "top": 202.5,
+          "bottom": 471.6,
+          "left": 74.8,
+          "right": 955
+        },
+        "myHand": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 649.45,
+          "right": 955
+        },
+        "myCap": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 74.8,
+          "right": 642.25
+        }
+      }
+    },
+    "7": {
+      "zone": {
+        "top": 7.2,
+        "bottom": 195.3,
+        "left": 649.45,
+        "right": 955,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 7,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 658.22,
+          "right": 712.22,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 717.63,
+          "right": 771.63,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 777.02,
+          "right": 831.02,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 836.42,
+          "right": 890.42,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 895.82,
+          "right": 949.82,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 5,
+          "top": 112.5,
+          "bottom": 189,
+          "left": 658.22,
+          "right": 712.22,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 6,
+          "top": 112.5,
+          "bottom": 189,
+          "left": 717.63,
+          "right": 771.63,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 202.5,
+        "bottom": 471.6,
+        "left": 74.8,
+        "right": 955
+      },
+      "floorCardsTop": 202.5,
+      "maxCardBottom": 189,
+      "floorGap": 13.5,
+      "zones": {
+        "oppCap": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 74.8,
+          "right": 642.25
+        },
+        "oppHand": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 649.45,
+          "right": 955
+        },
+        "floor": {
+          "top": 202.5,
+          "bottom": 471.6,
+          "left": 74.8,
+          "right": 955
+        },
+        "myHand": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 649.45,
+          "right": 955
+        },
+        "myCap": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 74.8,
+          "right": 642.25
+        }
+      }
+    },
+    "10": {
+      "zone": {
+        "top": 7.2,
+        "bottom": 195.3,
+        "left": 649.45,
+        "right": 955,
+        "overflow": "visible",
+        "handCardsOverflow": "visible"
+      },
+      "cardCount": 10,
+      "cards": [
+        {
+          "idx": 0,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 658.22,
+          "right": 712.22,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 1,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 717.63,
+          "right": 771.63,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 2,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 777.02,
+          "right": 831.02,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 3,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 836.42,
+          "right": 890.42,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 4,
+          "top": 30.6,
+          "bottom": 107.1,
+          "left": 895.82,
+          "right": 949.82,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 5,
+          "top": 112.5,
+          "bottom": 189,
+          "left": 658.22,
+          "right": 712.22,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 6,
+          "top": 112.5,
+          "bottom": 189,
+          "left": 717.63,
+          "right": 771.63,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 7,
+          "top": 112.5,
+          "bottom": 189,
+          "left": 777.02,
+          "right": 831.02,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 8,
+          "top": 112.5,
+          "bottom": 189,
+          "left": 836.42,
+          "right": 890.42,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        },
+        {
+          "idx": 9,
+          "top": 112.5,
+          "bottom": 189,
+          "left": 895.82,
+          "right": 949.82,
+          "width": 54,
+          "height": 76.5,
+          "computedW": "60px",
+          "computedH": "85px",
+          "clippedByZone": false
+        }
+      ],
+      "clippedCount": 0,
+      "allCardsInsideZone": true,
+      "allInViewport": true,
+      "floorBoxOverlapPx2": 0,
+      "floorContentOverlapPx2": 0,
+      "floorZone": {
+        "top": 202.5,
+        "bottom": 471.6,
+        "left": 74.8,
+        "right": 955
+      },
+      "floorCardsTop": 202.5,
+      "maxCardBottom": 189,
+      "floorGap": 13.5,
+      "zones": {
+        "oppCap": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 74.8,
+          "right": 642.25
+        },
+        "oppHand": {
+          "top": 7.2,
+          "bottom": 195.3,
+          "left": 649.45,
+          "right": 955
+        },
+        "floor": {
+          "top": 202.5,
+          "bottom": 471.6,
+          "left": 74.8,
+          "right": 955
+        },
+        "myHand": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 649.45,
+          "right": 955
+        },
+        "myCap": {
+          "top": 478.8,
+          "bottom": 667.8,
+          "left": 74.8,
+          "right": 642.25
+        }
+      }
+    }
+  }
+}

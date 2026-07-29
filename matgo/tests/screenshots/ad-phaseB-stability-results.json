@@ -1,0 +1,38 @@
+{
+  "1280x720_10cards": {
+    "handCardsH": 158.4,
+    "oppZoneH": 188.1,
+    "minH": "176px",
+    "floorTop": 202.5,
+    "floorGap": 13.5,
+    "myHandTop": 478.8,
+    "screenH": 720
+  },
+  "1280x720_2cards": {
+    "handCardsH": 158.4,
+    "oppZoneH": 188.1,
+    "minH": "176px",
+    "floorTop": 202.5,
+    "floorGap": 13.5,
+    "myHandTop": 478.8,
+    "screenH": 720
+  },
+  "1920x1080_10cards": {
+    "handCardsH": 237.6,
+    "oppZoneH": 282.15,
+    "minH": "176px",
+    "floorTop": 303.75,
+    "floorGap": 20.25,
+    "myHandTop": 718.2,
+    "screenH": 1080
+  },
+  "1920x1080_2cards": {
+    "handCardsH": 237.6,
+    "oppZoneH": 282.15,
+    "minH": "176px",
+    "floorTop": 303.75,
+    "floorGap": 20.25,
+    "myHandTop": 718.2,
+    "screenH": 1080
+  }
+}
