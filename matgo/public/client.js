@@ -447,7 +447,9 @@
     }
     let text = null;
     switch (la.kind) {
-      case 'jjok':            text = '쪽!'; break;
+      case 'jjok':
+        text = window.MatgoI18n?.t?.(la.messageKey || 'action.ppeokSweep') || '뻑 풀이!';
+        break;
       case 'ppeok':           text = `${la.month}월 뻑!`; break;
       case 'ttadak':          text = '따닥!'; break;
       case 'bomb':            text = `${la.month}월 폭탄!`; break;
@@ -462,7 +464,10 @@
       // 쓸: chooseFloor 후 더미 매칭으로 그 월 4장 전부 가져간 케이스 (한국 표준 룰).
       // sweep_from_flip은 뻑 풀이(바닥 3장+더미 1장) — 효과는 같지만 의미가 다르므로 표시 분리.
       case 'sseul':           text = la.month ? `${la.month}월 쓸!` : '쓸!'; break;
-      case 'sweep_from_flip': text = '뻑 풀이!'; break;
+      case 'sweep_from_flip':
+      case 'sweep_from_hand':
+        text = window.MatgoI18n?.t?.(la.messageKey || 'action.ppeokSweep') || '뻑 풀이!';
+        break;
       case 'go':              text = `${la.count}고!`; break;
       case 'shake':           text = `${la.month}월 흔들기!`; break;
       case 'kkeut_choice':    text = la.choice === 'ssangpi' ? '술잔 → 쌍피' : '술잔 → 끗'; break;
@@ -575,6 +580,7 @@
     pendingCaptureToast = null;
     completedCaptureToastKeys.add(key);
     maybeShowActionToast(action);
+    if (actionToastEl) actionToastEl.dataset.toastKey = key;
     return true;
   }
 
@@ -735,6 +741,13 @@
         break;
       case 'STATE':
         lastState = msg;
+        if (window.__matgoDiagnostics && typeof window.__matgoDiagnostics === 'object') {
+          window.__matgoDiagnostics.lastState = {
+            phase: msg.phase,
+            turn: msg.turn,
+            turnAction: msg.turnAction || null,
+          };
+        }
         bonusFlipRequestPending = false;
         if (isAnimating) {
           // fly 진행 중이면 큐잉. 중간 STATE는 무시하고 마지막만 적용해도 무방.
@@ -988,6 +1001,19 @@
     );
     const settleStep = timelineSteps.find((step) => step.type === 'SETTLE_CAPTURE_BATCH');
     const settleBatchId = settleStep?.batchId || null;
+    const refillHandIds = new Set(
+      timelineSteps
+        .filter((step) => step.type === 'REFILL_HAND')
+        .flatMap((step) => (step.moves || []).map((move) => move.cardId)),
+    );
+    // 임시 batch에만 있고 아직 구조화 source move가 없는 카드(대표: #50 강탈 피)는
+    // staging 화면에서 deck 신규 카드로 추론하지 않는다. 최종 settlement STATE에서
+    // captured→captured 절대 move로 한 번만 RESOLVE한다.
+    for (const card of (s.pendingCaptureBatch?.cards || [])) {
+      if (!timelineMoves.some((move) => move.cardId === card.id)) {
+        newCardIds.delete(card.id);
+      }
+    }
 
     // chooseFloorSteps 단계 1 (choice_made): srcCard가 captured에 등장하는데, 이건
     // 사용자가 모달 선택 직전에 던진 자기 카드다. 덱 origin이 아니므로 drewIds에서 제외.
@@ -1008,6 +1034,7 @@
     // 단계 2 (deck_flipped): flip_place / pair_from_flip / jjok / ttadak / ppeok → 덱
     // 폭탄(bomb)도 손에서 3장 + 바닥 1장 captured → 상대 손 origin으로 묶음
     const oppHandOriginIds = new Set();
+    const localHandOriginIds = new Set();
     const explicitHandSourceIds = new Set(
       timelineMoves
         .filter((move) => move.sourceZone === 'hand')
@@ -1021,6 +1048,12 @@
           && move.ownerBefore === oppId
           && newCardIds.has(move.cardId)) {
         oppHandOriginIds.add(move.cardId);
+      }
+      if (move.sourceZone === 'hand'
+          && move.ownerBefore === me
+          && newCardIds.has(move.cardId)
+          && !pendingFlies.some((fly) => fly.cardId === move.cardId)) {
+        localHandOriginIds.add(move.cardId);
       }
     }
     // 2) 구형 snapshot의 lastHandPlayed 폴백 (타임라인 없는 상태 주입 호환)
@@ -1164,6 +1197,7 @@
     for (const id of drewIds) flyTargetIds.add(id);
     // 상대 손에서 나온 카드도 fly 대상
     for (const id of oppHandOriginIds) flyTargetIds.add(id);
+    for (const id of localHandOriginIds) flyTargetIds.add(id);
     // 강탈 피도 fly 대상 — 도착지(내 captured) appear 애니메이션 끄고 상대 captured에서 출발
     for (const id of stolenPiIds) flyTargetIds.add(id);
     // R5/R8: choice srcCard / 조커도 fly 대상 — captured 도착지 appear 억제 후 손에서 출발.
@@ -1193,6 +1227,18 @@
     if (_jokerFlyId) {
       startFlyFromHand(_jokerFlyId);
       _jokerFlyId = null;
+    }
+    // 흔들기 확인 직후에는 SHAKE STATE가 먼저 도착하므로 클릭 시점 clone을 만들지
+    // 않는다. 실제 PLAY_MATCH의 절대 hand source를 확인한 이 지점에서 1회 생성한다.
+    for (const id of localHandOriginIds) {
+      if (!claimSettlementFly(id, settleBatchId)) continue;
+      startFlyFromHand(id);
+    }
+    if (deckRectForFly) {
+      for (const id of refillHandIds) {
+        if (!claimSettlementFly(id, `${s.turnAction?.turnId}:refill`)) continue;
+        startFlyFromDeck(id, deckRectForFly, { timelineRole: 'refill-hand' });
+      }
     }
 
     // 덱 뒤집기 fly 시작 — 도착지(floor 또는 captured) DOM이 그려진 후 클론
@@ -1846,7 +1892,9 @@
     const target =
       floorCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
       myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
-      oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
+      oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      myCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      oppCardsEl.querySelector(`[data-card-id="${cardId}"]`);
     if (!target) return;
     // 카드 크기는 도착지 기준 — 상대 손 카드 크기와 비슷. 시작은 손 중앙.
     const targetRect = target.getBoundingClientRect();
@@ -1949,7 +1997,9 @@
     const target =
       floorCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
       myCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
-      oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
+      oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      myCardsEl.querySelector(`[data-card-id="${cardId}"]`) ||
+      oppCardsEl.querySelector(`[data-card-id="${cardId}"]`);
     if (!target) return;
     const clone = target.cloneNode(true);
     clone.classList.add('flying-card');
@@ -2121,6 +2171,10 @@
       if (el) return { zone: 'cap', el };
       el = oppCapturedZoneEl.querySelector(`[data-card-id="${cardId}"]`);
       if (el) return { zone: 'cap', el };
+      el = myCardsEl.querySelector(`[data-card-id="${cardId}"]`);
+      if (el) return { zone: 'hand', el };
+      el = oppCardsEl.querySelector(`[data-card-id="${cardId}"]`);
+      if (el) return { zone: 'hand', el };
       return null;
     }
 
@@ -2168,9 +2222,9 @@
     //   RESOLVE    : 매칭 카드 captured로 (없으면 skip)
     //   CLEANUP    : 클론 제거 + 도착지 복원
     const T = {
-      HAND_THROW: 280, HAND_LAND: 240,  // HAND_LAND 늘려 손이 바닥에 붙은 후 잠시 머묾
+      HAND_THROW: 280, HAND_LAND: 180,  // 손 안착은 인지 가능한 짧은 정지 후 즉시 더미 단계로 연결
       DECK_FLIP:  240, DECK_THROW: 260, DECK_LAND: 180,
-      RESOLVE:    320, CLEANUP:    220,
+      RESOLVE:    320, CLEANUP:      0,
     };
     const hasCapMove = entries.some((e) => e.isCap);
     const stagedJokerEntries = entries.filter(
@@ -2415,7 +2469,11 @@
             for (const pe of pairs) flashMeet(pe.clone);
           }
           scheduleState(
-            () => transition(stagedJokerEntries.length > 0 ? 'JOKER_FLIP' : 'DECK_FLIP'),
+            () => {
+              if (stagedJokerEntries.length > 0) transition('JOKER_FLIP');
+              else if (deckEntries.length > 0) transition('DECK_FLIP');
+              else transition(hasCapMove ? 'RESOLVE' : 'CLEANUP');
+            },
             T.HAND_LAND,
           );
           break;
@@ -2505,7 +2563,11 @@
       completionReason: null,
       duplicateCompletionAttempts: 0,
     });
-    transition('HAND_THROW');
+    if (handLikeEntries.length > 0) transition('HAND_THROW');
+    else if (stagedJokerEntries.length > 0) transition('JOKER_FLIP');
+    else if (deckEntries.length > 0) transition('DECK_FLIP');
+    else if (hasCapMove) transition('RESOLVE');
+    else transition('CLEANUP');
   }
 
   function sendPlay(cardId) {
@@ -2642,7 +2704,6 @@
     const card = cardId ? (lastState?.yourHand || []).find((c) => c.id === cardId) : null;
     sendShake('shake', card ? card.month : null);
     if (cardId) {
-      startFlyFromHand(cardId);
       if (ws && ws.readyState === 1) {
         ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
       }
@@ -2656,7 +2717,6 @@
     const card = cardId ? (lastState?.yourHand || []).find((c) => c.id === cardId) : null;
     sendShake('normal', card ? card.month : null);
     if (cardId) {
-      startFlyFromHand(cardId);
       if (ws && ws.readyState === 1) {
         ws.send(JSON.stringify({ type: 'PLAY_CARD', cardId }));
       }

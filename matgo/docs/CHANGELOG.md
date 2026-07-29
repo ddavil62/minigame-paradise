@@ -1,5 +1,47 @@
 # Changelog
 
+## [2026-07-29] — 리포트 #44~#50 카드 연속 재생·특수 정산 수정
+
+카드 이동의 actor 출처와 재생 순서를 보강하고, 폭탄·조커·손뻑 회수를 서버 타임라인의 단일 정산 계약으로 통합했다. Phase A/B/C UI 검수는 모두 `APPROVED`, 최종 QA는 `PASS`다.
+
+### 카드 연결·출처 (#44, #47, #48)
+
+- `server.js`의 불필요한 고정 단계 대기를 제거하고 `HAND_LAND` 정지를 180ms로 조정해 상대 손 안착 뒤 더미 출발을 연속 재생한다.
+- 20회 계측에서 hand-land→deck-start p95 `191.3ms`, 최대 `192.0ms`, recovery 증가와 active timer가 모두 0이었다.
+- 흔들기 제출 카드는 실제 actor 손에서, AI 제출 카드는 관전자 기준 상대 손에서 각각 정확히 한 번 출발한다. 로컬 손 복제 fly와 중복 deck 진입을 막았다.
+
+### 폭탄·조커 순서 (#45, #49)
+
+- 폭탄 손패 3장을 바닥 같은 월 카드에 staging하고 더미 결과까지 기다린 뒤, 고유 카드 4장 또는 6장을 하나의 `SETTLE_CAPTURE_BATCH`로 정산한다. 중간 captured 편입과 조기 토스트는 발생하지 않는다.
+- 손 조커 사용은 조커와 강탈 피를 같은 batch로 정산한 뒤 `REFILL_HAND` 단계에서 더미 보충 카드를 손으로 이동한다. deck fly 전에 보충 카드가 손 DOM에 순간 생성되지 않는다.
+- `public/client.js`의 deck fly 도착지에 hand zone을 포함해 조커 보충 이동을 정상 재생한다.
+
+### 상황 메시지·손뻑 회수 (#46, #50)
+
+- 뻑 풀이 완료 이벤트에 메시지 키를 부여하고 마지막 fly와 clone 정리 뒤 ko `뻑 풀이!`, en `Ppeok cleared!`를 정확히 한 번 표시한다.
+- 손패로 뻑을 회수할 때 관련 6장과 강탈 피 1장을 고유 7장 단일 `RESOLVE` batch로 이동한다. 강탈 피의 선행 fly와 분리 정산은 없다.
+- QA의 #50 간헐 실패는 새 매치 랜덤 초기 딜 토스트가 남은 테스트 오염이었다. `turnId|batchId|messageKey` 대상 키로 관측을 격리했으며 제품 동작 로직은 바꾸지 않았다.
+
+### 검증
+
+- 신규 전체 고유 테스트: **13/13 PASS**
+- #50 독립 반복: **3/3 PASS**
+- #44 20회 timing: p95 `191.3ms`, 최대 `192.0ms`, recovery/timer 0
+- Phase A/B/C 1920×1080 Art Director 모드 3: 모두 **APPROVED**
+- 최종 통합 QA: **PASS**
+- 런타임 에셋 변경 없음. Mockup Sync 대상 없음.
+
+### 참고
+
+- 목적 정의: `.Codex/specs/2026-07-29-minigames-reports-44-50-scope.md`
+- 실행 계획: `.Codex/specs/2026-07-29-minigames-reports-44-50-plan.md`
+- 구현: `.Codex/specs/2026-07-29-minigames-reports-44-50-phaseA-report.md`, `phaseB-report.md`, `phaseC-report.md`
+- UI 검수: `.Codex/specs/2026-07-29-minigames-reports-44-50-phaseA-ui-review.md`, `phaseB-ui-review.md`, `phaseC-ui-review.md`
+- QA 수정: `.Codex/specs/2026-07-29-minigames-reports-44-50-qa-fix-report.md`
+- QA: `.Codex/specs/2026-07-29-minigames-reports-44-50-qa.md`
+
+---
+
 ## [2026-07-29] — 리포트 #35~#43 규칙·연출·매치 로그 수정
 
 카드 출처와 소유권, 폭탄 후 입력, 선택 대기 정산, 사통 점수, 사후 분석 로그를 서버 권위 계약으로 정리했다. QA에서 발견한 매치 경계 runner 간섭, #34 정산 fly 중복, 카드 이동 전 효과 토스트 노출도 후속 수정했다.

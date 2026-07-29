@@ -311,6 +311,7 @@ export function* playCardSteps(g, playerId, cardId) {
     turnId: `${playerId}-${g.turnSequence}`,
     actor: playerId,
     steps: [],
+    nextEventSequence: 1,
     resultingStateVersion: null,
   };
 
@@ -330,17 +331,11 @@ export function* playCardSteps(g, playerId, cardId) {
     const opp = playerId === 'p1' ? 'p2' : 'p1';
     g.captured[playerId].push(card);
     stealPi(g, playerId, opp, 1);
-    // 더미 위 1장 손 보충 (뒤집기 아님 — pop 후 hand에 add)
-    let refilled = null;
-    if (g.deck.length > 0) {
-      refilled = g.deck.pop();
-      g.hands[playerId].push(refilled);
-    }
     g.lastAction = {
       kind: 'joker_play', player: playerId, card,
-      stoleFromOpp: 1, refilled,
+      stoleFromOpp: 1, refilled: null,
     };
-    g.turnAction.steps.push({
+    appendTimelineStep(g.turnAction, {
       type: 'PLAY_MATCH',
       actor: playerId,
       owner: playerId,
@@ -350,6 +345,24 @@ export function* playCardSteps(g, playerId, cardId) {
     });
     finalizeTurnAction(g, playerId, captureBaseline);
     yield { step: 'hand_played', card };
+    // 조커와 강탈 피의 정산·fly가 먼저 공개된 뒤 더미 보충 카드를 손으로 이동한다.
+    // 첫 STATE부터 최종 hand snapshot을 노출하면 빈자리에 카드가 순간 생성된다.
+    let refilled = null;
+    if (g.deck.length > 0) {
+      refilled = g.deck.pop();
+      g.hands[playerId].push(refilled);
+      appendTimelineStep(g.turnAction, {
+        type: 'REFILL_HAND',
+        actor: playerId,
+        owner: playerId,
+        card: refilled,
+        moves: [
+          createTimelineMove(refilled, 'deck', 'hand', playerId, null, playerId, 'joker_refill'),
+        ],
+      });
+    }
+    g.lastAction = { ...g.lastAction, refilled };
+    yield { step: 'deck_flipped', card: refilled };
     // 손 조커는 턴의 본 행동이 아니다. 점수·고/스톱·라운드 종료 평가는
     // 일반 카드를 내고 덱 뒤집기까지 모두 끝난 뒤 한 번만 수행한다.
     g.phase = 'awaiting_play';
@@ -360,7 +373,7 @@ export function* playCardSteps(g, playerId, cardId) {
 
   const floorCountAtTurnStart = g.floor.length;
   const handResolution = resolveCardOnFloor(g, playerId, card, true);
-  g.turnAction.steps.push({
+  appendTimelineStep(g.turnAction, {
     type: 'PLAY_MATCH',
     actor: playerId,
     owner: playerId,
@@ -376,12 +389,9 @@ export function* playCardSteps(g, playerId, cardId) {
   // 상대가 만든 뻑을 손패로 회수한 네 장은 후속 더미 결과가 확정될 때까지
   // 점수판에 편입하지 않는다. 화면과 점수 모두 단일 정산 배치 시점에 갱신된다.
   if (handResolution.matched === 3) {
-    stagePendingCaptures(
-      g,
-      playerId,
-      [card, ...(handResolution.matchedCards || [])],
-      'hand_sweep_waiting_for_draw',
-    );
+    // 뻑 회수 4장뿐 아니라 이 시점에 강탈한 피도 같은 pending 배치에 넣는다.
+    // 강탈 피만 첫 STATE에서 captured로 선행 이동하면 최종 7장 동시 RESOLVE가 깨진다.
+    stageNewTurnCaptures(g, playerId, captureBaseline, 'hand_sweep_waiting_for_draw');
   }
   yield { step: 'hand_played', card };
 
@@ -562,6 +572,7 @@ function resolveCardOnFloor(g, playerId, card, fromHand) {
   delete g.ppeokFlags[month];
   g.lastAction = {
     kind: fromHand ? 'sweep_from_hand' : 'sweep_from_flip',
+    messageKey: 'action.ppeokSweep',
     player: playerId, card, trio, stoleFromOpp: sweepPiCount,
   };
   return { matched: 3, matchedCards: trio };
@@ -694,7 +705,7 @@ function finalizeTurnAction(g, playerId, baseline) {
     throw new Error('SETTLE_CAPTURE_BATCH 카드 ID가 중복되었다');
   }
   const batchId = `${g.turnAction.turnId}:settle`;
-  g.turnAction.steps.push({
+  appendTimelineStep(g.turnAction, {
     type: 'SETTLE_CAPTURE_BATCH',
     batchId,
     actor: playerId,
@@ -721,7 +732,7 @@ function finalizeTurnAction(g, playerId, baseline) {
  */
 function recordDrawMatch(timeline, actor, drawnCard, matchedFloorCards = []) {
   if (!timeline) return;
-  timeline.steps.push({
+  appendTimelineStep(timeline, {
     type: 'DRAW_MATCH',
     actor,
     owner: null,
@@ -790,7 +801,7 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
   // 3) 더미에서 한 번 더 뒤집기 (재귀 — 그 카드는 평소대로 처리, 또 조커면 또 케이스 B)
   if (flipped.type === 'joker') {
     if (timeline) {
-      timeline.steps.push({
+      appendTimelineStep(timeline, {
         type: 'STAGE_DRAWN_JOKER',
         actor: playerId,
         owner: null,
@@ -833,7 +844,14 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
       g.floor = g.floor.filter((c) => c.id !== handCard.id);
       g.captured[playerId].push(handCard, flipped);
       stealPi(g, playerId, opp, 1);
-      g.lastAction = { kind: 'jjok', player: playerId, handCard, flipped, stoleFromOpp: 1 };
+      g.lastAction = {
+        kind: 'jjok',
+        messageKey: 'action.ppeokSweep',
+        player: playerId,
+        handCard,
+        flipped,
+        stoleFromOpp: 1,
+      };
       recordDrawMatch(timeline, playerId, flipped, [handCard]);
       return;
     }
@@ -939,8 +957,39 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
   const flipSweepCount = isPpeokOwner(g, playerId, flipped.month) ? 2 : 1;
   stealPi(g, playerId, opp, flipSweepCount);
   delete g.ppeokFlags[flipped.month];
-  g.lastAction = { kind: 'sweep_from_flip', player: playerId, card: flipped, trio, stoleFromOpp: flipSweepCount };
+  g.lastAction = {
+    kind: 'sweep_from_flip',
+    messageKey: 'action.ppeokSweep',
+    player: playerId,
+    card: flipped,
+    trio,
+    stoleFromOpp: flipSweepCount,
+  };
   recordDrawMatch(timeline, playerId, flipped, trio);
+}
+
+/**
+ * 턴 타임라인 step과 그 안의 카드 이동에 단조 증가 순번을 부여한다.
+ * 동일 카드가 PLAY_MATCH와 SETTLE_CAPTURE_BATCH에 다시 등장하더라도 클라이언트는
+ * `turnId + seq` 순서와 `batchId + cardId` 등록권으로 정확히 한 번만 재생한다.
+ *
+ * @param {object} timeline 현재 턴의 구조화 타임라인
+ * @param {object} step 추가할 단계
+ * @returns {object} 순번이 부여된 단계
+ */
+function appendTimelineStep(timeline, step) {
+  if (!timeline) return step;
+  let nextSeq = Number.isInteger(timeline.nextEventSequence)
+    ? timeline.nextEventSequence
+    : 1;
+  const sequencedStep = {
+    ...step,
+    seq: nextSeq++,
+    moves: (step.moves || []).map((move) => ({ ...move, seq: nextSeq++ })),
+  };
+  timeline.nextEventSequence = nextSeq;
+  timeline.steps.push(sequencedStep);
+  return sequencedStep;
 }
 
 /**
@@ -1431,12 +1480,28 @@ export function* bombSteps(g, playerId, month) {
     yield { error: `${month}월 카드 1장이 바닥에 있어야 한다` }; return;
   }
 
-  // 단계 1: 폭탄 실행 (손 3장 + 바닥 1장 모두 captured + 상대 피 1장)
+  const opp = playerId === 'p1' ? 'p2' : 'p1';
+  const captureBaseline = {
+    actor: new Set(g.captured[playerId].map((c) => c.id)),
+    opponent: new Set(g.captured[opp].map((c) => c.id)),
+  };
+  g._turnCaptureBaseline = captureBaseline;
+  g.turnSequence = (g.turnSequence || 0) + 1;
+  g.turnAction = {
+    turnId: `${playerId}-${g.turnSequence}`,
+    actor: playerId,
+    steps: [],
+    nextEventSequence: 1,
+    resultingStateVersion: null,
+  };
+
+  // 단계 1: 손 3장과 바닥 1장을 staging에 보류한다. 더미 결과 전에는 captured에
+  // 편입하지 않아 충돌과 후속 결과를 한 정산 batch로 보여 준다.
   g.phase = 'resolving_bomb';
   g.hands[playerId] = hand.filter((c) => c.month !== month);
   g.floor          = g.floor.filter((c) => c.month !== month);
   g.captured[playerId].push(...handSame, ...floorSame);
-  const opp = playerId === 'p1' ? 'p2' : 'p1';
+  stagePendingCaptures(g, playerId, [...handSame, ...floorSame], 'bomb_waiting_for_draw');
   stealPi(g, playerId, opp, 1);
   g.pendingBombFlips = g.pendingBombFlips || { p1: 0, p2: 0 };
   g.pendingBombFlips[playerId] += 2;
@@ -1444,10 +1509,24 @@ export function* bombSteps(g, playerId, month) {
   // 손 origin 추적 — 폭탄은 손에서 3장 + 바닥 1장 모두 가져감. handSame이 손 origin.
   g.lastHandPlayed = { player: playerId, card: handSame[0], cards: handSame, month };
   g.lastAction = { kind: 'bomb', player: playerId, month, stoleFromOpp: 1 };
+  appendTimelineStep(g.turnAction, {
+    type: 'STAGE_BOMB',
+    actor: playerId,
+    owner: playerId,
+    cards: [...handSame, ...floorSame],
+    moves: [
+      ...handSame.map((card) => (
+        createTimelineMove(card, 'hand', 'staging', playerId, playerId, playerId, 'bomb')
+      )),
+      ...floorSame.map((card) => (
+        createTimelineMove(card, 'floor', 'staging', playerId, null, playerId, 'bomb')
+      )),
+    ],
+  });
   yield { step: 'bomb_played' };
 
   // 단계 2: 통상 덱 뒤집기 1회 (폭탄 당 턴의 통상 뒤집기)
-  drawAndResolve(g, playerId, handSame[0]);
+  drawAndResolve(g, playerId, handSame[0], g.turnAction);
   yield { step: 'deck_flipped' };
   if (g.phase === 'awaiting_floor_choice') return;
 
@@ -1487,6 +1566,9 @@ function* continueBombResolution(g, playerId) {
   // 덱이 먼저 소진된 경우 남은 권리를 유령 상태로 남기지 않는다.
   g.pendingBombFlips[playerId] = 0;
   g.bombResolvingPlayer = null;
+  stageNewTurnCaptures(g, playerId, g._turnCaptureBaseline, 'bomb_final_settlement');
+  commitPendingCaptures(g, playerId);
+  finalizeTurnAction(g, playerId, g._turnCaptureBaseline);
   finishTurn(g, playerId);
   yield { step: 'turn_finished' };
 }

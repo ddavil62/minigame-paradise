@@ -163,8 +163,9 @@ export function createApp(opts = {}) {
   }
 
   // ── 단계별 STATE 송신 (generator runner) ─────────────────────────
-  // 단계 사이 지연(ms). 클라이언트 카드 fly(0.32s) + 약간의 여유.
-  const STEP_DELAY_MS = 800;
+  // 단계 STATE는 즉시 생산하고, 실제 시각 간격은 클라이언트의 단일 fly 큐가 소유한다.
+  // 서버가 고정 지연을 더하면 손 안착 뒤 더미 출발까지 불필요한 공백이 생긴다.
+  const STEP_DELAY_MS = 0;
   // 단일 서버 단계가 다음 단계 또는 입력 대기로 전환되어야 하는 상한.
   const SERVER_STEP_TIMEOUT_MS = 2000;
   // 사용자 입력 대기 phase — 단계 시퀀스를 여기서 끊고 다음 메시지를 기다린다.
