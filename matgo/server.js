@@ -1045,12 +1045,18 @@ export function createApp(opts = {}) {
           if (cfg.ppeokCount !== undefined) game.ppeokCount = cfg.ppeokCount;
           if (cfg.firstPpeokBy !== undefined) game.firstPpeokBy = cfg.firstPpeokBy;
           if (cfg.roundResult !== undefined) game.roundResult = cfg.roundResult;
+          // #64 테스트 지원 (2026-07-30): choice srcCard fly 출처 검증을 위해
+          // choiceFloorSrcCardId(→pendingChoiceSrcCardId)와 lastAction을 직접
+          // 주입할 수 있게 한다. 미지정 시 기존 동작(test_inject) 그대로 유지.
+          game.pendingChoiceSrcCardId = cfg.choiceFloorSrcCardId !== undefined
+            ? cfg.choiceFloorSrcCardId
+            : null;
           // 항상 초기화 — 이전 대기 상태 잔류 방지
           game.ppeokFlags         = cfg.ppeokFlags || {};
           game.pendingFloorChoice = null;
           game.pendingCaptureBatch = null;
           game.pendingKkeutChoice = cfg.pendingKkeutChoice || null;
-          game.lastAction         = { kind: 'test_inject' };
+          game.lastAction         = cfg.lastAction !== undefined ? cfg.lastAction : { kind: 'test_inject' };
           broadcastState();
           // round_end 상태 주입 시 ROUND_END 이벤트도 발송
           if (game.phase === 'round_end' && game.roundResult) {

@@ -1363,8 +1363,17 @@
     // ── R5 손 fly 후처리: 렌더 완료 후 startFlyFromHand 호출 (덱 fly보다 먼저 등록) ──
     // startFlyFromDeck보다 먼저 호출해야 pendingFlies에 손 카드가 먼저 들어가
     // HAND_THROW → DECK 시퀀스 순서가 자연 정합된다 (R6 순서 해소).
+    // #64 수정 (2026-07-30): choice srcCard fly 행위자 분기
+    // R5(2026-06-17)는 내 차례 choice fly만 고려해 startFlyFromHand만 호출했다.
+    // 상대 차례에서 choiceFloorSrcCardId가 설정되면 fly가 내 손(myCardsEl)에서
+    // 출발하는 오류. s.lastAction?.player를 기준으로 행위자를 판정해 출발점을 분기.
     if (_choiceSrcFlyId) {
-      startFlyFromHand(_choiceSrcFlyId);
+      const choiceActor = s.lastAction?.player || s.turn;
+      if (choiceActor === me) {
+        startFlyFromHand(_choiceSrcFlyId);
+      } else {
+        startFlyFromOppHand(_choiceSrcFlyId, oppCardsEl.getBoundingClientRect());
+      }
       _choiceSrcFlyId = null;
     }
     // ── R8 조커 fly 후처리 ──

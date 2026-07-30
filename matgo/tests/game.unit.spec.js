@@ -792,7 +792,10 @@ test('G-41: 쓸 — 상대 피 0장이어도 게임 정상 진행 (피 빼앗기
   expect(['awaiting_play', 'awaiting_go_stop', 'round_end'].includes(g.phase)).toBe(true);
 });
 
-test('G-42: 같은 월 네 장 선택 경로는 쓸로 재라벨링하지 않는다', () => {
+// #63 수정 (2026-07-30): chooseFloorSteps 경로의 ttadak은 sseul로 재라벨링된다.
+// 바닥 2장(같은 월) + 손패 1장 + 덱 1장(같은 월) -> 선택 후 덱 매칭 -> 바닥 비움 = sseul.
+// 이전에는 chooseFloorSteps에 sseul 판정이 누락돼 ttadak으로 남았다 (B3 미반영).
+test('G-42: 같은 월 네 장 선택 경로는 쓸(sseul)로 재라벨링된다', () => {
   const g = makeGame({
     p1Hand: ['m01_gwang', 'm05_kkeut'],
     p2Hand: ['m06_kkeut'],
@@ -801,7 +804,7 @@ test('G-42: 같은 월 네 장 선택 경로는 쓸로 재라벨링하지 않는
   });
   playCard(g, 'p1', 'm01_gwang');
   chooseFloor(g, 'p1', 'm01_tti_hong');
-  expect(g.lastAction.kind).not.toBe('sseul');
+  expect(g.lastAction.kind).toBe('sseul');
 });
 
 test('G-43: 바닥이 남으면 쓸이 아니다', () => {

@@ -396,6 +396,9 @@ export function* playCardSteps(g, playerId, cardId) {
   yield { step: 'hand_played', card };
 
   // awaiting_floor_choice로 빠지면 사용자 선택 대기 (chooseFloor에서 이어짐)
+  // 주의: runSteps(server.js)는 이전 yield 반환 직후 phase가 사용자 입력 대기
+  // 상태이면 generator를 재개하지 않고 즉시 release하므로, 이 if 블록은 실행되지
+  // 않는 죽은 코드다. floorCountAtTurnStart는 resolveCardOnFloor에서 직접 캡처한다.
   if (g.phase === 'awaiting_floor_choice') {
     g.lastAction = { kind: 'play_card_choice_pending', player: playerId, cardId, month: card.month };
     return;
@@ -491,6 +494,21 @@ export function* chooseFloorSteps(g, playerId, cardId) {
   if (wasFromHand) {
     // 단계 2: 덱 뒤집기 (손패에서 온 매칭이었던 경우만)
     drawAndResolve(g, playerId, pending.srcCard, g.turnAction);
+    // #63 수정 (2026-07-30): chooseFloorSteps 경로 쓸 판정 누락 보완
+    // drawAndResolve가 같은 월 매칭으로 ttadak을 설정하고 stealPi를 이미 호출한 경우,
+    // 턴 시작 바닥 2장 + 바닥 비움 조건이면 sseul로 재라벨링한다.
+    // applySseulAfterFullFloorClear는 pair_from_flip만 처리하므로 ttadak 경로에는 직접 라벨링.
+    if (g.lastAction?.kind === 'ttadak'
+      && (pending.floorCountAtTurnStart ?? 0) === 2
+      && g.floor.length === 0) {
+      g.lastAction = { ...g.lastAction, kind: 'sseul' };
+    } else {
+      // pair_from_flip 경로 (동월이 아닌 매칭)에 대한 기존 쓸 판정
+      applySseulAfterFullFloorClear(g, playerId, {
+        floorCountAtTurnStart: pending.floorCountAtTurnStart ?? 0,
+        handMatched: true,
+      });
+    }
     if (g.phase !== 'awaiting_floor_choice') {
       commitPendingCaptures(g, playerId);
       finalizeTurnAction(g, playerId, g._turnCaptureBaseline);
@@ -554,6 +572,12 @@ function resolveCardOnFloor(g, playerId, card, fromHand) {
       candidates: sameMonth.slice(),
       srcCard: card,
       fromHand,
+      // #63 수정 (2026-07-30): 쓸 판정에 필요한 턴 시작 바닥 장수를 여기서 캡처한다.
+      // 이 시점의 g.floor는 아직 이번 카드로 변경되지 않은 원본이므로 g.floor.length가
+      // 곧 턴 시작 시 바닥 장수와 같다. playCardSteps의 yield 이후 코드는 runSteps가
+      // awaiting_floor_choice에서 즉시 release하며 generator를 재개하지 않아 실행되지
+      // 않으므로(죽은 코드), 여기서 직접 설정해야 chooseFloorSteps가 값을 읽을 수 있다.
+      floorCountAtTurnStart: g.floor.length,
     };
     g.phase = 'awaiting_floor_choice';
     g.lastAction = { kind: 'choice_pending', player: playerId, card, candidates: sameMonth.slice() };

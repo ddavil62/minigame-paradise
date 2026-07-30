@@ -9,7 +9,7 @@
  *
  * Phase C:
  * - T-54-fly-dedup: 바닥 2장 선택 흐름에서 중복 fly 재생 없음
- * - T-57-ttadak-toast: 따닥 토스트 정상 표시
+ * - T-57-ttadak-toast: 바닥 2장 선택 + 덱 매칭 시 쓸 토스트 정상 표시 (2026-07-30 리포트 #63 수정 반영)
  * - T-58-jjok-toast-timing: 쪽 토스트가 fly 완료 직후 표시 (다음 턴 이전)
  *
  * 서버 사전 실행 필수: node matgo/server.js --port 3013
@@ -440,11 +440,14 @@ test('T-54-fly-dedup: 바닥 2장 선택 흐름에서 choice srcCard fly가 1회
 });
 
 // ── T-57: 따닥 텍스트 효과 ────────────────────────────────────────
-test('T-57-ttadak-toast: 따닥 상황에서 따닥! 토스트가 fly 완료 직후 표시된다', async () => {
+test('T-57-ttadak-toast: 바닥 2장 선택 후 덱 매칭 시 쓸! 토스트가 fly 완료 직후 표시된다', async () => {
   const { browser, p1 } = await openMatch();
   try {
-    // 따닥 시나리오: 바닥에 1월 2장 + 손에 1월 1장 + 덱에 1월 1장
-    // → 바닥 선택 후 덱 뒤집기가 나머지 1장과 매칭 → ttadak
+    // 바닥에 1월 2장 + 손에 1월 1장 + 덱에 1월 1장
+    // → 바닥 선택 후 덱 뒤집기가 나머지 1장과 매칭 → 바닥이 완전히 비워지므로 쓸(sseul)
+    // (2026-07-30 리포트 #63 수정: 이 시나리오는 바닥 2장에서 시작해 매칭으로 바닥이
+    // 전부 비므로 룰북 기준 쓸이 맞다. 수정 전에는 이 조건이 누락되어 따닥으로 잘못
+    // 표시되던 버그였다. 수정 후 정상 동작인 쓸! 표시로 기대값을 갱신한다.)
     await inject({
       turn: 'p1',
       phase: 'awaiting_play',
@@ -471,12 +474,12 @@ test('T-57-ttadak-toast: 따닥 상황에서 따닥! 토스트가 fly 완료 직
     await p1.waitForSelector('#floor-choice-modal:not(.hidden)', { timeout: 8000 });
     await p1.click('#floor-choice-cards [data-card-id="m01_tti_hong"]');
 
-    // 따닥! 토스트가 표시되는지 확인 (AC-57-1)
+    // 쓸! 토스트가 표시되는지 확인 (AC-57-1, 리포트 #63 수정 반영)
     // fly 완료 후 토스트가 표시돼야 한다 (AC-57-2)
     await p1.waitForFunction(
       () => {
         const toast = document.querySelector('.action-toast.show');
-        return toast && toast.textContent.includes('따닥');
+        return toast && toast.textContent.includes('쓸');
       },
       { timeout: 15000 },
     );
@@ -485,7 +488,7 @@ test('T-57-ttadak-toast: 따닥 상황에서 따닥! 토스트가 fly 완료 직
     const toastText = await p1.evaluate(
       () => document.querySelector('.action-toast.show')?.textContent
     );
-    expect(toastText).toContain('따닥!');
+    expect(toastText).toContain('쓸!');
 
     // 같은 턴 내 중복 표시 없음 확인 (AC-57-3)
     // action-toast.show가 1개만 있어야 한다
