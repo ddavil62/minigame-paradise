@@ -1,5 +1,66 @@
 # Changelog
 
+## [2026-07-30] — 리포트 #65/#66 상대 손 fly 중복 수정 + 자뻑 텍스트 변경
+
+### #65 (fix, full 파이프라인) — 상대 손 fly 중복 재생 수정
+
+바닥에 같은 월 2장이 있고 상대가 낸 카드로 하나를 선택해 먹는 흐름(`chooseFloor`)에서, 상대 손 영역 fly 애니메이션이 두 번 재생되던 회귀 버그(리포트 #64 수정 직후 발생)를 수정했다.
+
+#### 근본 원인
+
+`_choiceSrcFlyId` 경로(경로 A, 1차 `awaiting_floor_choice` STATE)와 `oppHandOriginIds` 루프(경로 B, 2차 통합 STATE)가 서로 다른 `settleBatchId`로 `claimSettlementFly`를 호출해 같은 카드에 대해 중복으로 fly를 등록했다. 1차 STATE에서 `settleBatchId = null`(Set 미등록)이므로 2차 STATE의 다른 batchId가 Set 가드를 우회해 fly #2가 등록됐다.
+
+#### 변경
+
+- `public/client.js` 1407~1417행: `oppHandOriginIds` fly 실행 루프 직전에 가드 추가(+7행, 주석 포함)
+  ```js
+  if (s.choiceFloorSrcCardId && lastChoiceSrcFlyActionKey) {
+    oppHandOriginIds.delete(s.choiceFloorSrcCardId);
+  }
+  ```
+- 스펙 제안(`oppHandOriginIds.delete(_choiceSrcFlyId)`)과 달리 `s.choiceFloorSrcCardId`(서버 지속 필드) + `lastChoiceSrcFlyActionKey`(경로 A 진입 표시) 조합을 사용 -- `_choiceSrcFlyId`는 발사 블록(1377행)에서 `null`로 리셋되어 1415행 시점에 항상 null이므로
+
+#### 신규 테스트
+
+- `tests/reports-65-browser.spec.js`: T-65-opp-choice-fly-no-dup (inject 기반, opp-hand fly 1회 + hand fly 0회 검증)
+- `tests/reports-65-qa.spec.js`: QA-65-1~QA-65-5 (5건, 시각 검증/내 차례 회귀/연속 choice/choice_made 폴백/일반 상대 턴 비발동)
+
+### #66 (improve, quick 파이프라인) — "뻑 풀이!" 텍스트를 "자뻑!"으로 변경
+
+방안 A(단순 교체) 채택 -- `stoleFromOpp` 구분 없이 전부 "자뻑!" 표시.
+
+#### 변경
+
+- `public/client.js` 539~542행: `sweep_from_flip`/`sweep_from_hand` case의 fallback 텍스트 `'뻑 풀이!'` -> `'자뻑!'`
+- `public/i18n.js` 9행: `'action.ppeokSweep': '뻑 풀이!'` -> `'자뻑!'`
+- `public/i18n.js` 13행: `'action.ppeokSweep': 'Ppeok cleared!'` -> `'Jabbeok!'`
+- `tests/reports-44-50-phaseC-browser.spec.js:138`: 기대값 `'뻑 풀이!'` -> `'자뻑!'` 갱신
+
+### 검증
+
+- #65: AC-65-1~AC-65-7 수용기준 7건 전부 PASS + QA 능동 탐색 5건 PASS
+- #66: game.js/server.js/score.js 무수정. 순수 텍스트 변경
+- 회귀 테스트 최종 50건 관련 스위트(e2e 32 + reports-44-50-phaseC 2 + reports-54-59 8 + reports-63-64 3 + reports-65 1 + reports-65-qa 5) 전부 PASS
+- 전체 통합: 단위 100 + 브라우저 48(코더 시점 43 + QA 5) = 148건 PASS
+- AD 모드 3: APPROVED (fly 중복 해소, 출발점/도착점/속도 기존 일관성 유지)
+- QA: PASS (결함 0, LOW 1건 T-65 커버리지 갭 비차단)
+
+### 참고
+
+- 목적 정의: `.claude/specs/2026-07-30-matgo-reports-65-66-scope.md`
+- 계획: `.claude/specs/2026-07-30-matgo-reports-65-plan.md`
+- 구현: `.claude/specs/2026-07-30-matgo-reports-65-coder-report.md`
+- AD 검수: `.claude/specs/2026-07-30-matgo-reports-65-ad-review.md`
+- QA: `.claude/specs/2026-07-30-matgo-reports-65-qa.md`
+
+---
+
+## [2026-07-30] — 리포트 #63/#64 쓸 토스트·fly 출발 좌표 수정
+
+(이전 커밋에서 기록 완료 -- 상세는 CHANGELOG #63/#64 섹션 참조)
+
+---
+
 ## [2026-07-29] — 절차형 효과음 시스템
 
 외부 음원 파일이나 신규 런타임 의존성 없이 Web Audio API로 카드 진행과 특수 상황의 청각 피드백을 추가했다. UI, CSS, 게임 규칙과 서버 프로토콜은 변경하지 않았다.

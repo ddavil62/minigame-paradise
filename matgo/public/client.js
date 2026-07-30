@@ -538,7 +538,8 @@
       case 'sseul':           text = la.month ? `${la.month}월 쓸!` : '쓸!'; break;
       case 'sweep_from_flip':
       case 'sweep_from_hand':
-        text = window.MatgoI18n?.t?.(la.messageKey || 'action.ppeokSweep') || '뻑 풀이!';
+        // #66 수정 (2026-07-30): "뻑 풀이!" → "자뻑!" 명칭 변경 (사용자 피드백 리포트 #66)
+        text = window.MatgoI18n?.t?.(la.messageKey || 'action.ppeokSweep') || '자뻑!';
         break;
       case 'go':              text = `${la.count}고!`; break;
       case 'shake':           text = `${la.month}월 흔들기!`; break;
@@ -1403,6 +1404,17 @@
           batchId: settleBatchId,
         });
       }
+    }
+    // ── #65 수정 (2026-07-30): choice srcCard fly 중복 방지 ──
+    // 경로 A(_choiceSrcFlyId 블록, 1306~1318행)가 처리를 표명(lastChoiceSrcFlyActionKey
+    // 기록)한 카드를 경로 B(oppHandOriginIds 루프)에서 제거해, 동일 카드에 대한 이중
+    // startFlyFromOppHand 호출을 차단한다. 1차 STATE에서 fly가 발사·완료된 뒤 2차 통합
+    // STATE가 다른 settleBatchId로 도착하면 claimSettlementFly 가드를 우회하므로,
+    // oppHandOriginIds에서 srcCard를 선제 제거해 방어한다.
+    // lastChoiceSrcFlyActionKey가 비어있으면(경로 A 미진입) 제거하지 않아
+    // 경로 B가 정상 담당한다.
+    if (s.choiceFloorSrcCardId && lastChoiceSrcFlyActionKey) {
+      oppHandOriginIds.delete(s.choiceFloorSrcCardId);
     }
     // 상대 손에서 나온 카드 fly 시작
     if (oppHandOriginIds.size > 0) {

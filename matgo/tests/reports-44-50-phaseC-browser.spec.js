@@ -133,9 +133,10 @@ test('#50 강탈 피 선행 없이 7장이 동일 batch RESOLVE에서 이동한�
     expect(new Set(settlement.moves.map((move) => move.cardId)).size).toBe(7);
     await p1.waitForFunction(() => document.querySelectorAll('#fly-overlay .flying-card').length === 0);
     await expect(p1.locator('#fly-overlay .flying-card')).toHaveCount(0);
+    // #66 수정 (2026-07-30): 토스트 텍스트 "뻑 풀이!" → "자뻑!" 명칭 변경
     await expect(p1.locator(
       `.action-toast.show[data-toast-key="${targetToastKey}"]`,
-    )).toHaveText('뻑 풀이!');
+    )).toHaveText('자뻑!');
     await expect(p1.locator('.action-toast')).toHaveCount(1);
     const offscreen = await p1.locator('[data-card-id]').evaluateAll((cards) => cards.filter((card) => {
       const rect = card.getBoundingClientRect();

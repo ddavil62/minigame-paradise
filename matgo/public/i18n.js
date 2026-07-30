@@ -6,11 +6,11 @@
   const messages = {
     ko: {
       'action.jjok': '쪽!',
-      'action.ppeokSweep': '뻑 풀이!',
+      'action.ppeokSweep': '자뻑!',
     },
     en: {
       'action.jjok': 'Jjok!',
-      'action.ppeokSweep': 'Ppeok cleared!',
+      'action.ppeokSweep': 'Jabbeok!',
     },
   };
   const requested = new URLSearchParams(location.search).get('lang')

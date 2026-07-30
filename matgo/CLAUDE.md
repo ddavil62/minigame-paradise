@@ -10,7 +10,7 @@
 - 출처: 나무위키 맞고·고스톱 + 게임 코드 교차검증
 - 포함 내용: 화투 48장 구성, 족보 점수표, 박 기준, 고배수 공식, QA 체크리스트, 구현 버그 목록
 
-### 룰북 §13 보강 (2026-05-31 신규 5건 + 2026-06-02 폭탄 룰 정정·확정 + 2026-06-03 쓸 룰 추가 + 2026-06-03 조커 2장 룰 + 2026-06-03 바닥 조커 선공 자동 획득 정정 + 2026-06-08 조커 라운드 종료 불가 수정 + 2026-06-16 조커 케이스 A 턴 유지 룰 변경 + B1/B2/B3 fly 연출 수정 + 2026-06-17 R5~R8: choice 손패 fly·순서 + 자뻑 풀이 2피 룰 + 조커 captured pi 그룹 표시 + 2026-06-20 조커 손패 fly 중복 재생 가드)
+### 룰북 §13 보강 (2026-05-31 신규 5건 + 2026-06-02 폭탄 룰 정정·확정 + 2026-06-03 쓸 룰 추가 + 2026-06-03 조커 2장 룰 + 2026-06-03 바닥 조커 선공 자동 획득 정정 + 2026-06-08 조커 라운드 종료 불가 수정 + 2026-06-16 조커 케이스 A 턴 유지 룰 변경 + B1/B2/B3 fly 연출 수정 + 2026-06-17 R5~R8: choice 손패 fly·순서 + 자뻑 풀이 2피 룰 + 조커 captured pi 그룹 표시 + 2026-06-20 조커 손패 fly 중복 재생 가드 + 2026-07-30 #65 choice srcCard fly 중복 방지 + #66 "뻑 풀이!"→"자뻑!" 텍스트 변경)
 
 | 항목 | 내용 |
 |---|---|
@@ -36,6 +36,8 @@
 | 조커 손패 fly 중복 재생 가드 (2026-06-20) | 손에서 조커를 냈을 때(케이스 A, `joker_play`) captured로 날아가는 fly가 **2~3회 중복 재생**되던 버그. 클릭 핸들러 `sendPlay`가 `startFlyFromHand`로 fly #1을 선등록하므로 첫 STATE 렌더에서 이미 `alreadyFlying=true`인데, 기존 코드는 skip만 하고 **키를 안 남겨** 후속 STATE 렌더(같은 `joker_play` 2~3회 송신)에서 두 번째 fly가 재등록됐다. `client.js`에 **이중 가드** 추가: ① `alreadyFlying = pendingFlies.some(f => f.cardId === la.card.id)`(choice srcCard 패턴), ② `jokerActionKey = la.kind + '|' + la.card.id + '|' + la.player` 기록(기존 토스트 `prevActionKey` 패턴). 핵심은 **`alreadyFlying=true`여도 항상 `lastJokerFlyActionKey`에 키를 기록**해 후속 렌더의 재등록을 차단한 것. 모듈 변수 `lastJokerFlyActionKey`는 `GAME_START`/`ROUND_START`에서 리셋. `newCardIds.delete(la.card.id)`는 fly 등록 여부와 무관하게 항상 수행. 케이스 B(`joker_flip`) 무영향. 서버는 여전히 STATE 2~3회 송신하나 클라 가드가 멱등 처리(broadcast 횟수 축소는 범위 외). 서버(`game.js`/`server.js`) 무수정. 회귀 게이트 e2e **E-32**에 "origin='hand' 조커 fly 정확히 1개" 단언 추가. |
 | #63 chooseFloorSteps 쓸 토스트 미표시 (2026-07-30) | B3(2026-06-16)가 `playCardSteps` 경로만 수정하고 `chooseFloorSteps` 경로에 `applySseulAfterFullFloorClear` 호출을 누락한 결함. **바닥 2장 + 선택 + 덱 매칭으로 바닥이 완전히 비워지는 경우**, 서버가 `sseul`이 아닌 `ttadak`(또는 `pair_from_flip`)을 최종 `lastAction.kind`로 송신해 클라이언트 토스트가 미표시됐다. **수정 3지점(`game.js`)**: (1) `resolveCardOnFloor` 2매칭 분기에서 `pendingFloorChoice` 생성 시 `floorCountAtTurnStart: g.floor.length` 캡처 — 스펙의 안 A 취지 유지하되, `playCardSteps`의 `awaiting_floor_choice` return 직전은 `runSteps` generator 재개 안 되는 죽은 코드였으므로 `resolveCardOnFloor`에서 직접 캡처. (2) `chooseFloorSteps` 단계2에 `ttadak` + 쓸 조건 충족 시 `sseul`로 직접 재라벨링 분기 추가(`drawAndResolve`가 동월 매칭으로 `ttadak`을 먼저 설정하는 케이스 — `applySseulAfterFullFloorClear`가 처리하지 않는 `ttadak` kind이므로 별도 분기). (3) `pair_from_flip` 케이스는 기존대로 `applySseulAfterFullFloorClear` 호출. `score.js`/`bot.js` 무수정. 기존 단위 G-42·브라우저 T-57의 낡은 기대값(`ttadak`)을 정상 동작(`sseul`)에 맞게 정정. 회귀 게이트 단위 100(G-40~G-44) + E2E 32 + T-57 + 신규 T-63. |
 | #64 상대 카드 choice fly 출발 좌표 오류 (2026-07-30) | R5(2026-06-17)가 `_choiceSrcFlyId` 발사 블록에 me/opp 분기 없이 항상 `startFlyFromHand`(myCardsEl)를 호출해, **상대 차례에도 내 손 영역에서 fly가 출발하던 결함**. `client.js:1366~1378` 발사 블록에 `choiceActor = s.lastAction?.player \|\| s.turn` 기준 행위자 분기 추가: `choiceActor === me` → 기존 `startFlyFromHand`(R5 동작 유지), `choiceActor !== me` → `startFlyFromOppHand(oppCardsEl.getBoundingClientRect())`. 수집 블록(1306~1318) 무수정, `lastChoiceSrcFlyActionKey` 멱등 가드 유지. `server.js`의 `/test/inject`에 `choiceFloorSrcCardId`/`lastAction` 필드 지원 추가(테스트 인프라 보강, 프로덕션 로직 무관). 회귀 게이트 E-31(R5 내 차례 회귀) + 신규 T-64-opp/T-64-my. |
+| #65 choice srcCard fly 중복 방지 가드 (2026-07-30) | #64 수정 직후 회귀. 바닥 2장 + 상대 차례 선택 흐름에서 **상대 손 fly가 2회 재생**되던 버그. 경로 A(`_choiceSrcFlyId` 블록, 1차 STATE)가 `settleBatchId=null`로 fly를 등록(Set 미등록)한 뒤, 경로 B(`oppHandOriginIds` 루프, 2차 통합 STATE)가 다른 `settleBatchId`로 `claimSettlementFly` 가드를 우회해 fly #2를 등록했다. `client.js` 1407~1417행에 `s.choiceFloorSrcCardId && lastChoiceSrcFlyActionKey` 조건으로 `oppHandOriginIds.delete(s.choiceFloorSrcCardId)` 가드 추가(+7행). 스펙 제안(`_choiceSrcFlyId` 직접 참조)과 달리 `s.choiceFloorSrcCardId`(서버 지속 필드) + `lastChoiceSrcFlyActionKey`(경로 A 진입 표시) 조합을 사용 -- `_choiceSrcFlyId`는 발사 후 null 리셋이므로. `game.js`/`server.js`/`score.js` 무수정. 회귀 게이트: E-31/T-64-opp/T-64-my + 신규 T-65/QA-65-1~5. |
+| #66 "뻑 풀이!" -> "자뻑!" 텍스트 변경 (2026-07-30) | 뻑을 풀었을 때 표시되는 토스트를 "뻑 풀이!"에서 "자뻑!"으로 변경. 방안 A(단순 교체, `stoleFromOpp` 구분 없이 전부 "자뻑!") 채택. `client.js` 539~542행 fallback + `i18n.js` ko/en 값 교체. `game.js`/`server.js`/`score.js` 무수정. 기존 테스트 `reports-44-50-phaseC-browser.spec.js:138`의 기대값도 "자뻑!"으로 갱신. |
 
 ### QA 필수 준수 사항
 
@@ -70,11 +72,13 @@ matgo/
     ├── reports-54-59-browser.spec.js — 리포트 #54~#59 브라우저 검증 (T-57 따닥→쓸 정정 포함)
     ├── reports-63-64-browser.spec.js — 리포트 #63/#64 브라우저 검증 (T-63/T-64-opp/T-64-my)
     ├── qa-63-64-edge.spec.js — QA #63/#64 능동 탐색 테스트 (경계값 4건)
+    ├── reports-65-browser.spec.js — 리포트 #65 브라우저 검증 (T-65-opp-choice-fly-no-dup)
+    ├── reports-65-qa.spec.js — QA #65 능동 탐색 테스트 (QA-65-1~5, 5건)
     ├── v8-qa.spec.js        — 구버전 QA 테스트 (레거시)
     └── screenshots/         — E2E 스크린샷 출력
 ```
 
-> 단위 game.unit(44) + score.unit(56) 합계 100/100 PASS (2026-07-30 기준 — G-42 기대값 sseul 정정 포함. 2026-06-17 R7 G-43a/G-43b 추가. 2026-06-13 레거시 G-22/G-23 제거 반영).
+> 단위 game.unit(44) + score.unit(56) 합계 100/100 PASS (2026-07-30 기준 — G-42 기대값 sseul 정정 포함. 2026-06-17 R7 G-43a/G-43b 추가. 2026-06-13 레거시 G-22/G-23 제거 반영). 브라우저 테스트 합계 52(e2e 32 + reports-54-59 7 + reports-63-64 3 + qa-63-64 4 + reports-65 1 + reports-65-qa 5). 전체 통합 152.
 
 ## 서버 실행 (테스트용)
 
@@ -106,7 +110,7 @@ npx playwright test tests/e2e-scenarios.spec.js --reporter=list
 npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-scenarios.spec.js --reporter=list
 ```
 
-### 테스트 현황 (2026-07-30 기준)
+### 테스트 현황 (2026-07-30 기준, #65/#66 반영)
 
 | 파일 | 테스트 수 | 상태 | 서버 필요 |
 |------|----------|------|----------|
@@ -115,10 +119,13 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 | `reports-54-59-browser.spec.js` | 7개 | ✅ 7/7 PASS (T-57 sseul 정정 포함) | ✅ (3013) |
 | `reports-63-64-browser.spec.js` | 3개 (T-63/T-64-opp/T-64-my) | ✅ 3/3 PASS | ✅ (3013) |
 | `qa-63-64-edge.spec.js` | 4개 (QA 능동 탐색) | ✅ 4/4 PASS | ✅ (3013) |
+| `reports-65-browser.spec.js` | 1개 (T-65-opp-choice-fly-no-dup) | ✅ 1/1 PASS | ✅ (3013) |
+| `reports-65-qa.spec.js` | 5개 (QA-65-1~5) | ✅ 5/5 PASS | ✅ (3013) |
 
 > **2026-06-17 R5~R8 반영**: 단위 98→100(R7 자뻑 풀이 2피 검증 G-43a/G-43b), e2e 30→32(E-31 R5 손패 fly 출처·E-32 R8 조커 captured 안착). adhoc node 러너 joker 24(케이스 A 턴 유지 반영)/sseul 11/bombdup 7/floor-joker 5 + TDZ 1 + QA 능동 probe 3 = 합계 183건 PASS, QA PASS(R8 1차 FAIL→재수정 해소), AD3 APPROVED(2회 — fly 순서 + 조커 pi 그룹 혼재 레이아웃).
 > **2026-06-17 버그 A 반영(별도 배치)**: 바닥 우측/스택 슬롯 fly 착지 좌표 어긋남 수정(`client.js` 6개 클론 지점 `clone.style.transform=''`). 신규 시각 검증 `tests/fly-right-slot-visual.spec.js`(VIS-A1 우측·A2 스택·A3 좌측). 검증: 단위 100 + adhoc 47(joker 24/sseul 11/bombdup 7/floor-joker 5) + e2e 32(E-26~E-32 fly 게이트 회귀) + VIS 3 = 전부 PASS, QA PASS, AD3 APPROVED. 서버·룰·점수 무수정이라 단위/adhoc 회귀 0.
 > **2026-06-20 조커 손패 fly 중복 재생 가드**: `client.js`에 이중 가드(`lastJokerFlyActionKey` 액션 키 + `pendingFlies` 중복 검사)로 케이스 A 조커 fly를 라운드당 정확히 1회만 등록. **E-32에 "origin='hand' 조커 fly 정확히 1개" 회귀 단언 추가**(E-32 자체는 32건 유지, 단언만 강화). 서버 무수정. 검증: 단위 100 + e2e 32(E-26~E-32 fly 게이트 회귀, E-32 강화) + adhoc joker 24/sseul 11/bombdup 7/floor-joker 5 = **179건 전부 PASS**, 회귀 0.
+> **2026-07-30 #65/#66 수정**: #65(상대 손 fly 중복 재생) — `client.js` oppHandOriginIds fly 루프 직전에 `s.choiceFloorSrcCardId && lastChoiceSrcFlyActionKey` 가드 추가(+7행). 경로 A/B 이중 등록 차단. 스펙 제안과 달리 `_choiceSrcFlyId`(발사 후 null)가 아닌 서버 필드 `s.choiceFloorSrcCardId` 사용. 신규 T-65 + QA-65-1~5. #66("뻑 풀이!"→"자뻑!") — `client.js`+`i18n.js` 텍스트 교체 + 기존 테스트 기대값 갱신(방안 A). 검증: 단위 100 + 브라우저 48(e2e 32 + reports-54-59 7(T-57 정정, #66 기대값 갱신) + reports-63-64 3 + reports-65 1 + reports-65-qa 5) = **148건 전부 PASS**, QA PASS(AC-65 7건 + 능동 5건 + 회귀 143 = 총 148), AD3 APPROVED.
 > **2026-07-30 #63/#64 수정**: #63(chooseFloorSteps 쓸 토스트 미표시) — `game.js` 3지점 수정(resolveCardOnFloor floorCountAtTurnStart 캡처 + chooseFloorSteps ttadak→sseul 재라벨링 + applySseulAfterFullFloorClear 호출). #64(상대 카드 choice fly 출발 좌표 오류) — `client.js` _choiceSrcFlyId 발사 블록에 choiceActor 분기 추가. `server.js` /test/inject에 choiceFloorSrcCardId/lastAction 필드 지원 추가(테스트 인프라). 기존 G-42/T-57 기대값 sseul 정정. 검증: 단위 100 + e2e 32 + reports-54-59 7(T-57 정정) + reports-63-64 3(T-63/T-64-opp/T-64-my) + qa-63-64-edge 4 + 회귀 32 = **총 178건 전부 PASS**, QA PASS, AD3 APPROVED(18/18 PASS).
 
 > **2026-06-13 flakiness 안정화**: 공유 룸 teardown 레이스(→ `POST /test/reset` + `beforeEach`/`afterEach`)와 랜덤 분배 바닥 조커 오프닝 fly 레이스(→ `waitForFlyIdle` + `pickSafePlayCard` 헬퍼)를 해소해 전체 e2e가 결정적이 됨.
@@ -188,3 +195,5 @@ npx playwright test tests/score.unit.spec.js tests/game.unit.spec.js tests/e2e-s
 24. **조커 손패 fly(`joker_play`)는 `alreadyFlying`이어도 `lastJokerFlyActionKey`를 반드시 기록해 멱등 처리한다** (2026-06-20 중복 재생 가드). 서버가 같은 `joker_play` STATE를 2~3회 송신하고, 클릭 핸들러 `sendPlay`가 이미 fly #1을 선등록(`startFlyFromHand`)하므로 첫 STATE 렌더에서 `alreadyFlying=true`다. 이때 **fly 재등록을 skip하더라도 액션 키(`la.kind+'|'+la.card.id+'|'+la.player`)를 `lastJokerFlyActionKey`에 기록하지 않으면**, 후속 STATE 렌더에서 pendingFlies가 비어 두 번째 fly가 재등록돼 2~3회 중복 재생된다. 가드 = ①pendingFlies 중복 검사 + ②액션 키 기록(키가 미처리일 때만 진입, `alreadyFlying`이면 `_jokerFlyId` 미설정하되 **키는 항상 기록**). `lastJokerFlyActionKey`는 `GAME_START`/`ROUND_START`에서 리셋(누락 시 다음 라운드 첫 조커가 무방비). 케이스 B(`joker_flip`)는 가드 조건(`la.kind==='joker_play'`) 밖이라 무영향. 회귀 게이트: e2e **E-32**(origin='hand' 조커 fly 정확히 1개 + captured 안착).
 25. **`chooseFloorSteps` 단계2에서 `drawAndResolve` 직후 쓸 재라벨링이 필요하다** (2026-07-30 #63 수정). `playCardSteps`에는 `applySseulAfterFullFloorClear` 호출이 있으나 `chooseFloorSteps`에는 누락돼 있었다(B3 수정 시 미반영). `drawAndResolve`가 `ttadak`을 설정하는 경우(`chooseFloorSteps` 경로에서 동월 2매칭+덱 동월)와 `pair_from_flip`을 설정하는 경우를 각각 분기해야 한다: `ttadak`+조건 충족 시 직접 `sseul`로 재라벨링(이때 `stealPi`는 `drawAndResolve`가 이미 호출했으므로 **호출하지 않는다**), `pair_from_flip`+조건 충족 시 `applySseulAfterFullFloorClear`를 호출한다. `floorCountAtTurnStart`는 `resolveCardOnFloor`에서 `pendingFloorChoice` 객체 생성 시 캡처한다(`playCardSteps`의 `awaiting_floor_choice` return 이후는 `runSteps` generator 재개 안 되는 죽은 코드이므로 그 위치에서 캡처하면 안 된다). 회귀 게이트: 단위 G-40~G-44 + T-63 + T-57(sseul 정정).
 26. **`_choiceSrcFlyId` 발사 블록은 행위자(me/opp)를 구분해야 한다** (2026-07-30 #64 수정). `s.lastAction?.player || s.turn`으로 `choiceActor`를 판정하고, `choiceActor === me`이면 기존 `startFlyFromHand`(R5), `choiceActor !== me`이면 `startFlyFromOppHand`를 호출한다. 수집 블록(1306~1318)은 무수정으로 유지한다 — `lastChoiceSrcFlyActionKey`의 키 구조(`choice|cardId|player`)가 me/opp 양쪽을 자동 구분한다. 회귀 게이트: E-31(R5 내 차례) + T-64-opp(상대 차례) + T-64-my(내 차례 회귀).
+27. **경로 A(`_choiceSrcFlyId`)가 처리를 표명한 카드는 경로 B(`oppHandOriginIds`)에서 선제 제거해야 한다** (2026-07-30 #65 수정). `oppHandOriginIds` fly 실행 루프(1415행) 직전에 `if (s.choiceFloorSrcCardId && lastChoiceSrcFlyActionKey) oppHandOriginIds.delete(s.choiceFloorSrcCardId)` 가드가 있다. 이 가드를 제거하면, 1차 STATE(`settleBatchId=null`, Set 미등록)에서 경로 A가 fly를 등록한 카드가 2차 통합 STATE(`settleBatchId="${turnId}:settle"`)에서 경로 B의 `claimSettlementFly` 가드를 우회해 fly가 2회 재생된다. `lastChoiceSrcFlyActionKey`가 비어있으면(경로 A 미진입) 가드가 미발동하므로 경로 B가 정상 담당한다. `_choiceSrcFlyId` 변수 자체는 발사 블록(1377행)에서 null로 리셋되므로 사용하면 안 된다 — 서버 지속 필드 `s.choiceFloorSrcCardId`를 사용한다. 회귀 게이트: T-65 + QA-65-1~5 + E-31 + T-64-opp/T-64-my.
+28. **"자뻑!" 토스트 텍스트는 `stoleFromOpp` 구분 없이 동일하게 표시된다** (2026-07-30 #66). `sweep_from_flip`/`sweep_from_hand` 케이스의 fallback과 `i18n.js`의 `action.ppeokSweep` 키값이 모두 "자뻑!"(en: "Jabbeok!")으로 통일되어 있다. 자뻑(`stoleFromOpp===2`)/타뻑(`===1`) 구분 표시를 원하면 방안 B로 변경해야 한다.
