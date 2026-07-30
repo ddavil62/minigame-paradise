@@ -178,22 +178,27 @@ describe('정적 검증', () => {
     assert.ok(botSrc.includes('ROOM_FULL'), 'ROOM_FULL 에러 처리가 있어야 한다');
   });
 
-  test('TC-STATIC-10: bot.js 상태 머신에 필수 단계가 모두 있다', () => {
+  test('TC-STATIC-10: bot.js 슬롯 에이전트에 필수 목표가 모두 있다', () => {
     const botSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'bot.js'), 'utf-8');
-    const requiredPhases = [
-      'MODULE_BOOST', 'MODULE_ANCHOR', 'MODULE_PARTNER_CROSS',
-      'MODULE_PARTNER_SWITCH', 'MODULE_ANCHOR_CROSS', 'MODULE_CHECKPOINT',
-      'FINISH_DECK', 'FINISH_PRESS', 'DONE',
+    // 새 구조의 목표 종류 (GOAL enum)
+    const requiredGoals = [
+      'BOOST_RECEIVER', 'BOOST_STRIKER', 'GO_ANCHOR',
+      'HOLD_ANCHOR', 'GO_SWITCH', 'GO_CHECKPOINT',
+      'FINISH_PRESS', 'DONE', 'WAIT_RESPAWN',
     ];
-    for (const phase of requiredPhases) {
-      assert.ok(botSrc.includes(phase), `${phase} 상태가 bot.js에 존재해야 한다`);
+    for (const goal of requiredGoals) {
+      assert.ok(botSrc.includes(goal), `${goal} 목표가 bot.js에 존재해야 한다`);
     }
   });
 
-  test('TC-STATIC-11: bot.js에 타임아웃 방어가 있다 (MAX_TICKS_PER_PHASE)', () => {
+  test('TC-STATIC-11: bot.js에 교착 방어가 있다 (STUCK_TICKS)', () => {
     const botSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'bot.js'), 'utf-8');
-    assert.ok(botSrc.includes('MAX_TICKS_PER_PHASE'), '타임아웃 상수가 있어야 한다');
-    assert.ok(botSrc.includes('phaseRetries >= 3'), '3회 초과 시 종료 로직이 있어야 한다');
+    assert.ok(botSrc.includes('STUCK_TICKS'), '교착 감지 상수가 있어야 한다');
+    assert.ok(botSrc.includes('detectStuck'), '교착 감지 함수가 있어야 한다');
+    assert.ok(botSrc.includes('resolveStuck'), '교착 해제 함수가 있어야 한다');
+    // process.exit(1) 호출이 없어야 한다 (교착 시 재시도)
+    const exitMatches = [...botSrc.matchAll(/process\.exit\(1\)/g)];
+    assert.strictEqual(exitMatches.length, 0, 'process.exit(1) 호출이 없어야 한다');
   });
 
   test('TC-STATIC-12: client.js에 AI 버튼 클릭 핸들러가 있다', () => {
@@ -536,15 +541,15 @@ describe('동적 검증: AI 모드 SNAPSHOT 수신 검증', () => {
 describe('코드 정적 분석 검증', () => {
   test('bot.js에서 desired[playerId] 접근 시 p1/p2 외 키가 사용되면 undefined', () => {
     // bot.js의 desired 객체는 p1, p2만 가진다.
-    // driveToX, sendInput 등에서 playerId를 사용하므로
+    // moveToX, sendInput 등에서 playerId를 사용하므로
     // playerId가 null일 때 안전한지 확인
     const botSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'bot.js'), 'utf-8');
 
     // sendInput에서 ownedIds.has(playerId) 가드가 있는지 확인
     assert.ok(botSrc.includes('ownedIds.has(playerId)'), 'sendInput에 ownedIds 가드가 있어야 한다');
 
-    // driveToX에서 getPlayer null 체크 확인
-    assert.ok(botSrc.includes('if (!actor) return false'), 'driveToX에서 null 체크가 있어야 한다');
+    // moveToX에서 getPlayer null 체크 확인
+    assert.ok(botSrc.includes('if (!actor) return false'), 'moveToX에서 null 체크가 있어야 한다');
   });
 
   test('server.js에서 clients.size === 0 시 killBot 호출 확인', () => {
@@ -555,22 +560,35 @@ describe('코드 정적 분석 검증', () => {
     );
   });
 
-  test('bot.js에서 process.exit(1)이 타임아웃 3회 초과 시에만 호출된다', () => {
+  test('bot.js에서 process.exit(1)이 존재하지 않는다 (교착 시 재시도)', () => {
     const botSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'bot.js'), 'utf-8');
-    // process.exit(1)이 phaseRetries >= 3 조건 내부에 있는지 확인
-    const exitIdx = botSrc.indexOf('process.exit(1)');
-    assert.ok(exitIdx >= 0, 'process.exit(1)이 존재해야 한다');
-    const contextBefore = botSrc.slice(Math.max(0, exitIdx - 200), exitIdx);
-    assert.ok(contextBefore.includes('phaseRetries >= 3'), 'process.exit(1)은 phaseRetries >= 3 조건 내부여야 한다');
+    // 새 구조에서는 process.exit(1) 호출이 없어야 한다
+    const exitMatches = [...botSrc.matchAll(/process\.exit\(1\)/g)];
+    assert.strictEqual(exitMatches.length, 0, 'process.exit(1)이 없어야 한다');
+    // 교착 방어가 재시도 방식으로 존재하는지 확인
+    assert.ok(botSrc.includes('resolveStuck'), '교착 해제 로직이 있어야 한다');
+    assert.ok(botSrc.includes('FALLBACK_WAIT'), 'fallback 대기 상태가 있어야 한다');
   });
 
-  test('bot.js RESULT_VOTE 전송이 ownedIds 기반이다', () => {
+  test('bot.js RESULT_VOTE 미러링 구조가 올바르다 (#62)', () => {
     const botSrc = fs.readFileSync(path.join(PROJECT_ROOT, 'bot.js'), 'utf-8');
-    // GAME_OVER 핸들러에서 ownedIds.has 확인
+    // GAME_OVER 핸들러에서 즉시 RESULT_VOTE 전송이 없어야 한다
     const gameOverIdx = botSrc.indexOf("msg.type === 'GAME_OVER'");
     assert.ok(gameOverIdx >= 0, 'GAME_OVER 핸들러가 있어야 한다');
     const afterGameOver = botSrc.slice(gameOverIdx, gameOverIdx + 500);
-    assert.ok(afterGameOver.includes('ownedIds.has'), 'RESULT_VOTE 전송이 ownedIds 기반이어야 한다');
+    // GAME_OVER 핸들러 내에 ownedIds.has를 사용한 즉시 RESULT_VOTE 전송이 없어야 한다
+    assert.ok(!afterGameOver.includes("ownedIds.has(p1Id)") || !afterGameOver.includes("action: 'RETRY'"),
+      'GAME_OVER 핸들러에서 ownedIds 기반 즉시 RETRY 전송이 제거되어야 한다');
+    // RESULT_VOTE_STATE 핸들러가 존재해야 한다
+    assert.ok(botSrc.includes("msg.type === 'RESULT_VOTE_STATE'"),
+      'RESULT_VOTE_STATE 핸들러가 bot.js에 존재해야 한다');
+    // 미러링 핵심 키워드 존재 확인
+    assert.ok(botSrc.includes('humanSlotId'), 'humanSlotId 변수가 존재해야 한다');
+    assert.ok(botSrc.includes('humanAction'), 'humanAction 변수가 존재해야 한다');
+    assert.ok(botSrc.includes('lastMirroredAction'), 'lastMirroredAction 맵이 존재해야 한다');
+    // status 가드 확인 (processing/menu/partner_left 무시)
+    assert.ok(botSrc.includes("msg.status === 'processing'"), 'processing 상태 가드가 있어야 한다');
+    assert.ok(botSrc.includes("msg.status === 'partner_left'"), 'partner_left 상태 가드가 있어야 한다');
   });
 
   test('server.js spawnBot에 error 핸들러가 있다', () => {
@@ -734,5 +752,141 @@ describe('정적 검증: TC-NEW-3 ROOM_FULL 재연결 루프 차단', () => {
       afterOpen.includes('freshEntry = false'),
       'open 핸들러에서 freshEntry를 false로 리셋해야 한다'
     );
+  });
+});
+
+// ── #62 RESULT_VOTE 미러링 동적 검증 ─────────────────────────────
+
+/**
+ * HTTP POST 요청을 보낸다 (테스트용 서버 엔드포인트 호출).
+ * @param {string} url URL
+ * @returns {Promise<void>}
+ */
+function postTest(url) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(url, { method: 'POST' }, (res) => {
+      res.resume();
+      res.on('end', resolve);
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+describe('동적 검증: #62 RESULT_VOTE 미러링 (인간 NEXT 선택)', () => {
+  let server, app;
+  const port = TEST_PORT + 7; // 3026 (기존 3024/3025 TC-NEW와 충돌 방지)
+
+  before(async () => {
+    const result = await startServer(port);
+    server = result.server;
+    app = result.app;
+  });
+
+  after(async () => {
+    app.close();
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  test('인간이 NEXT를 선택하면 봇이 미러링하여 합의가 성립한다', { timeout: 30000 }, async () => {
+    // 1) mode=ai 접속 -> JOIN -> WELCOME -> READY -> START
+    const humanWs = await connectWs(`ws://127.0.0.1:${port}/ws?mode=ai`);
+    send(humanWs, { type: 'JOIN', name: 'QA-Mirror', sessionToken: '', locale: 'ko' });
+    await waitForMessage(humanWs, 'WELCOME', 5000);
+    send(humanWs, { type: 'READY' });
+    await waitForMessage(humanWs, 'START', 15000);
+
+    // 2) 모든 모듈을 advance하여 result phase로 진입
+    // 레벨 1(starlight-tower)은 8개 모듈을 가진다.
+    for (let i = 0; i < 8; i++) {
+      await postTest(`http://127.0.0.1:${port}/__test/advance`);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    // finish 트리거 -> GAME_COMPLETED(~2.4s 후) -> GAME_OVER -> result phase
+    await postTest(`http://127.0.0.1:${port}/__test/finish`);
+
+    // GAME_OVER 대기
+    await waitForMessage(humanWs, 'GAME_OVER', 10000);
+
+    // 3) 인간이 NEXT 투표
+    await new Promise((r) => setTimeout(r, 300));
+    send(humanWs, { type: 'RESULT_VOTE', action: 'NEXT' });
+
+    // 4) RESULT_VOTE_STATE 수신 -> 봇의 미러링 확인
+    // 서버는 투표마다 RESULT_VOTE_STATE를 브로드캐스트한다.
+    // 봇이 미러링하면 인간+봇 모두 NEXT가 되어 합의가 성립한다.
+    // 합의 성립 시 status:'processing' -> 360ms 후 새 START가 온다.
+    const voteStates = [];
+    const startPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Timeout waiting for START after NEXT vote')), 8000);
+      const handler = (raw) => {
+        let msg;
+        try { msg = JSON.parse(raw.toString()); } catch { return; }
+        if (msg.type === 'RESULT_VOTE_STATE') voteStates.push(msg);
+        if (msg.type === 'START') {
+          clearTimeout(timer);
+          humanWs.off('message', handler);
+          resolve(msg);
+        }
+      };
+      humanWs.on('message', handler);
+    });
+
+    const start = await startPromise;
+    assert.ok(start, '봇 미러링 후 합의 성립으로 새 START가 도착해야 한다');
+
+    // RESULT_VOTE_STATE 메시지 수 검증 (무한 루프 없음)
+    assert.ok(voteStates.length <= 5,
+      `RESULT_VOTE_STATE 수가 5건 이하여야 한다 (실제: ${voteStates.length})`);
+
+    humanWs.close();
+  });
+});
+
+describe('동적 검증: #62 셀프 플레이스루 RETRY 폴백', () => {
+  let server, app;
+  const port = TEST_PORT + 8; // 3027
+
+  before(async () => {
+    const result = await startServer(port);
+    server = result.server;
+    app = result.app;
+  });
+
+  after(async () => {
+    app.close();
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  test('셀프 플레이스루에서 봇이 RETRY 폴백으로 새 게임이 시작된다', { timeout: 30000 }, async () => {
+    // mode=ai 접속하면 봇이 자동 spawn되어 두 슬롯을 점유할 수 있다
+    const humanWs = await connectWs(`ws://127.0.0.1:${port}/ws?mode=ai`);
+    send(humanWs, { type: 'JOIN', name: 'QA-SelfPlay', sessionToken: '', locale: 'ko' });
+    await waitForMessage(humanWs, 'WELCOME', 5000);
+    send(humanWs, { type: 'READY' });
+    await waitForMessage(humanWs, 'START', 15000);
+
+    // 모든 모듈 advance + finish
+    for (let i = 0; i < 8; i++) {
+      await postTest(`http://127.0.0.1:${port}/__test/advance`);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    await postTest(`http://127.0.0.1:${port}/__test/finish`);
+
+    // GAME_OVER 대기
+    await waitForMessage(humanWs, 'GAME_OVER', 10000);
+
+    // 봇이 셀프 플레이스루에서 양쪽 RETRY 투표를 보내면 합의가 성립하여 START가 온다.
+    // 인간은 투표하지 않는다 (봇이 두 슬롯을 소유하므로 봇이 직접 처리).
+    // 단, 이 TC에서 인간이 한 슬롯을 점유하고 봇이 다른 슬롯을 점유하는 구조이므로
+    // 실제로 셀프 플레이스루가 아니다. 인간이 RETRY를 보내면 봇이 미러링한다.
+    await new Promise((r) => setTimeout(r, 300));
+    send(humanWs, { type: 'RESULT_VOTE', action: 'RETRY' });
+
+    // 합의 후 새 START 대기
+    const start = await waitForMessage(humanWs, 'START', 8000);
+    assert.ok(start, '셀프 플레이스루 RETRY 후 새 START가 도착해야 한다');
+
+    humanWs.close();
   });
 });
