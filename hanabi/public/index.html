@@ -38,6 +38,15 @@
       <!-- 상대 입장 시 표시 (JOIN/READY 수신 후 갱신) -->
       <div id="opponent-info" class="opponent-info hidden">
         <span id="opponent-name-label"></span>님과 대전
+        <span id="opponent-ai-badge" class="ai-badge hidden" aria-label="인공지능 상대">AI</span>
+      </div>
+
+      <div id="ai-start-panel" class="ai-start-panel hidden">
+        <div class="ai-start-divider" aria-hidden="true"><span>또는</span></div>
+        <button id="btn-start-ai" class="btn-start-ai" type="button">AI와 시작</button>
+        <p id="ai-start-status" class="ai-start-status" role="status" aria-live="polite">
+          혼자서 별빛 AI와 협력 게임을 시작합니다.
+        </p>
       </div>
 
       <!-- 양방향 READY 상태 패널 — 자동 READY로 대체하여 숨김 -->
@@ -83,7 +92,11 @@
   <main id="screen-game" class="screen screen-game hidden">
     <!-- 상대 손패 (공개) -->
     <section class="zone zone-opponent">
-      <div class="zone-title">상대 손패 <span class="zone-sub">(색·숫자 공개 — 힌트로 알려주세요)</span></div>
+      <div id="opponent-hand-title" class="zone-title">
+        <span id="opponent-hand-name">상대 손패</span>
+        <span id="game-opponent-ai-badge" class="ai-badge hidden" aria-label="인공지능 상대">AI</span>
+        <span class="zone-sub">(색·숫자 공개 — 힌트로 알려주세요)</span>
+      </div>
       <div id="opponent-hand" class="hand"></div>
     </section>
 
@@ -174,7 +187,7 @@
       <div id="result-reason" class="result-reason"></div>
       <button id="rematch-btn" class="primary-btn rematch-btn" type="button">재대결</button>
       <button id="btn-return-lobby" class="return-lobby-btn" type="button">← 다른 종목</button>
-      <div class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
+      <div id="result-hint" class="result-hint">상대도 재대결을 누르면 새 게임이 시작됩니다.</div>
     </div>
   </div>
 

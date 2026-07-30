@@ -1,10 +1,10 @@
 # 하나비(Hanabi) 기획서
 
-> 최종 업데이트: 2026-06-01 — 1차 코어 + 대기 화면 가이드 슬라이더 (Playwright 61/61 PASS)
+> 최종 업데이트: 2026-07-30 — 협력 AI 모드 (AI 대상·핵심 회귀 70/70 PASS)
 
 ## 프로젝트 개요
 
-LAN 2인 완전 협력 카드게임 하나비. 미니게임 천국 패키지의 7번째 종목. 각자 자기 손패를 볼 수 없는 정보 비대칭을 서버 권위 아키텍처로 강제하며, 5색 불꽃을 협력으로 1→5 쌓아 최대 25점을 함께 만든다.
+인간 2인 LAN 또는 인간 1명과 서버 관리 AI가 함께하는 완전 협력 카드게임 하나비. 미니게임 천국 패키지의 7번째 종목. 각자 자기 손패를 볼 수 없는 정보 비대칭을 서버 권위 아키텍처로 강제하며, 5색 불꽃을 협력으로 1→5 쌓아 최대 25점을 함께 만든다.
 
 ## 기술 스택
 
@@ -23,10 +23,11 @@ LAN 2인 완전 협력 카드게임 하나비. 미니게임 천국 패키지의 
 ```
 hanabi/
 ├── game.js            # 순수 게임 로직 (서버 불필요 단위 테스트 가능)
-├── server.js          # WS 서버 + createApp() factory + 단독 실행 (PNG MIME 포함)
+├── bot.js             # 마스킹 관측 기반 협력 AI 순수 정책
+├── server.js          # WS 서버 + 인간/AI 세션 수명주기 + 단독 실행
 ├── public/            # index.html + css/style.css + js/{main,network}.js + assets/guide/(7장)
 ├── docs/              # RULEBOOK.md / PROJECT.md / CHANGELOG.md / GUIDE-INFOGRAPHIC-PLAN.md
-└── tests/             # Playwright rulebook-c1~c11 (61개)
+└── tests/             # Playwright 규칙·WS·AI 단위/E2E/QA
 ```
 
 ### 핵심 모듈
@@ -34,13 +35,16 @@ hanabi/
 | 모듈 | 파일 | 역할 |
 |------|------|------|
 | 게임 로직 | `game.js` | 덱·손패·토큰·힌트/내기/버리기 판정·종료·점수·손패 마스킹 (순수 함수) |
-| WS 서버 | `server.js` | `createApp()` → `{ handleHttp, handleUpgrade, setHostUrl }`, 룸 관리, 개별 마스킹 broadcast |
-| 렌더링 | `public/js/main.js` | 상태 렌더링, 행동 모드 입력, 종료 화면, 로비 복귀, 대기 화면 가이드 슬라이더(`initGuideSlider`) |
-| 통신 | `public/js/network.js` | WS 연결(`/hanabi/ws` ↔ 단독 `/ws`), 메시지 송수신 |
+| AI 정책 | `bot.js` | 자기 손패 실제 정보가 제거된 관측으로 합법 행동을 결정하는 순수 휴리스틱 |
+| WS 서버 | `server.js` | 룸 관리, 개별 마스킹 broadcast, `START_AI`, AI 행동 예약·검증·정리·재대결 |
+| 렌더링 | `public/js/main.js` | 상태·행동·종료 화면, AI CTA/배지, 로비 복귀, 가이드 슬라이더 |
+| 통신 | `public/js/network.js` | WS 연결(`/hanabi/ws` ↔ 단독 `/ws`), `START_AI` 포함 메시지 송수신 |
 
 ### 핵심 설계 원칙
 
 - **서버 권위 + 손패 가림**: `snapshotForPlayer(state, playerId)`가 본인 손패 `color`/`number`를 명시적 null로 마스킹. 매 액션 후 각 플레이어에게 개별 마스킹 STATE 전송. 받은 힌트(`clues`)는 공개.
+- **비치팅 방지 AI**: `별빛 AI`도 p2 관점의 마스킹 스냅샷만 받는다. 정책 결과는 제안이며 기존 게임 함수가 합법성을 최종 검증한다.
+- **AI 수명주기**: 500~900ms 단일 예약과 generation 검증으로 한 턴 한 행동을 보장하고 종료·이탈·새 게임에서 오래된 예약을 취소한다.
 
 ## 기능 목록
 
@@ -55,13 +59,14 @@ hanabi/
 | 런처 통합 | 로비 카드 + `/hanabi/` 라우팅 | 완료 |
 | 재대결/이탈 | REMATCH 양쪽 동의, OPPONENT_LEFT | 완료 |
 | 대기 화면 가이드 | 룰 인포그래픽 7장 슬라이더(버튼·키보드·스와이프, 인디케이터 N/7) | 완료 |
-| AI 봇 | `bot.js` 협력 휴리스틱 | 미착수 |
+| 별빛 AI 모드 | 대기 화면에서 즉시 시작, 마스킹 관측 휴리스틱, 자동 재대결 | 완료 |
 | 멀티컬러 변형 | 6번째 색 옵션 | 미착수 |
 
 ## 알려진 제약사항
 
 - 2인 전용 (표준 2~5인 중 LAN 1:1 통합 패키지 정책으로 2인 고정).
-- AI 봇 미지원 — 1/2 모드 비활성 (`botAvailable:false`).
+- AI는 p2 한 자리만 지원하며 난이도·성향 선택, 다중 AI, 3인 이상 모드는 없다.
+- AI는 결정론적 휴리스틱으로 동작하며 학습형·생성형 모델이나 외부 AI API를 사용하지 않는다.
 - 멀티컬러 변형 미포함 (표준 5색 50장만).
 - 힌트 마킹 항상 표시 (on/off 옵션 없음).
 - 가이드 슬라이더 이미지 404 시 placeholder/onerror 폴백 없음 (실제 7장 전부 200, `min-height:200px`로 레이아웃 보존). — AD3 WARN.
@@ -69,7 +74,6 @@ hanabi/
 
 ## 향후 계획
 
-- AI 협력 봇(`bot.js`) — 안전한 힌트/버리기 휴리스틱 (중간)
 - 멀티컬러 변형 옵션 (중간)
 - 힌트 마킹 on/off 난이도 옵션 (낮음)
 - 가이드 이미지 `<img onerror>` 폴백 (낮음, AD3 WARN)

@@ -25,6 +25,7 @@ import {
   discardCard,
   snapshotForPlayer,
 } from './game.js';
+import { chooseBotAction } from './bot.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -49,7 +50,7 @@ const MIME = {
  * 하나비 게임 앱 인스턴스를 생성한다.
  * 모든 룸 상태(players/game)는 closure로 격리되어 다른 게임과 공유되지 않는다.
  *
- * @param {{ hostUrl?: string }} [opts]
+ * @param {{ hostUrl?: string, botDelayMs?:number|(()=>number), chooseBotAction?:Function }} [opts]
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
@@ -70,8 +71,88 @@ export function createApp(opts = {}) {
   let players = [];
   /** @type {import('./game.js').GameState|null} */
   let game = null;
+  /** AI 모드에서만 존재하는 서버 내부 p2 플레이어. WebSocket을 갖지 않는다. */
+  let botPlayer = null;
+  /** @type {'lan'|'ai'|null} */
+  let gameMode = null;
+  /** 예약된 봇 행동 타이머. 항상 하나만 유지한다. */
+  let botTimer = null;
+  /** 오래된 타이머 콜백을 무효화하는 세대 번호. */
+  let botGeneration = 0;
+  const decideBotAction = typeof opts.chooseBotAction === 'function'
+    ? opts.chooseBotAction : chooseBotAction;
   /** READY 게이트: 양쪽 모두 들어있으면 게임 시작 (omok 패턴). */
   const readySet = new Set();
+
+  /** 예약된 봇 행동을 취소하고 오래된 콜백을 무효화한다. */
+  function cancelBotTurn() {
+    botGeneration += 1;
+    if (botTimer !== null) {
+      clearTimeout(botTimer);
+      botTimer = null;
+    }
+  }
+
+  /**
+   * 설정 또는 운영 기본 범위에서 봇 지연 시간을 구한다.
+   * @returns {number} 지연 밀리초
+   */
+  function getBotDelay() {
+    const configured = typeof opts.botDelayMs === 'function'
+      ? opts.botDelayMs() : opts.botDelayMs;
+    if (Number.isFinite(configured)) return Math.max(0, Number(configured));
+    return 500 + Math.floor(Math.random() * 401);
+  }
+
+  /**
+   * 봇 제안을 서버 권위 게임 함수로 검증하고 실행한다.
+   * @param {object|null} action 봇 행동 제안
+   * @returns {{ok:boolean,error?:string}} 실행 결과
+   */
+  function executeBotAction(action) {
+    if (!game || !action || typeof action !== 'object') {
+      return { ok: false, error: 'AI가 유효한 행동을 고르지 못했습니다.' };
+    }
+    if (action.type === 'GIVE_CLUE') {
+      return giveClue(game, 'p2', 'p1', action.clueType, action.value);
+    }
+    if (action.type === 'PLAY_CARD') return playCard(game, 'p2', action.handIndex);
+    if (action.type === 'DISCARD_CARD') return discardCard(game, 'p2', action.handIndex);
+    return { ok: false, error: '알 수 없는 AI 행동입니다.' };
+  }
+
+  /** 현재 조건이 맞을 때 봇 행동 하나를 예약한다. */
+  function scheduleBotTurn() {
+    cancelBotTurn();
+    if (!game || gameMode !== 'ai' || game.phase !== 'playing'
+        || game.currentTurn !== 'p2' || !botPlayer) return;
+    const human = players.find((candidate) => candidate.id === 'p1' && candidate.joined);
+    if (!human || human.ws.readyState !== 1) return;
+
+    const expectedGame = game;
+    const generation = botGeneration;
+    botTimer = setTimeout(() => {
+      botTimer = null;
+      if (generation !== botGeneration || game !== expectedGame || gameMode !== 'ai'
+          || !game || game.phase !== 'playing' || game.currentTurn !== 'p2'
+          || !players.some((candidate) => candidate.id === 'p1' && candidate.joined
+            && candidate.ws.readyState === 1)) return;
+
+      const observation = snapshotForPlayer(game, 'p2');
+      if (!observation.myHand.every((card) => card.color === null && card.number === null)) {
+        console.error('[hanabi] AI 관측 마스킹 계약 위반');
+        return;
+      }
+      const result = executeBotAction(decideBotAction(structuredClone(observation)));
+      if (!result.ok) {
+        console.warn('[hanabi] AI 행동 거부:', result.error);
+        return;
+      }
+      broadcastState();
+      maybeBroadcastGameOver();
+      scheduleBotTurn();
+    }, getBotDelay());
+  }
 
   /**
    * 모든 플레이어에게 각자의 마스킹된 STATE 스냅샷을 개별 전송한다(§12-6).
@@ -114,6 +195,7 @@ export function createApp(opts = {}) {
    */
   function maybeBroadcastGameOver() {
     if (game && game.phase === 'ended') {
+      cancelBotTurn();
       broadcastAll({ type: 'GAME_OVER', result: game.result });
       return true;
     }
@@ -139,23 +221,32 @@ export function createApp(opts = {}) {
    * 양쪽 READY 시 게임을 시작한다(READY 게이트).
    */
   function maybeStartGameIfReady() {
+    if (gameMode === 'ai') return;
     if (players.length < 2) return;
     if (!players.every(p => p.joined)) return;
     if (!players.every(p => readySet.has(p.id))) return;
     if (game) return; // 이미 시작
     console.log('[hanabi] 양쪽 READY → 새 게임 시작');
-    startNewGame();
+    gameMode = 'lan';
+    startNewGame('lan');
   }
 
   /**
    * 새 게임을 시작하고 START + STATE를 전송한다.
    */
-  function startNewGame() {
+  function startNewGame(mode = gameMode || 'lan') {
+    cancelBotTurn();
+    gameMode = mode;
     game = createGame();
     readySet.clear();
     for (const p of players) p.rematchReady = false;
-    broadcastAll({ type: 'START' });
+    broadcastAll({
+      type: 'START',
+      mode,
+      opponent: mode === 'ai' ? { name: botPlayer?.name || '별빛 AI', isBot: true } : null,
+    });
     broadcastState();
+    scheduleBotTurn();
   }
 
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
@@ -168,12 +259,17 @@ export function createApp(opts = {}) {
       players = players.filter((p) => p.ws.readyState <= 1);
       if (players.length < before) {
         console.log(`[hanabi] 좀비 슬롯 ${before - players.length}개 청소`);
-        if (players.length === 0) game = null;
+        if (players.length === 0) {
+          cancelBotTurn();
+          game = null;
+          botPlayer = null;
+          gameMode = null;
+        }
       }
     }
 
     // 룸 정원 초과 시 즉시 거절.
-    if (players.length >= 2) {
+    if (players.length >= 2 || botPlayer) {
       ws.send(JSON.stringify({ type: 'ERROR', message: '방이 가득 찼다 (2/2)' }));
       ws.close();
       console.log('[hanabi] 연결 거절: 룸 정원 초과');
@@ -222,6 +318,7 @@ export function createApp(opts = {}) {
             waiting: players.length < 2 || !opp,
             hostUrl: HOST_URL,
             opponentName: opp ? opp.name : '',
+            opponentIsBot: false,
           });
           // 상대에게 내 이름을 알린다 — 상대가 이미 입장한 경우 JOINED를 다시 보낸다.
           if (opp) {
@@ -231,10 +328,42 @@ export function createApp(opts = {}) {
               waiting: false,
               hostUrl: HOST_URL,
               opponentName: player.name,
+              opponentIsBot: false,
             });
           }
           // READY 상태 전송 (JOIN 직후 양쪽에 현재 READY 상태 알림).
           broadcastReadyState();
+          break;
+        }
+
+        case 'START_AI': {
+          const humanP2 = players.some((candidate) => candidate.id === 'p2');
+          if (!player.joined || player.id !== 'p1') {
+            sendTo(player, { type: 'ERROR', message: 'AI 게임을 시작할 수 없는 참가자입니다.' });
+            break;
+          }
+          if (humanP2) {
+            sendTo(player, { type: 'ERROR', message: '이미 다른 플레이어가 참가했습니다.' });
+            break;
+          }
+          if (game || botPlayer || gameMode) {
+            sendTo(player, { type: 'ERROR', message: '이미 게임이 진행 중입니다.' });
+            break;
+          }
+          botPlayer = {
+            id: 'p2', name: '별빛 AI', isBot: true, joined: true, rematchReady: true,
+          };
+          gameMode = 'ai';
+          readySet.clear();
+          sendTo(player, {
+            type: 'JOINED',
+            playerId: 'p1',
+            waiting: false,
+            hostUrl: HOST_URL,
+            opponentName: botPlayer.name,
+            opponentIsBot: true,
+          });
+          startNewGame('ai');
           break;
         }
 
@@ -258,6 +387,7 @@ export function createApp(opts = {}) {
           console.log(`[hanabi] GIVE_CLUE: ${player.id} → ${msg.clueType}=${msg.value} (${result.touchedIndices.length}장)`);
           broadcastState();
           maybeBroadcastGameOver();
+          scheduleBotTurn();
           break;
         }
 
@@ -271,6 +401,7 @@ export function createApp(opts = {}) {
           console.log(`[hanabi] PLAY_CARD: ${player.id} → idx ${msg.handIndex} (${result.success ? '성공' : '오연주'})`);
           broadcastState();
           maybeBroadcastGameOver();
+          scheduleBotTurn();
           break;
         }
 
@@ -284,10 +415,21 @@ export function createApp(opts = {}) {
           console.log(`[hanabi] DISCARD_CARD: ${player.id} → idx ${msg.handIndex}`);
           broadcastState();
           maybeBroadcastGameOver();
+          scheduleBotTurn();
           break;
         }
 
         case 'REMATCH': {
+          if (gameMode === 'ai' && player.id === 'p1' && botPlayer) {
+            if (!game || game.phase !== 'ended') {
+              sendTo(player, { type: 'ERROR', message: '게임이 끝난 뒤에 재대결할 수 있습니다.' });
+              break;
+            }
+            player.rematchReady = true;
+            broadcastAll({ type: 'REMATCH_STATUS', p1Ready: true, p2Ready: true });
+            startNewGame('ai');
+            break;
+          }
           if (players.length < 2) {
             sendTo(player, { type: 'ERROR', message: '상대방이 없어 새 게임을 시작할 수 없습니다.' });
             break;
@@ -300,7 +442,7 @@ export function createApp(opts = {}) {
           });
           if (players.every((p) => p.rematchReady)) {
             console.log('[hanabi] 양쪽 REMATCH → 새 게임');
-            startNewGame();
+            startNewGame('lan');
           }
           break;
         }
@@ -316,8 +458,19 @@ export function createApp(opts = {}) {
       const leftName = player.name || '(알 수 없음)';
       readySet.delete(player.id);
       players = players.filter((p) => p.id !== player.id);
-      if (players.length === 0) {
+      if (gameMode === 'ai' && player.id === 'p1') {
+        cancelBotTurn();
         game = null;
+        botPlayer = null;
+        gameMode = null;
+        readySet.clear();
+        return;
+      }
+      if (players.length === 0) {
+        cancelBotTurn();
+        game = null;
+        botPlayer = null;
+        gameMode = null;
         readySet.clear();
       } else {
         broadcastAll({
@@ -326,6 +479,7 @@ export function createApp(opts = {}) {
           message: `${leftName}님이 나갔습니다.`,
         });
         game = null; // 1명 남으면 게임 무효화 -> 두 번째 접속 시 새 게임 시작.
+        gameMode = null;
         // P2-5C: 남은 플레이어의 rematchReady 리셋 — 신규 접속자가 REMATCH만으로 게임 시작하는 것 차단
         for (const p of players) p.rematchReady = false;
       }
@@ -350,7 +504,13 @@ export function createApp(opts = {}) {
     }
   }, HEARTBEAT_INTERVAL_MS);
 
-  wss.on('close', () => { clearInterval(heartbeatTimer); });
+  wss.on('close', () => {
+    clearInterval(heartbeatTimer);
+    cancelBotTurn();
+    game = null;
+    botPlayer = null;
+    gameMode = null;
+  });
 
   // ── HTTP 핸들러 (정적 파일 서빙) ──────────────────────────────
   /**

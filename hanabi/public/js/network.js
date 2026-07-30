@@ -3,8 +3,9 @@
  *
  * 서버 권위 모델(server.js 기준 진실 원천). 메시지 프로토콜:
  *  C->S: JOIN { name } / READY {} / GIVE_CLUE { clueType, value } /
- *       PLAY_CARD { handIndex } / DISCARD_CARD { handIndex } / REMATCH {}
- *  S->C: JOINED { playerId, waiting, hostUrl, opponentName? } / START {} /
+ *       START_AI {} / PLAY_CARD { handIndex } / DISCARD_CARD { handIndex } / REMATCH {}
+ *  S->C: JOINED { playerId, waiting, hostUrl, opponentName?, opponentIsBot? } /
+ *       START { mode?, opponent? } /
  *       READY_STATE { myReady, opponentReady } /
  *       STATE (snapshotForPlayer 구조) / GAME_OVER { result } /
  *       OPPONENT_LEFT { name, message } / REMATCH_STATUS { p1Ready, p2Ready } /
@@ -82,6 +83,7 @@ export function createNetwork(handlers) {
           waiting: !!msg.waiting,
           hostUrl: typeof msg.hostUrl === 'string' ? msg.hostUrl : '',
           opponentName: typeof msg.opponentName === 'string' ? msg.opponentName : '',
+          opponentIsBot: !!msg.opponentIsBot,
         });
         break;
       case 'READY_STATE':
@@ -91,7 +93,15 @@ export function createNetwork(handlers) {
         });
         break;
       case 'START':
-        handlers.onStart();
+        handlers.onStart({
+          mode: msg.mode === 'ai' ? 'ai' : 'lan',
+          opponent: msg.opponent && typeof msg.opponent === 'object'
+            ? {
+              name: typeof msg.opponent.name === 'string' ? msg.opponent.name : '',
+              isBot: !!msg.opponent.isBot,
+            }
+            : null,
+        });
         break;
       case 'STATE':
         handlers.onState(msg);
@@ -132,6 +142,8 @@ export function createNetwork(handlers) {
     getMyId() { return myPlayerId; },
     sendJoin(name) { send({ type: 'JOIN', name }); },
     sendReady() { send({ type: 'READY' }); },
+    /** 대기 중인 p1이 서버 관리형 AI 게임 시작을 요청한다. */
+    startAi() { send({ type: 'START_AI' }); },
     /** 힌트 주기 — target은 서버가 상대로 자동 판정(S5-3). */
     giveClue(clueType, value) { send({ type: 'GIVE_CLUE', clueType, value }); },
     playCard(handIndex) { send({ type: 'PLAY_CARD', handIndex }); },

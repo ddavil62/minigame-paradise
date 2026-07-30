@@ -64,6 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
     myReadyMark: document.getElementById('my-ready-mark'),
     oppReadyMark: document.getElementById('opp-ready-mark'),
     btnReady: document.getElementById('btn-ready'),
+    aiStartPanel: document.getElementById('ai-start-panel'),
+    btnStartAi: document.getElementById('btn-start-ai'),
+    aiStartStatus: document.getElementById('ai-start-status'),
+    opponentAiBadge: document.getElementById('opponent-ai-badge'),
+    opponentHandTitle: document.getElementById('opponent-hand-title'),
+    opponentHandName: document.getElementById('opponent-hand-name'),
+    gameOpponentAiBadge: document.getElementById('game-opponent-ai-badge'),
+    resultHint: document.getElementById('result-hint'),
     // 상대 이탈 배너
     opponentLeftBanner: document.getElementById('opponent-left-banner'),
     opponentLeftMsg: document.getElementById('opponent-left-msg'),
@@ -83,6 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let opponentReady = false;
   /** 자동 READY 중복 전송 방지 플래그. */
   let readySent = false;
+  /** 현재 게임 모드. */
+  let gameMode = null;
+  /** 현재 상대가 서버 관리형 AI인지 여부. */
+  let opponentIsBot = false;
+  /** START_AI 응답 대기 여부. */
+  let aiStartPending = false;
   /** 상대 입장 즉시 READY 자동 전송 — 준비 버튼 불필요. */
   function autoReady() {
     if (readySent) return;
@@ -121,6 +135,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (opponentName && els.opponentInfo) {
       els.opponentInfo.classList.remove('hidden');
       if (els.opponentNameLabel) els.opponentNameLabel.textContent = opponentName;
+    }
+    if (els.opponentAiBadge) els.opponentAiBadge.classList.toggle('hidden', !opponentIsBot);
+    if (els.gameOpponentAiBadge) {
+      els.gameOpponentAiBadge.classList.toggle('hidden', !opponentIsBot);
+    }
+    if (els.opponentHandName) {
+      els.opponentHandName.textContent = opponentIsBot ? '별빛 AI 손패' : '상대 손패';
+    }
+  }
+
+  /**
+   * AI 시작 CTA의 노출과 진행 상태를 갱신한다.
+   * @param {boolean} waiting 서버가 상대를 기다리는 상태인지
+   */
+  function updateAiStartUI(waiting) {
+    const available = myId === 'p1' && waiting && !opponentName && !gameMode;
+    if (els.aiStartPanel) els.aiStartPanel.classList.toggle('hidden', !available);
+    if (els.btnStartAi) {
+      els.btnStartAi.disabled = aiStartPending || !available;
+      els.btnStartAi.setAttribute('aria-busy', aiStartPending ? 'true' : 'false');
+      els.btnStartAi.textContent = aiStartPending ? 'AI 참가 중…' : 'AI와 시작';
+    }
+    if (els.aiStartStatus) {
+      els.aiStartStatus.textContent = aiStartPending
+        ? '별빛 AI를 게임에 초대하고 있습니다.'
+        : '혼자서 별빛 AI와 협력 게임을 시작합니다.';
     }
   }
 
@@ -425,6 +465,11 @@ document.addEventListener('DOMContentLoaded', () => {
     els.resultReason.textContent = reasonText[result.reason] || '';
     els.rematchBtn.disabled = false;
     els.rematchBtn.textContent = '재대결';
+    if (els.resultHint) {
+      els.resultHint.textContent = gameMode === 'ai'
+        ? '재대결을 누르면 같은 AI와 새 게임을 시작합니다.'
+        : '상대도 재대결을 누르면 새 게임이 시작됩니다.';
+    }
     els.screenGameOver.classList.remove('hidden');
   }
 
@@ -438,13 +483,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (els.readyPanel) els.readyPanel.classList.add('hidden');
       }
     },
-    onJoined: ({ playerId, waiting, opponentName: oppName }) => {
+    onJoined: ({ playerId, waiting, opponentName: oppName, opponentIsBot: isBot }) => {
       myId = playerId;
       els.playerLabel.textContent = playerId === 'p1' ? '나 (P1, 선공)' : '나 (P2, 후공)';
 
       // 상대 이름 수신 시 갱신.
       if (oppName) {
         opponentName = oppName;
+        opponentIsBot = isBot;
+        if (isBot) {
+          gameMode = 'ai';
+          aiStartPending = false;
+        }
         updateOpponentInfo();
       }
 
@@ -452,13 +502,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 대기 카드 제목: 상대 합류(상대 이름 존재 또는 waiting=false) 시 "대전 준비 중".
       updateWaitingTitle(!!oppName || !waiting);
+      updateAiStartUI(waiting);
 
       showScreen('waiting');
     },
     onReadyState: () => {
-      autoReady();
+      // 사람 상대가 참가한 LAN 대전에서만 기존 자동 READY를 보낸다.
+      if (opponentName && !opponentIsBot) autoReady();
     },
-    onStart: () => {
+    onStart: ({ mode, opponent }) => {
+      gameMode = mode;
+      aiStartPending = false;
+      if (opponent) {
+        opponentName = opponent.name || opponentName;
+        opponentIsBot = !!opponent.isBot;
+        updateOpponentInfo();
+      }
+      updateAiStartUI(false);
       els.screenGameOver.classList.add('hidden');
       actionMode = null;
       // READY 상태 초기화(다음 리매치 대비).
@@ -483,6 +543,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     onOpponentLeft: ({ name }) => {
       readySent = false;
+      gameMode = null;
+      opponentIsBot = false;
       els.screenGameOver.classList.add('hidden');
       showOpponentLeftBanner(name);
     },
@@ -490,8 +552,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const myR = (myId === 'p1' && p1Ready) || (myId === 'p2' && p2Ready);
       const oppR = (myId === 'p1' && p2Ready) || (myId === 'p2' && p1Ready);
       showToast(`재대결 대기: 나 ${myR ? '완료' : '대기'} / 상대 ${oppR ? '완료' : '대기'}`);
+      if (gameMode === 'ai' && els.rematchBtn) {
+        els.rematchBtn.textContent = 'AI와 새 게임 준비 중…';
+      }
     },
     onError: (message) => {
+      if (aiStartPending) {
+        aiStartPending = false;
+        updateAiStartUI(true);
+      }
       showToast(message, 'error');
       console.warn('[main] 서버 오류:', message);
     },
@@ -510,6 +579,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (els.inlineNameInput) {
     els.inlineNameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') els.btnInlineEnter.click();
+    });
+  }
+
+  // ── AI 게임 시작 ──
+  if (els.btnStartAi) {
+    els.btnStartAi.addEventListener('click', () => {
+      if (aiStartPending || myId !== 'p1' || opponentName || gameMode) return;
+      aiStartPending = true;
+      updateAiStartUI(true);
+      net.startAi();
     });
   }
 
@@ -552,7 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
   els.rematchBtn.addEventListener('click', () => {
     net.sendRematch();
     els.rematchBtn.disabled = true;
-    els.rematchBtn.textContent = '재대결 대기 중';
+    els.rematchBtn.textContent = gameMode === 'ai' ? 'AI와 새 게임 준비 중…' : '재대결 대기 중';
   });
 
   // ── 로비 복귀 버튼(종료 화면) ──

@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-07-30 - 별빛 AI 협력 모드
+
+기존 인간 2인 LAN 모드를 유지하면서, p1이 대기 화면에서 `AI와 시작`을 눌러 서버 관리형 p2 `별빛 AI`와 즉시 게임할 수 있는 1인 진입 경로를 추가했다. AI 대상·QA 24개와 기존 C1~C7 핵심 회귀 46개를 독립 실행해 총 70/70 PASS했고, AD 모드 3는 APPROVED 판정을 받았다.
+
+### 추가
+
+- **협력 AI 정책** (`bot.js`) — `chooseBotAction(maskedSnapshot)` 순수 함수가 확실히 플레이 가능한 카드, 유용한 힌트, 안전한 버리기 순으로 결정론적 행동을 고른다. 자기 손패의 실제 `color`·`number`가 포함된 입력은 거부한다.
+- **AI 세션 프로토콜** (`server.js`) — `START_AI`로 p1 권한과 p2 공석을 검증해 `별빛 AI`를 생성한다. 중복 요청, JOIN 전 요청, p2 요청, 실제 p2와의 경합은 오류로 거부한다.
+- **AI 턴 스케줄러** (`server.js`) — 운영 기본 500~900ms 지연, 단일 timer와 generation·게임 객체·phase·turn 재검증으로 예약당 한 행동만 허용한다. 종료·이탈·새 게임·서버 종료 시 예약을 취소한다.
+- **AI 시작·식별 UI** (`public/index.html`, `public/css/style.css`, `public/js/main.js`, `public/js/network.js`) — 접근 가능한 `AI와 시작` CTA, busy/오류 복구, `별빛 AI` 이름과 텍스트 배지, AI 재대결 안내를 추가했다.
+- **자동화 테스트** — `tests/bot-ai-unit.spec.js`, `tests/bot-ai-ws.spec.js`, `tests/bot-ai-e2e.spec.js`, `tests/hanabi-ai-qa.spec.js`로 마스킹 경계, 행동 우선순위, 권한·경합, 지연·중복 방지, 종료·이탈·자동 재대결, 반응형 UI를 검증한다.
+
+### 변경
+
+- AI 행동도 기존 서버 권위 `giveClue()`·`playCard()`·`discardCard()`만 거쳐 상태를 변경한다. 공식 게임 규칙, 점수, 카드 구성과 인간 LAN READY/START/REMATCH 흐름은 변경하지 않았다.
+- AI 모드 게임 종료 후 인간의 `REMATCH` 한 번으로 AI 동의를 자동 처리해 같은 상대와 새 게임을 시작한다.
+- AD 모드 3 피드백에 따라 AI CTA 포커스 외곽선 색상을 하드코딩 값에서 기존 `var(--text)` 디자인 토큰으로 교체했다.
+
+### 검증
+
+- AI 단위·WS·E2E 및 QA: 24/24 PASS.
+- 기존 C1~C7 핵심 회귀: 46/46 PASS.
+- 합계: 70/70 PASS, `node --check` 및 `git diff --check` PASS.
+- 360×800, 520×900, 1280×800에서 키보드 포커스, 44px 이상 CTA, 가로 넘침, AI 식별, 콘솔 오류를 확인했다.
+- 기존 C8~C12 전체 브라우저 묶음은 180초 실행 제한과 C8/C9의 기존 단일 룸 테스트 격리 문제로 일괄 완주하지 못했다. AI 전용 E2E와 독립 UI E2E에서는 제품 실패가 없었다.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-07-30-hanabi-ai.md`
+- 구현: `.Codex/specs/2026-07-30-hanabi-ai-report.md`
+- UI 검수: `.Codex/specs/2026-07-30-hanabi-ai-ui-review.md`
+- QA: `.Codex/specs/2026-07-30-hanabi-ai-qa.md`
+
 ## 2026-06-01 - 대기 화면 룰 가이드 슬라이더 추가
 
 대기 화면(`#screen-waiting`)에 GPT Image 2.0으로 생성한 룰 설명 인포그래픽 7장을 좌우 탐색 슬라이더로 노출. 상대를 기다리는 동안 처음 하는 플레이어가 룰을 학습할 수 있게 한다. Playwright 61/61 PASS(기존 52 + 신규 9), QA PASS, AD3 APPROVED. game.js/WS 무변경.
