@@ -4,6 +4,34 @@
 
 ---
 
+## [2026-08-01] "Room is full" 재발 — 진짜 근본원인 수정 (sessionStorage AI모드 잔존 + 봇 스폰 레이스)
+
+### 배경
+- 2026-07-31 하트비트 수정 후 실사용자가 "친구랑 들어가자마자 첫판에서 Room is full 재발"을 보고. 하트비트 수정은 QA/Purposer PASS를 받았으나 **좀비 소켓 문제와는 별개인 실제 재현 시나리오를 커버하지 못했음**이 확인됨.
+- 재조사 결과 배포 누락(전날 재시작 이후 launcher 프로세스가 재기동되지 않아 하트비트 수정 자체가 반영 안 된 상태)도 겹쳐 있었으나, 그것과 무관하게 별도의 진짜 근본원인 2가지를 코드 레벨에서 확정.
+
+### 근본원인 1 — `network.js` sessionStorage 'ai' 모드 무기한 잔존
+- `connect()`가 URL `?mode=`가 없으면 `sessionStorage['tetris:mode']`를 폴백으로 사용하는데, 이 값을 제거하는 코드가 어디에도 없었음.
+- 한 번이라도 AI 모드로 진입(`?mode=ai` 또는 "AI랑 시작" 클릭)한 탭은 이후 **하드 리프레시로도 지워지지 않고** 계속 `mode=ai`로 재접속됨.
+- 서버는 `mode=ai` 단독 입장 시 200ms 후 자동으로 봇을 spawn해 슬롯 하나를 선점 → 뒤이어 들어온 진짜 친구가 이미 (이전 유저 + 봇)으로 가득 찬 방에서 "Room is full"을 받음.
+- **수정** (`public/js/main.js`): 매치 종료(`onResult`) 및 모든 "로비 복귀" 경로(상시 뒤로가기, 결과화면 로비 복귀, 상대이탈 배너 로비 복귀) 3곳에서 `sessionStorage.removeItem('tetris:mode')` 호출 → 다음 접속은 항상 human 기본값으로 복귀. 진행 중인 REMATCH는 기존 WS 연결을 재사용하므로 영향 없음.
+
+### 근본원인 2 — 자동 봇 스폰 setTimeout 취소 로직 부재 (테스트 중 발견된 연관 결함)
+- `server.js`의 JOIN 핸들러가 `mode=ai` 단독 입장 시 `setTimeout(() => spawnBotChild(), 200)`을 걸어두는데, 200ms 내에 해당 플레이어가 이미 나가도(로비 복귀 등) 스폰이 취소되지 않았음.
+- 빈 방에 봇만 홀로 남게 되고, 다음 방문자가 그 봇에게 p1 슬롯을 뺏겨 의도치 않게 봇과 매칭되는 경로가 별도로 존재함을 회귀 테스트 작성 중 실증.
+- **수정**: 스폰 직전 `players.includes(player) && player.ws.readyState === OPEN`을 재확인해, 해당 플레이어가 여전히 연결 중일 때만 봇을 spawn하도록 가드 추가.
+
+### 검증
+- `tests/roomfull-stale-sessionstorage.spec.js` 신규 (Playwright, 격리 포트 3118):
+  1. AI 모드 진입 → 로비 복귀 클릭 → sessionStorage의 `tetris:mode` 제거 확인
+  2. 그 상태에서 같은 탭 재접속(봇 미개입) + 진짜 친구 입장 → Room is full 없이 p1/p2 정상 JOINED 확인
+- 회귀: `bot-smoke.test.js` 11/11 PASS, `roomfull-heartbeat.test.js` 9/9 PASS (기존 하트비트 수정 유지 확인)
+- `entry-ui-phase2-*.spec.js`, `shield-glow-*.spec.js` 등 다수 FAIL은 `git stash`로 수정 전 코드에서도 동일 재현되는 baseline 결함(포트 3055 수동 서버 미기동 의존) — 이번 수정과 무관함을 확인.
+- 라이브 launcher(포트 3000) 프로세스를 PID 기반으로 재시작해 수정 사항 실제 반영 확인.
+- `visual_change: none` — 순수 클라이언트/서버 로직 수정.
+
+---
+
 ## [2026-07-31] "Room is full" 근본 원인 수정 — WebSocket 하트비트 도입
 
 ### 배경
