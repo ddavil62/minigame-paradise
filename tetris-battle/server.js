@@ -41,7 +41,7 @@ export function isWinningItemGrantRoll(roll) {
 // ──────────────────────────────────────────────────────────────
 /**
  * 테트리스 배틀 게임 앱 인스턴스를 생성한다.
- * @param {{ hostUrl?: string, getBotUrl?: () => (string|null), random?: () => number }} [opts]
+ * @param {{ hostUrl?: string, getBotUrl?: () => (string|null), random?: () => number, heartbeatIntervalMs?: number }} [opts]
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
@@ -58,6 +58,25 @@ export function createApp(opts = {}) {
 
   // ── WSS (noServer 모드) ───────────────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
+
+  // ── 하트비트 (ping/pong 기반 좀비 소켓 탐지) ──────────────────
+  // 네트워크 단절·브라우저 강제 종료 등으로 정상 close 프레임 없이 침묵 사망한
+  // 소켓을 주기적으로 탐지해 terminate()한다. 기존 close 핸들러가 그대로
+  // 좀비 슬롯 제거·상대 통보·resetRoomFlags 등을 처리하므로 코드 중복 없음.
+  // .unref()로 프로세스/테스트 종료를 막지 않는다.
+  const HEARTBEAT_MS = opts.heartbeatIntervalMs ?? 20000;
+  if (HEARTBEAT_MS > 0) {
+    setInterval(() => {
+      for (const client of wss.clients) {
+        if (client.isAlive === false) {
+          client.terminate();
+          continue;
+        }
+        client.isAlive = false;
+        client.ping();
+      }
+    }, HEARTBEAT_MS).unref();
+  }
 
 // ── 룸 상태 (2인 1룸 고정) ────────────────────────────────────────
 /**
@@ -256,6 +275,11 @@ function tryGrantItem(player, clearEventId) {
 
 // ── WebSocket 핸들러 ─────────────────────────────────────────────
 wss.on('connection', (ws, req) => {
+  // 하트비트: 연결 직후 살아있음을 표시하고, pong 수신 시마다 갱신한다.
+  // 브라우저 WebSocket과 ws 라이브러리 모두 프로토콜 레벨에서 ping에 자동 pong을 반환한다.
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
   // URL 쿼리에서 mode 파싱 (launcher/network가 mode=ai|bot|human 전달).
   const reqUrlObj = new URL(req.url || '/', 'http://localhost');
   const wsMode = reqUrlObj.searchParams.get('mode') || 'human';

@@ -1,6 +1,6 @@
 # Tetris Battle — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 한게임 테트리스 스타일 대전. Node.js + 바닐라 JS. Phase 1~5 완료 + AI 봇(2026-06-21). 2026-07-20 프리즈·재대결 입력 회귀 수정 및 QA PASS.
+> LAN 1:1 한게임 테트리스 스타일 대전. Node.js + 바닐라 JS. Phase 1~5 완료 + AI 봇(2026-06-21). 2026-07-31 "Room is full" 근본 수정(WS 하트비트 도입) 및 QA PASS.
 
 ## 정체성
 
@@ -55,7 +55,8 @@ tetris-battle/
     ├── input-freeze-rematch-independent-qa.test.js # 양쪽 5회 재대결 독립 QA
     ├── input-freeze-rematch.browser.spec.js # 실제 Chromium 입력 회귀
     ├── bot-smoke.test.js          # AI 봇 smoke (ad-hoc 러너, 포트 3110, 2026-06-21)
-    └── ai-mode-e2e.spec.js        # JOIN 레이스 회귀 E2E (Playwright, self-host 포트 3111, 2026-06-21)
+    ├── ai-mode-e2e.spec.js        # JOIN 레이스 회귀 E2E (Playwright, self-host 포트 3111, 2026-06-21)
+    └── roomfull-heartbeat.test.js # 좀비 소켓 하트비트 회수 검증 (ad-hoc 러너, 2026-07-31)
 ```
 
 ## 테스트 실행법
@@ -78,16 +79,24 @@ node tests/input-freeze-rematch-independent-qa.test.js
 npx playwright test tests/input-freeze-rematch.browser.spec.js --config=playwright.config.js
 node tests/bot-smoke.test.js              # AI 봇 smoke (ad-hoc 러너, 포트 3110, --test 미사용)
 npx playwright test tests/ai-mode-e2e.spec.js --config=playwright.config.js  # JOIN 레이스 회귀 E2E (self-host 포트 3111)
+node --test tests/roomfull-heartbeat.test.js  # 좀비 소켓 하트비트 회수 (2026-07-31)
 ```
 
-전체 합계: **회귀 9 슈트 344 PASS + bot-smoke 8/8 PASS**.
+전체 합계: **회귀 10 슈트 353 PASS + bot-smoke 11/11 PASS**.
 - 단, `phase3-4-qa-edge.test.js`의 **Q7b 1건은 baseline부터 실패하는 기존 결함**으로 FAIL(아래 「기존 결함」 참조). 봇 작업과 무관해 회귀 게이트를 막지 않는다.
 
 ### 기존 결함 — phase3-4-qa-edge Q7b (봇 무관, 향후 정리 대상)
 - Q7b("printBanner가 유니코드 박스 문자를 쓰지 않아야 한다") 검증 정규식 `/function printBanner[\s\S]+?\n\}/`가 **비탐욕**이라 printBanner 함수 경계를 넘어 뒤따르는 기존 주석 `// ── 서버 시작 ──`(유니코드 `─`)까지 매칭 → 박스 문자를 오검출하는 **테스트 취약성**. baseline(봇 작업 이전 git HEAD)에서도 동일하게 실패하며, 실제 배너 출력은 ASCII(`+ - |`)라 기능상 무해. 회귀 게이트 슈트 임의 수정 금지 원칙상 미수정 — 정규식을 printBanner 함수 경계로 한정하는 별도 보정 이슈로 분리 권장.
 
+### 기존 결함 — ai-mode-e2e.spec.js 2건 (환경 의존, 하트비트 무관)
+- `ai-mode-e2e.spec.js` 2건이 baseline에서도 FAIL 재현됨 (git stash 검증 완료, 2026-07-31). WS 연결이 페이지 로드 직후 즉시 close되는 Playwright + self-host 서버 환경 문제. 하트비트 도입과 무관하며 간헐적 환경 의존 실패로 판단.
+
+### #13 "Room is full" 수정 이력과 하트비트의 관계
+- **#13 수정 (2026-06-28)**: 사람 disconnect 시 짝 봇 슬롯을 동기적으로 `terminate()` + connection 진입부에서 `readyState!==OPEN` 죽은 슬롯 선제 제거. 이 수정은 여전히 유효하다.
+- **하트비트 수정 (2026-07-31)**: #13이 커버하지 못하는 "게임 진행 중 침묵 사망" 시나리오를 근본적으로 해결. 네트워크 단절로 소켓이 `readyState===OPEN`으로 남아 기존 두 안전망 모두 무력화되는 경우를, 주기적 ping/pong으로 탐지·`terminate()`한다. **#13은 이번 하트비트 수정의 부분집합**이며, 하트비트가 이를 포괄한다.
+
 ### 회귀 게이트
-- 어떤 변경도 위 9 슈트가 Q7b(기존 결함) 외 전부 PASS를 유지해야 한다.
+- 어떤 변경도 위 10 슈트가 Q7b(기존 결함) 외 전부 PASS를 유지해야 한다.
 - 신규 기능 추가 시 신규 슈트를 작성하되 기존 슈트는 절대 수정/삭제하지 않는다 (영구 회귀 차단용).
   - 예외: **사용자 승인 기능 제거**로 단언 대상 자체가 사라진 경우(예: 2026-06-17 C 작업 — invite-panel/copy 버튼 제거)는 해당 단언을 "제거됨을 검증하는 positive 단언"으로 전환한다(`phase4-launcher.test.js` L4/L4b/L5/L7a~c/L7e). 회귀게이트 정신(되살아나면 실패)은 유지된다.
 - `phase3-4-qa-edge.test.js`는 QA에서 발견한 결함(Q1 포트 폴백 등)을 영구 차단하는 슈트 — 특히 보존.
@@ -133,6 +142,8 @@ npx playwright test tests/ai-mode-e2e.spec.js --config=playwright.config.js  # J
 | 봇 아이템 처리 | `ITEM_EFFECT` 중 `garbage_bomb`만 봇 보드에 `pendingGarbage += 2` 반영. `dark`/`freeze`는 **의도적 무시**(봇은 시뮬레이터만 보고 중력 타이머 없음). 미정의 메시지에도 죽지 않도록 핸들러가 로그만 찍고 통과. |
 | 봇 미니맵 동기화 | 봇은 `BOARD_STATE.stack`에 `getColumnHeights(botGrid)`(board.js와 동일 포맷: 길이 BOARD_WIDTH, visible 높이)를 실어야 상대 화면 미니맵(ui.js renderOpponent)이 그려진다. `stack:[]`로 보내면 봇 보드가 비어 보인다. 회귀 게이트 bot-smoke TBOT-006. |
 | 클라이언트 JOIN 전송 시점 (`network.js`) | 클라이언트 JOIN은 WS `open` 핸들러에서 보낸다(setTimeout 금지 — open 전 전송 시 `send()`가 readyState≠OPEN이라 드롭되어 JOINED 미수신·봇 미spawn, 레이스라 간헐적). `pendingJoinName` 보관 후 open에서 전송, 재연결 재JOIN도 동일 경로. 회귀 게이트: `tests/ai-mode-e2e.spec.js`(JOIN 드롭 경고 부재 단언). |
+| 하트비트 타이머 `.unref()` 필수 (`server.js`) | `createApp` 스코프의 `setInterval`에 `.unref()`가 없으면 기존 10개 회귀 슈트가 각각 서버 인스턴스를 만들 때마다 프로세스가 종료되지 않아 hang 발생. `heartbeatIntervalMs: 0`으로 비활성화도 가능. 회귀 게이트: `tests/roomfull-heartbeat.test.js` HB-003. |
+| 하트비트와 기존 안전망 공존 | 하트비트는 기존 `readyState!==OPEN` 좀비 스윕(L292)과 `gameOver` 안전망(L280)을 **대체하지 않고 보완**한다. 이 안전망들을 제거하면 정상 close 시 즉시 정리가 안 되어 하트비트 주기(~40초)만큼 대기해야 하는 퇴보가 발생한다. |
 
 ## 향후 작업 시 우선순위
 

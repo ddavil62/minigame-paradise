@@ -4,6 +4,47 @@
 
 ---
 
+## [2026-07-31] "Room is full" 근본 원인 수정 — WebSocket 하트비트 도입
+
+### 배경
+- AI 모드(`?mode=ai`)로 진입할 때 "Room is full" 에러가 반복적으로 발생하는 버그. 서버 재시작 전까지 방이 영구 고착되어 이후 모든 접속이 거절됨.
+- **근본 원인**: `server.js`에 WebSocket ping/pong 하트비트(생존 확인) 메커니즘이 전혀 없었다. 네트워크 단절, 브라우저 강제 종료 등으로 소켓이 정상 close 프레임 없이 침묵 사망하면 `readyState`는 서버 관점에서 계속 `OPEN`으로 남는다. 게임이 실제 진행 중인 동안에는 기존 두 안전망(`readyState!==OPEN` 좀비 스윕, `players.some(p=>p.gameOver)` 안전망) 모두 무력화되어 방이 영구 고착.
+- **기각된 가설**: launcher `aiSlotCount` 잔존 -- `cleanupClient()`가 `room.clients.size===0` 시 방 자체를 삭제하므로 도달 불가.
+- **확인된 특수사례**: REMATCH 후 `gameOver` 안전망 우회 -- 일반 취약점("게임 진행 중 무응답 이탈은 회수 불가")의 부분집합으로 판정.
+- 기존 #13 수정(2026-06-28, 사람 disconnect 시 봇 슬롯 동기 terminate)은 여전히 유효하나 사람 소켓 침묵 사망까지는 커버하지 못했음. 이번 하트비트 도입이 #13을 포괄하는 근본 수정.
+
+### 추가
+- `server.js` `createApp(opts)` 시그니처에 `heartbeatIntervalMs` 옵션 추가 (기본 20000ms, 테스트에서 짧은 값으로 오버라이드 가능)
+- `createApp` 스코프에 `setInterval` 기반 하트비트 타이머 삽입:
+  - `client.isAlive === false`인 소켓을 `client.terminate()` (기존 close 핸들러가 그대로 정리 로직 재사용 -- 좀비 슬롯 제거, 상대 통보, `resetRoomFlags`)
+  - 응답한 소켓은 `isAlive = false`로 리셋 후 재 ping
+  - 타이머는 `.unref()` 처리로 Node 프로세스/테스트 하네스 hang 방지
+- `wss.on('connection')` 핸들러에 `ws.isAlive = true` 초기화 + `ws.on('pong', ...)` 리스너 등록
+- `tests/roomfull-heartbeat.test.js` 신규 (9개 단언, 3 시나리오):
+  - HB-001 (AC-2): 게임 진행 중 p1 소켓 무응답 방치 → 2*heartbeatIntervalMs 이내 회수 → 새 접속 정상
+  - HB-002 (AC-3): REMATCH 후 라운드 2 진행 중 동일 회수 동작
+  - HB-003 (AC-4): `heartbeatIntervalMs: 0` 비활성 + `.unref()` 프로세스 hang 없음
+
+### 미구현 (선택 사항, 후속 분리)
+- `network.js` 재연결 무한 루프 완화 (스펙 2.2절) -- 서버 측 근본 수정으로 AC 전부 충족하므로 미구현
+
+### 검증
+- AC-1~AC-6 전부 PASS
+- QA 독립 엣지케이스 21건 전부 PASS (다중 룸 격리, 정상 클라이언트 오탐 없음, 한쪽만 좀비, 빠른 연타 접속 등)
+- 회귀 게이트 9개 슈트 344건 PASS (Q7b baseline 제외) + 신규 `roomfull-heartbeat.test.js` 9건 PASS = 10개 슈트 353건
+- bot-smoke 11/11 PASS (하트비트 도입 후 봇 오탐 terminate 없음 확인)
+- `ai-mode-e2e.spec.js` 2건 FAIL은 git stash로 원복 후 재현 확인된 baseline 기존 결함 (WS 즉시 close 환경 문제)
+- `visual_change: none` -- 순수 서버 로직 수정, AD 전 단계 생략
+
+### 참고
+- 목적 정의: `.claude/specs/2026-07-31-tetris-battle-roomfull-fix-scope.md`
+- 스펙: `.claude/specs/2026-07-31-tetris-battle-roomfull-fix-plan.md`
+- 구현 리포트: `.claude/specs/2026-07-31-tetris-battle-roomfull-fix-coder-report.md`
+- QA: `.claude/specs/2026-07-31-tetris-battle-roomfull-fix-qa.md`
+- `assets/` 추가·변경이 없어 Mockup Sync를 생략했다.
+
+---
+
 ## [2026-07-27] 리포트 32 — 아이템 80% 확률 복원 및 모바일 전투 화면 보정
 
 ### 변경
