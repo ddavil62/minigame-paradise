@@ -218,6 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
       ui.showResult(msg, cssClass);
       game.stop();
       if (input) input.disable();
+      // Room-is-full 근본원인 fix: 매치가 끝나는 시점에 sessionStorage의 'ai' 모드 잔존을
+      // 제거한다. 그렇지 않으면 이후 같은 탭에서 새로 접속할 때 원치 않게 mode=ai가 재사용되어
+      // 서버가 자동으로 봇을 스폰, 슬롯을 선점해 실제 친구가 "Room is full"을 받게 된다.
+      // 진행 중인 재대결(REMATCH)은 기존 WS 연결을 그대로 재사용하므로 이 초기화의 영향을 받지 않는다.
+      sessionStorage.removeItem('tetris:mode');
       // Phase 3 LOW-3: 결과 화면 표시 시 잔존 아이템 효과/슬롯/타이머를 정리한다.
       // (다크 오버레이, 프리즈 펄스가 결과 화면 위로 보이지 않도록.)
       if (items) items.reset();
@@ -326,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── 상대 이탈 배너 — 로비 복귀 버튼 ──
   if (els.btnBannerReturnLobby) {
     els.btnBannerReturnLobby.addEventListener('click', () => {
+      sessionStorage.removeItem('tetris:mode');
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });
@@ -346,6 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const returnLobbyBtn = document.getElementById('btn-return-lobby');
   if (returnLobbyBtn) {
     returnLobbyBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('tetris:mode');
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });
@@ -356,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (backToLobbyBtn) {
     backToLobbyBtn.addEventListener('click', () => {
       if (!confirm('게임을 중단하고 게임 선택 화면으로 돌아가시겠어요? 상대방도 함께 로비로 이동합니다.')) return;
+      sessionStorage.removeItem('tetris:mode');
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });

@@ -372,7 +372,13 @@ wss.on('connection', (ws, req) => {
         // 봇 자신(mode=bot)이 들어올 때는 재spawn 하지 않는다. players.length===1로
         // 사람 단독 대기 시점을 보장(타이밍 경쟁 회피 — connection 직후가 아닌 JOIN 후).
         if (wsMode === 'ai' && !isBot && players.length === 1) {
-          setTimeout(() => spawnBotChild(), 200);
+          setTimeout(() => {
+            // 200ms 내에 이 사람이 이미 나갔으면(로비 복귀 등) 스폰을 취소한다.
+            // 그렇지 않으면 빈 방에 봇만 홀로 남아 다음 방문자의 p1 슬롯을 선점해버린다.
+            if (players.includes(player) && player.ws.readyState === WebSocket.OPEN) {
+              spawnBotChild();
+            }
+          }, 200);
         }
         // 두 명 모두 입장 시 양쪽에 상대 입장 알림 가능 (현재는 JOINED만 사용)
         break;
