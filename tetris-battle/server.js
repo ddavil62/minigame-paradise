@@ -64,7 +64,11 @@ export function createApp(opts = {}) {
   // 소켓을 주기적으로 탐지해 terminate()한다. 기존 close 핸들러가 그대로
   // 좀비 슬롯 제거·상대 통보·resetRoomFlags 등을 처리하므로 코드 중복 없음.
   // .unref()로 프로세스/테스트 종료를 막지 않는다.
-  const HEARTBEAT_MS = opts.heartbeatIntervalMs ?? 20000;
+  // Room-is-full 근본원인 fix(2026-08-01 3차): 기존 20000ms는 하드 리프레시 직후
+  // 곧바로 재접속하면 이전 소켓(+mode=ai 봇)이 아직 좀비로 판정되지 않아 방을 점유한
+  // 채로 새 접속이 거절되는 race window(최대 20~40초)를 만들었다. 4000ms로 단축해
+  // 회수 지연을 최소화한다(클라이언트 측 pagehide 명시적 close와 상호보완).
+  const HEARTBEAT_MS = opts.heartbeatIntervalMs ?? 4000;
   if (HEARTBEAT_MS > 0) {
     setInterval(() => {
       for (const client of wss.clients) {

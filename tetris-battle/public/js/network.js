@@ -105,6 +105,16 @@ export function createNetwork(handlers) {
     });
   }
 
+  // Room-is-full 근본원인 fix: 새로고침/탭 종료/다른 페이지 이동 시 브라우저의
+  // 암묵적 WS 종료 타이밍에만 의존하지 않고, 즉시 명시적으로 close()를 호출한다.
+  // 그렇지 않으면 서버가 하트비트(ping/pong)로 좀비 소켓을 회수할 때까지 짧게나마
+  // 방 슬롯을 계속 점유해, 그 직후 재접속한 사용자(본인 하드 리프레시 또는 진짜 친구)가
+  // "Room is full"을 받는 race window가 생긴다. connect()가 재연결마다 재호출되므로
+  // 리스너는 createNetwork() 생성 시 1회만 등록한다.
+  window.addEventListener('pagehide', () => {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+  });
+
   /**
    * 수신 메시지 라우팅.
    * @param {object} msg
