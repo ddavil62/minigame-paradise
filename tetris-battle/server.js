@@ -134,6 +134,25 @@ function createRoom(id) {
 }
 
 /**
+ * 외부(런처)가 미리 발급한 roomId로 룸을 선제 생성한다. 이미 존재하면 아무 것도 하지 않는다.
+ *
+ * 배경(Room-is-full/Room-not-found 근본원인 4차 fix, 2026-08-03): 런처는 로비 매칭이
+ * 완료되면 tetris-battle 전용으로 crypto.randomUUID()를 생성해 매칭된 클라이언트(및
+ * AI 채우기 봇)를 `?room=<roomId>`로 리다이렉트한다. 그러나 이 서버의 roomMap에는
+ * 해당 ID가 등록된 적이 없어, 클라이언트가 실제로 접속을 시도하면 `if (roomParam)` 분기가
+ * "Room not found"로 즉시 거절해왔다(런처 경유 매칭이 완전히 동작하지 않던 결함).
+ * 런처가 REDIRECT를 브로드캐스트하기 직전에 이 함수를 호출해 룸을 먼저 등록해 두면,
+ * 이후 클라이언트/봇의 접속이 정상적으로 그 룸에 합류할 수 있다.
+ * 공유 초대 링크(hostUrl) 등 서버가 스스로 생성하지 않은 임의의 roomId에 대해서는
+ * 이 함수가 호출되지 않으므로, 기존 "Room not found" 거절 동작은 그대로 유지된다.
+ * @param {string} id - 런처가 생성한 roomId
+ * @returns {void}
+ */
+function ensureRoom(id) {
+  if (!roomMap.has(id)) createRoom(id);
+}
+
+/**
  * 대기 중(인원 1명)인 첫 번째 룸을 반환한다. 없으면 null.
  * @returns {Room|null}
  */
@@ -744,7 +763,7 @@ wss.on('connection', (ws, req) => {
     HOST_URL = typeof url === 'string' ? url : '';
   }
 
-  return { handleHttp, handleUpgrade, setHostUrl };
+  return { handleHttp, handleUpgrade, setHostUrl, ensureRoom };
 }
 
 // ── 호스트 IP 자동 감지 ──────────────────────────────────────────

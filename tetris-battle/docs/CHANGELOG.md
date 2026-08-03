@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-08-03] 런처 경유 매칭 결함 수정 — 런처 발급 roomId 미등록으로 인한 "Room not found"/"Room is full" 근본원인 4차 fix
+
+### 배경
+- 2026-08-01 멀티룸 재설계 배포 후 실사용에서 "강제 새로고침 후 AI 채우기로 입장해도 여전히 시작이 안 된다"는 재현 보고 발생.
+- 원인 분석: 런처(`launcher/server.js`)의 `checkReady()`가 tetris-battle 매칭 완료 시 `crypto.randomUUID()`로 roomId를 생성해 클라이언트를 `?room=<roomId>`로 리다이렉트하지만, 이 roomId는 tetris-battle 서버의 `roomMap`에 등록된 적이 없었다. 서버의 `if (roomParam)` 분기는 미등록 ID를 무조건 "Room not found"로 거절하므로, **런처를 경유한 모든 매칭(일반 2인 매칭 + AI 채우기 모두)이 구조적으로 항상 실패**하고 있었다. 이 경로는 2026-08-01 QA에서 검증되지 않은 사각지대였다(당시 MR-004 테스트는 서버가 스스로 생성한 roomId를 초대 링크로 재사용하는 시나리오만 검증, 런처의 "접속 전 미리 발급" 패턴은 미커버).
+- 추가로 런처의 범용 AI 채우기 봇 spawn 함수(`spawnBotForAiFill`)는 room 파라미터를 전혀 모른 채 `?mode=bot`으로만 접속해, 설령 사람이 정상 합류해도 봇은 엉뚱한 신규 룸에 혼자 격리되는 2차 결함도 동반했다.
+
+### 수정
+- **`tetris-battle/server.js`**: `ensureRoom(id)` 함수 추가 및 `createApp()` 반환 객체에 export. 이미 존재하는 룸이면 아무 것도 하지 않고(멱등), 없으면 해당 ID로 룸을 선제 생성한다. 공유 초대 링크 등 서버가 스스로 발급하지 않은 임의 roomId에는 호출되지 않으므로 기존 "Room not found" 거절 동작(AC-4)은 그대로 유지된다.
+- **`launcher/server.js`**:
+  - `checkReady()`에서 tetris-battle roomId 생성 직후, REDIRECT 브로드캐스트 및 봇 spawn보다 먼저 `GAME_APPS['tetris-battle'].ensureRoom(roomId)`를 호출해 룸을 선제 등록한다.
+  - `GAME_MANAGED_AI_IDS`에 `'tetris-battle'` 추가. tetris-battle은 이미 `mode=ai` 진입 시 `getBotUrl(room.id)` 기반 자체 봇 spawn 로직(`server.js` JOIN 핸들러, 200ms 지연)을 갖추고 있으므로, 런처의 room-비인지 범용 `spawnBotForAiFill`을 더 이상 타지 않고 게임 서버 자신의 검증된 로직을 재사용한다.
+
+### 신규 테스트
+- `tests/launcher-room-precreate.test.js` (13단언, 포트 3130): 런처가 미리 발급한 roomId로 `ensureRoom()` 없이 접속 시 기존 "Room not found" 유지(LP-001), `ensureRoom()` 후 정상 합류(LP-002), 2인 매칭 재현(LP-003), `mode=ai&room=<id>` 조합에서 자체 봇 spawn 트리거 확인(LP-004), 재호출 멱등성(LP-005) 검증.
+- 기존 회귀 174건(멀티룸 63 + 런처 22 + phase1 37 + defect1 19 + 봇smoke 11 + 하트비트 9 + 신규 13) 전부 PASS.
+
+---
+
 ## [2026-08-01] 멀티룸 아키텍처 전면 재설계 — 단일 글로벌 2인 룸 → Map&lt;roomId, Room&gt; 다중 독립 룸
 
 ### 배경

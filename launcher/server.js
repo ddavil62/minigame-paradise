@@ -138,7 +138,12 @@ const GAME_APPS = {
 };
 
 // 게임 서버가 mode=ai 진입을 받아 자체 봇을 구성하는 게임은 런처 봇을 중복 생성하지 않는다.
-const GAME_MANAGED_AI_IDS = new Set(['sichuan-battle', 'starlight-mail-tower', 'yutnori']);
+// tetris-battle(2026-08-03 추가): 멀티룸 구조이므로 봇이 반드시 특정 roomId로 접속해야
+// 하는데, 런처의 범용 spawnBotForAiFill()은 room 파라미터를 모른다. tetris-battle은 이미
+// mode=ai 진입 시 자체적으로 room.id 기반 getBotUrl(room.id)을 호출해 봇을 spawn하는
+// 로직(server.js L476~486)을 갖추고 있으므로, 이 목록에 포함시켜 런처의 중복/불일치
+// 봇 spawn을 막고 게임 서버의 검증된 자체 로직을 그대로 재사용한다.
+const GAME_MANAGED_AI_IDS = new Set(['sichuan-battle', 'starlight-mail-tower', 'yutnori', 'tetris-battle']);
 
 /**
  * 안전한 런처 정적 파일 경로 해석 (디렉토리 트래버설 방지).
@@ -600,7 +605,23 @@ function checkReady(room, game) {
   // 게임 서버 관리형 AI는 mode=ai 진입 뒤 각 게임의 고유한 봇 수명주기를 시작한다.
   const usesGameManagedAi = GAME_MANAGED_AI_IDS.has(room.gameId) && room.aiSlotCount > 0;
 
+  // 테트리스 배틀은 멀티룸을 위해 roomId를 생성하여 URL에 포함시킨다.
+  // 다른 게임은 단일 룸 구조 유지이므로 조건 분기로 테트리스 배틀만 처리.
+  // roomId/ensureRoom은 봇 spawn·REDIRECT 브로드캐스트보다 먼저 처리해야 한다(아래 참조).
+  const isTetrisBattle = room.gameId === 'tetris-battle';
+  const roomId = isTetrisBattle ? crypto.randomUUID() : null;
+
+  // Room-is-full/Room-not-found 근본원인 4차 fix(2026-08-03): 런처가 발급한 roomId는
+  // tetris-battle 서버의 roomMap에 등록된 적이 없어, 클라이언트/봇이 이 ID로 접속하면
+  // "Room not found"(또는 이어지는 접속 경합에 따라 "Room is full")로 항상 거절되던
+  // 결함이 있었다. REDIRECT/봇 spawn 이전에 룸을 선제 등록해 이 문제를 근본적으로 막는다.
+  if (isTetrisBattle) {
+    GAME_APPS['tetris-battle'].ensureRoom(roomId);
+  }
+
   // 2. AI 봇 spawn (aiSlotCount > 0 && botAvailable)
+  // 테트리스 배틀은 GAME_MANAGED_AI_IDS 소속이라 usesGameManagedAi=true이므로 이 블록을
+  // 타지 않는다 — 게임 서버 자신의 mode=ai 진입 로직(getBotUrl(room.id))이 봇을 spawn한다.
   if (room.aiSlotCount > 0 && game.botAvailable && !usesGameManagedAi) {
     console.log(`[launcher] AI채우기 봇 ${room.aiSlotCount}개 spawn: ${room.gameId}`);
     for (let i = 0; i < room.aiSlotCount; i++) {
@@ -609,10 +630,6 @@ function checkReady(room, game) {
   }
 
   // 3. REDIRECT broadcast
-  // 테트리스 배틀은 멀티룸을 위해 roomId를 생성하여 URL에 포함시킨다.
-  // 다른 게임은 단일 룸 구조 유지이므로 조건 분기로 테트리스 배틀만 처리.
-  const isTetrisBattle = room.gameId === 'tetris-battle';
-  const roomId = isTetrisBattle ? crypto.randomUUID() : null;
   const playerCount = totalCount;
 
   for (const [ws, meta] of room.clients) {
