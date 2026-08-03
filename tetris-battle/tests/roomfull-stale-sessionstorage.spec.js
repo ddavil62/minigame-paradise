@@ -36,7 +36,7 @@ let server;
 test.beforeEach(async () => {
   const app = createApp({
     hostUrl: '',
-    getBotUrl: () => `ws://localhost:${PORT}/ws?mode=bot`,
+    getBotUrl: (roomId) => `ws://localhost:${PORT}/ws?mode=bot&room=${roomId}`,
   });
   server = http.createServer(app.handleHttp);
   server.on('upgrade', app.handleUpgrade);

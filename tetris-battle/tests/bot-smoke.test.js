@@ -56,11 +56,11 @@ function section(name) {
   console.log(`\n[${name}]`);
 }
 
-/** getBotUrl을 주입한 격리 서버를 띄운다. */
+/** getBotUrl을 주입한 격리 서버를 띄운다. (멀티룸: roomId를 인자로 받는다.) */
 async function startServer() {
   const app = createApp({
     hostUrl: '',
-    getBotUrl: () => `ws://localhost:${PORT}/ws?mode=bot`,
+    getBotUrl: (roomId) => `ws://localhost:${PORT}/ws?mode=bot&room=${roomId}`,
   });
   const server = http.createServer(app.handleHttp);
   server.on('upgrade', app.handleUpgrade);

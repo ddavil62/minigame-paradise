@@ -223,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // 서버가 자동으로 봇을 스폰, 슬롯을 선점해 실제 친구가 "Room is full"을 받게 된다.
       // 진행 중인 재대결(REMATCH)은 기존 WS 연결을 그대로 재사용하므로 이 초기화의 영향을 받지 않는다.
       sessionStorage.removeItem('tetris:mode');
+      // 멀티룸: 룸 ID도 함께 제거해 다음 접속 시 새 룸으로 진입하도록 한다.
+      sessionStorage.removeItem('tetris:room');
       // Phase 3 LOW-3: 결과 화면 표시 시 잔존 아이템 효과/슬롯/타이머를 정리한다.
       // (다크 오버레이, 프리즈 펄스가 결과 화면 위로 보이지 않도록.)
       if (items) items.reset();
@@ -332,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (els.btnBannerReturnLobby) {
     els.btnBannerReturnLobby.addEventListener('click', () => {
       sessionStorage.removeItem('tetris:mode');
+      sessionStorage.removeItem('tetris:room');
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });
@@ -353,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (returnLobbyBtn) {
     returnLobbyBtn.addEventListener('click', () => {
       sessionStorage.removeItem('tetris:mode');
+      sessionStorage.removeItem('tetris:room');
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });
@@ -364,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     backToLobbyBtn.addEventListener('click', () => {
       if (!confirm('게임을 중단하고 게임 선택 화면으로 돌아가시겠어요? 상대방도 함께 로비로 이동합니다.')) return;
       sessionStorage.removeItem('tetris:mode');
+      sessionStorage.removeItem('tetris:room');
       fetch('/lobby/return', { method: 'POST' }).catch(() => {});
       location.href = '/';
     });

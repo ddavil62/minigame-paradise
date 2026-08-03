@@ -1,9 +1,10 @@
 /**
- * @fileoverview WebSocket 서버 + 정적 파일 서빙. LAN 환경에서 2인 1룸 대전을 중계한다.
+ * @fileoverview WebSocket 서버 + 정적 파일 서빙. LAN 환경에서 다중 독립 룸 대전을 중계한다.
  *
  * 아키텍처: 클라이언트 권위 + 서버 중계
  * - 게임 로직은 각 클라이언트가 로컬에서 처리한다 (입력 지연 최소화)
  * - 서버는 가비지/아이템/게임오버 같은 이벤트만 두 플레이어 간 중계한다
+ * - 2026-08-01: 단일 전역 2인 룸 → Map<roomId, Room> 멀티룸 구조로 전환
  */
 
 import express from 'express';
@@ -14,6 +15,7 @@ import { fileURLToPath } from 'url';
 import os from 'os';
 import fs from 'fs';
 import { spawn } from 'child_process';
+import crypto from 'crypto';
 
 // ── 경로 ──────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -34,14 +36,17 @@ export function isWinningItemGrantRoll(roll) {
 
 // ──────────────────────────────────────────────────────────────
 // createApp(): launcher 통합 라우터용 앱 인스턴스를 생성한다.
-// 모든 룸 상태(players)는 closure 내부에 보관되어 다른 게임과 격리된다.
+// 모든 룸 상태(roomMap)는 closure 내부에 보관되어 다른 게임과 격리된다.
+// 2026-08-01: 단일 전역 players[] → Map<roomId, Room> 멀티룸 구조로 전환.
 // 옵션:
 //   - opts.hostUrl: JOINED 메시지에 포함될 친구 안내용 URL. 통합 라우터에서 launcher가
 //     공급한다. setHostUrl()로 부트 후 갱신 가능.
+//   - opts.getBotUrl(roomId): 봇이 접속할 WS URL을 반환한다. roomId를 인자로 받아
+//     해당 룸에 봇을 연결하는 URL을 생성한다.
 // ──────────────────────────────────────────────────────────────
 /**
  * 테트리스 배틀 게임 앱 인스턴스를 생성한다.
- * @param {{ hostUrl?: string, getBotUrl?: () => (string|null), random?: () => number, heartbeatIntervalMs?: number }} [opts]
+ * @param {{ hostUrl?: string, getBotUrl?: (roomId: string) => (string|null), random?: () => number, heartbeatIntervalMs?: number }} [opts]
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
@@ -82,7 +87,7 @@ export function createApp(opts = {}) {
     }, HEARTBEAT_MS).unref();
   }
 
-// ── 룸 상태 (2인 1룸 고정) ────────────────────────────────────────
+// ── 룸 상태 (다중 독립 룸 — Map<roomId, Room>) ──────────────────
 /**
  * @typedef {Object} Player
  * @property {string} id        - 'p1' | 'p2'
@@ -98,52 +103,90 @@ export function createApp(opts = {}) {
  * @property {import('ws').WebSocket} ws - WebSocket 인스턴스
  */
 
-/** @type {Player[]} */
-let players = [];
+/**
+ * @typedef {Object} Room
+ * @property {string}   id          - crypto.randomUUID() 또는 런처가 생성한 UUID
+ * @property {Player[]} players     - 이 룸의 플레이어 배열 (최대 2)
+ * @property {import('child_process').ChildProcess|null} botChild - 이 룸의 봇 프로세스
+ * @property {boolean}  _botSpawnPending - 200ms 지연 spawn 예약 여부 (중복 spawn 방지)
+ */
 
-// ── 봇 자식 프로세스 관리 (mode=ai 사용자 진입 시 자동 spawn) ────
-/** @type {import('child_process').ChildProcess|null} */
-let botChild = null;
+/** @type {Map<string, Room>} roomId → Room */
+const roomMap = new Map();
+
+/**
+ * 새 룸 ID를 생성한다. crypto.randomUUID()를 사용한다.
+ * @returns {string}
+ */
+function generateRoomId() {
+  return crypto.randomUUID();
+}
+
+/**
+ * 새 빈 Room 객체를 생성해 roomMap에 등록하고 반환한다.
+ * @param {string} id
+ * @returns {Room}
+ */
+function createRoom(id) {
+  const room = { id, players: [], botChild: null, _botSpawnPending: false };
+  roomMap.set(id, room);
+  return room;
+}
+
+/**
+ * 대기 중(인원 1명)인 첫 번째 룸을 반환한다. 없으면 null.
+ * @returns {Room|null}
+ */
+function findWaitingRoom() {
+  for (const room of roomMap.values()) {
+    // AI 전용 룸(_botSpawnPending=true)은 봇 spawn 대기 중이므로 일반 사용자의
+    // 자동 합류 대상에서 제외한다 (DEFECT-1: 200ms 레이스 윈도우 차단).
+    if (room.players.length === 1 && !room._botSpawnPending) return room;
+  }
+  return null;
+}
 
 /**
  * 봇 자식 프로세스를 spawn한다. 이미 실행 중이거나 bot.js가 없으면 무시.
+ * @param {Room} room - 봇을 연결할 대상 룸
  * @returns {void}
  */
-function spawnBotChild() {
+function spawnBotChild(room) {
   const botPath = path.join(__dirname, 'bot.js');
   if (!fs.existsSync(botPath)) {
     console.warn('[tetris] bot.js 없음 — 봇 spawn 스킵');
     return;
   }
-  if (botChild && botChild.exitCode === null) {
-    console.log('[tetris] 봇 이미 실행 중');
+  if (room.botChild && room.botChild.exitCode === null) {
+    console.log(`[tetris] 봇 이미 실행 중 (룸=${room.id})`);
     return;
   }
-  const url = getBotUrl();
+  const url = getBotUrl(room.id);
   if (!url) {
     console.warn('[tetris] getBotUrl이 null 반환 — 봇 spawn 스킵');
     return;
   }
-  console.log(`[tetris] 봇 spawn: ${url}`);
-  botChild = spawn(process.execPath, [botPath, '--url', url], {
+  console.log(`[tetris] 봇 spawn (룸=${room.id}): ${url}`);
+  room.botChild = spawn(process.execPath, [botPath, '--url', url], {
     detached: false,
     stdio: 'ignore',
   });
-  botChild.on('exit', (code) => {
-    console.log(`[tetris] 봇 종료 (code=${code})`);
-    botChild = null;
+  room.botChild.on('exit', (code) => {
+    console.log(`[tetris] 봇 종료 (룸=${room.id}, code=${code})`);
+    room.botChild = null;
   });
 }
 
 /**
  * 봇 자식 프로세스를 종료한다. mode=ai 사용자가 끊어졌을 때 호출.
+ * @param {Room} room
  * @returns {void}
  */
-function killBotChild() {
-  if (botChild && botChild.exitCode === null) {
-    console.log('[tetris] 봇 종료 요청');
-    botChild.kill();
-    botChild = null;
+function killBotChild(room) {
+  if (room.botChild && room.botChild.exitCode === null) {
+    console.log(`[tetris] 봇 종료 요청 (룸=${room.id})`);
+    room.botChild.kill();
+    room.botChild = null;
   }
 }
 
@@ -151,13 +194,41 @@ function killBotChild() {
  * 룸이 게임 중(playing) 상태인지 판정한다 (Phase 3 LOW-2).
  * 두 플레이어가 모두 READY인 상태에서 어느 한쪽도 GAME_OVER로 종료되지 않았을 때 true.
  *
+ * @param {Room} room
  * @returns {boolean}
  */
-function isRoomPlaying() {
-  if (players.length < 2) return false;
-  if (!players.every((p) => p.ready)) return false;
-  if (players.some((p) => p.gameOver)) return false;
+function isRoomPlaying(room) {
+  if (room.players.length < 2) return false;
+  if (!room.players.every((p) => p.ready)) return false;
+  if (room.players.some((p) => p.gameOver)) return false;
   return true;
+}
+
+/**
+ * 룸 내 죽은(비OPEN) 슬롯을 선제 제거한다 (기존 전역 sweep의 룸 단위 버전).
+ * @param {Room} room
+ */
+function sweepZombiesInRoom(room) {
+  const zombies = room.players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
+  if (zombies.length > 0) {
+    console.log(`[server] 룸 ${room.id}: 좀비 ${zombies.length}개 선제 제거`);
+    for (const z of zombies) z.ws.terminate();
+    room.players = room.players.filter((p) => p.ws.readyState === WebSocket.OPEN);
+  }
+}
+
+/**
+ * 게임 종료 방치 상태 룸을 초기화한다 (기존 gameOver 안전망의 룸 단위 버전).
+ * @param {Room} room
+ */
+function clearGameOverRoom(room) {
+  if (room.players.length > 0 && room.players.some((p) => p.gameOver)) {
+    console.log(`[server] 룸 ${room.id}: 게임 종료 방치 — 초기화`);
+    for (const p of room.players) {
+      try { p.ws.close(); } catch { /* 무시 */ }
+    }
+    room.players = [];
+  }
 }
 
 // ── Phase 2 아이템 상수 ─────────────────────────────────────────
@@ -181,10 +252,11 @@ function pickRandomItem() {
 
 /**
  * 룸을 초기 상태로 되돌린다 (재대결 시작 시 사용).
+ * @param {Room} room
  * @returns {void}
  */
-function resetRoomFlags() {
-  for (const p of players) {
+function resetRoomFlags(room) {
+  for (const p of room.players) {
     p.ready = false;
     p.shieldActive = false;
     p.slotCount = 0;
@@ -197,13 +269,14 @@ function resetRoomFlags() {
 
 /**
  * 특정 플레이어를 제외한 나머지에게 메시지를 보낸다.
+ * @param {Room} room
  * @param {string} senderId   - 제외할 플레이어 ID
  * @param {object} payload    - JSON 직렬화할 메시지 객체
  * @returns {void}
  */
-function broadcastOthers(senderId, payload) {
+function broadcastOthers(room, senderId, payload) {
   const msg = JSON.stringify(payload);
-  for (const p of players) {
+  for (const p of room.players) {
     if (p.id !== senderId && p.ws.readyState === 1) {
       p.ws.send(msg);
     }
@@ -212,12 +285,13 @@ function broadcastOthers(senderId, payload) {
 
 /**
  * 모든 플레이어에게 메시지를 브로드캐스트한다.
+ * @param {Room} room
  * @param {object} payload - JSON 직렬화할 메시지 객체
  * @returns {void}
  */
-function broadcastAll(payload) {
+function broadcastAll(room, payload) {
   const msg = JSON.stringify(payload);
-  for (const p of players) {
+  for (const p of room.players) {
     if (p.ws.readyState === 1) {
       p.ws.send(msg);
     }
@@ -239,12 +313,13 @@ function sendTo(player, payload) {
 /**
  * 각 플레이어에게 개별 관점으로 READY_STATE를 전송한다 (오목 파일럿 패턴).
  * myReady: 자기 자신의 ready, opponentReady: 상대의 ready.
+ * @param {Room} room
  * @returns {void}
  */
-function broadcastReadyState() {
-  for (const me of players) {
+function broadcastReadyState(room) {
+  for (const me of room.players) {
     if (me.ws.readyState !== 1) continue;
-    const opp = players.find((p) => p.id !== me.id);
+    const opp = room.players.find((p) => p.id !== me.id);
     sendTo(me, {
       type: 'READY_STATE',
       myReady: me.ready,
@@ -284,46 +359,66 @@ wss.on('connection', (ws, req) => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
 
-  // URL 쿼리에서 mode 파싱 (launcher/network가 mode=ai|bot|human 전달).
+  // URL 쿼리에서 mode/room 파싱 (launcher/network가 mode=ai|bot|human, room=<roomId> 전달).
   const reqUrlObj = new URL(req.url || '/', 'http://localhost');
   const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
+  const roomParam = reqUrlObj.searchParams.get('room') || null;
   const isBot = wsMode === 'bot';
 
-  // 사람(비봇)이 새로 연결될 때, 정원 판정 직전에 "죽은/닫히는" 슬롯만 선제 정리한다 (#13 안전망).
-  // 주의: 살아있는(OPEN) 봇은 보존한다. AI채우기 플로우는 런처가 봇을 먼저 spawn·접속시킨 뒤
-  // 사람이 접속하므로, 모든 봇을 sweep하면 방금 매칭된 정상 봇까지 죽여 상대가 사라진다.
-  // 따라서 ws.readyState가 OPEN이 아닌(좀비) 슬롯만 축출해 누적된 죽은 연결만 정리한다.
-  if (!isBot) {
-    const zombies = players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
-    if (zombies.length > 0) {
-      console.log(`[server] 죽은(좀비) 슬롯 ${zombies.length}개 선제 제거`);
-      for (const z of zombies) z.ws.terminate();
-      players = players.filter((p) => p.ws.readyState === WebSocket.OPEN);
-    }
+  // ── 룸 결정 로직 (멀티룸 아키텍처 2026-08-01) ──
+  let room = null;
 
-    // #14 fix: 연결은 살아있지만 게임이 이미 끝난 플레이어들이 결과창에서 아무것도
-    // 안 눌렀을 때 새 접속자가 "Room is full"로 막히는 문제 해소.
-    // 승자(gameOver=false)의 구 WS가 아직 OPEN일 때 every() 체크가 실패하는 문제 수정:
-    // 누구 하나라도 gameOver이면 게임이 끝난 것이므로 some()으로 완화한다.
-    if (players.length > 0 && players.some((p) => p.gameOver)) {
-      console.log('[server] 게임 종료 방치 상태 — 룸 초기화 후 새 접속 수용');
-      for (const p of players) {
-        try { p.ws.close(); } catch { /* 무시 */ }
+  if (roomParam) {
+    // 명시적 room 파라미터 있음: 지정 룸에만 입장 시도
+    room = roomMap.get(roomParam) || null;
+    if (!room) {
+      ws.send(JSON.stringify({ type: 'ERROR', message: 'Room not found' }));
+      ws.close();
+      console.log(`[server] 연결 거절: 룸 ${roomParam} 존재하지 않음`);
+      return;
+    }
+    // 좀비 선제 정리 (비봇 접속 시)
+    if (!isBot) {
+      sweepZombiesInRoom(room);
+      clearGameOverRoom(room);
+    }
+    if (room.players.length >= 2) {
+      ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
+      ws.close();
+      console.log(`[server] 연결 거절: 룸 ${roomParam} 정원 초과`);
+      return;
+    }
+  } else if (wsMode === 'ai') {
+    // mode=ai: 항상 전용 신규 룸 생성
+    const newId = generateRoomId();
+    room = createRoom(newId);
+    console.log(`[server] AI 전용 룸 생성: ${newId}`);
+  } else {
+    // room 파라미터 없음: 대기 중인 룸 자동 합류 or 신규 생성
+    if (!isBot) {
+      // 비봇 사람이 접속: 대기 룸(1인)을 찾되, 찾은 룸의 좀비/gameOver 정리 후 재검증
+      const candidate = findWaitingRoom();
+      if (candidate) {
+        sweepZombiesInRoom(candidate);
+        clearGameOverRoom(candidate);
+        // 정리 후 인원이 여전히 1명이면 합류, 아니면 룸이 비었거나 만석이므로 스킵
+        if (candidate.players.length === 1) {
+          room = candidate;
+        } else if (candidate.players.length === 0) {
+          // 좀비 정리 후 빈 룸이 됨 → 소멸 후 새 룸 생성
+          roomMap.delete(candidate.id);
+        }
       }
-      players = [];
     }
-  }
-
-  // 룸 정원 초과 시 즉시 거절
-  if (players.length >= 2) {
-    ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
-    ws.close();
-    console.log('[server] 연결 거절: 룸 정원 초과');
-    return;
+    if (!room) {
+      const newId = generateRoomId();
+      room = createRoom(newId);
+      console.log(`[server] 새 룸 생성: ${newId}`);
+    }
   }
 
   // 비어있는 슬롯 ID에 할당 — players.length 기반은 재접속 시 ID 충돌 발생 (P0-B fix)
-  const usedIds = new Set(players.map((p) => p.id));
+  const usedIds = new Set(room.players.map((p) => p.id));
   const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
   /** @type {Player} */
   const player = {
@@ -339,10 +434,13 @@ wss.on('connection', (ws, req) => {
     mode: wsMode,
     ws,
   };
-  players.push(player);
-  console.log(`[server] ${playerId} 연결됨 (현재 인원: ${players.length}/2)`);
+  room.players.push(player);
+  // 역참조: ws → room (close 핸들러에서 룸 추적용)
+  ws._room = room;
 
-  // ── 메시지 라우터 ──
+  console.log(`[server] ${playerId} 연결됨 (룸=${room.id}, 현재 인원: ${room.players.length}/2)`);
+
+  // ── 메시지 라우터 (기존과 동일, players → room.players, 함수 호출에 room 추가) ──
   ws.on('message', (data) => {
     let msg;
     try {
@@ -367,20 +465,22 @@ wss.on('connection', (ws, req) => {
         sendTo(player, {
           type: 'JOINED',
           playerId: player.id,
-          waiting: players.length < 2,
-          // Phase 4 C-2: 친구에게 안내할 호스트 LAN URL을 함께 전달.
-          // 빈 문자열일 수도 있음(LAN IP 미감지 시) → 클라이언트가 폴백 처리.
-          hostUrl: HOST_URL,
+          waiting: room.players.length < 2,
+          // 멀티룸: hostUrl에 ?room=<roomId>를 포함시켜 초대 링크가 특정 룸을 가리키도록 한다.
+          hostUrl: HOST_URL ? `${HOST_URL}/tetris-battle/?room=${room.id}` : '',
+          roomId: room.id,
         });
         // mode=ai 단독 진입(사람 p1) 시 봇 자식 프로세스를 자동 spawn.
-        // 봇 자신(mode=bot)이 들어올 때는 재spawn 하지 않는다. players.length===1로
+        // 봇 자신(mode=bot)이 들어올 때는 재spawn 하지 않는다. room.players.length===1로
         // 사람 단독 대기 시점을 보장(타이밍 경쟁 회피 — connection 직후가 아닌 JOIN 후).
-        if (wsMode === 'ai' && !isBot && players.length === 1) {
+        if (wsMode === 'ai' && !isBot && room.players.length === 1) {
+          room._botSpawnPending = true;
           setTimeout(() => {
+            room._botSpawnPending = false;
             // 200ms 내에 이 사람이 이미 나갔으면(로비 복귀 등) 스폰을 취소한다.
             // 그렇지 않으면 빈 방에 봇만 홀로 남아 다음 방문자의 p1 슬롯을 선점해버린다.
-            if (players.includes(player) && player.ws.readyState === WebSocket.OPEN) {
-              spawnBotChild();
+            if (room.players.includes(player) && player.ws.readyState === WebSocket.OPEN) {
+              spawnBotChild(room);
             }
           }, 200);
         }
@@ -389,14 +489,14 @@ wss.on('connection', (ws, req) => {
 
       case 'READY':
         // P2-5A: 게임 진행 중 중복 READY 차단 — START 재브로드캐스트 방지
-        if (isRoomPlaying()) break;
+        if (isRoomPlaying(room)) break;
         player.ready = true;
-        console.log(`[server] ${player.id} READY`);
-        broadcastReadyState();
+        console.log(`[server] ${player.id} READY (룸=${room.id})`);
+        broadcastReadyState(room);
         // 두 명 모두 READY면 카운트다운 시작
-        if (players.length === 2 && players.every((p) => p.ready)) {
-          console.log('[server] 양쪽 READY → 게임 시작 카운트다운');
-          broadcastAll({ type: 'START', countdown: 3 });
+        if (room.players.length === 2 && room.players.every((p) => p.ready)) {
+          console.log(`[server] 양쪽 READY → 게임 시작 카운트다운 (룸=${room.id})`);
+          broadcastAll(room, { type: 'START', countdown: 3 });
         }
         break;
 
@@ -412,13 +512,13 @@ wss.on('connection', (ws, req) => {
           : 0;
 
         // Phase 3 LOW-2: GAME_OVER 후의 잔여 메시지는 무시.
-        if (player.gameOver || !isRoomPlaying()) {
+        if (player.gameOver || !isRoomPlaying(room)) {
           break;
         }
 
         // lines>0일 때만 가비지를 상대에 중계한다.
         if (safeLines > 0) {
-          broadcastOthers(player.id, {
+          broadcastOthers(room, player.id, {
             type: 'GARBAGE_RECV',
             lines: safeLines,
             combo: safeCombo,
@@ -440,7 +540,7 @@ wss.on('connection', (ws, req) => {
                 : Array(10).fill(0)
             ))
           : [];
-        broadcastOthers(player.id, {
+        broadcastOthers(room, player.id, {
           type: 'OPPONENT_BOARD',
           height: msg.height || 0,
           stack: msg.stack || [],
@@ -458,8 +558,8 @@ wss.on('connection', (ws, req) => {
           break;
         }
         // Phase 3 LOW-2: GAME_OVER 후/게임 시작 전 ITEM_USE는 무시 (룸이 playing 상태일 때만 처리).
-        if (player.gameOver || !isRoomPlaying()) {
-          console.log(`[server] ITEM_USE 무시: ${player.id} (room not playing)`);
+        if (player.gameOver || !isRoomPlaying(room)) {
+          console.log(`[server] ITEM_USE 무시: ${player.id} (room not playing, 룸=${room.id})`);
           break;
         }
         // 서버 슬롯에서 실제 사용 위치를 비워 다음 지급이 그 빈칸을 재사용하게 한다.
@@ -469,27 +569,27 @@ wss.on('connection', (ws, req) => {
           player.slotCount = player.itemSlots.filter(Boolean).length;
         }
 
-        const opp = players.find((p) => p.id !== player.id);
+        const opp = room.players.find((p) => p.id !== player.id);
         if (!opp) break;
 
         if (itemId === 'shield') {
           // 방어막은 자기 자신에게 적용 (서버가 권위적으로 추적)
           player.shieldActive = true;
-          console.log(`[server] ${player.id} 방어막 활성화`);
+          console.log(`[server] ${player.id} 방어막 활성화 (룸=${room.id})`);
           // 상대에게 방어막 활성 알림 (상대 보드에 배지 표시용)
           sendTo(opp, { type: 'SHIELD_ACTIVE' });
           break;
         }
         if (itemId === 'line_clear') {
           // 자기 보드 효과만 (서버는 통과만시킴)
-          console.log(`[server] ${player.id} 라인 클리어 사용`);
+          console.log(`[server] ${player.id} 라인 클리어 사용 (룸=${room.id})`);
           break;
         }
         // 공격형: garbage_bomb / dark / freeze
         if (opp.shieldActive) {
           // 방어막에 차단됨 → 수신자별 역할을 명시해 양쪽 방어막 동시 활성도 안전하게 구분한다.
           opp.shieldActive = false;
-          console.log(`[server] ${opp.id} 방어막 발동: ${itemId} 차단`);
+          console.log(`[server] ${opp.id} 방어막 발동: ${itemId} 차단 (룸=${room.id})`);
           sendTo(player, { type: 'SHIELD_BLOCK', itemId, isDefender: false });
           sendTo(opp, { type: 'SHIELD_BLOCK', itemId, isDefender: true });
         } else {
@@ -511,10 +611,10 @@ wss.on('connection', (ws, req) => {
         player.gameOver = true;
 
         // P2-1: 상대가 이미 topout한 경우 → 무승부(double topout). 1회만 브로드캐스트.
-        const alreadyOut = players.find((p) => p.id !== player.id && p.gameOver);
+        const alreadyOut = room.players.find((p) => p.id !== player.id && p.gameOver);
         if (alreadyOut) {
-          console.log(`[server] GAME_OVER: 양쪽 동시 topout → 무승부`);
-          broadcastAll({
+          console.log(`[server] GAME_OVER: 양쪽 동시 topout → 무승부 (룸=${room.id})`);
+          broadcastAll(room, {
             type: 'GAME_RESULT',
             winner: null,
             reason: 'double_topout',
@@ -523,9 +623,9 @@ wss.on('connection', (ws, req) => {
         }
 
         // 자신의 패배 선언 → 상대가 승리
-        const winnerId = players.find((p) => p.id !== player.id)?.id || null;
-        console.log(`[server] GAME_OVER: ${player.id} 패배, ${winnerId} 승리`);
-        broadcastAll({
+        const winnerId = room.players.find((p) => p.id !== player.id)?.id || null;
+        console.log(`[server] GAME_OVER: ${player.id} 패배, ${winnerId} 승리 (룸=${room.id})`);
+        broadcastAll(room, {
           type: 'GAME_RESULT',
           winner: winnerId,
           reason: 'topout',
@@ -535,21 +635,21 @@ wss.on('connection', (ws, req) => {
 
       case 'REMATCH':
         player.rematchReady = true;
-        broadcastAll({
+        broadcastAll(room, {
           type: 'REMATCH_STATUS',
-          p1Ready: players.find((p) => p.id === 'p1')?.rematchReady || false,
-          p2Ready: players.find((p) => p.id === 'p2')?.rematchReady || false,
+          p1Ready: room.players.find((p) => p.id === 'p1')?.rematchReady || false,
+          p2Ready: room.players.find((p) => p.id === 'p2')?.rematchReady || false,
         });
-        if (players.length === 2 && players.every((p) => p.rematchReady)) {
-          console.log('[server] 양쪽 REMATCH → 새 게임 시작');
-          resetRoomFlags();
+        if (room.players.length === 2 && room.players.every((p) => p.rematchReady)) {
+          console.log(`[server] 양쪽 REMATCH → 새 게임 시작 (룸=${room.id})`);
+          resetRoomFlags(room);
           // Phase 3 LOW-2: resetRoomFlags가 ready를 false로 되돌리지만 재대결 START 직후에는
           // 게임이 즉시 진행되므로 ready를 true로 복원하여 isRoomPlaying()이 통과되도록 한다.
           // (재대결은 새 JOIN/READY 흐름을 거치지 않고 직접 START됨.)
-          for (const p of players) {
+          for (const p of room.players) {
             p.ready = true;
           }
-          broadcastAll({ type: 'START', countdown: 3 });
+          broadcastAll(room, { type: 'START', countdown: 3 });
         }
         break;
 
@@ -560,45 +660,53 @@ wss.on('connection', (ws, req) => {
 
   // ── 연결 해제 ──
   ws.on('close', () => {
-    console.log(`[server] ${player.id} 연결 해제`);
+    // room을 ws._room으로 추적
+    const r = ws._room;
+    if (!r) return;
+
+    console.log(`[server] ${player.id} 연결 해제 (룸=${r.id})`);
     // 종료된 이전 방의 close 이벤트가 늦게 도착해 같은 ID를 재사용한 새 방 참가자를
     // 제거하거나 새 봇을 종료하지 않도록 객체 동일성으로 현재 슬롯을 확인한다.
-    if (!players.includes(player)) {
+    if (!r.players.includes(player)) {
       console.log(`[server] ${player.id} 지연 close 무시 (이미 교체된 슬롯)`);
       return;
     }
     const leaverName = player.name || '(알 수 없음)';
-    players = players.filter((p) => p !== player);
+    r.players = r.players.filter((p) => p !== player);
     // 사람(비봇)이 끊긴 경우 봇 슬롯을 동기적으로 정리한다 (#13 좀비 봇 차단).
     if (!isBot) {
       // killBotChild()의 SIGTERM은 비동기라 봇 WS가 실제 close될 때까지 players에 좀비로 남는다.
       // 따라서 짝 봇 슬롯을 players에서 즉시 제거하고 ws.terminate()로 TCP를 강제 종료한다.
       // (terminate 후 봇 close 핸들러가 연달아 발화돼도 이미 제거된 상태라 filter는 no-op)
-      const botSlot = players.find((p) => p.mode === 'bot');
+      const botSlot = r.players.find((p) => p.mode === 'bot');
       if (botSlot) {
-        players = players.filter((p) => p.mode !== 'bot');
+        r.players = r.players.filter((p) => p.mode !== 'bot');
         botSlot.ws.terminate();
       }
       // 봇 자식 프로세스도 종료 (프로세스 자원 정리 병행).
-      killBotChild();
+      killBotChild(r);
     }
     // 상대가 있으면 이탈 배너 + disconnect 결과 알림
-    if (players.length > 0) {
+    if (r.players.length > 0) {
       // 상대 이탈 배너용 OPPONENT_LEFT 메시지 전송
-      broadcastAll({ type: 'OPPONENT_LEFT', name: leaverName });
-      const remainingId = players[0].id;
-      broadcastAll({
+      broadcastAll(r, { type: 'OPPONENT_LEFT', name: leaverName });
+      const remainingId = r.players[0].id;
+      broadcastAll(r, {
         type: 'GAME_RESULT',
         winner: remainingId,
         reason: 'disconnect',
       });
       // 남은 플레이어의 상태 리셋 (재대결 대기)
-      resetRoomFlags();
+      resetRoomFlags(r);
+    } else {
+      // 인원 0명 → 룸 즉시 소멸
+      roomMap.delete(r.id);
+      console.log(`[server] 룸 소멸: ${r.id}`);
     }
   });
 
   ws.on('error', (err) => {
-    console.error(`[tetris] ${player.id} WS 에러:`, err.message);
+    console.error(`[tetris] ${player.id} WS 에러 (룸=${ws._room?.id}):`, err.message);
   });
 });
 
@@ -797,7 +905,11 @@ if (isDirectExecution()) {
 
   // standalone에서 사용할 createApp 인스턴스 + HTTP 서버.
   // 포트 폴백 재시도 시 동일 createApp 인스턴스를 재사용한다 (룸 상태 유지).
-  const app = createApp({ hostUrl: '' });
+  // getBotUrl은 roomId를 인자로 받아 해당 룸에 봇을 연결하는 URL을 생성한다.
+  const app = createApp({
+    hostUrl: '',
+    getBotUrl: (roomId) => `ws://localhost:${ACTUAL_PORT}/ws?mode=bot&room=${roomId}`,
+  });
 
   function startListening(port, attemptsLeft) {
     const server = http.createServer(app.handleHttp);

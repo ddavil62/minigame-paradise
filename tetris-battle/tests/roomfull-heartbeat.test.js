@@ -79,7 +79,7 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 async function startServer(hbMs = HB_INTERVAL) {
   const app = createApp({
     hostUrl: '',
-    getBotUrl: () => null, // 봇 spawn 불필요 — 수동 소켓으로 시나리오 재현
+    getBotUrl: (roomId) => null, // 봇 spawn 불필요 — 수동 소켓으로 시나리오 재현
     heartbeatIntervalMs: hbMs,
   });
   const server = http.createServer(app.handleHttp);

@@ -1,6 +1,6 @@
 # Tetris Battle 기획서
 
-> 최종 업데이트: 2026-07-31 — server.js에 WebSocket ping/pong 하트비트를 도입하여 네트워크 단절 등 침묵 사망 좀비 소켓을 주기적으로 탐지·회수. "Room is full" 영구 고착 버그 근본 수정. 회귀 10개 슈트 353건 + bot-smoke 11건 PASS.
+> 최종 업데이트: 2026-08-01 — 단일 글로벌 2인 룸 구조를 `Map<roomId, Room>` 기반 멀티룸 아키텍처로 전면 재설계. N명 동시 접속 시 자동으로 여러 2인 룸으로 분리. 초대 링크 공유(주소창 room 파라미터 자동 반영), AI 전용 룸 격리, 룸 즉시 소멸 정책 포함. 회귀 17개 슈트 436건 + QA 독립 19건 PASS.
 
 ## 프로젝트 개요
 
@@ -61,14 +61,14 @@ tetris-battle/
 
 | 모듈 | 파일 | 역할 |
 |---|---|---|
-| 서버 | `server.js` | 2인 1룸 중계, 고유 클리어 이벤트별 80% 확률·아이템 슬롯 권위 처리, 전체 보드 검증·중계, LAN IP 감지, `mode=ai` 봇 관리, WS 하트비트(ping/pong 20초 주기)로 좀비 소켓 자동 회수 |
+| 서버 | `server.js` | `Map<roomId, Room>` 멀티룸 관리, 룸 결정 로직(명시적 room/AI 전용/자동 합류), 고유 클리어 이벤트별 80% 확률·아이템 슬롯 권위 처리, 전체 보드 검증·중계, LAN IP 감지, `mode=ai` 봇 관리, WS 하트비트(ping/pong 4초 주기)로 좀비 소켓 자동 회수 |
 | AI 봇 | `bot.js` | 독자 테트리스 엔진(board/tetromino 인라인 재구현) + WS 클라이언트. 1-look 전수 탐색 휴리스틱, 800~1200ms/피스, 라인 클리어 시 GARBAGE_SEND만 중계 |
 | 게임 루프 | `public/js/game.js` | rAF 기반 중력/Lock Delay/콤보, 상태 머신 (WAITING→COUNTDOWN→PLAYING→GAME_OVER) |
 | 보드 | `public/js/board.js` | 10×22 그리드 (visible 20 + hidden 2 vanish zone), 충돌·라인 제거·가비지(동일 hole)·고스트 |
 | 피스 | `public/js/tetromino.js` | I/O/T/S/Z/J/L 7종 + 4회전 행렬 + 7-bag (Fisher-Yates) |
 | 입력 | `public/js/input.js` | DAS 167ms + ARR 33ms, 프리즈 시 블록 조작만 차단하고 아이템 키는 허용 |
 | 아이템 | `public/js/items.js` | 슬롯 3개, 5종 효과 적용, 다크/프리즈 타이머·방어막 글로우 및 레거시 차단 역할 fallback |
-| 네트워크 | `public/js/network.js` | WS 송수신, 클리어 이벤트 ID·전체 보드·최종 상태 전달, 방어막 역할값 보존, 1회 재연결 |
+| 네트워크 | `public/js/network.js` | WS 송수신, room 파라미터 파싱·sessionStorage 보존, JOINED 수신 시 `history.replaceState`로 주소창 roomId 반영, 클리어 이벤트 ID·전체 보드·최종 상태 전달, 방어막 역할값 보존, 1회 재연결 |
 | UI | `public/js/ui.js` | Canvas 보드/NEXT/HOLD, 실제 셀 기반 상대 미니맵, HUD, 효과 오버레이·토스트 |
 
 ## 기능 목록
@@ -79,7 +79,7 @@ tetris-battle/
 | 입력 | DAS 167ms / ARR 33ms, 소프트 드롭, 하드 드롭 | 완료 (Phase 1) |
 | 점수/레벨 | Single 100/Double 300/Triple 500/Tetris 800 × 레벨, 10줄당 +1 | 완료 (Phase 1) |
 | 가비지 공격 | 변환표(0/1/2/4) + 콤보 +0.5/콤보, 동일 hole 칸 | 완료 (Phase 1) |
-| LAN 1:1 | WebSocket 중계, JOIN→READY→START(3초 카운트다운), 구 연결의 지연 종료로부터 새 참가자 슬롯 보호, 하트비트 기반 좀비 소켓 자동 회수 | 완료 (2026-07-31 보강) |
+| LAN 1:1 멀티룸 | `Map<roomId, Room>` 기반 다중 독립 2인 룸. N명 동시 접속 시 자동 2인 분리. `?room=<id>` 명시 입장(초대 링크), AI 전용 룸 격리, 인원 0명 즉시 소멸. WS 하트비트(4초) 좀비 회수 | 완료 (2026-08-01 전면 재설계) |
 | 상대 미니맵 | 검증된 22×10 전체 셀로 블록 종류·가비지 구멍을 표시하고 구형 높이 payload는 폴백 처리 | 완료 (2026-07-27 보강) |
 | 게임오버/재대결 | 토프아웃 판정, 결과 오버레이, 양쪽 REMATCH → 재시작. 종료·시작 양쪽에서 프리즈/held 입력 초기화 | 완료 (2026-07-20 보정) |
 | 5종 아이템 | 가비지 폭탄 / 시야 가림(5초) / 프리즈(3초) / 라인 클리어 / 방어막 | 완료 (Phase 2) |
@@ -108,24 +108,36 @@ tetris-battle/
 - **콤보**: 첫 클리어는 보너스 없음 (combo 시작값 -1), 두 번째 연속부터 +0.5줄/콤보 가산 (반올림)
 
 ### 가비지 변환표 (라인 클리어 → 상대에게 전송)
-| 클리어 | 가비지 |
-|---|---|
-| Single | 0 |
-| Double | 1 |
-| Triple | 2 |
-| Tetris | 4 |
 
-T-spin / Perfect Clear 보너스는 현재 미감지 (향후 확장 후보).
+Single 0 / Double 1 / Triple 2 / Tetris 4. T-spin / Perfect Clear 보너스는 현재 미감지 (향후 확장 후보).
 
-## 아이템 5종 요약
+### 아이템 5종
 
-| ID | 이름 | 유형 | 효과 | 지속 |
-|---|---|---|---|---|
-| `garbage_bomb` | 가비지 폭탄 | 공격 | 상대 보드 하단 2줄 즉시 추가 | 즉시 |
-| `dark` | 시야 가림 | 공격 | 상대 보드 위 검은 오버레이 (opacity 0.82, 페이드 350ms) | 5초 |
-| `freeze` | 프리즈 | 공격 | 상대 블록 조작 차단, 아이템 키·슬롯 클릭은 허용 (중력은 유지) | 3초 |
-| `line_clear` | 라인 클리어 | 방어 | 자기 보드 하단 2줄 즉시 제거 | 즉시 |
-| `shield` | 방어막 | 방어 | 다음 공격 1회 차단. 활성 중 보드 밖 금색 글로우, 실제 차단 시 짧은 팽창·수축 소멸 표시 | 다음 공격까지 |
+가비지 폭탄(상대 +2줄) / 시야 가림(5초) / 프리즈(3초, 블록 조작만 차단) / 라인 클리어(자기 -2줄) / 방어막(공격 1회 차단, 금색 글로우)
+
+## 룸 관리 아키텍처 (멀티룸)
+
+서버는 `Map<roomId, Room>` 구조로 동시에 여러 독립 2인 룸을 관리한다. 각 Room 객체는 `id`, `players[]`, `botChild`, `_botSpawnPending` 필드를 보유하며, 모든 게임 상태(가비지/아이템/게임오버/REMATCH)는 룸 단위로 격리된다.
+
+### 룸 결정 로직 (3갈래)
+
+| 조건 | 동작 |
+|------|------|
+| `?room=<id>` 파라미터 있음 | 해당 룸에만 입장 시도. 꽉 찼으면 ERROR "Room is full", 존재하지 않으면 ERROR "Room not found". 자동 폴백 없음 (초대 링크 무결성 보존) |
+| `?mode=ai` (room 파라미터 없음) | 항상 전용 신규 룸 생성. 대기 중인 사람 룸에 합류하지 않음. `_botSpawnPending` 가드로 200ms 봇 spawn 대기 중 일반 사용자 침입 차단 |
+| 파라미터 없음 (기본) | `findWaitingRoom()`으로 1인 대기 중인 룸에 자동 합류. 없으면 신규 룸 생성 |
+
+### 초대 링크 공유
+
+JOINED 수신 시 `network.js`가 `history.replaceState()`로 브라우저 주소창에 `?room=<roomId>`를 자동 반영. 사용자가 주소창을 복사해 친구에게 공유하면 동일 룸에 바로 입장 가능. `hostUrl` 필드에도 room 파라미터 포함.
+
+### launcher 연동
+
+`launcher/server.js`의 `/lobby/ws` 2인 매칭 로직은 유지. 매칭 완료 시 REDIRECT 페이로드에 `roomId`(`crypto.randomUUID()`)를 추가하고, path를 `/tetris-battle/?room=<roomId>`로 구성해 같은 로비에서 매칭된 두 클라이언트가 게임 서버의 동일 룸으로 진입.
+
+### 룸 수명주기
+
+인원 0명 시 `roomMap`에서 즉시 삭제(소멸). 유예시간 없음. REMATCH는 양쪽 접속 유지 상태에서만 성립하므로 즉시 소멸 정책과 충돌하지 않음.
 
 ## WebSocket 프로토콜 (요약)
 
@@ -138,7 +150,7 @@ T-spin / Perfect Clear 보너스는 현재 미감지 (향후 확장 후보).
 | C→S | `ITEM_USE` | `itemId`, `slotIndex` |
 | C→S | `GAME_OVER` | - |
 | C→S | `REMATCH` | - |
-| S→C | `JOINED` | `playerId`, `waiting`, `hostUrl` (Phase 4 추가) |
+| S→C | `JOINED` | `playerId`, `waiting`, `hostUrl` (Phase 4 추가), `roomId` (멀티룸 추가) |
 | S→C | `START` | `countdown: 3` |
 | S→C | `GARBAGE_RECV` | `lines`, `combo` |
 | S→C | `OPPONENT_BOARD` | `height`, `stack`, 검증된 `cells`, `final` |
@@ -166,7 +178,7 @@ npm start       # 또는 node server.js [--port 4000]
 ## 알려진 제약사항
 
 - LAN 전용 (WAN/인터넷 매치 미지원)
-- 2인 1룸 고정 (3번째 접속 거절). 종료된 방의 지연 종료는 다음 경기 슬롯을 훼손하지 않으며, 좀비 소켓은 하트비트(20초 주기)로 자동 회수. 여러 활성 매치의 동시 격리는 미지원
+- 각 룸은 2인 고정. 멀티룸(`Map<roomId, Room>`)으로 N명 동시 접속 시 자동 분리. 좀비 소켓은 하트비트(4초 주기)로 자동 회수. 명시적 `?room=<id>` 접속 시 꽉 찬/미존재 룸은 ERROR(자동 폴백 없음)
 - SRS 벽킥 미구현 (단순 회전만)
 - T-spin / Perfect Clear 보너스 미감지
 - Windows 전용 런처 (`.bat`). macOS/Linux에서는 `node server.js` 수동 실행 필요
@@ -178,7 +190,7 @@ npm start       # 또는 node server.js [--port 4000]
 
 - SRS 벽킥 + T-spin 감지 + Perfect Clear 보너스 (가비지 변환표 확장)
 - 단일 .exe 빌드 (`pkg` 또는 Node 21+ SEA) — 친구 PC에 Node가 없을 때
-- 옵저버/관전 모드 (현재 2인 1룸 고정)
+- 옵저버/관전 모드 (현재 룸당 2인 고정)
 - 매치 통계/랭킹 저장 (현재 세션 임시)
 - macOS/Linux 셸 스크립트 (`start.sh`)
 
@@ -186,4 +198,4 @@ npm start       # 또는 node server.js [--port 4000]
 
 - 변경 이력: `docs/CHANGELOG.md`
 - 사용법: `README.md`
-- 파이프라인 산출물: `C:\LazySlimeStudio\.claude\specs\2026-05-25-tetris-battle-*.md`
+- 파이프라인 산출물: `.claude/specs/2026-05-25-tetris-battle-*.md`, `.claude/specs/2026-08-01-tetris-battle-multiroom-*.md`

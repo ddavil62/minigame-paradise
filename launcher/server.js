@@ -19,6 +19,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
@@ -94,9 +95,9 @@ const GAME_APPS = {
     // mode=ai 사용자 진입 시 yutnori 서버가 자체적으로 봇을 spawn할 URL.
     getBotUrl: () => `ws://localhost:${PORT}/yutnori/ws?mode=bot`,
   }),
-  // 테트리스 배틀 — 봇 지원 (2026-06-21 추가).
+  // 테트리스 배틀 — 봇 지원 (2026-06-21 추가). 멀티룸: roomId를 인자로 받는다.
   'tetris-battle':  createTetrisApp({
-    getBotUrl: () => `ws://localhost:${PORT}/tetris-battle/ws?mode=bot`,
+    getBotUrl: (roomId) => `ws://localhost:${PORT}/tetris-battle/ws?mode=bot&room=${roomId}`,
   }),
   'janggi':         createJanggiApp({
     // mode=ai 사용자 진입 시 janggi 서버가 자체적으로 봇을 spawn할 URL.
@@ -608,17 +609,34 @@ function checkReady(room, game) {
   }
 
   // 3. REDIRECT broadcast
-  const redirectPath = `/${room.gameId}/`;
+  // 테트리스 배틀은 멀티룸을 위해 roomId를 생성하여 URL에 포함시킨다.
+  // 다른 게임은 단일 룸 구조 유지이므로 조건 분기로 테트리스 배틀만 처리.
+  const isTetrisBattle = room.gameId === 'tetris-battle';
+  const roomId = isTetrisBattle ? crypto.randomUUID() : null;
   const playerCount = totalCount;
 
   for (const [ws, meta] of room.clients) {
+    // 테트리스 배틀: AI 채우기 시 mode=ai&room=<roomId>, 일반 시 ?room=<roomId>
+    let redirectPath;
+    let mode;
+    if (isTetrisBattle) {
+      mode = usesGameManagedAi ? 'ai' : 'human';
+      redirectPath = usesGameManagedAi
+        ? `/${room.gameId}/?mode=ai&room=${roomId}`
+        : `/${room.gameId}/?room=${roomId}`;
+    } else {
+      mode = usesGameManagedAi ? 'ai' : 'human';
+      redirectPath = `/${room.gameId}/`;
+    }
+
     sendJson(ws, {
       type: 'REDIRECT',
       gameId: room.gameId,
       path: redirectPath,
-      mode: usesGameManagedAi ? 'ai' : 'human',
+      mode,
       playerCount,
       role: meta.id === 'p1' ? 'p1' : 'p2',
+      roomId,
       transitionMs: 300,
     });
   }

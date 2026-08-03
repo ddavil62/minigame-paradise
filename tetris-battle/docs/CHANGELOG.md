@@ -4,6 +4,104 @@
 
 ---
 
+## [2026-08-01] 멀티룸 아키텍처 전면 재설계 — 단일 글로벌 2인 룸 → Map&lt;roomId, Room&gt; 다중 독립 룸
+
+### 배경
+- 기존 서버(`server.js`)는 프로세스 전체에서 `let players = []` 단일 배열로 단 하나의 2인 룸만 유지. 여러 쌍의 사용자가 동시 접속하면 최초 2인 외에는 "Room is full"로 거절되는 근본 구조 한계.
+- 사용자 요청: "10명이 접속하면 5개의 방이 별도로 만들어져야 한다."
+
+### 추가
+- **Room 타입 정의 및 roomMap**: `Map<roomId, Room>` 구조 도입. 각 Room은 `id`, `players[]`, `botChild`, `_botSpawnPending` 필드 보유
+- **룸 결정 로직 3갈래**:
+  - `?room=<id>` 파라미터: 해당 룸에만 엄격 입장 (꽉 찼으면 "Room is full", 미존재면 "Room not found", 자동 폴백 없음)
+  - `?mode=ai` (room 없음): 항상 전용 신규 룸 생성, 대기 중인 사람 룸에 합류하지 않음
+  - 파라미터 없음: `findWaitingRoom()`으로 1인 대기 룸 자동 합류, 없으면 신규 생성
+- **roomId 생성**: `crypto.randomUUID()` 사용 (Node 19+ 글로벌 crypto), 타임스탬프+난수 폴백
+- **룸 수명주기**: 인원 0명 시 `roomMap`에서 즉시 삭제 (유예시간 없음)
+- **초대 링크 공유**: JOINED 수신 시 `network.js`가 `history.replaceState()`로 브라우저 주소창에 `?room=<roomId>` 자동 반영. 주소창 복사로 친구에게 공유 가능
+- **신규 테스트**: `tests/multiroom-isolation.test.js` (MR-001~MR-011, 63단언, 포트 3120)
+- **QA 독립 테스트**: `tests/multiroom-qa-edge.test.js` (49단언, 포트 3125), `tests/multiroom-visual-qa.spec.js` (Playwright 4건, 포트 3130), `tests/defect1-qa-reverify.test.js` (19단언, 포트 3125)
+
+### 변경
+- **`server.js` 핵심 재설계**: 전역 `players[]`/`botChild` → Room 인스턴스 필드로 캡슐화. 모든 헬퍼 함수(`broadcastOthers`, `broadcastAll`, `resetRoomFlags`, `isRoomPlaying`, `spawnBotChild`, `killBotChild`, `broadcastReadyState`)에 room 인자 추가
+- **`getBotUrl` 시그니처**: `() => url` → `(roomId) => url`. 봇이 `?mode=bot&room=<roomId>`로 특정 룸에 접속
+- **connection 핸들러 전면 재작성**: 룸 결정 로직 + `ws._room` 역참조 패턴(close 핸들러에서 룸 추적)
+- **`network.js`**: `connect()`에서 `?room=` URL 파라미터 파싱 + `sessionStorage('tetris:room')` 보존. `aiStart()`에서 `sessionStorage.removeItem('tetris:room')` 추가
+- **`main.js`**: 로비 복귀 4경로(onResult, btnBannerReturnLobby, returnLobbyBtn, backToLobbyBtn)에 `sessionStorage.removeItem('tetris:room')` 추가
+- **`launcher/server.js`**: `import crypto from 'node:crypto'` 추가. `checkReady()`에서 tetris-battle인 경우 `crypto.randomUUID()` roomId 생성, REDIRECT path에 `?room=<roomId>` 포함. `getBotUrl` 시그니처 `(roomId) =>` 변경
+- **JOINED 응답**: `roomId` 필드 추가, `hostUrl`에 `?room=<roomId>` 포함
+- **기존 테스트 호환성 패치**: `bot-smoke.test.js`, `roomfull-heartbeat.test.js`, `roomfull-stale-sessionstorage.spec.js`, `ai-mode-e2e.spec.js` — `getBotUrl: (roomId) =>` 시그니처 변경. `phase1-ws.test.js` 시나리오 6 단언 전환 ("Room is full" ERROR → JOINED `waiting=true` 자동 배정). `phase4-launcher.test.js` L1b/L1c 단언 추가 (`JOINED.roomId` 존재, `hostUrl`에 `?room=` 포함)
+- **좀비 정리 헬퍼**: 기존 전역 sweep → `sweepZombiesInRoom(room)`, `clearGameOverRoom(room)` 룸 단위 버전
+- **하트비트**: 기존 `wss.clients` 전역 순회 유지. close 시 `ws._room`으로 소속 룸 추적해 룸 단위 정리
+
+### 수정
+- **DEFECT-1 (HIGH)**: `findWaitingRoom()`이 AI 전용 룸(봇 spawn 대기 200ms 윈도우)을 일반 사용자의 자동 합류 대상으로 반환하는 레이스 컨디션. 1차 QA에서 발견 → `findWaitingRoom()` 조건에 `&& !room._botSpawnPending` 가드 추가로 수정 → 2차 QA PASS
+  - 근본 원인: AI 사용자 JOIN 수신 시 `_botSpawnPending = true` 설정 후 200ms setTimeout으로 봇 spawn. 이 윈도우에서 일반 사용자가 접속하면 해당 AI 룸에 잘못 합류
+  - 수정 코드: `if (room.players.length === 1 && !room._botSpawnPending) return room;`
+  - `_botSpawnPending` 라이프사이클: 룸 생성 시 `false` → AI JOIN 시 `true` → 200ms 후 무조건 `false` (봇 spawn 성공/실패 무관). 영구 잔류 위험 없음
+
+### 테스트 결과
+| 슈트 | 결과 | 단언 수 |
+|------|------|---------|
+| multiroom-isolation (MR-001~011) | PASS | 63 |
+| phase1-ws | PASS | 37 |
+| phase2-items | PASS | 58 |
+| phase2-edge | PASS | 13 |
+| phase3-polish | PASS | 12 |
+| phase3-4-qa-edge | PASS (Q7b 제외) | 20/21 |
+| phase4-launcher | PASS | 22 |
+| phase5-vanish-zone | PASS | 52 |
+| phase5-qa-edge | PASS | 71 |
+| bot-smoke | PASS | 11 |
+| roomfull-heartbeat | PASS | 9 |
+| roomfull-stale-sessionstorage | PASS | 2 |
+| ai-mode-e2e | FAIL (baseline) | 0/2 |
+| input-freeze-rematch | PASS | 7 |
+| input-freeze-rematch-independent-qa | PASS | 1 |
+| input-freeze-rematch.browser | PASS | 1 |
+| defect1-qa-reverify (QA 독립) | PASS | 19 |
+| **합계** | | **398 PASS** (baseline 3건 제외) |
+
+### AD 검수
+- visual_change: ui
+- AD 모드 3 판정: **APPROVED** (WARN 1건 비강제 — 게임 화면 상하 여백 24px 비대칭은 기존 구조 특성, 이번 변경 무관)
+- HTML/CSS 변경 없음. 유일한 UI 영향은 `history.replaceState`로 브라우저 주소창에 room 파라미터가 추가되는 것뿐
+
+### 알려진 이슈
+- **phase3-4-qa-edge Q7b** (1건): printBanner 정규식 오검출. 기존 baseline 결함, 멀티룸 무관
+- **ai-mode-e2e** (2건): Playwright + self-host WS 환경 의존 간헐 실패. 기존 baseline 결함, 멀티룸 무관
+- **launcher console.log 변수 스코프** (LOW): `checkReady()` 내 for 루프 밖 `redirectPath` 참조 — 마지막 반복값만 출력. 기능 무영향, 로그 전용
+
+### 변경 파일 목록
+| 파일 | 유형 |
+|------|------|
+| `tetris-battle/server.js` | 수정 (핵심) |
+| `tetris-battle/public/js/network.js` | 수정 |
+| `tetris-battle/public/js/main.js` | 수정 |
+| `launcher/server.js` | 수정 |
+| `tetris-battle/tests/bot-smoke.test.js` | 수정 |
+| `tetris-battle/tests/roomfull-heartbeat.test.js` | 수정 |
+| `tetris-battle/tests/roomfull-stale-sessionstorage.spec.js` | 수정 |
+| `tetris-battle/tests/ai-mode-e2e.spec.js` | 수정 |
+| `tetris-battle/tests/phase1-ws.test.js` | 수정 |
+| `tetris-battle/tests/phase4-launcher.test.js` | 수정 |
+| `tetris-battle/tests/multiroom-isolation.test.js` | 신규 |
+| `tetris-battle/tests/multiroom-qa-edge.test.js` | 신규 (QA) |
+| `tetris-battle/tests/multiroom-visual-qa.spec.js` | 신규 (QA) |
+| `tetris-battle/tests/defect1-qa-reverify.test.js` | 신규 (QA) |
+
+### 참고
+- 목적 정의: `.claude/specs/2026-08-01-tetris-battle-multiroom-scope.md`
+- 스펙: `.claude/specs/2026-08-01-tetris-battle-multiroom-plan.md`
+- 구현 리포트: `.claude/specs/2026-08-01-tetris-battle-multiroom-coder-report.md`
+- DEFECT-1 수정: `.claude/specs/2026-08-01-tetris-battle-multiroom-defect1-fix-report.md`
+- QA 1차 (FAIL): `.claude/specs/2026-08-01-tetris-battle-multiroom-qa.md`
+- QA 2차 (PASS): `.claude/specs/2026-08-01-tetris-battle-multiroom-qa-round2.md`
+- AD 검수 (APPROVED): `.claude/specs/2026-08-01-tetris-battle-multiroom-ad-review.md`
+- `assets/` 추가·변경이 없어 Mockup Sync를 생략했다.
+
+---
+
 ## [2026-08-01] "Room is full" 3차 재발 — 하트비트 회수 지연 race window 수정
 
 ### 배경

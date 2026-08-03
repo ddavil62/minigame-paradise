@@ -268,7 +268,12 @@ async function main() {
   }
 
   // ──────────────────────────────────────────────────────────
-  section('시나리오 6: 3번째 클라이언트 거절 (Room is full)');
+  // 시나리오 6: 3번째 클라이언트 — 멀티룸 자동 배정 (아키텍처 변경 2026-08-01)
+  // 기존: room 없이 3번째 접속 시 "Room is full" 거절.
+  // 변경: 멀티룸 도입으로 p3는 새 룸에 p1으로 자동 배정된다.
+  // "Room is full"은 이제 room 파라미터 지정 + 꽉 찬 경우에만 발생한다.
+  // 이 단언 전환은 사용자 승인 완료(멀티룸 아키텍처 변경에 따른 의도적 동작 변경).
+  section('시나리오 6: 3번째 클라이언트 → 멀티룸 새 룸 자동 배정');
   {
     await sleep(300);
     const p1 = makeClient('p1'); await p1.waitOpen();
@@ -281,12 +286,12 @@ async function main() {
 
     const p3 = makeClient('p3');
     await p3.waitOpen();
-    const err = await p3.waitMessage((m) => m.type === 'ERROR', 1500);
-    assert(err.message === 'Room is full', `p3 ERROR message=Room is full (실제: ${err.message})`);
-    await p3.waitClose();
-    assert(p3.ws.readyState === 3, 'p3 연결이 서버에 의해 종료됨');
+    p3.send({ type: 'JOIN' });
+    const j3 = await p3.waitMessage((m) => m.type === 'JOINED', 1500);
+    assert(j3.waiting === true, `p3: 새 룸에 p1으로 자동 배정, waiting=true (멀티룸 동작, 실제: ${j3.waiting})`);
+    assert(j3.playerId === 'p1', `p3: 새 룸의 p1 (실제: ${j3.playerId})`);
 
-    p1.close(); p2.close();
+    p1.close(); p2.close(); p3.close();
     await p1.waitClose(); await p2.waitClose();
     await sleep(300);
   }

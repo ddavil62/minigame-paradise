@@ -47,8 +47,19 @@ export function createNetwork(handlers) {
     let mode = urlParams.get('mode') || sessionStorage.getItem('tetris:mode') || '';
     if (mode) sessionStorage.setItem('tetris:mode', mode);
 
-    const modeQuery = mode ? `?mode=${encodeURIComponent(mode)}` : '';
-    const url = `${proto}://${location.host}${wsPath}${modeQuery}`;
+    // room 파라미터 파싱 + sessionStorage 보존 (재연결 시 동일 룸 유지).
+    // 런처 REDIRECT의 ?room=<roomId>로 진입하거나 직접 공유 링크로 진입한 경우 모두 처리.
+    let room = urlParams.get('room') || sessionStorage.getItem('tetris:room') || '';
+    if (room) {
+      sessionStorage.setItem('tetris:room', room);
+    }
+
+    // 쿼리 파라미터 조립
+    const queryParts = [];
+    if (mode) queryParts.push(`mode=${encodeURIComponent(mode)}`);
+    if (room) queryParts.push(`room=${encodeURIComponent(room)}`);
+    const queryStr = queryParts.length ? `?${queryParts.join('&')}` : '';
+    const url = `${proto}://${location.host}${wsPath}${queryStr}`;
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
 
@@ -123,11 +134,24 @@ export function createNetwork(handlers) {
     switch (msg.type) {
       case 'JOINED':
         myPlayerId = msg.playerId;
+        // 멀티룸: 서버가 응답한 roomId를 sessionStorage에 보존하고, 브라우저 주소창에
+        // ?room=<roomId>를 반영한다. 최초 접속자(p1)가 주소창을 복사해 친구에게
+        // 공유하면 그 링크에 room이 포함되어 같은 방으로 입장할 수 있다.
+        if (msg.roomId) {
+          sessionStorage.setItem('tetris:room', msg.roomId);
+          // 현재 주소창에 room 파라미터가 없으면 추가한다 (replaceState로 히스토리 오염 방지)
+          const currentUrl = new URL(location.href);
+          if (!currentUrl.searchParams.has('room')) {
+            currentUrl.searchParams.set('room', msg.roomId);
+            history.replaceState(null, '', currentUrl.toString());
+          }
+        }
         // Phase 4 C-2: 서버가 알려준 호스트 LAN URL을 함께 전달 (없으면 빈 문자열).
         handlers.onJoined({
           playerId: msg.playerId,
           waiting: msg.waiting,
           hostUrl: typeof msg.hostUrl === 'string' ? msg.hostUrl : '',
+          roomId: msg.roomId || '',
         });
         break;
       case 'START':
@@ -251,6 +275,7 @@ export function createNetwork(handlers) {
      */
     aiStart() {
       sessionStorage.setItem('tetris:mode', 'ai');
+      sessionStorage.removeItem('tetris:room');  // AI는 항상 새 전용 룸
       const base = location.origin + location.pathname;
       location.href = `${base}?mode=ai`;
     },

@@ -126,6 +126,14 @@ async function run() {
     // L3: 기존 필드 보존
     assert(joined.playerId === 'p1', `L3a. playerId 보존 (실제: ${joined.playerId})`);
     assert(joined.waiting === true, `L3b. waiting 보존 (실제: ${joined.waiting})`);
+    // L1b (멀티룸 2026-08-01): JOINED 응답에 roomId 필드가 포함된다
+    assert(typeof joined.roomId === 'string' && joined.roomId.length > 0,
+      `L1b. JOINED.roomId 존재 (멀티룸 초대 링크 기반, 실제: "${joined.roomId}")`);
+    // L1c: hostUrl이 비어있지 않다면 ?room= 파라미터 포함
+    if (url) {
+      const hasRoom = url.includes('?room=') || url.includes('&room=');
+      assert(hasRoom, `L1c. JOINED.hostUrl에 ?room= 파라미터 포함 (멀티룸 초대 링크, 실제: "${url}")`);
+    }
     a.close();
     await sleep(150);
   }
