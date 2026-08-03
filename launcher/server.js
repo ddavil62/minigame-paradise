@@ -631,10 +631,12 @@ function checkReady(room, game) {
 
   // 3. REDIRECT broadcast
   const playerCount = totalCount;
+  // 요약 로그(663번 줄)에서 루프 종료 후에도 참조할 수 있도록 루프 밖에 선언한다.
+  // (이전 버전은 for 블록 내부 let이라 스코프를 벗어나 ReferenceError가 발생했다.)
+  let redirectPath;
 
   for (const [ws, meta] of room.clients) {
     // 테트리스 배틀: AI 채우기 시 mode=ai&room=<roomId>, 일반 시 ?room=<roomId>
-    let redirectPath;
     let mode;
     if (isTetrisBattle) {
       mode = usesGameManagedAi ? 'ai' : 'human';
