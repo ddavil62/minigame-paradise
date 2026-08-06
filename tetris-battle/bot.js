@@ -449,7 +449,11 @@ function doPlace(type) {
   // 전송해 상대 화면 미니맵에 봇 보드가 그려지도록 한다. (이전 stack:[]는 미니맵이 비어 보이던 버그)
   const stack = getColumnHeights(botGrid);
   const height = stack.length ? Math.max(...stack) : 0;
-  send({ type: 'BOARD_STATE', height, stack });
+  // cells: 서버 BOARD_STATE 핸들러가 검증하는 22x10 배열. botGrid를 deep copy해 전달한다.
+  // server.js L553: cells.length===22 && row.length===10 && 값 0~8 → safeCells로 중계됨.
+  // cells가 없으면 ui.js renderOpponent가 구형 막대 폴백으로 렌더링해 시각적 게임오버처럼 보임.
+  const cells = botGrid.map((row) => row.slice());
+  send({ type: 'BOARD_STATE', height, stack, cells });
 
   // 다음 피스 예약.
   if (isRunning) scheduleNextPiece();

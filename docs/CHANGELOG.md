@@ -1,5 +1,36 @@
 # Changelog
 
+## [2026-08-05] - 테트리스 배틀 AI 대전 게임오버 미판정 및 아이템 미지급 버그 수정
+
+### 수정
+
+- **원인 A: 봇 BOARD_STATE cells 누락 해소** (`tetris-battle/bot.js`): BOARD_STATE 전송에 `cells` 필드(botGrid deep copy, 22x10 배열, 값 0~8)를 추가했다. 기존에는 cells가 없어 server.js가 `safeCells = []`로 중계하고, ui.js renderOpponent가 구형 막대(stack 기반) 폴백으로 렌더링해 봇 보드가 시각적으로 게임오버처럼 보이는 왜곡이 발생했다. `botGrid.map(row => row.slice())`로 deep copy해 서버 검증(22행 x 10열 x 값 0~8)을 통과한다.
+- **원인 B: 봇 GAME_OVER 메시지 전달 실패 해소** (`tetris-battle/server.js`): 봇 WS close 핸들러(player 슬롯 제거 직전)에 봇 gameOver 직접 처리 블록을 삽입했다. 발동 조건: `isBot && !player.gameOver && opponent OPEN` 3중 가드. 봇이 토프아웃 후 WS가 닫힐 때 GAME_OVER 메시지가 `ws.readyState !== 1`로 DROP되어도 서버가 직접 `player.gameOver = true` + `broadcastAll(GAME_RESULT, topout)`을 처리한다. 사람 disconnect 시 봇 terminate 경로에서는 opponent 조건으로 자동 차단된다.
+- **원인 C: 아이템 미지급** (자동 해소): 원인 B 해결로 봇 WS 종료 전에 서버가 게임오버를 처리하므로 `isRoomPlaying()=true`가 유지되어 `tryGrantItem()` 호출이 정상 동작한다.
+
+### 추가
+
+- `tetris-battle/tests/bot-gameover-fix.test.js` 신규 회귀 테스트 슈트 (포트 3112, ad-hoc 노드 러너):
+  - TBFIX-001: 봇 BOARD_STATE에 cells 22x10 배열 포함 확인 (3 단언)
+  - TBFIX-002: 봇이 쌓였을 때 cells에 0이 아닌 값 존재 확인 (1 단언)
+  - TBFIX-003: 봇 WS 비정상 종료(GAME_OVER 미전송) 시 사람이 GAME_RESULT 수신 (2 단언)
+  - TBFIX-004: 리매치 후 아이템 지급 정상 동작, `random: () => 0` 주입으로 100% 당첨 확인 (3 단언)
+
+### 검증
+
+- QA PASS: AC-1~AC-8 전부 충족.
+- 신규 테스트 TBFIX-001~004: 9단언 전부 PASS.
+- 기존 회귀 슈트 12종 353건 PASS (Q7b 기존 결함 1건 제외, 봇 무관).
+- bot-smoke 11/11 PASS.
+- Playwright 시각 검증 2건 PASS (상대 미니맵 실제 셀 색상 렌더링 확인).
+- QA 능동 탐색 11단언 PASS (이중 GAME_RESULT, 즉시 close, 사람 먼저 disconnect, cells 값 범위, 연속 2회 비정상 종료 등).
+- MEDIUM 이슈 1건 비차단: 봇 close 시 GAME_RESULT(topout) + GAME_RESULT(disconnect) 이중 전송 발생하나 클라이언트 `resultShown` 가드로 UI 영향 없음. 후속 수정 권장.
+
+### 참고
+
+- 스펙: `.claude/specs/2026-08-05-tetris-battle-ai-gameover-stuck-plan.md`
+- QA: `.claude/specs/2026-08-05-tetris-battle-ai-gameover-stuck-qa.md` (PASS)
+
 ## [2026-07-30] - 맞고 버그 리포트 #54~#59 일괄 수정
 
 ### 수정

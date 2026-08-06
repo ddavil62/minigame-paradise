@@ -690,6 +690,29 @@ wss.on('connection', (ws, req) => {
       console.log(`[server] ${player.id} 지연 close 무시 (이미 교체된 슬롯)`);
       return;
     }
+    // 원인 B 수정: 봇 WS가 종료될 때 게임이 아직 진행 중이고 봇이 gameOver 상태가 아니면
+    // 서버가 직접 봇의 게임오버를 처리한다.
+    // GAME_OVER 메시지가 WS 불안정 타이밍에 DROP된 경우도 이 경로로 복구된다.
+    //
+    // 발동 조건:
+    //   1. 종료되는 연결이 봇(isBot === true)
+    //   2. 봇이 아직 gameOver 상태가 아님 (player.gameOver === false)
+    //   3. 상대(사람 플레이어)가 룸에 아직 있고 OPEN 상태
+    //   → 사람 disconnect 직후 서버가 봇을 terminate()한 경우(상대 없음)에는 발동하지 않음.
+    if (isBot && !player.gameOver) {
+      const opponent = r.players.find((p) => p !== player && p.ws.readyState === WebSocket.OPEN);
+      if (opponent) {
+        console.log(`[server] 봇(${player.id}) WS close 감지 — gameOver 직접 처리 (룸=${r.id})`);
+        player.gameOver = true;
+        // 봇이 패배 → 상대(사람)가 승리
+        broadcastAll(r, {
+          type: 'GAME_RESULT',
+          winner: opponent.id,
+          reason: 'topout',
+        });
+      }
+    }
+
     const leaverName = player.name || '(알 수 없음)';
     r.players = r.players.filter((p) => p !== player);
     // 사람(비봇)이 끊긴 경우 봇 슬롯을 동기적으로 정리한다 (#13 좀비 봇 차단).
