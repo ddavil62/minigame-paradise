@@ -1053,9 +1053,13 @@ function stealPi(g, taker, victim, count) {
   }
   // 부족하면 쌍피와 조커를 카드 단위로 가져온다. 둘 다 피 2장 가치지만
   // 강탈 횟수는 피 가치가 아니라 실제 카드 한 장을 기준으로 소모한다.
+  // 9월 술잔(m09_kkeut)을 쌍피로 선택한 경우도 포함한다 — score.js의
+  // calculateScore는 채점용 로컬 복사본에서만 type을 바꾸므로 원본 카드는
+  // 여전히 type:'kkeut'으로 남아있어, kkeutAsSsangpi 플래그로 별도 판정한다.
   for (let i = g.captured[victim].length - 1; i >= 0 && remaining > 0; i--) {
     const c = g.captured[victim][i];
-    if ((c.type === 'pi' && c.subtype === 'ssangpi') || c.type === 'joker') {
+    const isKkeutAsSsangpi = c.id === 'm09_kkeut' && g.kkeutAsSsangpi[victim];
+    if ((c.type === 'pi' && c.subtype === 'ssangpi') || c.type === 'joker' || isKkeutAsSsangpi) {
       g.captured[victim].splice(i, 1);
       g.captured[taker].push(c);
       remaining--;

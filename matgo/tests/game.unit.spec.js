@@ -876,3 +876,24 @@ test('G-43b: 타인 뻑 풀이 시 상대 피 1장 강탈 (ppeokFlags[month] !==
   expect(g.lastAction.stoleFromOpp).toBe(1);          // 타인 뻑 → 1장 유지
   expect(g.captured.p2.length).toBe(2);               // 3 - 1 = 2
 });
+
+test('G-67(버그 리포트 #67): 9월 술잔을 쌍피로 선택한 카드도 강탈 대상에 포함된다', () => {
+  // 원인: score.js calculateScore는 채점용 로컬 복사본에서만 type을 바꾸므로
+  // 원본 captured 카드는 kkeutAsSsangpi 선택 후에도 type:'kkeut'로 남는다.
+  // stealPi가 이를 인식 못해 일반 피가 0장인 상대에게서 술잔 카드를 강탈하지 못하던 버그.
+  const g = makeGame({
+    p1Hand: ['m01_gwang', 'm05_kkeut'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m01_tti_hong', 'm01_pi_a', 'm01_pi_b'],
+    deck:   [],
+  });
+  g.captured.p2 = [card('m09_kkeut')]; // 일반 피 없음, 쌍피 선택된 9월 술잔만 보유
+  g.kkeutAsSsangpi.p2 = true;          // p2가 9월 술잔을 쌍피로 선택한 상태
+  g.ppeokFlags[1] = 'p2';              // 타인 뻑 풀이 → 1장 강탈
+
+  playCard(g, 'p1', 'm01_gwang');
+  expect(g.lastAction.kind).toBe('sweep_from_hand');
+  expect(g.lastAction.stoleFromOpp).toBe(1);
+  expect(g.captured.p2.length).toBe(0);                          // 술잔 카드가 강탈되어 사라짐
+  expect(g.captured.p1.some((c) => c.id === 'm09_kkeut')).toBe(true);
+});

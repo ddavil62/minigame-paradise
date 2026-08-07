@@ -1,5 +1,22 @@
 # Changelog
 
+## [2026-08-07] — 리포트 #67 조커/쌍피 강탈 시 9월 술잔(쌍피 선택) 누락 수정
+
+### #67 (fix, quick 모드) — 9월 술잔을 쌍피로 선택해도 강탈 대상에서 빠지던 버그
+
+조커나 쌍피 강탈(뻑 풀이·따닥·쓸 등) 시 상대가 9월 술잔(`m09_kkeut`)을 쌍피로 선택한 상태여도 강탈 대상에 포함되지 않던 버그를 수정했다.
+
+#### 근본 원인
+
+`score.js`의 `calculateScore`는 `kkeutAsSsangpi` 옵션 적용 시 **채점용 로컬 복사본**(`pool`)에서만 `m09_kkeut`의 `type`을 `'pi'`/`subtype:'ssangpi'`로 임시 변경한다. 실제 `g.captured[player]`에 저장된 원본 카드 객체는 선택 이후에도 `type:'kkeut'`으로 그대로 남아있어, `game.js`의 `stealPi`가 `c.type`만으로 쌍피 여부를 판정하는 두 번째 루프(일반 피 소진 후 쌍피/조커 강탈)에서 이 카드를 찾지 못했다.
+
+#### 변경
+
+- `game.js` `stealPi`: 쌍피/조커 판정 루프에 `c.id === 'm09_kkeut' && g.kkeutAsSsangpi[victim]` 조건 추가(원본 카드 객체는 그대로 두고, 선택 플래그로 별도 판정).
+- `tests/game.unit.spec.js`: 회귀 테스트 `G-67` 신규 추가(수정 전 실패 → 수정 후 통과 확인).
+
+검증: `game.unit.spec.js` + `score.unit.spec.js` 101/101 PASS (신규 1건 포함, 무회귀).
+
 ## [2026-07-30] — 리포트 #65/#66 상대 손 fly 중복 수정 + 자뻑 텍스트 변경
 
 ### #65 (fix, full 파이프라인) — 상대 손 fly 중복 재생 수정
