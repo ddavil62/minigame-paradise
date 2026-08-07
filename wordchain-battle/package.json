@@ -1,0 +1,30 @@
+{
+  "name": "wordchain-battle",
+  "version": "0.1.0",
+  "description": "LAN 1:1 끝말잇기 배틀 - 가비지 음절 공격 2인 실시간 대전",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build-words": "node scripts/build-wordlist.js"
+  },
+  "keywords": [
+    "wordchain",
+    "battle",
+    "korean",
+    "lan",
+    "multiplayer",
+    "websocket"
+  ],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

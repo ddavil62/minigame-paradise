@@ -40,6 +40,7 @@ import { createApp as createStarlightMailTowerApp } from '../starlight-mail-towe
 import { createApp as createMoonlightKitchenExpressApp } from '../moonlight-kitchen-express/server.js';
 import { createApp as createVeneziaApp } from '../venezia/server.js';
 import { createApp as createSichuanBattleApp } from '../sichuan-battle/server.js';
+import { createApp as createWordchainBattleApp } from '../wordchain-battle/server.js';
 
 // ── P0-A 안전망: WS 핸들러에서 빠져나온 예외가 런처 프로세스를 종료시키지 않게 한다.
 // 각 게임 server.js의 null guard(1차 방어)로 정상 경로는 차단되며,
@@ -135,6 +136,8 @@ const GAME_APPS = {
   'sichuan-battle': createSichuanBattleApp({
     getBotUrl: () => `ws://localhost:${PORT}/sichuan-battle/ws?mode=bot`,
   }),
+  // 끝말잇기 배틀 — 봇 미지원 (1차 버전).
+  'wordchain-battle': createWordchainBattleApp(),
 };
 
 // 게임 서버가 mode=ai 진입을 받아 자체 봇을 구성하는 게임은 런처 봇을 중복 생성하지 않는다.
@@ -1018,7 +1021,7 @@ function printBanner(port, lanIps) {
     console.log(ANSI.cyan + line(`    ${ANSI.dim}(LAN IP 미감지 — ipconfig로 확인)${ANSI.reset}`) + ANSI.reset);
   }
   console.log(ANSI.cyan + empty + ANSI.reset);
-  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임 15종: /sichuan-battle/ 포함${ANSI.reset}`) + ANSI.reset);
+  console.log(ANSI.cyan + line(`  ${ANSI.dim}게임 16종: /wordchain-battle/ 포함${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + line(`  ${ANSI.dim}종료: Ctrl+C${ANSI.reset}`) + ANSI.reset);
   console.log(ANSI.cyan + top + ANSI.reset);
   console.log('');

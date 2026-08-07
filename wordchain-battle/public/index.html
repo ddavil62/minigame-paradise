@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>끝말잇기 배틀</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 대기 화면 -->
+  <div id="waiting-screen" class="screen active">
+    <h1>끝말잇기 배틀</h1>
+    <p class="subtitle">가비지 음절로 상대를 압박하는 2인 실시간 대전</p>
+    <p id="waiting-msg" class="waiting-msg">상대를 기다리는 중...</p>
+    <a href="/" class="back-link">&larr; 게임 선택</a>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="game-screen" class="screen">
+    <!-- 상단: 플레이어 정보 -->
+    <div class="player-panels">
+      <div class="player-panel me" id="panel-me">
+        <div class="player-name" id="name-me">나</div>
+        <div class="hp-row">
+          <span class="hp-label">HP</span>
+          <div class="hp-bar-wrap">
+            <div class="hp-bar" id="hp-me" style="width:100%"></div>
+          </div>
+          <span class="hp-text" id="hp-text-me">100</span>
+        </div>
+        <div class="gauge-row">
+          <span class="gauge-label">게이지</span>
+          <div class="gauge-bar-wrap">
+            <div class="gauge-bar" id="gauge-me" style="width:0%"></div>
+          </div>
+          <span class="gauge-text" id="gauge-text-me">0%</span>
+        </div>
+      </div>
+      <div class="vs-label">VS</div>
+      <div class="player-panel opp" id="panel-opp">
+        <div class="player-name" id="name-opp">상대</div>
+        <div class="hp-row">
+          <span class="hp-label">HP</span>
+          <div class="hp-bar-wrap">
+            <div class="hp-bar" id="hp-opp" style="width:100%"></div>
+          </div>
+          <span class="hp-text" id="hp-text-opp">100</span>
+        </div>
+        <div class="gauge-row">
+          <span class="gauge-label">게이지</span>
+          <div class="gauge-bar-wrap">
+            <div class="gauge-bar" id="gauge-opp" style="width:0%"></div>
+          </div>
+          <span class="gauge-text" id="gauge-text-opp">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 체인 이력 -->
+    <div class="chain-area">
+      <div class="chain-col">
+        <h3>내 체인</h3>
+        <ul id="chain-me" class="chain-list"></ul>
+      </div>
+      <div class="chain-col">
+        <h3>상대 체인</h3>
+        <ul id="chain-opp" class="chain-list"></ul>
+      </div>
+    </div>
+
+    <!-- 입력 영역 -->
+    <div class="input-area">
+      <div class="start-char-display">
+        <span>시작 글자: </span>
+        <span id="start-char" class="start-char">자유</span>
+      </div>
+      <div class="timer-display">
+        <span>⏱</span>
+        <span id="timer-text">20</span><span>초</span>
+      </div>
+      <div class="input-row">
+        <input type="text" id="word-input" class="word-input" placeholder="단어를 입력하세요" autocomplete="off" disabled>
+        <button id="submit-btn" class="submit-btn" disabled>제출</button>
+      </div>
+      <div id="feedback" class="feedback"></div>
+    </div>
+
+    <!-- 가비지 알림 팝업 -->
+    <div id="garbage-popup" class="garbage-popup hidden"></div>
+
+    <!-- 카운트다운 오버레이 -->
+    <div id="countdown-overlay" class="countdown-overlay hidden">
+      <div id="countdown-num" class="countdown-num">3</div>
+    </div>
+  </div>
+
+  <!-- 매치 종료 모달 -->
+  <div id="result-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2 id="result-title">게임 종료</h2>
+      <p id="result-detail"></p>
+      <div class="modal-buttons">
+        <button id="rematch-btn" class="btn-primary">한 판 더</button>
+        <a href="/" class="btn-secondary">로비로</a>
+      </div>
+      <p id="rematch-status" class="rematch-status"></p>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

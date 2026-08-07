@@ -221,5 +221,27 @@
     "playersLabelEn": "Solo AI · 2 players",
     "botLabelKo": "보통 AI 지원",
     "botLabelEn": "Normal AI available"
+  },
+  {
+    "id": "wordchain-battle",
+    "name": "끝말잇기 배틀",
+    "nameKo": "끝말잇기 배틀",
+    "nameEn": "Word Chain Battle",
+    "description": "가비지 음절로 상대를 압박하는 2인 실시간 끝말잇기 대전",
+    "descriptionKo": "가비지 음절로 상대를 압박하는 2인 실시간 끝말잇기 대전",
+    "descriptionEn": "A real-time word chain duel where you send garbage syllables to jam your opponent",
+    "port": 3008,
+    "httpPath": "/wordchain-battle/",
+    "wsPath": "/wordchain-battle/ws",
+    "color": "#A855F7",
+    "emoji": "",
+    "keyArt": "/wordchain-battle/assets/key-art.svg",
+    "botAvailable": false,
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "playersLabelKo": "2인 대전",
+    "playersLabelEn": "2-player battle",
+    "botLabelKo": "AI 미지원",
+    "botLabelEn": "No AI"
   }
 ]
