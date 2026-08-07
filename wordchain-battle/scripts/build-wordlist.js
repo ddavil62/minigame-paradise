@@ -9,7 +9,12 @@
  *
  * 필터 조건:
  *   1. 품사: 명사 (동사/형용사/어미/접사/조사 등 제외)
- *   2. 한글 전용: /^[가-힣]+$/
+ *   2. 형태소 경계 하이픈 제거 후 한글 전용: /^[가-힣]+$/
+ *      (표준국어대사전 원문은 합성명사의 형태소 경계를 하이픈으로 표기한다.
+ *       예: "자동-차", "비행-기", "선생-님". 실제 표기는 하이픈 없이 붙여 쓰므로
+ *       한글 검사 전에 하이픈을 제거해야 "자동차", "비행기" 같은 흔한 합성명사가
+ *       누락되지 않는다. 반면 "^"(공백 표기, 예: "국제^자동차^연맹")는 별도 단어로
+ *       띄어 쓰는 구(句)이므로 제거하지 않고 그대로 필터링 대상에 남긴다.)
  *   3. 최소 2글자 이상
  *   4. 중복 제거
  */
@@ -50,11 +55,11 @@ for (const line of lines) {
   const commaIdx = line.indexOf(',');
   if (commaIdx === -1) continue;
 
-  const word = line.slice(0, commaIdx).trim();
+  const rawWord = line.slice(0, commaIdx).trim();
   const pos = line.slice(commaIdx + 1).trim();
 
   // 접사 기호 제거 (예: -가 → 가)
-  if (word.startsWith('-')) continue;
+  if (rawWord.startsWith('-')) continue;
 
   // 품사 필터
   if (!VALID_POS.has(pos)) {
@@ -62,7 +67,10 @@ for (const line of lines) {
     continue;
   }
 
-  // 한글 전용 필터
+  // 형태소 경계 하이픈 제거: "자동-차" → "자동차" (실제 표기는 붙여 쓴다)
+  const word = rawWord.replace(/-/g, '');
+
+  // 한글 전용 필터 (하이픈 제거 후에도 "^"(구 표시) 등이 남으면 제외)
   if (!HANGUL_RE.test(word)) {
     skippedHangul++;
     continue;
