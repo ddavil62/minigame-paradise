@@ -116,8 +116,7 @@ net.on('WORD_ACCEPTED', (msg) => {
   const who = msg.playerId === myId ? 'me' : 'opp';
 
   // 가비지 음절로 시작한 단어인지 판단 (간략화: UI에서는 forced 상태가 해소됐으므로 서버 정보 기준)
-  const wasGarbage = msg.garbagedOpponent;
-  ui.addChainWord(who, msg.word, false);
+  ui.addChainWord(who, msg.word, Boolean(msg.wasGarbage));
 
   // 게이지 플래시
   if (msg.garbagedOpponent) {

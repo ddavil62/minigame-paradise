@@ -118,6 +118,7 @@ export function calcGaugeGain(wordLength) {
  * @property {number} [gaugeGain]     - 게이지 충전량
  * @property {number} [newGauge]      - 새 게이지 값
  * @property {string} [newLastSyllable] - 새 시작 글자
+ * @property {boolean} [wasGarbage] - 직전에 받은 강제 글자에 대응한 단어인지 여부
  * @property {boolean} [garbageFired] - 가비지 발동 여부
  * @property {string|null} [garbageChar] - 가비지 음절
  * @property {string|null} [garbageTargetId] - 가비지 대상
@@ -169,6 +170,9 @@ export function submitWord(game, playerId, word, wordSet, garbageCandidates) {
 
   // ── 모든 검사 통과: 단어 수락 ──
 
+  // 검증에 성공한 시점의 forced 상태를 보존해야 이후 상태 해제와 의미가 섞이지 않는다.
+  const wasGarbage = Boolean(player.forced);
+
   // 사용된 단어 추가
   game.usedWords.add(word);
 
@@ -212,6 +216,7 @@ export function submitWord(game, playerId, word, wordSet, garbageCandidates) {
     gaugeGain,
     newGauge: player.gauge,
     newLastSyllable: player.lastSyllable,
+    wasGarbage,
     garbageFired,
     garbageChar,
     garbageTargetId,

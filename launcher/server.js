@@ -136,8 +136,10 @@ const GAME_APPS = {
   'sichuan-battle': createSichuanBattleApp({
     getBotUrl: () => `ws://localhost:${PORT}/sichuan-battle/ws?mode=bot`,
   }),
-  // 끝말잇기 배틀 — 봇 미지원 (1차 버전).
-  'wordchain-battle': createWordchainBattleApp(),
+  // 끝말잇기 배틀 — 사람 mode=ai 입장 뒤 게임 서버가 보통 AI를 소유한다.
+  'wordchain-battle': createWordchainBattleApp({
+    getBotUrl: () => `ws://localhost:${PORT}/wordchain-battle/ws?mode=bot`,
+  }),
 };
 
 // 게임 서버가 mode=ai 진입을 받아 자체 봇을 구성하는 게임은 런처 봇을 중복 생성하지 않는다.
@@ -146,7 +148,9 @@ const GAME_APPS = {
 // mode=ai 진입 시 자체적으로 room.id 기반 getBotUrl(room.id)을 호출해 봇을 spawn하는
 // 로직(server.js L476~486)을 갖추고 있으므로, 이 목록에 포함시켜 런처의 중복/불일치
 // 봇 spawn을 막고 게임 서버의 검증된 자체 로직을 그대로 재사용한다.
-const GAME_MANAGED_AI_IDS = new Set(['sichuan-battle', 'starlight-mail-tower', 'yutnori', 'tetris-battle']);
+const GAME_MANAGED_AI_IDS = new Set([
+  'sichuan-battle', 'starlight-mail-tower', 'yutnori', 'tetris-battle', 'wordchain-battle',
+]);
 
 /**
  * 안전한 런처 정적 파일 경로 해석 (디렉토리 트래버설 방지).

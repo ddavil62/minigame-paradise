@@ -604,6 +604,12 @@ body {
   .game-card-keyart { width: 136px; height: 82px; }
 }
 
+/* 4개 최소 열과 gap이 컨테이너 폭을 넘는 태블릿 구간은 안정적인 3열로 전환한다. */
+@media (min-width: 601px) and (max-width: 860px) {
+  .game-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .game-card { min-width: 0; }
+}
+
 #btn-ready:hover {
   background: rgba(245, 233, 201, 0.12);
   border-color: rgba(245, 233, 201, 0.5);

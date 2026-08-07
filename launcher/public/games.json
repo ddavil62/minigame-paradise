@@ -236,12 +236,13 @@
     "color": "#A855F7",
     "emoji": "",
     "keyArt": "/wordchain-battle/assets/key-art.svg",
-    "botAvailable": false,
+    "botAvailable": true,
     "minPlayers": 2,
     "maxPlayers": 2,
-    "playersLabelKo": "2인 대전",
-    "playersLabelEn": "2-player battle",
-    "botLabelKo": "AI 미지원",
-    "botLabelEn": "No AI"
+    "aiFillTargetPlayers": 2,
+    "playersLabelKo": "1인 AI · 2인 대전",
+    "playersLabelEn": "Solo AI · 2 players",
+    "botLabelKo": "보통 AI 지원",
+    "botLabelEn": "Normal AI available"
   }
 ]

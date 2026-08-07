@@ -475,7 +475,8 @@ body {
     gap: 8px;
   }
   .garbage-popup {
-    top: 120px;
+    top: auto;
+    bottom: 16px;
     max-width: calc(100vw - 16px);
     padding: 10px 14px;
     font-size: 0.9rem;
