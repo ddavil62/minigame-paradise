@@ -137,6 +137,11 @@ export function submitWord(game, playerId, word, wordSet, garbageCandidates) {
   const player = game.players[playerId];
   if (!player) return { ok: false, reason: 'invalid' };
 
+  // macOS 등 일부 환경의 한글 IME는 자모가 분리된 NFD 형태로 입력을 전달한다.
+  // 사전(words.json)은 NFC(완성형)로 저장되어 있으므로, 검증 전 NFC로 통일해
+  // "사과"(NFD)가 "한글 아님"/"사전 없음"으로 오판되지 않게 한다.
+  word = typeof word === 'string' ? word.normalize('NFC') : word;
+
   // 1. 한글 검사
   if (!isKorean(word)) {
     return { ok: false, reason: 'not_korean' };

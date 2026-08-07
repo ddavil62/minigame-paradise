@@ -1,5 +1,46 @@
 # 끝말잇기 배틀 변경 이력
 
+## 2026-08-07: 한글 자모 분리(NFD) 입력 시 정상 단어가 "한글 아님"으로 거부되는 버그 수정
+
+### 수정
+
+- macOS 등 일부 OS의 한글 IME는 완성형(NFC) 대신 자모가 분리된 정규화 형태(NFD)로 텍스트를 전달한다. 사전(`data/words.json`)은 전부 NFC로 저장되어 있는데 클라이언트·서버 어디에서도 유니코드 정규화를 하지 않아, NFD로 들어온 정상 단어(예: "사과")가 `isKorean()`의 `/^[가-힣]+$/` 정규식(완성형 음절 범위만 매칭)을 통과하지 못하고 "한글 단어를 입력해주세요"로 거부되던 버그를 수정했다. 사용자에게는 "거의 모든 입력이 실패하는 것"처럼 보였다.
+- `game.js`의 `submitWord()` 최상단에서 `word = word.normalize('NFC')`를 적용해, 이후 `isKorean` 검증·사전 조회(`wordSet.has`)·중복 체크(`usedWords`)·체인 갱신(`lastWord`/`lastSyllable`) 전부가 정규화된 형태로 일관되게 처리되도록 했다. 서버가 유일한 검증 지점이므로 이 한 곳의 수정으로 클라이언트 종류와 무관하게 방어된다.
+
+### 검증
+
+- Node 스크립트로 재현: 수정 전 NFD "사과" 제출 시 `not_korean`으로 거부됨을 확인, 수정 후 정상 수락(`ok:true`) 확인.
+- NFC로 제출된 단어와 NFD로 제출된 동일 단어가 중복으로 정확히 판정됨을 확인(정규화 후 `usedWords` 비교 일관성).
+- `tests/wordchain-battle-ai.test.js` 회귀 통과(AI 선택기 forced·두음법칙·공용 중복 로직 무영향).
+
+## 2026-08-07: 런처 썸네일·대기실 입장 복구
+
+### 수정
+
+- 실행 중인 구 런처가 최신 `games.json`만 다시 제공해 카드에는 끝말잇기가 보이지만 HTTP/WS 라우터는 이를 모르는 split-brain 상태를 제거했다.
+- 런처 시작 시 `games.json`의 순서를 보존한 카탈로그·조회 Map·JSON을 한 번만 만들고, `GAME_APPS`와 양방향 id 정합성을 검증한다.
+- `/games.json`도 같은 런타임 스냅샷을 응답해 썸네일 경로, 카드 입장과 `/lobby/ws?gameId=wordchain-battle` 지원 상태를 한 버전으로 고정했다.
+- 360×640과 390×844 런처 대기실에서 제목과 `AI로 채우기`가 두 줄로 접히지 않도록 제목 크기·헤더 간격·나가기 폭을 압축하고, 준비·AI 버튼을 한 줄의 동일한 52px 높이로 정렬했다.
+- 런처 카탈로그 불일치가 감지되면 준비 전 예외를 런타임 안전망으로 계속 실행하지 않고 명시적 nonzero 코드로 종료하도록 시작 생명주기를 보강했다.
+- AI의 1.2~2.0초 예약값 생성기를 순수 함수로 분리해 난수 경계를 결정적으로 검증하고, 실제 제출 E2E에는 프로세스·사전·WS 전달 여유를 포함한 3초 상한을 적용했다.
+
+### 검증
+
+- 신규 focused Playwright 6건이 모두 통과했다.
+- 기존 SVG 자체와 카드 레이아웃은 변경하지 않고 200 `image/svg+xml`, 자연 크기 250×150을 확인했다.
+- 실제 입장 버튼, raw 로비 WS, AI 채우기, 두 사람 READY handoff, 정상 prefix 3종과 경로 이탈 12종을 검증했다.
+- 최종 QA는 Playwright 35건과 Node 8건으로 **43/43 PASS**, AI 예약값·실제 제출 추가 반복은 **10/10 PASS**다.
+- 모바일 360×640·390×844의 제목과 두 CTA는 한 줄·동일 52px 높이로 검수되었고 AD 모드 3에서 **APPROVED** 판정을 받았다.
+- stale PID 17488만 교체했으며 사용자 테스트용 포트 3000은 현재 소스의 PID 76924로 복구했다.
+
+### 참고
+
+- 스펙: `.Codex/specs/2026-08-07-wordchain-battle-lobby-entry-fix.md`
+- 구현 리포트: `.Codex/specs/2026-08-07-wordchain-battle-lobby-entry-fix-report.md`
+- QA: `.Codex/specs/2026-08-07-wordchain-battle-lobby-entry-fix-qa.md`
+- UI 검수: `.Codex/specs/2026-08-07-wordchain-battle-lobby-entry-fix-ui-review.md`
+- 신규 이미지·에셋 파일 변경이 없어 Mockup asset sync는 생략했다.
+
 ## 2026-08-07: 1인 보통 AI 테스트 모드
 
 ### 추가
