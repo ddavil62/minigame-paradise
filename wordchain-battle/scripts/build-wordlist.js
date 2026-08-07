@@ -17,6 +17,14 @@
  *       띄어 쓰는 구(句)이므로 제거하지 않고 그대로 필터링 대상에 남긴다.)
  *   3. 최소 2글자 이상
  *   4. 중복 제거
+ *
+ * 보충 단어(data/supplement-words.json):
+ *   표준국어대사전은 국가 공인 규범 사전이라 연예인/캐릭터 등 현대 고유명사를
+ *   등재하지 않는다("유재석", "람보" 등은 원본 CSV 어디에도 없음. CSV의
+ *   "인명"/"지명" 품사 태그도 대부분 외국 역사인물·다단어 표기라 실질 도움이 안 됨).
+ *   이런 고유명사는 별도로 수동 큐레이션한 data/supplement-words.json을 만들어
+ *   본 사전과 병합한다. 이 파일은 카테고리별 객체로 구성되며 빌드 시 전부
+ *   평탄화하여 동일한 한글/길이 검증을 거친 뒤 wordSet에 추가된다.
  */
 
 import fs from 'fs';
@@ -30,6 +38,7 @@ const ROOT = path.join(__dirname, '..');
 // ── 인자 파싱 ──
 const csvPath = process.argv[2] || path.join(ROOT, 'data', 'kr_korean.csv');
 const outPath = path.join(ROOT, 'data', 'words.json');
+const supplementPath = path.join(ROOT, 'data', 'supplement-words.json');
 
 // ── 유효 품사 목록 ──
 const VALID_POS = new Set([
@@ -85,6 +94,24 @@ for (const line of lines) {
   wordSet.add(word);
 }
 
+const dictWordCount = wordSet.size;
+
+// ── 보충 단어(연예인/캐릭터 등 고유명사) 병합 ──
+let supplementAdded = 0;
+if (fs.existsSync(supplementPath)) {
+  const supplement = JSON.parse(fs.readFileSync(supplementPath, 'utf8'));
+  for (const [category, list] of Object.entries(supplement)) {
+    if (category.startsWith('_') || !Array.isArray(list)) continue;
+    for (const rawWord of list) {
+      const word = String(rawWord).trim();
+      if (!HANGUL_RE.test(word) || word.length < 2) continue;
+      if (!wordSet.has(word)) supplementAdded++;
+      wordSet.add(word);
+    }
+  }
+  console.log(`[build-wordlist] 보충 단어(고유명사) 병합: +${supplementAdded}개`);
+}
+
 const words = [...wordSet].sort();
 
 console.log(`[build-wordlist] 통계:`);
@@ -92,7 +119,8 @@ console.log(`  전체 라인: ${lines.length}`);
 console.log(`  품사 제외: ${skippedPos}`);
 console.log(`  비한글 제외: ${skippedHangul}`);
 console.log(`  1글자 제외: ${skippedLength}`);
-console.log(`  최종 단어 수: ${words.length}`);
+console.log(`  사전 단어 수: ${dictWordCount}`);
+console.log(`  최종 단어 수(보충 포함): ${words.length}`);
 
 // ── 초성별 분포 출력 (가비지 후보 판단용) ──
 const initialsCount = new Map();
