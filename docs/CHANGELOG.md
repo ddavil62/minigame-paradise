@@ -1,5 +1,37 @@
 # Changelog
 
+## [2026-08-07] - 버그 리포트 #67/#68/#25 처리 결과
+
+### 처리 완료 — #67 (fix)
+
+- **맞고(matgo) 조커/쌍피 강탈 시 9월 술잔(쌍피 선택) 누락**: `score.js`의 `calculateScore`가 `kkeutAsSsangpi` 옵션 적용 시 채점용 로컬 복사본에서만 `m09_kkeut`의 type을 임시 변경해, 원본 `captured` 카드는 `type:'kkeut'`로 남아 `stealPi`가 강탈 대상으로 인식하지 못하던 버그를 수정했다.
+- `matgo/game.js` `stealPi`의 쌍피/조커 판정 루프에 `c.id === 'm09_kkeut' && g.kkeutAsSsangpi[victim]` 조건을 추가했다.
+- 회귀 테스트 `G-67` 신규 추가(수정 전 실패 → 수정 후 통과, git stash로 검증), `game.unit.spec.js` + `score.unit.spec.js` 101/101 PASS(무회귀).
+- 상세: `matgo/docs/CHANGELOG.md` [2026-08-07] 항목. 커밋 `b83fc66`.
+
+### 조사 완료 — #68 (버그 아님, 코드 변경 없음)
+
+- **맞고(matgo) "고" 선언 후 "1고" UI 잔류 신고**: Playwright로 서버 상태를 강제 주입(`/test/inject`)해 실제 "고" 선언 흐름을 재현했다. 액션 토스트("1고!")는 CSS `forwards` 애니메이션으로 정상적으로 opacity:0까지 사라짐을 확인했고, 프로필 뱃지의 "1고" 표시는 점수 배수에 영향을 미치므로 라운드 종료까지 지속 표시되도록 의도된 설계임을 확인했다. 사용자가 신고한 "상대편 1고" 표기는 중앙 배너("상대 턴")와 배수 뱃지("1고")가 나란히 표시되는 정상 UI를 오인한 것으로 판단된다.
+- 코드 변경 없음. 조사용 임시 스크립트(`tests/repro-68-adhoc.mjs`)와 스크린샷은 조사 종료 후 삭제했다.
+
+### 확인 완료 — #25 (이미 해결됨, 코드 변경 없음)
+
+- **사천성(sichuan-battle) 교착 상태 해법 요청**("패를 셔플하는 대신 5초간 조작불가 상태에 빠지는 선택지가 있으면 좋겠어"): 리포트 접수 다음날인 2026-07-27에 이미 `beginDeadlock`/`resolveDeadlock`(`sichuan-battle/lib/game.js`)로 "즉시 셔플" 또는 "5초 대기"(`DEADLOCK_WAIT_MS = 5_000`) 선택 시스템이 구현·배포되어 있음을 코드와 `sichuan-battle/docs/CHANGELOG.md`("[2026-07-27] - 교착 선택과 5초 입력 대기")로 재확인했다.
+
+## [2026-08-07] - 끝말잇기 배틀 로비 썸네일·입장 복구
+
+- 실행 중 구 런처의 메모리 라우터와 매 요청 다시 읽던 `games.json` 사이의 버전 불일치로 끝말잇기 썸네일이 404가 되고 대기실 WS가 `INVALID_GAME`으로 닫히던 원인을 제거했다.
+- 런처 시작 시 순서 보존 카탈로그·조회 Map·직렬화 JSON을 한 번만 만들고, 모든 카탈로그 id와 `GAME_APPS` id의 양방향 정합성을 명시적으로 검증한다.
+- `GET /games.json`은 대기실과 동일한 런타임 스냅샷을 `application/json`, `Cache-Control: no-cache`로 응답한다. 실행 중 파일만 바뀌어 UI와 라우터가 갈라지는 상태를 방지한다.
+- 신규 focused Playwright 6건에서 SVG 200/MIME/250×150, 버튼 DOM 계약, raw `ROOM_STATE`, 일반·AI·2인 handoff, prefix 정상 경로와 12종 경로 이탈 차단을 검증했다.
+- 360×640과 390×844 대기실에서 제목과 `AI로 채우기`가 두 줄로 접히거나 CTA 높이가 달라지지 않도록 모바일 전용 폭·간격 규칙을 적용하고 두 CTA를 동일한 52px 높이로 맞췄다.
+- 시작 카탈로그 정합성 오류가 전역 런타임 예외 안전망에 삼켜지지 않도록, 런처 준비 전 예외는 명시적 로그와 nonzero 코드로 즉시 종료하고 정상 시작 후 WS 런타임 복구 동작은 유지했다.
+- AI 반응 예약값 1.2~2.0초를 순수 경계 테스트로 고정하고, 실제 프로세스·사전·WS 전달 시간은 3초 이내 별도 E2E 계약으로 분리해 부하 환경의 시간 테스트를 안정화했다.
+- stale PID 17488만 확인 후 종료하고 현재 소스로 포트 3000을 복구했다. 최종 사용자 테스트용 런처는 PID 76924이며, `/games.json`, 키아트, 일반·AI·2인 handoff를 live 환경에서 재검증했다.
+- 최종 QA는 Playwright 35건과 Node 8건으로 **43/43 PASS**, AI 예약값·실제 제출 추가 반복은 **10/10 PASS**, AD 모드 3은 **APPROVED**다.
+- 스펙: `.Codex/specs/2026-08-07-wordchain-battle-lobby-entry-fix.md`; QA: `.Codex/specs/2026-08-07-wordchain-battle-lobby-entry-fix-qa.md`.
+- `assets/` 변경이 없어 Mockup asset sync는 생략했다.
+
 ## [2026-08-07] - 끝말잇기 배틀 1인 보통 AI 테스트 모드
 
 - 런처 `AI로 채우기`에서 사람 1명과 서버 관리형 `AI (보통)` 1명을 매칭하도록 `mode=ai` 전달과 `GAME_MANAGED_AI_IDS` 계약을 추가했다.
