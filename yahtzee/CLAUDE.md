@@ -125,11 +125,10 @@ node tests/screenshot-live-keep.js  # 두 페이지 시점 캡처 (tests/screens
 | **재대결 버튼 고착 (N5)** | 2판 연속 AI 재대결 시 버튼이 "재대결 대기 중…"에 영구 고착되던 버그 → `main.js onStart` 콜백에서 `rematchBtn.disabled=false; textContent='재대결'`로 리셋해야 한다. |
 | **턴 강조 셀렉터 범위 (N2)** | `current-p{n}` 강조는 **tbody에만** 적용한다(`tfoot .col-p{n}` 셀렉터 제외). tfoot에 강조 배경이 덮이면 하단 총점/소계(total-row 먹색+연황색)가 가려져 가독성이 깨진다. thead 강조(`color`)는 유지. |
 
-## 파이프라인 적용 규칙
+## 시각 검증
 
-- **`visual_change: ui`**가 기본. UI 변경 시 AD3 검수.
-- **`visual_change: art`는 발생하지 않음** (외부 이미지 에셋 없음). AD1/2 생략.
-- 순수 서버/로직 변경(`game.js`/`server.js`)은 `visual_change: none` 가능.
+- UI 변경은 실제 브라우저에서 점수판, 주사위 상태와 작은 뷰포트를 확인한다.
+- 외부 이미지 에셋은 사용하지 않는다. 순수 서버·게임 로직 변경에는 시각 검증이 필요하지 않다.
 
 ## Mockup Sync
 

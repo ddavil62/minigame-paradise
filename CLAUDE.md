@@ -1,129 +1,62 @@
-# 미니게임 천국 (minigame-paradise)
+# 미니게임 천국
 
-LAN 1:1 미니게임 11종 통합 패키지. 단일 포트(3000) 통합 라우터 구조. (하나비는 2인 협력 게임)
+여러 LAN 멀티플레이 게임을 단일 런처에서 제공하는 Node.js 패키지다. 각 게임은 독립 실행할 수 있고, 통합 모드에서는 런처가 HTTP와 WebSocket을 한 포트로 라우팅한다.
 
-## 게임 목록
+## 먼저 확인할 것
 
-| 경로 | 게임 | 서버 | AI 봇 |
-|------|------|------|------|
-| `/matgo/` | 맞고 (화투 1:1 대전) | `matgo/server.js` | O |
-| `/tetris-battle/` | 테트리스 배틀 | `tetris-battle/server.js` | O |
-| `/davinci-code/` | 다빈치 코드 | `davinci-code/server.js` | X |
-| `/yutnori/` | 윷놀이 | `yutnori/server.js` | O |
-| `/codenames-duet/` | 코드네임 듀엣 | `codenames-duet/server.js` | X |
-| `/janggi/` | 장기 (한국식 표준 KJA 2009) | `janggi/server.js` | O |
-| `/hanabi/` | 하나비 (협력 불꽃 카드게임) | `hanabi/server.js` | X |
-| `/yahtzee/` | 요트 다이스 (Yahtzee, 1:1 점수표) | `yahtzee/server.js` | O |
-| `/rummikub/` | 루미큐브 (타일 그룹/런 세트 만들기) | `rummikub/server.js` | O |
-| `/omok/` | 오목 (표준 19×19, 쌍삼·사사 금수) | `omok/server.js` | O |
-| `/codenames/` | 코드네임 (정통 2:2 팀 경쟁) | `codenames/server.js` | O |
+- 게임 카탈로그의 단일 기준: `launcher/public/games.json`
+- 서버 등록과 라우팅의 단일 기준: `launcher/server.js`의 `GAME_APPS`
+- 게임별 규칙·테스트·함정: `{gameId}/CLAUDE.md`, `README.md`, `docs/`
+- 현재 구현을 확인할 때 이 파일에 게임 목록이나 테스트 개수를 복제하지 않는다.
 
-AI 봇 지원 게임은 1/2 AI 모드 진입 시 server.js가 `bot.js`를 child_process로 자동 spawn한다 (`getBotUrl` 옵션 패턴).
+## 실행
 
-## 서버 실행
-
-```bash
-# 통합 런처 (포트 3000)
+```powershell
+cd C:\antigravity\minigame-paradise
 node launcher/server.js
-
-# 개별 게임 단독 실행 (개발/테스트용)
-node matgo/server.js --port 3013
 ```
+
+- 통합 런처 기본 포트는 `3000`이다.
+- 개별 게임은 해당 디렉터리에서 `node server.js --port <격리 포트>`로 실행한다.
+- 테스트 서버는 사용자 런처와 다른 포트를 사용한다.
+
+## 통합 구조
+
+- `launcher/server.js`
+  - `/{gameId}/...`를 각 게임의 `handleHttp`로 전달한다.
+  - `/{gameId}/ws`를 각 게임 WebSocket 서버로 전달한다.
+  - `/lobby/ws?gameId={gameId}`는 게임별 대기실을 제공한다.
+  - `GAME_MANAGED_AI_IDS`에 포함된 게임은 게임 서버가 AI 수명주기를 관리한다.
+- `launcher/public/games.json`
+  - 이름, 설명, 인원, 경로, 키아트 등 런처 표시 메타데이터를 관리한다.
+  - 게임 추가·삭제 시 `GAME_APPS` 등록과 함께 갱신한다.
+- `launcher/public/app.js`
+  - 포탈, 대기실, 준비 상태, AI 채우기와 게임 이동을 담당한다.
+- `launcher/public/bug-widget.js`
+  - 게임 페이지에 공통 신고 UI를 주입하고 `/bug-report`로 전송한다.
+
+## 변경 규칙
+
+- 게임을 추가하거나 제거할 때 다음을 함께 확인한다.
+  - `launcher/public/games.json`
+  - `launcher/server.js`의 import, `GAME_APPS`, AI 관련 집합
+  - HTTP 경로와 WS 경로
+  - 게임별 `CLAUDE.md` 또는 `README.md`
+- 개별 게임의 룰과 프로토콜을 루트 문서에 다시 서술하지 않는다. 링크와 한 줄 역할만 둔다.
+- 게임 서버는 통합 모드와 단독 모드에서 모두 동작해야 한다.
+- AI 자식 프로세스는 사람 이탈, 게임 종료 정책과 서버 종료 시 정리되어야 한다.
+- 룸 정원, 준비 상태, 리디렉션 경로는 `games.json`의 인원 설정과 일치해야 한다.
+- 사용자 노출 텍스트를 바꾸면 한국어·영어 메타데이터와 관련 테스트를 함께 확인한다.
 
 ## 테스트
 
-각 게임별 CLAUDE.md에 테스트 가이드가 있다. QA는 반드시 해당 게임의 **룰북**을 먼저 숙지한 후 테스트를 진행한다.
+- 게임 로직 변경은 해당 게임 문서가 지정한 최소 회귀 테스트부터 실행한다.
+- 런처 변경은 포탈 로딩, 대기실 입퇴장, READY, AI 채우기, 게임 리디렉션을 확인한다.
+- UI 변경은 데스크톱과 작은 뷰포트에서 실제 렌더링을 확인한다.
+- 고정된 PASS 개수는 문서에 기록하지 않는다. 테스트 파일과 현재 실행 결과를 기준으로 판단한다.
 
-- **장기 (janggi)**: 룰북 `janggi/docs/RULEBOOK.md` (KJA 2009, §1~§13 + 부록 A/B) + 룰북 기반 Playwright 시나리오 111개(`tests/rulebook-c1~c12-*.spec.js`, JR-C1~C12, §11 11/11 커버리지) 완비 (2026-05-31).
-- **맞고 (matgo)**: 룰북 + 단위/E2E 104개 + 신규 G-40~G-44 5건(쓸) + JOKER-001~009 9건(조커). 2026-05-31 룰 보강 5건 — 사통(같은 월 4장 모달 +7), 흔들기/폭탄 카드 클릭 시점 모달(`shake_decision` phase 제거, `awaiting_sangtong` 신설), 첫뻑 +7 base 가산, 폭탄 후 덱 2턴 연속 뒤집기, floor 카드 ID 기반 `floorSlotMap` 위치 고정. 2026-06-03 6건째: **쓸(`sseul`)** — 바닥 같은 월 2장 + 손패 1장(awaiting_floor_choice → 선택) + 더미 1장 매치 = 그 월 4장 전부 + 상대 피 1장. `sweep_from_flip` 토스트는 "쓸!" → "뻑 풀이!"로 정정. 2026-06-03 7건째: **조커 2장** — 덱 50장(`m00_joker_a/b`, `type='joker'`, `month=0`), 매치 불가, captured 시 피 +2, 케이스 A(손 조커 → 상대 피 1 + captured + 더미 1장 손 보충 + 매치 스킵 + **턴 유지**) / 케이스 B(더미 뒤집은 게 조커 → 상대 피 1 + 손에 추가 + 한 번 더 뒤집기, 재귀). `bonusFlipSteps`도 동일. **2026-06-03 정정**: 바닥에 깔린 조커는 데드 슬롯이 아니라 **선공자 자동 획득**(`applyFloorJokerToFirst` in `startRound` — 분배 직후 floor 조커 N장 → `captured[firstTurn]`, 추가 보너스 없음, `lastAction.kind='floor_joker_to_first'` 토스트). **2026-06-15 바닥 리필 룰**: 조커 제거 후 `deck.pop()`으로 floor를 8로 리필(연쇄 최대 2, deck 소진 방어) → `createGame` 결과 `floor`는 **항상 8**(deck 충분 시), `deck`은 `22 - N` 가변(이전 "floor 6~8 가변" 표기 폐기), 카드 총 50 불변. **2026-06-15 선공 바닥 조커 연출 수정**: `client.js` `isRoundStart`에 `floor_joker_to_first` 추가 → 조커·리필 카드 모두 fly 없이 appear. **2026-06-08 조커 라운드 종료 불가 수정**: 케이스 B로 한쪽 손이 +1 누적되어 양쪽 0 동시 도달 불가능했던 버그 수정. `finishTurn` 종료 조건을 "한쪽 손+credit=0 + 상대 credit=0"으로 변경 + 종료 시 양쪽 잔여 손 카드를 본인 captured로 자동 정산(`flushHandsToCaptured`). 폭탄 권리(credit) 우선 보존. `score.js` 무수정. 회귀 JOKER-014~017 추가 (joker-adhoc 19/19, sseul-adhoc 11/11, bombdup-adhoc 7/7, floor-joker-smoke 5/5 = 42/42 PASS). **2026-06-16 버그 4건 수정(B1/B2/B3 fly + B4 조커 턴 룰)**: B1(바닥 2장 먹기 fly 출처) — awaiting_floor_choice 통합 STATE에서 손으로 낸 srcCard가 더미서 나온 것처럼 보이던 버그(`la.kind==='choice_made'` 가드가 sseul/pair_from_flip로 덮여 무효화). `game.js`에 `pendingChoiceSrcCardId` 필드 신설(startRound 초기화 / chooseFloorSteps 단계1에서 `wasFromHand ? srcCard.id : null` 설정 / finishTurn·finishTurnKeepTurn 리셋) + snapshot `choiceFloorSrcCardId` 노출 → `client.js`가 이 필드로 srcCard를 drewIds에서 제외(손패 출처=HAND_THROW, 덱만 DECK_THROW), `la.kind` 폴백 유지. B2(fly 경로 어긋남+텔레포트) — `client.js flyTo`가 left/top만 transition(width/height 동시 transition 제거, 덱·바닥·손패 카드 60×85 동일이라 크기 즉시 적용 시 점프 0) + DECK_THROW 더블 rAF로 snap 제거. B3(쓸 미적용) — 서버 룰(쓸 stealPi)은 정상(G-40 입증), 증상은 B1과 동일 통합 STATE 연출 누락 → **B1 수정으로 강탈 피 fly(origin='opp-captured')+"N월 쓸!" 토스트 정상화, 서버 무수정**. B4(조커 케이스 A) — **룰 변경: 턴 유지**. 기존 "조커 손에서 내면 턴 교대"(finishTurn)를 **턴 유지**(`finishTurnKeepTurn` — 점수/고스톱/술잔/라운드종료 평가 동일, turn=본인 유지, phase=awaiting_play)로 변경. 조커 captured+상대피1+더미1장 손보충은 유지. 케이스 B(더미 뒤집은 게 조커)는 현행 유지(범위 외). `finishTurnKeepTurn`은 `finishTurn` 복사본(턴 교대 줄만 제거, JSDoc 동기화 주의 명시). 테스트: JOKER-002/003/009 턴 단언을 턴 유지로 수정 + JOKER-002a 신규(phase 단언). JOKER-001/REG-G-01의 stale 단언(deck===22, 2026-06-15 리필 룰로 폐기)을 현행 룰(floor===8, deck===22-N)로 정정. 수정 3파일(`game.js`/`public/client.js`/`tests/joker-adhoc.mjs`). 검증: joker-adhoc 24/24 + sseul 11/11 + bombdup 7/7 + floor-joker-smoke 5/5 + game.unit+score.unit 98/98 + e2e-scenarios 30/30(회귀 게이트 E-26~E-30 포함) + QA 능동 probe 10/10 + QA 시각 e2e 2/2 = **191건 전부 PASS**, QA PASS(결함 0), AD3 APPROVED(WARN 1건 비강제).
-- **윷놀이 (yutnori)**: 룰북 `yutnori/docs/RULEBOOK.md` (한국 표준 + 본 구현 비교, §1~§13 + 부록) + 룰북 기반 Playwright 시나리오(`tests/rulebook-c1~c18-*.spec.js`, YR-C1~C18, §13 12건 커버). §13 구현 vs 표준 차이 **12건** (미해소 7 + 해소 5). **2026-06-11 룰 정합 수정 4건(FIX-1~4) + 중첩 분기 수정**: FIX-1 재입장 ID 중복 데드락 / FIX-2 모서리(5/10) 외곽·지름길 선택 분기(§13-1 [HIGH] 해소, `branchType corner/center` + 모서리 지름길 후 중앙 통과 시 corner→center 2단계 중첩 분기 모달) / FIX-3 centerExitB `23→24→25→GOAL` 잔여 소진(§13-2 [HIGH] 해소, 신규 칸 24/25) / FIX-4 capturedBonus 소진 조건 정밀화. §13-12 [LOW] §6-1 윷·모 잡기 중복 보너스 차단 신규 등록(미구현, 별도 발주). 2026-05-31 해소: §13-9 HOME 시각 통일 / §13-10 HOME → 칸 N 정통 매핑 / §13-11 capturedBonus 리셋. 테스트: 서버리스 회귀 289 + QA 엣지 26 = **315/315 PASS** + E2E 25 + smoke 40(신규 `qa-rulefix-edge.spec.js`, `rulebook-c15~c18-*.spec.js`). QA PASS(결함 0), AD3 APPROVED. **2026-06-12 AI 봇 추가**: `bot.js`(STATE 기반 상태 머신, `getBotUrl`+spawn 패턴, `mode=ai` 자동 spawn + 대기 화면 "🤖 AI랑 시작" 진입점), STATE에 `capturedBonus` 필드 추가(후방 호환). 중첩 분기(corner shortcut→center 재무장) 간헐 데드락(HIGH)을 봇 dedup 키에 `awaitingBranchType` 추가로 해소. 봇 smoke `tests/bot-smoke.test.js`(YBOT-001~005, 포트 3104) **4회 연속 7/7 PASS** + 서버리스 315 + E2E 25 유지. **2026-06-15 §13-5/§13-6/§13-12 해소** (첫칸 빽도 워프 cell 1↔19 / 지름길B 경유 중앙 정착 자동 centerExitB / 윷·모 잡기 중복 보너스 차단). **2026-06-16 버그A/B 해소**: 버그A — 중앙(23) **통과**(정확히 안 멈춤) 시 BRANCH 미발송 + 진입 지름길 기준 자동 라우팅(지름길A→centerExitA, 지름길B→centerExitB), 분기 결정은 정확 착지에만 / 버그B — centerExitA에 중간 칸 28/29 신설(`23→28→29→15→…→GOAL`, centerExitB 24/25와 거울 대칭, 백도 29→28/28→23). 수정 `server.js`/`public/js/board.js`. 검증: 서버리스 **338** + bot-smoke **10/10**(YBOT-004 결정적 inject 프로브) + E2E **25** = 전부 PASS, QA PASS(결함 0), AD3 APPROVED(28=(356.67,356.67)/29=(433.33,433.33) 겹침 0).
-- **루미큐브 (rummikub)**: LAN 1:1 타일 게임 (2026-06-10 신규). 타일 106장(1~13×4색×2 + 조커 2), 손 14×2, 더미 78. 그룹(같은 숫자/다른 색 3~4장) / 런(같은 색/연속 숫자 3장+, wrap-around 없음). 첫 등판 30점 이상 필요. 턴 시작 시 `turnSnapshot` 캡처 → 도중 자유 이동 → END_TURN 시 보드 검증 + 첫 등판 점수 검증 → invalid 또는 미달 시 롤백 + 더미 1장. 손 0장 즉시 승리. 서버 권위(`game.js`) — 분배·세트 검증·첫 등판 30점·승리 판정 모두 서버. **AI 봇 강화 완료 (2026-06-10)** — 첫 등판 백트래킹 + 등판 후 그리디 + **조커 활용**(그룹 빈 색 + 런 빈 자리 모든 패턴) + **보드 재구성**(보드 세트 분해 + 새 세트 재조립, 500ms 시간 제한). 조커 회수(SWAP_JOKER)는 표준 룰 지원하지만 봇은 미시도(안전 회피). 효과음 Web Audio 8종. **2026-06-11 룰 정합 수정 10건**: 손 타일을 1장도 내지 않은 턴(순수 재배치)은 commit 불가 → 롤백 + 더미 1장(신규 `no_tile_played` reason, `deck_empty_pass` 패스 카운터 우회 봉쇄), 첫 등판 전 기존 보드 타일 결합 차단, 런 점수 순서 독립 계산, 조커 회수 등판 후 + 정확 타일 검증, 빈 세트 4개 상한, 봇 actionEpoch 체인 취소 등(QA 능동 공격 발견 LOW 1건 QA-ISSUE-1 포함 즉시 보정). smoke `tests/smoke.test.js` (RUMMI-001~032, **138/138 PASS**) + qa-pass3-attack 48/48 + qa-pass3-parity 12/12. 작업 포트 3096. **2026-06-12 손패 정렬 버튼 2종(색상순 기본/숫자순, localStorage `rummikub.sortMode` 영속) + 보드 세트 자동 정규화(`normalizeSetTiles` — `moveTile`/`swapJoker` 후 valid 세트만 오름차순, WS 프로토콜 무변경)**: 신규 RUMMI-033~037로 smoke **150/150** + 능동 공격 `qa-pass4-sort` 34/34 + Playwright `sort-buttons-qa` 1/1, AD3 APPROVED.
-- **요트 다이스 (yahtzee)**: LAN 1:1 턴 교대 5다이스 점수표 게임 (2026-06-08 신규). 서버 권위 — 다이스 랜덤·점수 계산·턴 전환 모두 `game.js` 순수 함수. 표준 Yahtzee 13 카테고리 + 상단 보너스(63점 → +35) + 야츠 보너스(첫 야츠 50점 후 +100점 누적). smoke 테스트 `tests/smoke.test.js`(ad-hoc 노드 러너, 10건 YACHT-001~010, 131/131 PASS). **AI 봇 지원** (2026-06-08 추가): `bot.js` 휴리스틱 — 최빈/스트레이트/큰값 keep + 카테고리 우선순위(Yahtzee→Straight→FullHouse→Quad→Triple→상단→Chance→손해 최소 0점). 봇 시나리오 `tests/bot-smoke.test.js`(25/25 PASS, YACHT-BOT-001~005, 포트 3099). 외부 에셋 0(다이스는 Canvas 2D pip 패턴). **2026-06-09 효과음 9종**(Web Audio API 코드 합성, 외부 MP3 0건, 헤더 🔊/🔇 토글, localStorage `yahtzee.muted` 영속). **2026-06-09 실시간 keep 동기화 + 카테고리 강조**: 신규 `TOGGLE_KEEP { index, value }` 메시지(서버 `game.js::toggleKeep` 가드 — phase/턴/rollCount≥1/0≤index<5, 실패는 조용히 무시) → 상대 턴에서 본인 keep 다이스가 `.die.kept.opponent` + 라벨 "상대 KEEP"으로 즉시 동기화. CATEGORY_SCORED 시 `data-pid`+`data-category` 셀에 `@keyframes scored-flash`(1.4s, scale 1→1.55→1.3→1 + tomato 글로우) 적용. 신규 회귀 YACHT-LIVE-001(toggleKeep 단위 가드)/002(WS 양쪽 STATE.keep 일치)/003·004(opponent KEEP 라벨). 합계 **222/222 PASS** (smoke 155 + dice-render 42 + bot-smoke 25).
-- **테트리스 배틀 (tetris-battle)**: LAN 1:1 한게임 테트리스 스타일 대전. **클라이언트 권위 + 서버 중계** 구조(서버는 가비지/아이템/게임오버만 중계, 보드 전체를 매 tick 브로드캐스트하지 않음). 상세는 `tetris-battle/CLAUDE.md`. **2026-06-21 AI 봇 추가**: 봇이 서버 STATE를 수신하지 않고 **독자 테트리스 엔진을 내장**(`bot.js`, board.js/tetromino.js 상수·로직 인라인 재구현)해 보드를 시뮬레이션하고 라인 클리어 시에만 `GARBAGE_SEND`로 가비지를 서버에 중계. 표준 휴리스틱 1-look(전수 탐색·넥스트 미고려) + 800~1200ms/피스 캐주얼 난이도, 대기 화면 "🤖 AI랑 시작" 진입점(`?mode=ai`→`getBotUrl`+`child_process.spawn` 패턴). `dark`/`freeze`는 의도적 무시(봇은 시뮬레이터만 보고 중력 타이머 없음), `garbage_bomb`만 봇 보드 반영. 검증: 봇 smoke `tests/bot-smoke.test.js`(TBOT-001~005, 포트 3110) **8/8 PASS** + 회귀 9 슈트 **344 PASS**(phase3-4-qa-edge Q7b 1건은 봇 무관 기존 결함, §non-blocker). QA PASS(blocker 0), AD3 대상. **2026-06-28 버그 2건 수정(#12/#13)**: #12 봇 start desync — `bot.js` START 핸들러가 `msg.countdown`을 무시하고 즉시 게임 루프를 시작해 사람보다 ~4초 먼저 플레이하던 버그. `resetBot()`은 즉시, `isRunning=true`+`scheduleNextPiece()`는 `(countdown+1)*1000`ms(=4000ms) 지연으로 사람 `runCountdown(3)` 완료 시점과 동기화. #13 AI채우기 재진입 "Room is full" — 사람 disconnect 시 `killBotChild()` SIGTERM이 비동기라 봇 WS 슬롯이 `players`에 좀비로 잔존하던 버그. `server.js` close 핸들러에서 짝 봇 슬롯 동기 제거 + `ws.terminate()`, connection 진입부에서 `readyState!==OPEN` 죽은 슬롯만 선제 제거(살아있는 봇 보존, 전체 sweep 금지), `import { WebSocket }` 추가. 검증: bot-smoke 11/11 PASS + phase4-launcher/phase1-ws PASS(phase3-4-qa-edge Q7b 기존 결함 무관). QA PASS, #12/#13은 `visual_change:none`이라 AD3 생략.
-- **코드네임 듀엣 (codenames-duet)**: 2026-06-09 **복기 모드 추가** — 게임 종료(`GAME_END`) 시 서버가 `review = { words, keyCardP1, keyCardP2, revealed, greenFound, tokensLeft }`를 함께 브로드캐스트. 결과 모달의 "🔍 복기 보기" 버튼 → 모달 닫고 보드 25칸이 **양쪽 시점 키 카드 전체 공개**(좌상단=내 시점, 우하단=상대 시점 점). 상단 `#review-banner` (sticky)에 결과 요약 + 새 게임/다른 종목/결과 다시 보기 버튼. 복기 중 카드 클릭·단서 입력 비활성. **자동 새 게임 트리거 없음** (사용자가 명시적으로 `NEW_GAME` 보낼 때만 시작). 회귀: `tests/review-smoke.mjs`(27/27 PASS, REVIEW-000~004) + `tests/review-visual.mjs`(11/11 PASS, Playwright). 작업 포트 3098(launcher 3000과 격리). **AI 봇 미지원.** **2026-06-28 복기 잔존 버그(#10) 수정**: 암살자 종료→복기→"새 게임" 시 이전 복기 점(`.review-dot` 50)·배경(`.review-cell` 25)이 잔존하던 버그. `GAME_START` 핸들러가 복기 DOM을 정리하지 않은 게 원인. `clearReviewArtifacts()` 헬퍼 신설(25개 카드에서 `.review-cell`/`.was-revealed` 클래스 제거 + `.review-grid` DOM 제거 + `.my-indicator` display 복원) → `GAME_START`(renderState 재호출 없음, 곧 새 STATE 도착)와 `closeReviewBackToModal()` 양쪽에서 호출. 라이브 검증 cell/dot/assassin 전부 0, review-smoke 27/27 PASS, AD3 APPROVED(6항목).
-- **하나비 (hanabi)**: 룰북 `hanabi/docs/RULEBOOK.md` (Antoine Bauza 표준 Hanabi + 본 구현 비교, §1~§13, 2026-06-01) + 룰북 기반 Playwright 시나리오 61개(`tests/rulebook-c1~c11-*.spec.js`, HR-C1~C11) 완비 (2026-06-01). 2인 완전 협력 카드게임 — 서버 권위 + **손패 가림**(`snapshotForPlayer`가 본인 손패 color/number null 마스킹)이 정체성. §13 구현 vs 표준 차이 **8건 전부 confirmed**. 회귀 게이트: 손패 누설(HR-C6-001/HR-C7-001), §13-7 오프바이원(HR-C7-003/004, 2026-06-01 giveClue checkGameEnd 누락 HIGH 버그 수정). 테스트: 유닛 31 + WS 7 + QA엣지 8 + E2E 6 + 가이드 슬라이더 9. **대기 화면 룰 가이드 슬라이더**(인포그래픽 7장 `public/assets/guide/`, 버튼·키보드·스와이프, HR-C11, 2026-06-01 추가 — game.js/WS 무변경). E2E(C8~C11)는 `node server.js --port 3095` 사전 구동 필요. **AI 봇 미지원.**
-- **오목 (omok)**: 표준 19×19 오목 (2026-06-15 신규, 10번째 종목). 룰: **쌍삼(33)·사사(44) 금수**(흑·백 양쪽 동일, 착수 거부), 5목 이상 연속(가로/세로/대각 4방향) 승리, **장목(6목 이상)도 승리**(반칙 아님), 선공=흑(p1). 서버 권위 — 착수 검증·4방향 `checkWin`(5목 이상·장목 포함)·금수·`checkDraw`(361칸) 모두 `game.js` 순수 함수. **AI 봇 지원**(`bot.js` 휴리스틱 1수 평가 — 빈 교차점 361칸 전수 평가, 공격 1.0 + 수비 0.9 가중치, CHAIN_WEIGHT 테이블, 첫 수 천원, `getBotUrl`+`child_process.spawn` 패턴 + 대기 화면 "🤖 AI랑 시작"). 외부 이미지 에셋 0 — Canvas(728px, 19×19 격자·나뭇결·화점 9곳·좌표 라벨 A~T/1~19) + CSS 우드 테마. 단독 실행 포트 3012(충돌 시 +1 폴백). **2026-06-15 쌍삼·사사 금수 + 세션 유지 리매치 추가**: (1) 금수 — 한 착수로 열린3(`_XXX_`) 2개+ 또는 4목(len===4) 2개+ 동시 생성 시 **착수 거부**(board/moveCount 원복·ERROR 토스트·게임 계속), `game.js`에 `isOpenThree`/`isFour`/`checkDoubleThree`/`checkDoubleFour` 추가, `placeStone` 순서 = 기존검증→가상착수→`checkWin`(승리 우선)→`checkDoubleThree`→`checkDoubleFour`(거부 원복)→`checkDraw`→턴교대. **5목+ 완성 수는 33/44 동시여도 승리**(checkWin 선행), 장목은 여전히 승리. (2) 리매치 — `location.reload()` 제거, WS 연결 유지한 채 양쪽 "한 판 더" 동의 시 재시작. 신규 메시지 `REMATCH`(C→S)/`REMATCH_WAITING{ready}`/`REMATCH_START{nextBlack}`(S→C). 선공: 패자=다음 흑, 기권자=흑, 무승부=색 교체(p1/p2 id 불변·color만 재배정 + `createGame()` 재생성, `server.js` `swapColorsForRematch`/`rematchPending`/`lastGameResult`). 봇은 GAME_OVER/REMATCH_WAITING 시 자동 REMATCH(0.5s, 타임아웃 보호 10s), `REMATCH_START`에서 myColor 재설정, 종료 안 함. 수정: `game.js`/`server.js`/`bot.js`/`public/js/{main,network}.js`/`public/index.html`/`public/css/style.css`. 테스트: smoke 106(OMOK-001~012, 포트 3105) + bot-smoke 14(OMOK-BOT-001~004, 포트 3106) + QA엣지 35(`qa-edge` +QA-R1~R6) + QA draw/bot 9 + QA 금수공격 28(`qa-renju-attack` — 닫힌3 비금수/장목 승리/5목+33 승리/경계 래핑/흑백 양쪽) + QA 리매치공격 14(`qa-rematch-attack` — 색 swap/WAITING/START/원복) + E2E 3 + 모바일 1(격리 포트 3077) = **210건 전부 PASS**(기존 117 회귀 포함, 장목 승리·대각/세로 승리·draw 금수 오탐 0건). QA PASS(결함 0), AD3 APPROVED.
-- **코드네임 (codenames, 클래식)**: 정통 2:2 팀 대전 워드게임 (2026-06-28 신규, 11번째 종목). 룰북 `codenames/docs/RULEBOOK.md` (Vlaada Chvátil 표준 Codenames + 본 구현 비교, §1~§13, §13 구현 vs 표준 차이 7건 + non-blocker 2건). **codenames-duet(2인 협력)과 독립 병존** — 런처 라우팅은 URL 첫 세그먼트(`codenames` vs `codenames-duet`)로 정확 분리. 룰: 25단어 + **단일 공유 키**(선공팀 9/후공팀 8/중립 7/암살자 1), 선공팀(9장)은 매 게임 랜덤, **역할별 시야 분리**(스파이마스터=키 전체 / 요원=공개 카드만, `snapshotForPlayer` 마스킹이 정체성), 팀 턴제(단서=단어+숫자, 추측 숫자+1, 자기팀 적중 턴 유지 / 중립·상대·암살자 턴 종료), 암살자 즉시 패배, 자기팀 카드 전부 공개 승리. **role_select 대기실**(4인이 팀/역할 자유 선택 + 중복 가드 + 호스트 START, 서버 자체 phase) → playing → over(리매치 선공 교체, omok 패턴). 서버 권위 — 키 분배·턴·승패·마스킹 모두 `game.js` 순수 함수, `server.js` createApp noServer 모드. 단독 실행 포트 3014(충돌 시 +1 폴백). 외부 이미지 에셋 0(보드/카드 CSS). 테스트: smoke **65** + Playwright E2E **12**(4 브라우저 컨텍스트 = 레드 마스터/요원·블루 마스터/요원) = **77 PASS** + codenames-duet 회귀 27/27 무영향 + 역할 마스킹 시각 육안 검증(요원 키 누설 **0**). QA PASS(blocker 0), AD3 APPROVED(REVISE 6건 반영, 잔여 WARN 2 비강제). LOW 2건 non-blocker(종료 후 silent break / `isAllSlotsFilled`의 joined 미검사 — 정상 흐름 무영향). **2026-06-28 AI 봇 추가(접근법 C: 완전 오프라인 태그맵, 외부 의존성 0 — LLM·임베딩·HTTP 호출 0)**: `bot-knowledge.js`(빌드타임 생성 **590단어 정적 태그맵**, 128 고유태그 + 헬퍼 `tagsForWord`/`wordsForTag`/`commonTags`/`allTags`, 런타임 API 0) + `bot.js`(WS 봇 — 스파이마스터: 자기팀 ≥2단어 공통 태그 단서·암살자+상대+중립 회피 2단 폴백·보드단어 회피·`number`=커버수 / 요원: 단서 태그 역조회 추측·보너스 미사용 보수적·후보소진 END_TURN, 행동 1~2초 딜레이 `CODENAMES_BOT_DELAY_MIN/RAND` 단축, REMATCH 자동). `server.js`: `getBotUrl` 다중 봇 spawn(`Map<slotKey, child>`) + `FILL_WITH_AI`(게임 내 빈 슬롯 명시 team/role 봇 채움) + **team/role 없는 봇 자동 슬롯 배정**(런처 제너릭 spawn 지원) + #13 좀비 정리(사람 disconnect 시 봇 슬롯 동기 terminate). `public/`: role_select 봇 슬롯 "AI" 뱃지 + 호스트 "AI로 빈자리 채우기" 버튼 + 봇슬롯 클릭 가드. **2가지 AI 진입 경로**: ① 게임 내 "AI로 빈자리 채우기"(사람 자리 선택 후 명시 배정) ② 런처 "AI채우기"(제너릭 봇 → 서버 자동 슬롯배정). 사람 1~3명 + 봇으로 시작 가능. `launcher/public/games.json` codenames `botAvailable: true` + `launcher/server.js` getBotUrl 주입. 검증: 봇 smoke **23**(`bot-smoke.test.js`) 3회 반복 데드락 **0** + bot-knowledge 단위 **22**(590 커버리지 100%) + AI채우기 1+3/2+2/3+1 + #13 좀비 무재발 + 휴먼 smoke 65·E2E 12·duet 27 회귀 무영향. QA가 찾은 DEFECT-1(스파이마스터 데드락)·GAP-1(런처 진입) 수정 후 최종 PASS, AD3 APPROVED. v1 한계: 단서가 카테고리/태그 기반이라 LLM 같은 창의적 단서는 아님(사용자 합의, 추후 연상어 보강 여지).
+## 문서 관리
 
-## 런처 로비 (게임 포탈 + 게임별 대기실)
-
-3-뷰 구조: 닉네임 게이트 → 포탈 뷰(WS 연결 없음, 게임 카드 10개 그리드) → 대기실 뷰(게임별 독립 WS 연결).
-
-- 포탈 뷰: 닉네임 게이트 통과 후 WS 없이 games.json fetch + 게임 카드 표시. 모든 사용자가 카드 클릭 가능.
-- 대기실: 카드 클릭 시 `/lobby/ws?gameId={gameId}`로 WS 연결 + 대기실 뷰 전환. 정원 = maxPlayers.
-- READY 시스템: 전원 준비(READY 토글) AND 인원 >= minPlayers 두 조건 동시 충족 시 REDIRECT.
-- 타임아웃 킥: 입장 후 60초 내 READY 미완료 시 KICKED + 자동 퇴장.
-- AI 채우기: 호스트(첫 입장자)가 FILL_WITH_AI → 빈 슬롯을 AI 봇으로 채움. botAvailable=false 게임은 ERROR 반환.
-- 나가기: LEAVE_ROOM 전송 → WS 닫기 → 포탈 뷰 복귀.
-- 게임 복귀: 게임 종료 후 `location.href='/'`로 포탈 복귀. 각 게임 "로비로" 버튼 현행 유지.
-- 호스트: Map 첫 번째 입장자. 퇴장 시 두 번째로 승계. AI 채우기 버튼 권한만 다름.
-
-### WS 프로토콜 (launcher `/lobby/ws?gameId={gameId}`)
-
-| 방향 | 메시지 | 페이로드 | 설명 |
-|------|--------|---------|------|
-| C->S | `JOIN` | `{ name }` | 대기실 입장 시 닉네임 송신 |
-| C->S | `READY` | (없음) | 준비 버튼 클릭. 토글(준비/취소) |
-| C->S | `LEAVE_ROOM` | (없음) | 나가기 버튼. 서버가 제거 후 ROOM_STATE 재브로드캐스트 |
-| C->S | `FILL_WITH_AI` | (없음) | 호스트 전용. 빈 슬롯을 AI로 채우고 READY 조건 즉시 평가 |
-| S->C | `ROOM_STATE` | `{ gameId, players, aiSlots, readyCount, totalCount, minPlayers, maxPlayers, myId, myReady, canStart }` | 대기실 상태 스냅샷 |
-| S->C | `ROOM_FULL` | `{ gameId, maxPlayers }` | 정원 초과. 클라이언트는 포탈 복귀 |
-| S->C | `KICKED` | `{ reason: 'timeout' }` | 타임아웃 킥. 클라이언트는 포탈 복귀 |
-| S->C | `REDIRECT` | `{ gameId, path, mode, playerCount }` | 게임 시작 |
-| S->C | `ERROR` | `{ message }` | botAvailable=false 게임에서 FILL_WITH_AI 요청 시 |
-
-**삭제된 메시지**: `SET_TARGET`, `PICK_GAME`, `VOTE_GAME`, `CANCEL_AI_FILL` (C->S), `LOBBY_STATE`, `RESET`, `RETURN_LOBBY`, `FULL`, `PLAYER_JOINED`, `PLAYER_LEFT` (S->C)
-
-### HTTP 엔드포인트
-
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `POST` | `/bug-report` | 버그 신고 수신 → `bug-reports.jsonl`에 append. 200 `{ok:true}` / 빈 텍스트·비JSON 400. 게임 prefix 라우팅보다 **먼저** 매칭 (공통 버그리포트 위젯 참조) |
-
-**삭제된 엔드포인트**: `POST /lobby/return` (게임 복귀는 `location.href='/'`로 처리)
-
-## 공통 버그리포트 위젯 (2026-06-16 신규)
-
-게임 10종 + 로비 **전체**에 자동 표시되는 버그 신고 위젯. 게임/런처 `index.html`은 **무수정** — 런처 미들웨어가 일괄 주입한다.
-
-### 자동 주입 메커니즘 (`launcher/server.js`)
-
-- `http.createServer` 콜백 **최상단**(라우팅 이전)에서 `attachWidgetInjector(res)`가 `res.writeHead/write/end`를 1회 wrap한다.
-- **text/html 응답에만** `</body>` 앞(`lastIndexOf`, 대소문자 무시, iframe 방어)에 다음 스니펫을 삽입한다. `</body>`가 없으면 끝에 append.
-  ```html
-  <link rel="stylesheet" href="/bug-widget.css"><script src="/bug-widget.js" defer></script>
-  ```
-- Content-Type 판정: `writeHead` headers 인자 또는 `res.getHeader('content-type')`. `writeHead`를 거치지 않는 Express(`setHeader`+`write`) 경로 대비 `write`/`end` 첫 호출 시 재판정(`decided` 플래그로 1회만) → yutnori/tetris-battle 같은 Express 게임도 동작.
-- HTML 확정 시 `content-length` 헤더 제거 → Node가 `Transfer-Encoding: chunked` 자동 전환.
-- **비HTML·바이너리 무손상**: js/css/json/png 등은 버퍼링 없이 원본 write/end 즉시 통과(PNG 바이트 동일 검증 완료). 위젯 스크립트 자체에도 미주입.
-- WS upgrade(`server.on('upgrade')`)는 별도 이벤트라 wrap 영향 없음.
-
-### 신고 저장 (`POST /bug-report`)
-
-- 라우팅: **게임 prefix 라우팅보다 먼저** 매칭(게임 서버로 전달 방지).
-- `minigames/bug-reports.jsonl`에 `fs.appendFile`로 1행씩 append (JSON Lines, appendFile 원자성으로 동시 신고 인터리빙 안전).
-- 레코드 5필드: `gameId`(pathname 첫 세그먼트, 로비=`launcher`), `timestamp`(ISO), `screenSize{w,h}`, `url`, `text`.
-- 검증: 비JSON·`text` 누락·공백만 → 400. 서버측 길이 상한 미강제(스펙상 Out of Scope, LAN 한정).
-- `bug-reports.jsonl`은 `.gitignore` 등록(런타임 데이터, 커밋 제외).
-
-### 위젯 UX (`launcher/public/bug-widget.{js,css}`, 바닐라)
-
-- 우하단 `position:fixed` 🐛 FAB → 클릭 시 텍스트 패널 펼침 → 제출 시 패널 접힘 + "기록됨" 토스트(2초). 외부 클릭/✕ 닫기.
-- 빈 입력 무시, double-submit 방지(제출 즉시 `disabled`), 중복 주입 가드(`window.__bwWidgetLoaded`).
-- CSS는 `.bw-` prefix로만 한정(게임 전역 스타일 미오염), z-index 9001~9003(게임 오버레이 위).
-
-### "로그 확인" 워크플로우
-
-사용자가 **"버그 로그 보고 확인하라"**고 하면, Claude가 `C:\LazySlimeStudio\minigames\bug-reports.jsonl`을 Read해 신고 내역(gameId·url·text 등)을 보고 해당 버그를 해결한다. 이 파일이 신고 수집 채널의 단일 출처다.
-
-### 테스트
-
-- QA 자산: `tests/bug-report-widget-qa.spec.js`(Playwright 7/7 — FAB 표시·펼침·외부클릭 닫힘·제출→토스트·5필드·빈텍스트 미발송·더블클릭 1회·모바일 360px).
-- 회귀: omok smoke 106/106, WS upgrade, POST /lobby/return 204 무영향. AC-1~AC-11 + 예외 15건 전부 PASS. QA PASS(blocker 0), AD3 APPROVED.
-
-## 기술 스택
-
-- 바닐라 JavaScript (Node.js 서버, 브라우저 클라이언트)
-- WebSocket (`ws` 패키지)
-- Playwright (QA 자동화)
-- 의존성: `npm install` (루트 `package.json`)
+- `docs/PROJECT.md`: 현재 통합 구조와 운영 방식
+- `docs/CHANGELOG.md`: 사용자에게 의미 있는 변경 이력
+- 날짜별 구현 과정과 QA 횟수는 Git과 변경 이력에 두고 이 파일에는 누적하지 않는다.

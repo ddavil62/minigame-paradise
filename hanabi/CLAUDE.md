@@ -6,10 +6,10 @@
 
 **`docs/RULEBOOK.md`** — Antoine Bauza 표준 Hanabi 룰 + 본 구현 비교. matgo/janggi/yutnori와 동일한 13섹션 패턴.
 
-- QA는 룰북 시나리오 작성 시 §번호를 반드시 인용한다 (테스트 ID `HR-Cn-xxx`).
-- Coder가 게임 로직(`game.js`)을 수정하면 **§13 구현 노트의 영향 항목을 확인**하고 영향이 있으면 Doc Writer가 §13을 갱신한다.
+- 룰북 시나리오 테스트는 §번호를 인용한다 (테스트 ID `HR-Cn-xxx`).
+- 게임 로직(`game.js`)을 수정하면 **§13 구현 노트의 영향 항목을 확인**하고 영향이 있으면 같은 작업에서 §13을 갱신한다.
 - `§13 구현 노트`: 구현 vs 표준 차이 **8건 전부 confirmed** (2026-06-01). 룰북 시나리오 회귀 게이트의 핵심.
-- §12 체크리스트가 QA 범위 기준.
+- §12 체크리스트를 관련 회귀 테스트 범위의 기준으로 사용한다.
 
 ## 정체성
 
@@ -134,7 +134,7 @@ npx playwright test tests/rulebook-c1-c5-unit.spec.js tests/rulebook-c6-ws.spec.
 | **토큰 상한/하한 분기** | `discardCard`는 `tokens.clue===8`이면 진입부에서 차단(§13-5). `playCard` 5완성 회수는 `min(8, clue+1)`(§6-2). 5완성 시 `fiveCompleted` 플래그는 회수 여부와 무관하게 true(`game.js:262-264`, QA EDGE4). |
 | **마지막 라운드 초기화** | `createGame()`/REMATCH 시 `deckEmptyTurn=null`, `lastRoundTurnsLeft=null` 초기화 필수. `drawCard()`가 덱 소진을 1회만 감지하도록. |
 | **종료 우선순위** | `checkGameEnd()`는 25점(perfect) > 폭탄3(fuse) > 덱소진(deck_end) 순. 25점+fuse0 동시 시 win/perfect 우선 (QA EDGE5). |
-| **가이드 이미지 PNG MIME** | `server.js` MIME 맵에 `.png`(+`.jpg`/`.jpeg`/`.webp`)가 등록되어 있어야 한다. 누락 시 `application/octet-stream`으로 응답되어 브라우저가 렌더 안 함. **코드 수정 후 node 재기동 필수** — stale 프로세스는 구 MIME 맵을 유지(Coder가 octet-stream 오진 후 재기동으로 해소한 전례). |
+| **가이드 이미지 PNG MIME** | `server.js` MIME 맵에 `.png`(+`.jpg`/`.jpeg`/`.webp`)가 등록되어 있어야 한다. 누락 시 `application/octet-stream`으로 응답되어 브라우저가 렌더 안 함. **코드 수정 후 node 재기동 필수** — stale 프로세스는 구 MIME 맵을 유지하므로 재기동 후 응답을 확인한다. |
 | **가이드 이미지 public 하위 서빙** | `handleHttp`는 `PUBLIC_DIR`(`public/`)만 서빙. 가이드 이미지는 반드시 `public/assets/guide/`에 둔다(`assets/guide/` 직하면 403). 상대 경로 `assets/guide/N.png`로 참조하면 단독(`/assets/...`)·런처(`/hanabi/assets/...` → prefix strip) 양쪽 동작. handleHttp 라우팅은 무수정 유지. |
 | **가이드 키보드 누수** | 슬라이더 ←/→ keydown 리스너는 `document` 전역 등록. 게임 진입 후 방향키가 슬라이더를 움직이지 않도록 `els.screenWaiting.classList.contains('hidden')` 가드 필수(`main.js`). 가드 제거 시 게임 중 키 누수(HR-C11-007 회귀). |
 
@@ -153,11 +153,10 @@ npx playwright test tests/rulebook-c1-c5-unit.spec.js tests/rulebook-c6-ws.spec.
 | §13-7 | 덱소진 마지막 라운드 오프바이원 | MED | **확정(버그 수정)** | `giveClue() 216-217` checkGameEnd 추가, HR-C7-003/004 |
 | §13-8 | AI 봇 미지원 | MED | 확정 | `bot.js` 없음, `botAvailable:false` |
 
-## 파이프라인 적용 규칙
+## 시각 검증
 
-- **`visual_change: ui`**가 기본 (CSS/HTML 변경). UI 변경 시 AD3 검수.
-- **`visual_change: art`는 발생하지 않음** (외부 이미지 에셋 없음). AD1/2 생략.
-- 순수 서버/로직 변경(`game.js`/`server.js`)은 `visual_change: none` 가능.
+- CSS/HTML을 바꾸면 실제 브라우저에서 게임 화면과 작은 뷰포트를 확인한다.
+- 외부 이미지 에셋은 사용하지 않는다. 순수 서버·게임 로직 변경에는 시각 검증이 필요하지 않다.
 
 ## Mockup Sync
 
