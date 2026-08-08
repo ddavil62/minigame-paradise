@@ -29,7 +29,7 @@ import {
   createGame, submitWord, applyTimerExpiry, applyResign,
   isGameOver, snapshot, TURN_TIMER_SEC,
 } from './game.js';
-import { loadWords, getWordSet, buildGarbageCandidates } from './words.js';
+import { loadWords, getWordSet, buildGarbageCandidates, buildFollowerCountMap } from './words.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -56,6 +56,7 @@ const COUNTDOWN_SEC = 3;
 // ── 단어 DB 초기화 ──────────────────────────────────────────────
 const wordSet = loadWords();
 const garbageCandidates = buildGarbageCandidates(50);
+const followerCountMap = buildFollowerCountMap();
 
 // ── createApp ───────────────────────────────────────────────────
 
@@ -542,7 +543,7 @@ export function createApp(opts = {}) {
             break;
           }
 
-          const result = submitWord(game, player.id, word, wordSet, garbageCandidates);
+          const result = submitWord(game, player.id, word, wordSet, garbageCandidates, followerCountMap);
 
           if (!result.ok) {
             broadcastAll({
@@ -565,6 +566,7 @@ export function createApp(opts = {}) {
             wasGarbage: result.wasGarbage,
             garbagedOpponent: result.garbageFired,
             garbageChar: result.garbageChar,
+            deadEndExpanded: result.deadEndExpanded,
           });
 
           // 가비지 발동 시 알림

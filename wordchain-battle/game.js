@@ -6,7 +6,7 @@
  *   - 클라이언트는 WORD_SUBMIT만 전송.
  */
 
-import { isValidWord, isKorean, getLastSyllable, matchesStartChar, pickGarbageSyllable } from './words.js';
+import { isValidWord, isKorean, getLastSyllable, matchesStartChar, pickGarbageSyllable, computeDeadEndAlts } from './words.js';
 
 // ── 밸런스 수치 ─────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ const GAUGE_5PLUS = 50;
  * @property {string|null} forced  - 다음 단어의 강제 시작 글자 (가비지 음절). null이면 자유
  * @property {string|null} lastWord - 마지막으로 제출한 단어
  * @property {string|null} lastSyllable - 다음 단어의 시작 글자 (자기 체인의 마지막 글자)
+ * @property {Set<string>|null} deadEndAlts - 막힘/희귀 종성 발동 시 허용되는 대체 시작 글자 집합. null이면 비활성
  */
 
 /**
@@ -79,6 +80,7 @@ export function createGame(p1Name, p2Name) {
         forced: null,
         lastWord: null,
         lastSyllable: null,
+        deadEndAlts: null,
       },
       p2: {
         id: 'p2',
@@ -88,6 +90,7 @@ export function createGame(p1Name, p2Name) {
         forced: null,
         lastWord: null,
         lastSyllable: null,
+        deadEndAlts: null,
       },
     },
     usedWords: new Set(),
@@ -122,6 +125,7 @@ export function calcGaugeGain(wordLength) {
  * @property {boolean} [garbageFired] - 가비지 발동 여부
  * @property {string|null} [garbageChar] - 가비지 음절
  * @property {string|null} [garbageTargetId] - 가비지 대상
+ * @property {boolean} [deadEndExpanded] - 막힘/희귀 종성 대체 글자 확장이 발동됐는지 여부
  */
 
 /**
@@ -131,9 +135,10 @@ export function calcGaugeGain(wordLength) {
  * @param {string} word 제출된 단어
  * @param {Set<string>} wordSet 사전 단어 Set
  * @param {Map<string, number>} garbageCandidates 가비지 후보 맵
+ * @param {Map<string, number>} [followerCountMap] 글자별 후속 단어 수 맵 (막힘/희귀 종성 판정용)
  * @returns {SubmitResult}
  */
-export function submitWord(game, playerId, word, wordSet, garbageCandidates) {
+export function submitWord(game, playerId, word, wordSet, garbageCandidates, followerCountMap) {
   const player = game.players[playerId];
   if (!player) return { ok: false, reason: 'invalid' };
 
@@ -167,7 +172,11 @@ export function submitWord(game, playerId, word, wordSet, garbageCandidates) {
     }
   } else if (player.lastSyllable) {
     // 4b. 자기 체인의 마지막 글자 확인
-    if (!matchesStartChar(startChar, player.lastSyllable)) {
+    // deadEndAlts가 있으면 확장 집합으로 판정, 없으면 기존 matchesStartChar 로직
+    const validStart = player.deadEndAlts
+      ? player.deadEndAlts.has(startChar)
+      : matchesStartChar(startChar, player.lastSyllable);
+    if (!validStart) {
       return { ok: false, reason: 'wrong_start' };
     }
   }
@@ -212,9 +221,24 @@ export function submitWord(game, playerId, word, wordSet, garbageCandidates) {
   // forced 해소 (이 단어로 forced 조건을 충족했으므로)
   player.forced = null;
 
+  // deadEndAlts 소거 (이 단어로 확장 조건 해소)
+  player.deadEndAlts = null;
+
   // 체인 갱신
   player.lastWord = word;
   player.lastSyllable = getLastSyllable(word);
+
+  // 막힘/희귀 종성 판정 → 상대방 deadEndAlts 주입
+  let deadEndExpanded = false;
+  if (followerCountMap) {
+    const alts = computeDeadEndAlts(player.lastSyllable, followerCountMap);
+    if (alts !== null) {
+      const opponentId = playerId === 'p1' ? 'p2' : 'p1';
+      const opponent = game.players[opponentId];
+      opponent.deadEndAlts = alts;
+      deadEndExpanded = true;
+    }
+  }
 
   return {
     ok: true,
@@ -225,6 +249,7 @@ export function submitWord(game, playerId, word, wordSet, garbageCandidates) {
     garbageFired,
     garbageChar,
     garbageTargetId,
+    deadEndExpanded,
   };
 }
 
@@ -298,6 +323,7 @@ export function snapshot(game) {
       forced: p.forced,
       lastWord: p.lastWord,
       lastSyllable: p.lastSyllable,
+      deadEndAlts: p.deadEndAlts ? [...p.deadEndAlts] : null,
     })),
     usedWordsCount: game.usedWords.size,
   };
