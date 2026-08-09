@@ -143,6 +143,7 @@ net.on('GARBAGE_RECEIVED', (msg) => {
   } else {
     // 상대가 가비지를 받았음 — 내가 보낸 것
     ui.updateGauge('me', 0, true);
+    ui.showAttackPopup(msg.garbageChar);
   }
 });
 

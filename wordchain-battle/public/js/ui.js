@@ -35,6 +35,7 @@ const el = {
   feedback: $('#feedback'),
 
   garbagePopup: $('#garbage-popup'),
+  attackPopup: $('#attack-popup'),
   countdownOverlay: $('#countdown-overlay'),
   countdownNum: $('#countdown-num'),
 
@@ -265,6 +266,19 @@ export function showGarbagePopup(char) {
   el.garbagePopup.classList.remove('hidden');
   setTimeout(() => {
     el.garbagePopup.classList.add('hidden');
+  }, 3000);
+}
+
+/**
+ * 공격 성공 알림 팝업을 표시한다. (내가 게이지를 채워 상대에게 가비지를 보냈을 때)
+ * @param {string} char 상대에게 강제된 가비지 음절
+ */
+export function showAttackPopup(char) {
+  if (!el.attackPopup) return;
+  el.attackPopup.textContent = `⚔ 상대에게 가비지 음절 "${char}"을 보냈습니다!`;
+  el.attackPopup.classList.remove('hidden');
+  setTimeout(() => {
+    el.attackPopup.classList.add('hidden');
   }, 3000);
 }
 

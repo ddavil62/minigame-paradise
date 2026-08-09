@@ -352,6 +352,10 @@ body {
   from { transform: translateX(-50%) translateY(-8px); opacity: 0; }
   to { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
+.attack-popup {
+  background: linear-gradient(135deg, var(--color-success), var(--color-success-light));
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+}
 
 /* ── 카운트다운 오버레이 ─────────────────────────────────── */
 .countdown-overlay {
