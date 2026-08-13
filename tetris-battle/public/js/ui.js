@@ -6,6 +6,7 @@
 
 import { BOARD_HEIGHT, BOARD_WIDTH, VANISH_ZONE, VISIBLE_HEIGHT } from './board.js';
 import { COLOR_HEX, PIECES, PIECE_COLORS, PIECE_TYPES } from './tetromino.js';
+import { ITEMS } from './items.js';
 
 // ── 렌더링 상수 ──────────────────────────────────────────────────
 export const CELL_SIZE = 30;          // 메인 보드 셀 (px)
@@ -54,8 +55,11 @@ export function createUI(els) {
   els.holdCanvas.width = 4 * PREVIEW_CELL;
   els.holdCanvas.height = 4 * PREVIEW_CELL;
   if (els.opponentCanvas) {
-    els.opponentCanvas.width = BOARD_WIDTH * MINIMAP_CELL;
-    els.opponentCanvas.height = VISIBLE_HEIGHT * MINIMAP_CELL;
+    const initialOpponentCellSize = els.opponentCanvas.closest?.('.opponents-grid')?.classList.contains('two-player')
+      ? CELL_SIZE
+      : MINIMAP_CELL;
+    els.opponentCanvas.width = BOARD_WIDTH * initialOpponentCellSize;
+    els.opponentCanvas.height = VISIBLE_HEIGHT * initialOpponentCellSize;
     opponentViews.set('_legacy', {
       card: els.opponentCanvas.closest?.('.player-area') || els.opponentCanvas,
       canvas: els.opponentCanvas,
@@ -67,6 +71,10 @@ export function createUI(els) {
   function syncOpponents(players, myPlayerId) {
     if (!els.opponentsGrid) return;
     const opponents = players.filter((player) => player.id !== myPlayerId);
+    const isTwoPlayer = players.length === 2;
+    const opponentCellSize = isTwoPlayer ? CELL_SIZE : MINIMAP_CELL;
+    els.opponentsGrid.classList.toggle('two-player', isTwoPlayer);
+    els.opponentsGrid.classList.toggle('multiplayer', players.length >= 3);
     const wanted = new Set(opponents.map((player) => player.id));
     for (const [id, view] of opponentViews) {
       if (!wanted.has(id)) {
@@ -85,8 +93,8 @@ export function createUI(els) {
         const wrap = document.createElement('div');
         wrap.className = 'board-wrap minimap';
         const canvas = document.createElement('canvas');
-        canvas.width = BOARD_WIDTH * MINIMAP_CELL;
-        canvas.height = VISIBLE_HEIGHT * MINIMAP_CELL;
+        canvas.width = BOARD_WIDTH * opponentCellSize;
+        canvas.height = VISIBLE_HEIGHT * opponentCellSize;
         const shield = document.createElement('div');
         shield.className = 'opp-shield-badge';
         shield.textContent = '🛡️';
@@ -97,14 +105,46 @@ export function createUI(els) {
         const eliminated = document.createElement('div');
         eliminated.className = 'opponent-eliminated';
         eliminated.textContent = '탈락';
+        const itemSlots = document.createElement('div');
+        itemSlots.className = 'opponent-item-slots';
+        itemSlots.setAttribute('aria-label', '보유 아이템');
+        itemSlots.replaceChildren(...Array.from({ length: 3 }, (_, index) => {
+          const slot = document.createElement('span');
+          slot.className = 'opponent-item-slot empty';
+          slot.dataset.slot = String(index);
+          return slot;
+        }));
         wrap.append(canvas, shield, eliminated);
-        card.append(label, wrap);
+        card.append(label, wrap, itemSlots);
         els.opponentsGrid.appendChild(card);
-        view = { card, label, canvas, ctx: canvas.getContext('2d'), shield };
+        view = { card, label, canvas, ctx: canvas.getContext('2d'), shield, itemSlots };
         opponentViews.set(player.id, view);
+      }
+      const targetWidth = BOARD_WIDTH * opponentCellSize;
+      const targetHeight = VISIBLE_HEIGHT * opponentCellSize;
+      if (view.canvas.width !== targetWidth || view.canvas.height !== targetHeight) {
+        view.canvas.width = targetWidth;
+        view.canvas.height = targetHeight;
+        view.ctx = view.canvas.getContext('2d');
       }
       view.label.textContent = `${player.number} · ${player.name}`;
       view.card.classList.toggle('eliminated', !!player.eliminated);
+      const slots = Array.isArray(player.itemSlots) ? player.itemSlots : [];
+      Array.from(view.itemSlots.children).forEach((slot, index) => {
+        const item = ITEMS[slots[index]] || null;
+        slot.className = 'opponent-item-slot';
+        if (item) {
+          slot.classList.add('filled', item.cssClass);
+          slot.textContent = item.icon;
+          slot.title = item.name;
+          slot.setAttribute('aria-label', `${index + 1}번 슬롯: ${item.name}`);
+        } else {
+          slot.classList.add('empty');
+          slot.textContent = '';
+          slot.title = '빈 슬롯';
+          slot.setAttribute('aria-label', `${index + 1}번 슬롯: 비어 있음`);
+        }
+      });
     }
   }
 
@@ -303,6 +343,7 @@ export function createUI(els) {
     const { ctx: oppCtx, canvas } = view;
     const w = canvas.width;
     const h = canvas.height;
+    const cellSize = w / BOARD_WIDTH;
     oppCtx.fillStyle = COLOR_HEX[0];
     oppCtx.fillRect(0, 0, w, h);
     // 그리드 — visible 영역(20줄)만
@@ -310,8 +351,14 @@ export function createUI(els) {
     oppCtx.lineWidth = 1;
     for (let r = 1; r < VISIBLE_HEIGHT; r++) {
       oppCtx.beginPath();
-      oppCtx.moveTo(0, r * MINIMAP_CELL);
-      oppCtx.lineTo(w, r * MINIMAP_CELL);
+      oppCtx.moveTo(0, r * cellSize);
+      oppCtx.lineTo(w, r * cellSize);
+      oppCtx.stroke();
+    }
+    for (let c = 1; c < BOARD_WIDTH; c++) {
+      oppCtx.beginPath();
+      oppCtx.moveTo(c * cellSize, 0);
+      oppCtx.lineTo(c * cellSize, h);
       oppCtx.stroke();
     }
     const cells = Array.isArray(state.cells) ? state.cells : [];
@@ -324,7 +371,7 @@ export function createUI(els) {
         for (let c = 0; c < BOARD_WIDTH; c++) {
           const value = Number.isInteger(row[c]) ? row[c] : 0;
           if (value > 0 && COLOR_HEX[value]) {
-            drawCell(oppCtx, c * MINIMAP_CELL, r * MINIMAP_CELL, MINIMAP_CELL, COLOR_HEX[value]);
+            drawCell(oppCtx, c * cellSize, r * cellSize, cellSize, COLOR_HEX[value]);
           }
         }
       }
@@ -334,8 +381,8 @@ export function createUI(els) {
       for (let c = 0; c < BOARD_WIDTH; c++) {
         const colHeight = Math.min(stack[c] || 0, VISIBLE_HEIGHT);
         for (let i = 0; i < colHeight; i++) {
-          const y = (VISIBLE_HEIGHT - 1 - i) * MINIMAP_CELL;
-          drawCell(oppCtx, c * MINIMAP_CELL, y, MINIMAP_CELL, COLOR_HEX[8]);
+          const y = (VISIBLE_HEIGHT - 1 - i) * cellSize;
+          drawCell(oppCtx, c * cellSize, y, cellSize, COLOR_HEX[8]);
         }
       }
     }
@@ -343,6 +390,22 @@ export function createUI(els) {
     oppCtx.strokeStyle = '#333366';
     oppCtx.lineWidth = 2;
     oppCtx.strokeRect(0, 0, w, h);
+  }
+
+  /** 새 라운드 카운트다운 동안 이전 판의 블록이 남지 않도록 모든 보드를 비운다. */
+  function clearRoundVisuals() {
+    clearItemAttacks();
+    const emptyGrid = Array.from(
+      { length: BOARD_HEIGHT },
+      () => Array(BOARD_WIDTH).fill(0),
+    );
+    renderBoard(emptyGrid, null, null);
+    renderHUD({ score: 0, level: 1, lines: 0, combo: -1 });
+    renderNext([]);
+    renderHold(null);
+    for (const playerId of opponentViews.keys()) {
+      renderOpponent({ playerId, cells: emptyGrid, stack: [] });
+    }
   }
 
   /**
@@ -550,6 +613,141 @@ export function createUI(els) {
     boardWrapEl.addEventListener('animationend', onEnd);
   }
 
+  const activeItemFlights = [];
+
+  function removeItemFlight(flight) {
+    if (flight?._failsafeTimer) clearTimeout(flight._failsafeTimer);
+    flight?._animation?.cancel();
+    flight?._trail?.remove();
+    flight?.remove();
+    const index = activeItemFlights.indexOf(flight);
+    if (index >= 0) activeItemFlights.splice(index, 1);
+  }
+
+  function clearItemAttacks() {
+    for (const flight of [...activeItemFlights]) removeItemFlight(flight);
+  }
+
+  function boardElementForPlayer(playerId, myPlayerId) {
+    if (playerId === myPlayerId) return els.boardCanvas;
+    return opponentViews.get(playerId)?.canvas || opponentViews.get('_legacy')?.canvas || null;
+  }
+
+  function pulseAttackEndpoint(element, className) {
+    const wrap = element?.parentElement;
+    if (!wrap) return;
+    wrap.classList.remove(className);
+    void wrap.offsetWidth;
+    wrap.classList.add(className);
+    setTimeout(() => wrap.classList.remove(className), 420);
+  }
+
+  function animateItemAttack({ attackId, itemId, attackerId, targetId, myPlayerId }) {
+    const item = ITEMS[itemId];
+    const source = boardElementForPlayer(attackerId, myPlayerId);
+    const target = boardElementForPlayer(targetId, myPlayerId);
+    if (!item || !source || !target) return;
+
+    while (activeItemFlights.length >= 4) {
+      const oldest = activeItemFlights.shift();
+      oldest?._animation?.cancel();
+      oldest?._trail?.remove();
+      oldest?.remove();
+    }
+
+    const sourceRect = source.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const start = { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 };
+    const end = { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 };
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+    const flight = document.createElement('div');
+    flight.className = `item-attack-flight ${item.cssClass}`;
+    flight.dataset.attackId = attackId;
+    flight._target = target;
+    flight._targetId = targetId;
+    flight._myPlayerId = myPlayerId;
+    flight.style.left = `${start.x}px`;
+    flight.style.top = `${start.y}px`;
+    flight.innerHTML = `<span class="flight-icon">${item.icon}</span><span class="flight-route">${attackerId.slice(1)} → ${targetId.slice(1)}</span>`;
+    const trail = document.createElement('div');
+    trail.className = `item-attack-trail ${item.cssClass}`;
+    trail.style.left = `${start.x}px`;
+    trail.style.top = `${start.y}px`;
+    trail.style.width = `${distance}px`;
+    trail.style.transform = `rotate(${angle}deg)`;
+    document.body.append(trail, flight);
+    flight._trail = trail;
+    // 프로토콜 버전 불일치나 일시적 메시지 유실이 있어도 화면을 영구히 가리지 않는다.
+    flight._failsafeTimer = setTimeout(() => removeItemFlight(flight), 2500);
+    activeItemFlights.push(flight);
+
+    pulseAttackEndpoint(source, 'item-attack-launch');
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const duration = reduced ? 160 : 1000;
+    const animation = flight.animate([
+      { transform: 'translate(-50%, -50%) translate(0, 0) scale(0.55)', opacity: 0.25 },
+      { transform: 'translate(-50%, -50%) translate(0, 0) scale(1.2)', opacity: 0.82, offset: reduced ? 0 : 0.1 },
+      { transform: `translate(-50%, -50%) translate(${dx}px, ${dy}px) scale(1)`, opacity: 0.72 },
+    ], {
+      duration,
+      easing: reduced ? 'linear' : 'cubic-bezier(0.05, 0.82, 0.16, 1)',
+      fill: 'forwards',
+    });
+    flight._animation = animation;
+    trail.animate([
+      { opacity: 0, transform: `rotate(${angle}deg) scaleX(0)` },
+      { opacity: 0.34, transform: `rotate(${angle}deg) scaleX(1)`, offset: 0.22 },
+      { opacity: 0, transform: `rotate(${angle}deg) scaleX(1)` },
+    ], { duration, easing: 'linear', fill: 'forwards' });
+
+    animation.finished.then(() => {
+      animation.cancel();
+      flight.style.left = `${end.x}px`;
+      flight.style.top = `${end.y}px`;
+      flight.style.transform = 'translate(-50%, -50%)';
+      flight._arrived = true;
+      if (flight._result) finishItemAttack(flight, flight._result.blocked);
+    }).catch(() => {
+      flight.remove();
+      trail.remove();
+      const index = activeItemFlights.indexOf(flight);
+      if (index >= 0) activeItemFlights.splice(index, 1);
+    });
+  }
+
+  function finishItemAttack(flight, blocked) {
+    if (!flight?._arrived || flight._finishing) return;
+    flight._finishing = true;
+    flight.classList.toggle('blocked', blocked);
+    flight.classList.add('arrived');
+    pulseAttackEndpoint(flight._target, blocked ? 'item-attack-blocked' : 'item-attack-impact');
+    if (flight._targetId === flight._myPlayerId && !blocked) shakeBoard();
+    setTimeout(() => {
+      removeItemFlight(flight);
+    }, blocked ? 320 : 180);
+  }
+
+  /** 서버의 도착 시점 판정과 비행 애니메이션을 결합해 충돌/차단 연출을 마무리한다. */
+  function resolveItemAttack({ attackId, targetId, blocked, cancelled, myPlayerId }) {
+    const flight = activeItemFlights.find((entry) => entry.dataset.attackId === attackId);
+    if (cancelled) {
+      if (flight) removeItemFlight(flight);
+      return;
+    }
+    if (!flight) {
+      const target = boardElementForPlayer(targetId, myPlayerId);
+      pulseAttackEndpoint(target, blocked ? 'item-attack-blocked' : 'item-attack-impact');
+      if (targetId === myPlayerId && !blocked) shakeBoard();
+      return;
+    }
+    flight._result = { blocked };
+    finishItemAttack(flight, blocked);
+  }
+
   /**
    * Phase 3 LOW-2: 결과 화면 표시 시 아이템 슬롯 클릭을 비활성화한다.
    * pointer-events 토글로 마우스 입력만 차단 (시각은 유지).
@@ -596,6 +794,7 @@ export function createUI(els) {
     renderHold,
     renderHUD,
     renderOpponent,
+    clearRoundVisuals,
     syncOpponents,
     setStatus,
     showResult,
@@ -614,6 +813,9 @@ export function createUI(els) {
     // Phase 3
     showBoardNotice,
     shakeBoard,
+    animateItemAttack,
+    resolveItemAttack,
+    clearItemAttacks,
     setItemSlotsInteractive,
     showToast,
   };

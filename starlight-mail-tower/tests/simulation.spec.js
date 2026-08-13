@@ -118,6 +118,7 @@ test('한 명이 추락하면 1.2초 안에 둘을 마지막 체크포인트로 
 test('프로토콜은 비정상 입력과 과거 시퀀스를 거부한다', () => {
   assert.equal(validateClientMessage({ type: 'JOIN', name: '' }).ok, false);
   assert.equal(validateClientMessage({ type: 'INPUT', seq: 1, left: true, right: false, jump: false, interact: false }).ok, true);
+  assert.equal(validateClientMessage({ type: 'INPUT', seq: 2, down: true }).message.down, true);
   assert.equal(validateClientMessage({ type: 'INPUT', seq: -1 }).ok, false);
   assert.equal(validateClientMessage({ type: 'TELEPORT', x: 999 }).ok, false);
   assert.equal(validateClientMessage({ type: 'RESTART_VOTE', agree: true }).ok, true);
@@ -247,4 +248,90 @@ test('접촉 래치는 8px 완전 분리 전 중복 발동을 막고 착지에�
   stepTicks(simulation, 1);
   assert.equal(simulation.players[0].grounded, true);
   assert.equal(simulation.players[0].boostConsumed, false);
+});
+
+test('합체 리프트의 서버 충돌체가 실제로 승강하며 탑승자를 함께 운반한다', () => {
+  const simulation = createSimulation('cloud-cargo', { startPlaying: true });
+  simulation.checkpointId = 7;
+  const device = simulation.devices[7];
+  const route = simulation.dynamicPlatforms.find((platform) => platform.id === 'm8-route');
+  const anchor = simulation.players.find((player) => player.id === device.requiredPlayerId);
+  const rider = simulation.players.find((player) => player.id !== device.requiredPlayerId);
+  Object.assign(device, { state: 'POWERED', anchorPlayerId: anchor.id, stateChangedMs: 0 });
+  Object.assign(anchor, { ...device.anchor, anchored: true });
+  anchor.input.interact = true;
+  Object.assign(rider, { x: route.x + route.width / 2, y: route.y - 28, grounded: true, vy: 0 });
+  rider.input.interact = true;
+  stepTicks(simulation, 1);
+  const startPlatformY = simulation.dynamicPlatforms.find((platform) => platform.id === route.id).y;
+  const startRiderY = rider.y;
+  stepTicks(simulation, 60);
+  const movedPlatform = simulation.dynamicPlatforms.find((platform) => platform.id === route.id);
+  assert.ok(movedPlatform.y < startPlatformY - 10);
+  assert.ok(rider.y < startRiderY - 10);
+  assert.ok(Math.abs((rider.y + 28) - movedPlatform.y) < 1);
+  assert.equal(rider.grounded, true);
+});
+
+test('회전 발판은 각도를 가진 서버 충돌체로 회전하며 탑승자를 회전 궤도로 운반한다', () => {
+  const simulation = createSimulation('moon-clock', { startPlaying: true });
+  simulation.checkpointId = 1;
+  const device = simulation.devices[1];
+  const route = simulation.dynamicPlatforms.find((platform) => platform.id === 'm2-route');
+  const anchor = simulation.players.find((player) => player.id === device.requiredPlayerId);
+  const rider = simulation.players.find((player) => player.id !== device.requiredPlayerId);
+  Object.assign(device, { state: 'POWERED', anchorPlayerId: anchor.id, stateChangedMs: 0 });
+  Object.assign(anchor, { ...device.anchor, anchored: true });
+  anchor.input.interact = true;
+  Object.assign(rider, { x: route.x + route.width * 0.7, y: route.y - 28, grounded: true, vy: 0 });
+  stepTicks(simulation, 1);
+  const startX = rider.x;
+  const startY = rider.y;
+  stepTicks(simulation, 120);
+  const rotated = simulation.dynamicPlatforms.find((platform) => platform.id === route.id);
+  assert.ok(Math.abs(rotated.angle) > 0.1);
+  assert.ok(Math.hypot(rider.x - startX, rider.y - startY) > 8);
+  assert.equal(Number.isFinite(rider.x) && Number.isFinite(rider.y), true);
+});
+
+test('점프 패드, 연결 배관, 왕복 밀기 벽을 서버 물리로 처리한다', () => {
+  const jumpSimulation = createSimulation('cloud-cargo', { startPlaying: true });
+  jumpSimulation.checkpointId = 2;
+  const jumpPad = jumpSimulation.dynamicSpecials.find((special) => special.type === 'jump-pad');
+  Object.assign(jumpSimulation.players[0], { x: jumpPad.x + jumpPad.width / 2, y: jumpPad.y - 28, grounded: true, vy: 0 });
+  const jumpEvents = stepTicks(jumpSimulation, 1);
+  assert.ok(jumpEvents.some((event) => event.kind === 'JUMP_PAD'));
+  assert.ok(jumpSimulation.players[0].vy <= -970);
+
+  const pipeSimulation = createSimulation('moon-clock', { startPlaying: true });
+  const pipeIn = pipeSimulation.dynamicSpecials.find((special) => special.id === 'moon-pipe-in');
+  const pipeOut = pipeSimulation.dynamicSpecials.find((special) => special.id === 'moon-pipe-out');
+  Object.assign(pipeSimulation.players[0], { x: pipeIn.x + pipeIn.width / 2, y: pipeIn.y - 28, grounded: true, vy: 0 });
+  applyInput(pipeSimulation, 'p1', { seq: 1, left: false, right: false, down: true, jump: false, interact: false });
+  const pipeEvents = stepTicks(pipeSimulation, 1);
+  assert.ok(pipeEvents.some((event) => event.kind === 'PIPE_TRAVEL'));
+  assert.equal(pipeSimulation.players[0].x, pipeOut.x + pipeOut.width / 2);
+  assert.equal(pipeSimulation.players[0].y, pipeOut.y - 28);
+
+  const pusherSimulation = createSimulation('storm-station', { startPlaying: true });
+  const pusher = pusherSimulation.dynamicSpecials.find((special) => special.type === 'pusher-wall');
+  Object.assign(pusherSimulation.players[0], { x: pusher.x + 10, y: pusher.y + pusher.height / 2, grounded: false, vy: 0 });
+  const pusherEvents = stepTicks(pusherSimulation, 1);
+  assert.ok(pusherEvents.some((event) => event.kind === 'PUSHER_HIT'));
+  assert.ok(Math.abs(pusherSimulation.players[0].vx) >= 620);
+});
+
+test('상승 기류 경로는 크기, 위치, 최고 속도와 횡력을 변수로 조절한다', () => {
+  const simulation = createSimulation('starlight-tower', { startPlaying: true });
+  simulation.checkpointId = 5;
+  const device = simulation.devices[5];
+  device.state = 'POWERED';
+  device.active = true;
+  device.mechanics = { zoneOffsetX: 40, zoneOffsetY: -20, zoneWidth: 120, zoneHeight: 180, liftAcceleration: -3000, maxLiftSpeed: -400, lateralForce: 600 };
+  Object.assign(simulation.players[0], { x: device.checkpoint.x + 70, y: device.checkpoint.y - 80, grounded: false, vx: 0, vy: 0 });
+  stepTicks(simulation, 1);
+  assert.ok(simulation.players[0].vx > 0);
+  assert.ok(simulation.players[0].vy < 0);
+  assert.equal(simulation.activeZones[0].width, 120);
+  assert.equal(simulation.activeZones[0].height, 180);
 });

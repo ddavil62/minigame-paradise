@@ -1,3 +1,6 @@
 # 빌드 원본 CSV (9.72MB, git 추적 불필요)
 data/kr_korean.csv
 node_modules/
+
+# 우리말샘 수집 진행 상황 체크포인트 (재실행용 임시 데이터, git 추적 불필요)
+data/.woorimalsam-progress.json

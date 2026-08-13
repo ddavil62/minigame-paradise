@@ -258,7 +258,7 @@ test.describe('AC-L: Phase 1-A 다인용 로비', () => {
       await expect(host.locator('#player-count')).toHaveText('3/3');
 
       // maxPlayers=2인 게임은 3인 로비에서 비활성인지 확인한다.
-      const twoPlayerGames = ['matgo', 'janggi', 'codenames-duet', 'davinci-code', 'tetris-battle', 'yahtzee', 'omok'];
+      const twoPlayerGames = ['matgo', 'janggi', 'codenames-duet', 'davinci-code', 'yahtzee', 'omok'];
       for (const gameId of twoPlayerGames) {
         const card = host.locator(`.game-card[data-game-id="${gameId}"]`);
         const hasDisabled = await card.evaluate(el => el.classList.contains('player-disabled'));
@@ -270,7 +270,7 @@ test.describe('AC-L: Phase 1-A 다인용 로비', () => {
       }
 
       // maxPlayers>=3인 게임은 활성 상태를 유지한다.
-      const multiGames = ['yutnori', 'hanabi', 'rummikub'];
+      const multiGames = ['yutnori', 'tetris-battle', 'hanabi', 'rummikub'];
       for (const gameId of multiGames) {
         const card = host.locator(`.game-card[data-game-id="${gameId}"]`);
         const hasDisabled = await card.evaluate(el => el.classList.contains('player-disabled'));

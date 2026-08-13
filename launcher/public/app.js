@@ -23,8 +23,8 @@ function getLauncherLocale() { return localStorage.getItem('starlight-locale') =
 /** @param {string} key 문구 키 @param {Record<string,string|number>} [values] 치환 값 @returns {string} 현재 런처 언어 문구 */
 function launcherText(key, values = {}) {
   const copy = {
-    ko: { enter: '입장', ready: '준비', cancelReady: '준비 ✓', waiting: '대기 중', me: '나', connecting: '서버에 연결 중...', joined: '대기실에 입장했습니다.', disconnected: '연결이 끊겼습니다.', starting: '게임을 시작합니다...', needPlayers: '{min}명 이상 필요 (현재 {count}/{max})', notReady: '{count}명이 아직 준비하지 않았습니다.', allReady: '모두 준비 완료!', moving: '{game}로 이동 중...', empty: '친구를 기다리는 중', leave: '나가기' },
-    en: { enter: 'Enter', ready: 'READY', cancelReady: 'READY ✓', waiting: 'Waiting', me: 'Me', connecting: 'Connecting to server...', joined: 'Joined the waiting room.', disconnected: 'Connection lost.', starting: 'Starting game...', needPlayers: 'Need {min} players ({count}/{max})', notReady: '{count} player(s) are not ready.', allReady: 'Everyone is ready!', moving: 'Moving to {game}...', empty: 'Waiting for a friend', leave: 'Leave' },
+    ko: { enter: '입장', ready: '준비', cancelReady: '준비 ✓', waiting: '대기 중', me: '나', connecting: '서버에 연결 중...', joined: '대기실에 입장했습니다.', disconnected: '연결이 끊겼습니다.', starting: '게임을 시작합니다...', needPlayers: '{min}명 이상 필요 (현재 {count}/{max})', notReady: '{count}명이 아직 준비하지 않았습니다.', allReady: '모두 준비 완료!', moving: '{game}로 이동 중...', empty: '친구를 기다리는 중', leave: '나가기', inviteCopied: '초대 주소를 복사했어요.', inviteCopyFailed: '주소를 선택했어요. Ctrl+C로 복사해 주세요.' },
+    en: { enter: 'Enter', ready: 'READY', cancelReady: 'READY ✓', waiting: 'Waiting', me: 'Me', connecting: 'Connecting to server...', joined: 'Joined the waiting room.', disconnected: 'Connection lost.', starting: 'Starting game...', needPlayers: 'Need {min} players ({count}/{max})', notReady: '{count} player(s) are not ready.', allReady: 'Everyone is ready!', moving: 'Moving to {game}...', empty: 'Waiting for a friend', leave: 'Leave', inviteCopied: 'Invite address copied.', inviteCopyFailed: 'Address selected. Press Ctrl+C to copy it.' },
   };
   return Object.entries(values).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), copy[getLauncherLocale()][key] || key);
 }
@@ -48,6 +48,12 @@ let currentGameId = null;
 /** @type {object|null} 가장 최근 수신한 ROOM_STATE */
 let lastRoomState = null;
 
+function publishPresence(status, gameId = null) {
+  const state = { name: myName, status, gameId };
+  window.__minigamePresenceState = state;
+  window.dispatchEvent(new CustomEvent('minigame-presence-update', { detail: state }));
+}
+
 // ── 유틸 ───────────────────────────────────────────────────────
 /** @type {number|null} 토스트 자동 소멸 타이머. */
 let toastTimer = null;
@@ -58,8 +64,8 @@ let toastTimer = null;
  * @param {string} text 표시할 텍스트
  */
 function showToast(text) {
-  // 대기실 뷰가 표시 중이면 wr-toast, 아니면 범용
-  const toastEl = document.getElementById('wr-toast');
+  const portalVisible = !document.getElementById('portal-view')?.classList.contains('hidden');
+  const toastEl = document.getElementById(portalVisible ? 'portal-toast' : 'wr-toast');
   if (!toastEl) return;
   toastEl.textContent = text;
   toastEl.classList.add('show');
@@ -68,6 +74,38 @@ function showToast(text) {
     toastEl.classList.remove('show');
     toastTimer = null;
   }, 2500);
+}
+
+async function setupInvitePanel() {
+  const panel = document.getElementById('invite-panel');
+  const input = /** @type {HTMLInputElement|null} */ (document.getElementById('invite-url'));
+  const button = document.getElementById('btn-copy-invite');
+  const status = document.getElementById('invite-status');
+  if (!panel || !input || !button) return;
+
+  try {
+    const response = await fetch('/connection-info', { cache: 'no-store' });
+    if (!response.ok) return;
+    const info = await response.json();
+    if (typeof info.publicUrl !== 'string' || !info.publicUrl.startsWith('https://')) return;
+    input.value = info.publicUrl;
+    panel.classList.remove('hidden');
+    if (status) status.textContent = 'HTTPS로 안전하게 연결됩니다.';
+  } catch (err) {
+    console.warn('[launcher] 초대 주소를 불러오지 못했습니다:', err.message);
+    return;
+  }
+
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(input.value);
+      showToast(launcherText('inviteCopied'));
+    } catch (_) {
+      input.focus();
+      input.select();
+      showToast(launcherText('inviteCopyFailed'));
+    }
+  });
 }
 
 /**
@@ -227,6 +265,7 @@ function enterPortal() {
   if (nameEl) nameEl.textContent = `${myName}님, 게임을 골라주세요!`;
 
   showView('portal-view');
+  publishPresence('lobby');
 }
 
 // ── 대기실 뷰 ──────────────────────────────────────────────────
@@ -239,6 +278,7 @@ function enterWaitingRoom(gameId) {
   if (currentGameId && ws) return;
 
   currentGameId = gameId;
+  publishPresence('waiting', gameId);
   document.getElementById('waiting-room-view').dataset.gameId = gameId;
   lastRoomState = null;
 
@@ -387,6 +427,7 @@ function updateWaitingRoomUI(msg) {
       const card = document.createElement('div');
       const role = playerIndex === 0 ? 'a' : 'b';
       card.className = `player-ready-card role-${role}`;
+      if (msg.gameId === 'tetris-battle') card.classList.add('tetris-player-slot');
       if (p.ready) card.classList.add('ready');
       if (p.id === msg.myId) card.classList.add('self');
 
@@ -395,6 +436,10 @@ function updateWaitingRoomUI(msg) {
       const isMoonlightKitchen = msg.gameId === 'moonlight-kitchen-express';
       roleMark.textContent = isMoonlightKitchen ? (role === 'a' ? '☾' : '★') : (role === 'a' ? '△' : '○');
       roleMark.setAttribute('aria-label', `Role ${role.toUpperCase()}`);
+      if (msg.gameId === 'tetris-battle') {
+        roleMark.textContent = String(playerIndex + 1);
+        roleMark.setAttribute('aria-label', `Player ${playerIndex + 1}`);
+      }
       card.appendChild(roleMark);
 
       // 호스트 표시
@@ -435,6 +480,12 @@ function updateWaitingRoomUI(msg) {
       card.className = `player-ready-card role-${role} empty-slot`;
       const emptyRoleMark = msg.gameId === 'moonlight-kitchen-express' ? (role === 'a' ? '☾' : '★') : (role === 'a' ? '△' : '○');
       card.innerHTML = `<span class="prc-role" aria-label="Role ${role.toUpperCase()}">${emptyRoleMark}</span><div class="prc-name">${launcherText('empty')}</div><div class="prc-badge not-ready">${launcherText('waiting')}</div><span class="prc-state-icon" aria-hidden="true"><i></i></span>`;
+      if (msg.gameId === 'tetris-battle') {
+        card.classList.add('tetris-player-slot');
+        const roleMark = card.querySelector('.prc-role');
+        roleMark.textContent = String(slotIndex + 1);
+        roleMark.setAttribute('aria-label', `Player ${slotIndex + 1}`);
+      }
       playersEl.appendChild(card);
     }
 
@@ -528,6 +579,7 @@ function handleFillWithAi() {
  * @param {{path?:string, gameId:string, mode:string, playerCount?:number,role?:string,transitionMs?:number}} msg
  */
 function handleRedirect(msg) {
+  publishPresence('playing', msg.gameId);
   // REDIRECT 수신 후에는 close 이벤트에서 재진입하지 않도록 상태 정리
   const oldWs = ws;
   ws = null;
@@ -619,6 +671,8 @@ function setupNicknameGate() {
  * WS 연결은 대기실 진입 시에만 일어난다.
  */
 async function init() {
+  setupInvitePanel();
+
   // 게임 목록 로드 후 즉시 카드 렌더링 (포탈은 hidden 상태이므로 사용자엔 비노출)
   try {
     gamesCache = await loadGames();

@@ -18,10 +18,12 @@ export const ATTACK_ITEMS = new Set(['lock', 'flip', 'fog']);
 /** @param {unknown} itemId 검사할 아이템 ID @returns {boolean} 지원하는 아이템인지 여부 */
 export function isKnownItemId(itemId) { return typeof itemId === 'string' && ITEM_IDS.includes(itemId); }
 
-/** @param {string|number} seed 경기 시드 @param {number} ordinal 성공 제거 순번 @param {number} pity 연속 실패 @returns {{dropped:boolean,itemId:string|null,pity:number}} 결과 */
-export function rollDrop(seed, ordinal, pity) {
+/** @param {string|number} seed 경기 시드 @param {number} ordinal 성공 제거 순번 @param {number} pity 연속 실패 @param {number} [chanceMultiplier=1] 지급 확률 배율 @returns {{dropped:boolean,itemId:string|null,pity:number}} 결과 */
+export function rollDrop(seed, ordinal, pity, chanceMultiplier = 1) {
   const random = createPrng(deriveSeed(seed, `drop:${ordinal}`));
-  const dropped = ordinal === 1 || pity >= 5 || random() < 0.14;
+  const baseDropped = ordinal === 1 || pity >= 5 || random() < 0.14;
+  const multiplier = Math.max(0, Math.min(1, Number(chanceMultiplier) || 0));
+  const dropped = baseDropped && (multiplier >= 1 || createPrng(deriveSeed(seed, `drop-multiplier:${ordinal}`))() < multiplier);
   if (!dropped) return { dropped: false, itemId: null, pity: pity + 1 };
   const totalWeight = ITEM_IDS.reduce((total, itemId) => total + ITEM_DEFINITIONS[itemId].weight, 0);
   let roll = random() * totalWeight;

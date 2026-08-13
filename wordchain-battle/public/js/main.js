@@ -15,10 +15,10 @@ import { rejectReasonToKo } from './input.js';
 let myId = null;
 
 /** 내 현재 forced 글자 */
-let myForced = null;
+let isPlaying = false;
 
-/** 내 현재 lastSyllable */
-let myLastSyllable = null;
+/** 현재 입력 가능한 플레이어 ID */
+let currentTurn = null;
 
 // ── 닉네임 취득 ─────────────────────────────────────────────
 
@@ -43,10 +43,12 @@ function getPlayerName() {
  * 입력창의 단어를 서버에 제출한다.
  */
 function handleSubmit() {
+  if (!isPlaying || currentTurn !== myId) return;
   const word = ui.getInputValue();
   if (!word) return;
 
   net.send({ type: 'WORD_SUBMIT', word });
+  net.send({ type: 'TYPING', count: 0 });
   ui.clearInput();
 }
 
@@ -67,6 +69,8 @@ net.on('GAME_START', (msg) => {
   // UI 리셋
   ui.resetGameUI();
   ui.showGame();
+  isPlaying = false;
+  currentTurn = null;
 
   // 플레이어 이름 설정
   for (const p of msg.players) {
@@ -83,11 +87,12 @@ net.on('GAME_START', (msg) => {
 net.on('PLAYING', () => {
   console.log('[main] 게임 진행 시작');
   ui.hideCountdown();
-  ui.setInputEnabled(true);
-  myForced = null;
-  myLastSyllable = null;
-  ui.setStartChar(null);
-  ui.updateTimer(20);
+  isPlaying = true;
+  ui.setInputEnabled(false);
+  // 실제 시작 글자는 바로 뒤따르는 STATE 메시지에서 공개된다.
+  // 그 전까지 '자유'로 오인되지 않도록 대기 표시를 유지한다.
+  ui.setStartCharPending();
+  ui.updateTimer(10);
 });
 
 net.on('STATE', (msg) => {
@@ -96,20 +101,16 @@ net.on('STATE', (msg) => {
     ui.updateHp(who, p.hp);
     ui.updateGauge(who, p.gauge);
 
-    if (p.id === myId) {
-      myForced = p.forced;
-      myLastSyllable = p.lastSyllable;
-
-      // 시작 글자 표시 우선순위: forced > lastSyllable > 자유
-      if (p.forced) {
-        ui.setStartChar(p.forced, true);
-      } else if (p.lastSyllable) {
-        ui.setStartChar(p.lastSyllable, false);
-      } else {
-        ui.setStartChar(null);
-      }
-    }
   }
+
+  currentTurn = msg.turn || null;
+  const isMyTurn = isPlaying && currentTurn === myId;
+  ui.setTurn(isMyTurn);
+  ui.setInputEnabled(isMyTurn);
+  const chain = msg.chain || {};
+  if (chain.forced) ui.setStartChar(chain.forced, true);
+  else if (chain.lastSyllable) ui.setStartChar(chain.lastSyllable, false, chain.deadEndAlts);
+  else ui.setStartChar(null);
 });
 
 net.on('WORD_ACCEPTED', (msg) => {
@@ -148,22 +149,38 @@ net.on('GARBAGE_RECEIVED', (msg) => {
 });
 
 net.on('TIMER_TICK', (msg) => {
-  if (msg.playerId === myId) {
-    ui.updateTimer(msg.remaining);
-  }
+  ui.updateTimer(msg.remaining);
 });
 
 net.on('TIMER_EXPIRED', (msg) => {
+  const who = msg.playerId === myId ? 'me' : 'opp';
+
   if (msg.playerId === myId) {
-    ui.showFeedback('시간 초과! HP가 감소했습니다.', 2000);
+    const detail = msg.autoWord
+      ? `시간 초과! HP가 감소했고, "${msg.autoWord}"(으)로 자동 진행됩니다.`
+      : '시간 초과! HP가 감소했습니다.';
+    ui.showFeedback(detail, 2500);
     ui.updateHp('me', msg.newHp, true);
-    ui.updateTimer(20);
   } else {
     ui.updateHp('opp', msg.newHp, true);
+  }
+
+  if (msg.autoWord) {
+    ui.addChainWord(who, msg.autoWord, false, true);
+  }
+
+  ui.updateTimer(10);
+});
+
+net.on('TYPING', (msg) => {
+  if (msg.playerId !== myId && currentTurn === msg.playerId) {
+    ui.setTypingProgress(msg.count);
   }
 });
 
 net.on('GAME_OVER', (msg) => {
+  isPlaying = false;
+  currentTurn = null;
   ui.setInputEnabled(false);
 
   const iWon = msg.winner === myId;
@@ -186,8 +203,8 @@ net.on('REMATCH_WAITING', (msg) => {
 net.on('REMATCH_START', () => {
   ui.hideResult();
   ui.resetGameUI();
-  myForced = null;
-  myLastSyllable = null;
+  isPlaying = false;
+  currentTurn = null;
 });
 
 net.on('OPPONENT_LEFT', () => {
@@ -203,9 +220,18 @@ net.on('ERROR', (msg) => {
 
 ui.onSubmitClick(handleSubmit);
 ui.onInputEnter(handleSubmit);
+ui.onInputChange((count) => {
+  if (isPlaying && currentTurn === myId) net.send({ type: 'TYPING', count });
+});
 ui.onRematchClick(() => {
   net.send({ type: 'REMATCH' });
   ui.setRematchStatus('리매치 요청 전송됨...');
+});
+ui.onExitClick(() => {
+  if (isPlaying && !window.confirm('게임을 나가시겠습니까? 기권 처리됩니다.')) return;
+  if (isPlaying) net.send({ type: 'RESIGN' });
+  net.disconnect();
+  location.href = '/';
 });
 
 // ── 초기화 ──────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # 장기 (Janggi) — 개발·QA 가이드
 
-LAN 1:1 한국 전통 장기. KJA 2009 개정 룰(빅장 폐지, 점수제, 동형반복 3회) 기반.
+공개 HTTPS 통합 런처의 1:1 한국 전통 장기. KJA 2009 개정 룰(빅장 폐지, 점수제, 동형반복 3회) 기반. 친구는 같은 공유기에서도 `https://112.155.2.238`로 접속하며 포트 3000과 개별 포트는 내부·개발 전용이다.
 
 ## 룰북 (필수 참조)
 
@@ -77,9 +77,9 @@ npx playwright test tests/rulebook-c4-check.spec.js --reporter=list
 ## 서버 실행
 
 ```bash
-# 통합 런처 (포트 3000)
+# 통합 런처 내부 프로세스
 cd minigame-paradise && node launcher/server.js
-# http://localhost:3000 → 장기 카드 클릭
+# 공개 운영은 start-public.ps1 → https://112.155.2.238 → 장기 카드 클릭
 
 # 단독 실행 (포트 3006, 개발/테스트용)
 cd minigame-paradise && node janggi/server.js

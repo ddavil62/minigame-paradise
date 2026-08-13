@@ -47,6 +47,15 @@ test('플레이어와 발판은 운동값만 보간하고 최신 이산 상태�
   assert.ok(device.angle > Math.PI * 1.9);
 });
 
+test('회전 발판 각도도 2π 경계에서 최단 경로로 보간한다', () => {
+  const platform = interpolatePlatform(
+    { id: 'rotary', x: 100, y: 200, angle: Math.PI * 1.9 },
+    { id: 'rotary', x: 100, y: 200, angle: Math.PI * 0.1 },
+    0.5,
+  );
+  assert.ok(platform.angle > Math.PI * 1.9);
+});
+
 test('리스폰, ID 누락과 큰 좌표 이동은 최신 위치로 스냅한다', () => {
   const current = { id: 'p1', x: 500, y: 500, vx: 0, vy: 0, respawnTimer: 0 };
   assert.equal(interpolatePlayer(undefined, current, 0.2).x, 500);

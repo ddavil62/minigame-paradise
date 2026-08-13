@@ -24,6 +24,7 @@ export function rejectReasonToKo(reason) {
     case 'duplicate':   return '이미 사용한 단어입니다.';
     case 'wrong_start': return '잘못된 시작 글자입니다.';
     case 'not_korean':  return '한글 단어를 입력해주세요.';
+    case 'not_your_turn': return '상대 차례입니다.';
     default:            return '단어가 거부되었습니다.';
   }
 }

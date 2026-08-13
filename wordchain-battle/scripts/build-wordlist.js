@@ -39,6 +39,7 @@ const ROOT = path.join(__dirname, '..');
 const csvPath = process.argv[2] || path.join(ROOT, 'data', 'kr_korean.csv');
 const outPath = path.join(ROOT, 'data', 'words.json');
 const supplementPath = path.join(ROOT, 'data', 'supplement-words.json');
+const woorimalsamPath = path.join(ROOT, 'data', 'woorimalsam-words.json');
 
 // ── 유효 품사 목록 ──
 const VALID_POS = new Set([
@@ -96,21 +97,35 @@ for (const line of lines) {
 
 const dictWordCount = wordSet.size;
 
-// ── 보충 단어(연예인/캐릭터 등 고유명사) 병합 ──
-let supplementAdded = 0;
-if (fs.existsSync(supplementPath)) {
-  const supplement = JSON.parse(fs.readFileSync(supplementPath, 'utf8'));
+/**
+ * 카테고리별 객체 형태의 보충 단어 JSON 파일을 읽어 wordSet에 병합한다.
+ * (supplement-words.json, woorimalsam-words.json이 공유하는 포맷)
+ * @param {string} filePath
+ * @param {string} label 로그 출력용 라벨
+ * @returns {number} 새로 추가된 단어 수
+ */
+function mergeSupplementFile(filePath, label) {
+  if (!fs.existsSync(filePath)) return 0;
+  let added = 0;
+  const supplement = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   for (const [category, list] of Object.entries(supplement)) {
     if (category.startsWith('_') || !Array.isArray(list)) continue;
     for (const rawWord of list) {
       const word = String(rawWord).trim();
       if (!HANGUL_RE.test(word) || word.length < 2) continue;
-      if (!wordSet.has(word)) supplementAdded++;
+      if (!wordSet.has(word)) added++;
       wordSet.add(word);
     }
   }
-  console.log(`[build-wordlist] 보충 단어(고유명사) 병합: +${supplementAdded}개`);
+  console.log(`[build-wordlist] ${label} 병합: +${added}개`);
+  return added;
 }
+
+// ── 보충 단어(연예인/캐릭터 등 고유명사) 병합 ──
+mergeSupplementFile(supplementPath, '보충 단어(고유명사)');
+
+// ── 우리말샘 보강 단어(scripts/fetch-woorimalsam.js 수집 결과) 병합 ──
+mergeSupplementFile(woorimalsamPath, '우리말샘 보강 단어');
 
 const words = [...wordSet].sort();
 

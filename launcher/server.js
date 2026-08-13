@@ -23,6 +23,8 @@ import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
+import { createAccessController } from './access-control.js';
+import { createPresenceHub } from './presence.js';
 
 // 각 게임 앱 import (createApp factory)
 import { createApp as createCodenamesApp } from '../codenames-duet/server.js';
@@ -46,7 +48,14 @@ import { createApp as createWordchainBattleApp } from '../wordchain-battle/serve
 // 각 게임 server.js의 null guard(1차 방어)로 정상 경로는 차단되며,
 // 이 핸들러는 예상치 못한 예외만 최후 방어한다.
 // 주의: 모든 예외를 삼키면 디버깅이 어려워지므로 에러 정보를 반드시 stderr에 출력한다.
+let launcherStarted = false;
 process.on('uncaughtException', (err, origin) => {
+  // 카탈로그 정합성 등 시작 단계의 구성 오류는 복구 가능한 런타임 WS 오류가 아니다.
+  // listener가 준비되기 전이라면 배포/프로세스 관리자가 실패를 감지하도록 즉시 non-zero 종료한다.
+  if (!launcherStarted) {
+    console.error(`[launcher] 시작 실패 (origin=${origin}):`, err);
+    process.exit(1);
+  }
   console.error(`[launcher] uncaughtException (origin=${origin}):`, err);
   // 프로세스를 종료하지 않고 계속 실행한다.
   // 게임 서버별 WS 핸들러 내부의 예외만 이 경로로 유입됨을 기대한다.
@@ -63,6 +72,36 @@ const portFlagIndex = argv.indexOf('--port');
 const PORT = portFlagIndex >= 0 && argv[portFlagIndex + 1]
   ? parseInt(argv[portFlagIndex + 1], 10)
   : 3000;
+
+const accessController = createAccessController();
+
+function normalizePublicUrl(raw) {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    url.pathname = '/';
+    url.search = '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+}
+
+const CONFIGURED_PUBLIC_URL = normalizePublicUrl(process.env.MINIGAME_PUBLIC_URL);
+
+function getBotUrl(gameId, extraParams = {}) {
+  const url = new URL(`ws://localhost:${PORT}/${gameId}/ws`);
+  url.searchParams.set('mode', 'bot');
+  for (const [key, value] of Object.entries(extraParams)) {
+    url.searchParams.set(key, value);
+  }
+  if (accessController.enabled) {
+    url.searchParams.set('_internal', accessController.internalToken);
+  }
+  return url.toString();
+}
 
 // ── MIME 매핑 ────────────────────────────────────────────────
 const MIME = {
@@ -89,58 +128,114 @@ const GAME_APPS = {
   'davinci-code':   createDavinciApp(),
   'matgo':          createMatgoApp({
     // mode=ai 사용자 진입 시 matgo 서버가 자체적으로 봇을 spawn할 URL.
-    getBotUrl: () => `ws://localhost:${PORT}/matgo/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('matgo'),
   }),
   // 윷놀이 — 봇 지원 (2026-06-12 추가).
   'yutnori':        createYutnoriApp({
     // mode=ai 사용자 진입 시 yutnori 서버가 자체적으로 봇을 spawn할 URL.
-    getBotUrl: () => `ws://localhost:${PORT}/yutnori/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('yutnori'),
   }),
   // 테트리스 배틀 — 봇 지원 (2026-06-21 추가). 멀티룸: roomId를 인자로 받는다.
   'tetris-battle':  createTetrisApp({
-    getBotUrl: (roomId) => `ws://localhost:${PORT}/tetris-battle/ws?mode=bot&room=${roomId}`,
+    getBotUrl: (roomId) => getBotUrl('tetris-battle', { room: roomId }),
   }),
   'janggi':         createJanggiApp({
     // mode=ai 사용자 진입 시 janggi 서버가 자체적으로 봇을 spawn할 URL.
-    getBotUrl: () => `ws://localhost:${PORT}/janggi/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('janggi'),
   }),
   // 하나비는 봇 미지원(§13-8) — getBotUrl 옵션 불필요. setHostUrl만 사용.
   'hanabi':         createHanabiApp(),
   // 요트 다이스 — 봇 지원 (2026-06-08 추가).
   'yahtzee':        createYahtzeeApp({
-    getBotUrl: () => `ws://localhost:${PORT}/yahtzee/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('yahtzee'),
   }),
   // 루미큐브 — 봇 지원 (2026-06-10 추가).
   'rummikub':       createRummikubApp({
-    getBotUrl: () => `ws://localhost:${PORT}/rummikub/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('rummikub'),
   }),
   // 오목 — 봇 지원 (2026-06-15 추가).
   'omok':           createOmokApp({
-    getBotUrl: () => `ws://localhost:${PORT}/omok/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('omok'),
   }),
   // 코드네임 클래식 — 봇 지원 (2026-06-28 P-C 추가). role_select 단계에서 호스트가
   // FILL_WITH_AI(또는 mode=ai)로 빈 (팀,역할) 슬롯을 봇으로 채운다. 게임 서버의
   // spawnBotForSlot이 이 URL에 &team=&role=을 덧붙여 슬롯별 봇을 spawn 한다.
   'codenames':      createCodenamesClassicApp({
-    getBotUrl: () => `ws://localhost:${PORT}/codenames/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('codenames'),
   }),
   'starlight-mail-tower': createStarlightMailTowerApp({
-    getBotUrl: () => `ws://localhost:${PORT}/starlight-mail-tower/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('starlight-mail-tower'),
   }),
   'moonlight-kitchen-express': createMoonlightKitchenExpressApp({ testing: process.env.KITCHEN_E2E === '1' }),
   // 베네치아 타이핑 배틀 — 봇 지원 (2026-07-19 추가).
   'venezia': createVeneziaApp({
-    getBotUrl: () => `ws://localhost:${PORT}/venezia/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('venezia'),
   }),
   // 사천성 배틀 — 서버 권위 보통 난이도 AI 지원.
   'sichuan-battle': createSichuanBattleApp({
-    getBotUrl: () => `ws://localhost:${PORT}/sichuan-battle/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('sichuan-battle'),
   }),
   // 끝말잇기 배틀 — 사람 mode=ai 입장 뒤 게임 서버가 보통 AI를 소유한다.
   'wordchain-battle': createWordchainBattleApp({
-    getBotUrl: () => `ws://localhost:${PORT}/wordchain-battle/ws?mode=bot`,
+    getBotUrl: () => getBotUrl('wordchain-battle'),
   }),
 };
+
+// ── 게임 카탈로그 스냅샷 ───────────────────────────────────────
+/**
+ * 서버 시작 시 games.json을 정확히 한 번 읽어 순서가 보존된 카탈로그와 조회 Map을 만든다.
+ * 런처 UI 응답과 대기실 검증이 반드시 같은 버전을 보도록 원본 객체도 동결한다.
+ * @returns {{ catalog: ReadonlyArray<object>, map: Map<string, object>, json: string }}
+ */
+function loadGamesCatalogSnapshot() {
+  const catalogPath = path.join(PUBLIC_DIR, 'games.json');
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+  } catch (err) {
+    throw new Error(`[launcher] games.json 로드 실패 (${catalogPath}): ${err.message}`);
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('[launcher] games.json 정합성 오류: 최상위 값은 배열이어야 합니다.');
+  }
+
+  const map = new Map();
+  for (const [index, rawGame] of parsed.entries()) {
+    const id = typeof rawGame?.id === 'string' ? rawGame.id.trim() : '';
+    if (!id) {
+      throw new Error(`[launcher] games.json 정합성 오류: ${index}번 항목의 id가 비어 있습니다.`);
+    }
+    if (map.has(id)) {
+      throw new Error(`[launcher] games.json 정합성 오류: 중복 id "${id}"`);
+    }
+    if (!GAME_APPS[id]) {
+      throw new Error(`[launcher] 게임 등록 불일치: games.json의 "${id}"에 대응하는 GAME_APPS 라우터가 없습니다.`);
+    }
+    const game = Object.freeze({ ...rawGame, id });
+    map.set(id, game);
+  }
+
+  const catalogIds = new Set(map.keys());
+  const missingCatalogIds = Object.keys(GAME_APPS).filter((id) => !catalogIds.has(id));
+  if (missingCatalogIds.length > 0) {
+    throw new Error(`[launcher] 게임 등록 불일치: GAME_APPS에만 존재하는 id: ${missingCatalogIds.join(', ')}`);
+  }
+
+  const catalog = Object.freeze([...map.values()]);
+  return { catalog, map, json: JSON.stringify(catalog) };
+}
+
+const {
+  catalog: gamesCatalog,
+  map: gamesMap,
+  json: gamesCatalogJson,
+} = loadGamesCatalogSnapshot();
+
+const presenceHub = createPresenceHub({
+  gamesMap,
+  identityForRequest: (req) => accessController.getSessionFingerprint(req),
+});
 
 // 게임 서버가 mode=ai 진입을 받아 자체 봇을 구성하는 게임은 런처 봇을 중복 생성하지 않는다.
 // tetris-battle(2026-08-03 추가): 멀티룸 구조이므로 봇이 반드시 특정 roomId로 접속해야
@@ -196,6 +291,35 @@ function serveLauncherStatic(req, res) {
   });
 }
 
+/**
+ * 시작 시 고정한 게임 카탈로그 JSON을 응답한다.
+ * 디스크 파일을 다시 읽지 않아 대기실 gamesMap과 브라우저 카드 목록의 버전 분리를 막는다.
+ * @param {http.IncomingMessage} req
+ * @param {http.ServerResponse} res
+ * @returns {void}
+ */
+function serveGamesCatalog(req, res) {
+  res.writeHead(200, {
+    'Content-Type': MIME['.json'],
+    'Cache-Control': 'no-cache',
+  });
+  res.end(req.method === 'HEAD' ? undefined : gamesCatalogJson);
+}
+
+function serveConnectionInfo(req, res) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  const requestPublicUrl = forwardedProto === 'https' && forwardedHost
+    ? normalizePublicUrl(`https://${forwardedHost}`)
+    : null;
+  const publicUrl = CONFIGURED_PUBLIC_URL || requestPublicUrl;
+  res.writeHead(200, {
+    'Content-Type': MIME['.json'],
+    'Cache-Control': 'no-store',
+  });
+  res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ publicUrl }));
+}
+
 // ── 버그리포트 위젯 주입 미들웨어 ─────────────────────────────────
 /**
  * 모든 text/html 응답의 마지막 `</body>` 앞에 삽입할 위젯 태그.
@@ -203,7 +327,9 @@ function serveLauncherStatic(req, res) {
  */
 const WIDGET_SNIPPET =
   '<link rel="stylesheet" href="/bug-widget.css">' +
-  '<script src="/bug-widget.js" defer></script>';
+  '<link rel="stylesheet" href="/presence-widget.css">' +
+  '<script src="/bug-widget.js" defer></script>' +
+  '<script src="/presence-client.js" defer></script>';
 
 /**
  * res.writeHead / res.write / res.end를 1회 wrap 해, text/html 응답에만 위젯 태그를 주입한다.
@@ -326,6 +452,8 @@ function attachWidgetInjector(res) {
 
 // ── HTTP 서버 (통합 라우터) ─────────────────────────────────────
 const server = http.createServer((req, res) => {
+  if (accessController.handleHttp(req, res)) return;
+
   // 콜백 최상단: 라우팅 이전에 위젯 주입기를 부착 (text/html 응답에만 실제 동작)
   attachWidgetInjector(res);
 
@@ -400,6 +528,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if ((req.method === 'GET' || req.method === 'HEAD') && urlPath === '/games.json') {
+    serveGamesCatalog(req, res);
+    return;
+  }
+
+  if ((req.method === 'GET' || req.method === 'HEAD') && urlPath === '/connection-info') {
+    serveConnectionInfo(req, res);
+    return;
+  }
+
   if (first && GAME_APPS[first]) {
     // 게임 prefix 제거 후 req.url 재작성: /matgo/style.css → '/style.css'
     const sub = segments.length === 1
@@ -413,25 +551,6 @@ const server = http.createServer((req, res) => {
   // 런처 정적 서빙
   serveLauncherStatic(req, res);
 });
-
-// ── games.json 캐시 ──────────────────────────────────────────
-/**
- * 서버 시작 시 games.json을 1회 읽어 메모리에 캐시한다.
- * 대기실 gameId 검증 및 게임 메타 참조에 사용.
- * @returns {Map<string, object>}
- */
-function loadGamesMap() {
-  try {
-    const raw = fs.readFileSync(path.join(PUBLIC_DIR, 'games.json'), 'utf8');
-    const arr = JSON.parse(raw);
-    return new Map(arr.map((g) => [g.id, g]));
-  } catch (err) {
-    console.error('[launcher] games.json 로드 실패:', err.message);
-    return new Map();
-  }
-}
-
-const gamesMap = loadGamesMap();
 
 // ── 게임별 대기실 상태 (rooms) ─────────────────────────────────
 /**
@@ -714,7 +833,7 @@ function spawnBotForAiFill(gameId) {
     console.warn(`[launcher] bot.js 없음, AI 채우기 봇 생략: ${gameId}`);
     return;
   }
-  const url = `ws://localhost:${PORT}/${gameId}/ws?mode=bot`;
+  const url = getBotUrl(gameId);
   try {
     const child = spawn(process.execPath, [botPath, '--url', url], {
       detached: true,
@@ -724,7 +843,7 @@ function spawnBotForAiFill(gameId) {
       console.error(`[launcher] AI채우기 봇 spawn 에러 (${gameId}):`, err.message);
     });
     child.unref();
-    console.log(`[launcher] AI채우기 봇 기동: ${gameId} --url ${url} (pid=${child.pid})`);
+    console.log(`[launcher] AI채우기 봇 기동: ${gameId} (pid=${child.pid})`);
   } catch (err) {
     console.error(`[launcher] AI채우기 봇 spawn 예외 (${gameId}):`, err.message);
   }
@@ -932,6 +1051,16 @@ roomWss.on('connection', (ws, req) => {
 
 // ── WS upgrade 라우터 ────────────────────────────────────────────
 server.on('upgrade', (req, socket, head) => {
+  if (!accessController.isWebSocketAuthorized(req)) {
+    socket.write(
+      'HTTP/1.1 401 Unauthorized\r\n'
+      + 'Connection: close\r\n'
+      + 'Content-Length: 0\r\n\r\n',
+    );
+    socket.destroy();
+    return;
+  }
+
   const urlPath = (req.url || '/').split('?')[0];
   const segments = urlPath.split('/').filter(Boolean);
 
@@ -946,6 +1075,11 @@ server.on('upgrade', (req, socket, head) => {
     roomWss.handleUpgrade(req, socket, head, (ws) => {
       roomWss.emit('connection', ws, req);
     });
+    return;
+  }
+
+  if (segments.length === 2 && segments[0] === 'presence' && segments[1] === 'ws') {
+    presenceHub.handleUpgrade(req, socket, head);
     return;
   }
 
@@ -1056,6 +1190,11 @@ server.listen(PORT, '0.0.0.0', () => {
     + ' Tip: 처음 실행 시 Windows Defender 방화벽 팝업이 뜨면 "개인 네트워크"에 체크 후 액세스 허용.'
     + ANSI.reset);
   console.log(ANSI.dim
-    + ` games.json 캐시: ${gamesMap.size}개 게임 로드됨 (botAvailable=true: ${[...gamesMap.values()].filter((g) => g.botAvailable).length}개)`
+    + ` games.json 스냅샷: ${gamesCatalog.length}개 게임 로드됨 (botAvailable=true: ${gamesCatalog.filter((g) => g.botAvailable).length}개)`
     + ANSI.reset);
+  console.log(accessController.enabled
+    ? `${ANSI.green} 공통 비밀번호 인증: 활성화${ANSI.reset}`
+    : `${ANSI.yellow} 공통 비밀번호 인증: 비활성화 (LAN 전용 권장)${ANSI.reset}`);
+  // 시작 구성과 앱별 host 설정까지 모두 끝난 뒤에만 런타임 예외 복구 모드로 전환한다.
+  launcherStarted = true;
 });

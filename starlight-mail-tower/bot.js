@@ -244,8 +244,8 @@ let p2Closed = false;
 
 /** 각 플레이어의 desired 입력 상태 */
 const desired = {
-  p1: { left: false, right: false, jump: false, interact: false },
-  p2: { left: false, right: false, jump: false, interact: false },
+  p1: { left: false, right: false, down: false, jump: false, interact: false },
+  p2: { left: false, right: false, down: false, jump: false, interact: false },
 };
 /** 인간 슬롯의 마지막으로 미러링한 action (중복 전송·무한 루프 방지) */
 const lastMirroredAction = new Map();
@@ -557,6 +557,7 @@ function sendInput(playerId) {
     seq,
     left: input.left,
     right: input.right,
+    down: input.down,
     jump: input.jump,
     interact: input.interact,
   });

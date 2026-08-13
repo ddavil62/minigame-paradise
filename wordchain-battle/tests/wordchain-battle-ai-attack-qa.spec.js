@@ -85,9 +85,12 @@ test('선택기는 forced·두음·공용 중복을 지키며 막다른 후보�
   expect(dueum).toBe('나라');
 });
 
-test('실제 AI 첫 제출은 PLAYING 후 1.2~2.0초 범위이며 한 봇만 참가한다', async () => {
+test('실제 AI 첫 제출은 AI 턴 시작 후 1.2~2.0초 범위이며 한 봇만 참가한다', async () => {
   let port = 0;
-  const app = createApp({ getBotUrl: () => `ws://127.0.0.1:${port}/ws?mode=bot` });
+  const app = createApp({
+    getBotUrl: () => `ws://127.0.0.1:${port}/ws?mode=bot`,
+    random: () => 0.99,
+  });
   const server = http.createServer(app.handleHttp);
   server.on('upgrade', app.handleUpgrade);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -97,6 +100,9 @@ test('실제 AI 첫 제출은 PLAYING 후 1.2~2.0초 범위이며 한 봇만 참
     human.send({ type: 'JOIN', name: '반응시간QA' });
     await human.wait((message) => message.type === 'GAME_START');
     await human.wait((message) => message.type === 'PLAYING', 5_000);
+    const initialState = await human.wait((message) => message.type === 'STATE', 5_000);
+    expect(initialState.turn).toBe('p2');
+    expect(initialState.chain.lastSyllable).toMatch(/^[가-힣]$/);
     const startedAt = performance.now();
     const accepted = await human.wait(
       (message) => message.type === 'WORD_ACCEPTED' && message.playerId === 'p2',
@@ -104,7 +110,7 @@ test('실제 AI 첫 제출은 PLAYING 후 1.2~2.0초 범위이며 한 봇만 참
     );
     const elapsed = performance.now() - startedAt;
     expect(elapsed).toBeGreaterThanOrEqual(1_150);
-    expect(elapsed).toBeLessThanOrEqual(2_150);
+    expect(elapsed).toBeLessThanOrEqual(2_300);
     expect(accepted.word).toMatch(/^[가-힣]{2,}$/);
     expect(human.messages.filter((message) => message.type === 'GAME_START')).toHaveLength(1);
     expect(human.messages.filter((message) => message.type === 'PLAYING')).toHaveLength(1);

@@ -81,7 +81,12 @@ export function interpolatePlayer(previous, current, alpha) {
  */
 export function interpolatePlatform(previous, current, alpha) {
   if (shouldSnapEntity(previous, current, { distanceLimit: PLATFORM_SNAP_DISTANCE })) return { ...current };
-  return { ...current, x: lerp(previous.x, current.x, alpha), y: lerp(previous.y, current.y, alpha) };
+  const result = { ...current, x: lerp(previous.x, current.x, alpha), y: lerp(previous.y, current.y, alpha) };
+  if (Number.isFinite(previous.angle) && Number.isFinite(current.angle)) {
+    const delta = ((current.angle - previous.angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    result.angle = previous.angle + delta * clamp(alpha, 0, 1);
+  }
+  return result;
 }
 
 /**
@@ -115,6 +120,7 @@ export function interpolateSnapshot(previous, current, alpha) {
     level: {
       ...current.level,
       platforms: (current.level?.platforms ?? []).map((item) => interpolatePlatform(previousPlatforms.get(item.id), item, alpha)),
+      specials: (current.level?.specials ?? []).map((item) => interpolatePlatform((previous.level?.specials ?? []).find((previousItem) => previousItem.id === item.id), item, alpha)),
     },
   };
 }

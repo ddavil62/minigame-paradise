@@ -22,6 +22,8 @@ const ws = new WebSocket(BOT_URL, {
 let myId = null;
 /** @type {object|null} 가장 최근 자기 STATE. */
 let latestPlayer = null;
+/** 최신 STATE의 현재 턴. */
+let latestTurn = null;
 /** 경기 전체에서 수락된 단어 집합. */
 let usedWords = new Set();
 /** 최신 상태에서 거절된 후보 집합. */
@@ -74,30 +76,35 @@ function send(payload) {
 /** 최신 자기 상태에 따라 1.2~2.0초 뒤 제출을 예약한다. */
 function scheduleWord() {
   clearScheduled('action');
-  if (!playing || !latestPlayer || !myId) return;
+  if (!playing || !latestPlayer || !myId || latestTurn !== myId) return;
+  const decisionStartedAt = Date.now();
   const key = `${matchGeneration}|${latestPlayer.forced || ''}|${latestPlayer.lastSyllable || ''}|${usedWords.size}|${latestPlayer.lastWord || ''}`;
   if (key === scheduledKey) return;
   scheduledKey = key;
   const generation = matchGeneration;
-  const delay = 1200 + Math.floor(Math.random() * 801);
+  // 후보 탐색 비용은 생각 시간에 포함하지 않아 실제 제출이 1.2~2.0초 범위를 지키게 한다.
+  const word = chooser.chooseAiWord({ player: latestPlayer, usedWords, excludedWords: rejectedWords });
+  if (!word) return;
+  const targetDelay = 1200 + Math.floor(Math.random() * 801);
+  const delay = Math.max(0, targetDelay - (Date.now() - decisionStartedAt));
   actionTimer = setTimeout(() => {
     actionTimer = null;
-    if (!playing || generation !== matchGeneration || key !== scheduledKey || ws.readyState !== WebSocket.OPEN) return;
-    const word = chooser.chooseAiWord({ player: latestPlayer, usedWords, excludedWords: rejectedWords });
-    if (word) send({ type: 'WORD_SUBMIT', word });
+    if (!playing || latestTurn !== myId || generation !== matchGeneration || key !== scheduledKey || ws.readyState !== WebSocket.OPEN) return;
+    send({ type: 'WORD_SUBMIT', word });
   }, delay);
 }
 
 /** 거절된 최신 상태에서 다른 후보를 한 번 재시도한다. */
 function scheduleRetry() {
   clearScheduled('retry');
-  if (!playing || !latestPlayer) return;
+  if (!playing || !latestPlayer || latestTurn !== myId) return;
   const generation = matchGeneration;
+  const word = chooser.chooseAiWord({ player: latestPlayer, usedWords, excludedWords: rejectedWords });
+  if (!word) return;
   retryTimer = setTimeout(() => {
     retryTimer = null;
-    if (!playing || generation !== matchGeneration || ws.readyState !== WebSocket.OPEN) return;
-    const word = chooser.chooseAiWord({ player: latestPlayer, usedWords, excludedWords: rejectedWords });
-    if (word) send({ type: 'WORD_SUBMIT', word });
+    if (!playing || latestTurn !== myId || generation !== matchGeneration || ws.readyState !== WebSocket.OPEN) return;
+    send({ type: 'WORD_SUBMIT', word });
   }, 250 + Math.floor(Math.random() * 251));
 }
 
@@ -125,6 +132,7 @@ ws.on('message', (data) => {
       matchGeneration += 1;
       playing = false;
       latestPlayer = null;
+      latestTurn = null;
       usedWords = new Set();
       rejectedWords = new Set();
       rematchRequested = false;
@@ -135,7 +143,13 @@ ws.on('message', (data) => {
     case 'STATE': {
       clearScheduled('action');
       const own = Array.isArray(msg.players) ? msg.players.find((player) => player.id === myId) : null;
-      latestPlayer = own || null;
+      latestTurn = msg.turn || null;
+      latestPlayer = own ? {
+        ...own,
+        forced: msg.chain?.forced || null,
+        lastSyllable: msg.chain?.lastSyllable || null,
+        lastWord: msg.chain?.lastWord || null,
+      } : null;
       rejectedWords = new Set();
       scheduledKey = null;
       scheduleWord();
@@ -149,7 +163,7 @@ ws.on('message', (data) => {
       if (msg.playerId === myId && typeof msg.word === 'string') {
         rejectedWords.add(msg.word);
         scheduledKey = null;
-        scheduleRetry();
+        if (msg.reason !== 'not_your_turn') scheduleRetry();
       }
       break;
     case 'TIMER_EXPIRED':
@@ -171,6 +185,7 @@ ws.on('message', (data) => {
       clearAllScheduled();
       playing = false;
       latestPlayer = null;
+      latestTurn = null;
       usedWords = new Set();
       rejectedWords = new Set();
       rematchRequested = false;

@@ -74,6 +74,7 @@ export function createApp(opts = {}) {
   let HOST_URL = typeof opts.hostUrl === 'string' ? opts.hostUrl : '';
   const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
   const spawnBotProcess = typeof opts.spawnBotProcess === 'function' ? opts.spawnBotProcess : spawn;
+  const random = typeof opts.random === 'function' ? opts.random : Math.random;
 
   // ── 룸 상태 (closure 격리, 2인 1룸 고정) ─────────────────
 
@@ -93,11 +94,17 @@ export function createApp(opts = {}) {
   /** @type {import('./game.js').GameState|null} */
   let game = null;
 
-  /** @type {Object<string, NodeJS.Timeout>} 플레이어별 타이머 핸들 */
-  const timers = {};
+  /** @type {NodeJS.Timeout|null} 현재 턴 만료 타이머 핸들 */
+  let turnTimer = null;
 
-  /** @type {Object<string, NodeJS.Timeout>} 플레이어별 tick 인터벌 핸들 */
-  const tickIntervals = {};
+  /** @type {NodeJS.Timeout|null} 현재 턴 tick 인터벌 핸들 */
+  let turnTickInterval = null;
+
+  /** 현재 턴의 서버 권위 잔여 시간(정수 초). */
+  let turnRemaining = 0;
+
+  /** 오래된 턴 타이머 콜백을 무효화하는 세대 번호. */
+  let turnTimerGeneration = 0;
 
   /** 리매치 동의한 playerId Set. */
   let rematchPending = new Set();
@@ -291,65 +298,62 @@ export function createApp(opts = {}) {
 
   // ── 타이머 관리 ────────────────────────────────────────────
 
-  /**
-   * 특정 플레이어의 제출 타이머를 시작(리셋)한다.
-   * @param {string} playerId
-   */
-  function startTimer(playerId) {
-    clearTimer(playerId);
+  /** 현재 턴의 단일 제출 타이머를 시작한다. */
+  function startTurnTimer() {
+    clearAllTimers();
+    if (!game || game.phase !== 'playing') return;
 
+    const playerId = game.turn;
+    const generation = turnTimerGeneration;
     let remaining = TURN_TIMER_SEC;
+    turnRemaining = remaining;
+    broadcastAll({ type: 'TIMER_TICK', playerId, remaining });
 
-    // 1초 간격 틱 전송
-    tickIntervals[playerId] = setInterval(() => {
-      remaining--;
+    turnTickInterval = setInterval(() => {
+      if (generation !== turnTimerGeneration) return;
+      remaining -= 1;
+      turnRemaining = remaining;
       broadcastAll({ type: 'TIMER_TICK', playerId, remaining });
-      if (remaining <= 0) {
-        clearInterval(tickIntervals[playerId]);
-        delete tickIntervals[playerId];
+      if (remaining <= 0 && turnTickInterval) {
+        clearInterval(turnTickInterval);
+        turnTickInterval = null;
       }
     }, 1000);
 
-    // 만료 타이머
-    timers[playerId] = setTimeout(() => {
-      if (!game || game.phase !== 'playing') return;
+    turnTimer = setTimeout(() => {
+      if (generation !== turnTimerGeneration || !game || game.phase !== 'playing' || game.turn !== playerId) return;
+      turnTimer = null;
+      turnRemaining = 0;
 
-      const { hpLoss, newHp } = applyTimerExpiry(game, playerId);
-      broadcastAll({ type: 'TIMER_EXPIRED', playerId, hpLoss, newHp });
+      const {
+        hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
+      } = applyTimerExpiry(game, playerId, wordSet, followerCountMap);
+      broadcastAll({
+        type: 'TIMER_EXPIRED', playerId, hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
+      });
+      broadcastAll({ type: 'TYPING', playerId, count: 0 });
       broadcastState();
 
-      // HP 체크
       const over = isGameOver(game);
       if (over.ended) {
         handleGameEnd();
         return;
       }
 
-      // 타이머 재시작
-      startTimer(playerId);
+      startTurnTimer();
     }, TURN_TIMER_SEC * 1000);
-  }
-
-  /**
-   * 특정 플레이어의 타이머를 정지한다.
-   * @param {string} playerId
-   */
-  function clearTimer(playerId) {
-    if (timers[playerId]) {
-      clearTimeout(timers[playerId]);
-      delete timers[playerId];
-    }
-    if (tickIntervals[playerId]) {
-      clearInterval(tickIntervals[playerId]);
-      delete tickIntervals[playerId];
-    }
   }
 
   /**
    * 모든 타이머를 정지한다.
    */
   function clearAllTimers() {
-    for (const pid of Object.keys(timers)) clearTimer(pid);
+    turnTimerGeneration += 1;
+    if (turnTimer) clearTimeout(turnTimer);
+    if (turnTickInterval) clearInterval(turnTickInterval);
+    turnTimer = null;
+    turnTickInterval = null;
+    turnRemaining = 0;
   }
 
   // ── 게임 시작/종료 ─────────────────────────────────────────
@@ -374,9 +378,16 @@ export function createApp(opts = {}) {
     cancelCountdown();
     const p1 = players.find((p) => p.id === 'p1');
     const p2 = players.find((p) => p.id === 'p2');
+    const initialSyllables = [...garbageCandidates.keys()];
+    const initialSyllable = initialSyllables.length > 0
+      ? initialSyllables[Math.floor(random() * initialSyllables.length)]
+      : null;
     game = createGame(
       p1 ? p1.name : '플레이어1',
       p2 ? p2.name : '플레이어2',
+      random() < 0.5 ? 'p1' : 'p2',
+      initialSyllable,
+      followerCountMap,
     );
     game.phase = 'countdown';
     rematchPending = new Set();
@@ -415,9 +426,7 @@ export function createApp(opts = {}) {
       broadcastAll({ type: 'PLAYING' });
       broadcastState();
 
-      // 양쪽 타이머 시작
-      startTimer('p1');
-      startTimer('p2');
+      startTurnTimer();
       console.log('[wordchain] 게임 시작');
     }, COUNTDOWN_SEC * 1000);
     countdownTimeout = timeoutHandle;
@@ -543,10 +552,19 @@ export function createApp(opts = {}) {
             break;
           }
 
-          const result = submitWord(game, player.id, word, wordSet, garbageCandidates, followerCountMap);
+          const result = submitWord(
+            game,
+            player.id,
+            word,
+            wordSet,
+            garbageCandidates,
+            followerCountMap,
+            turnRemaining,
+          );
 
           if (!result.ok) {
-            broadcastAll({
+            // 거절된 시도 단어는 상대에게 노출하지 않는다.
+            sendJson(ws, {
               type: 'WORD_REJECTED',
               playerId: player.id,
               word,
@@ -554,6 +572,8 @@ export function createApp(opts = {}) {
             });
             break;
           }
+
+          broadcastAll({ type: 'TYPING', playerId: player.id, count: 0 });
 
           // 단어 수락
           broadcastAll({
@@ -588,8 +608,17 @@ export function createApp(opts = {}) {
             break;
           }
 
-          // 타이머 리셋
-          startTimer(player.id);
+          // 상대 턴의 타이머 시작
+          startTurnTimer();
+          break;
+        }
+
+        case 'TYPING': {
+          if (!game || game.phase !== 'playing' || game.turn !== player.id || player._isBot) break;
+          const count = Number.isFinite(msg.count)
+            ? Math.max(0, Math.min(30, Math.floor(msg.count)))
+            : 0;
+          broadcastAll({ type: 'TYPING', playerId: player.id, count });
           break;
         }
 

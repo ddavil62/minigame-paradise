@@ -223,35 +223,44 @@ test('실제 WORD_ACCEPTED는 일반 단어 false와 forced 대응 true를 양�
     await p2.wait('GAME_START');
     await p1.wait('PLAYING');
     await p2.wait('PLAYING');
+    const initialState = await p1.wait('STATE');
+    await p2.wait('STATE');
+    const clients = { p1, p2 };
+    let turn = initialState.turn;
 
     const used = new Set();
-    const first = words[0];
+    const first = words.find((word) => matchesStartChar(word[0], initialState.chain.lastSyllable));
+    expect(first).toBeTruthy();
     used.add(first);
-    p1.send({ type: 'WORD_SUBMIT', word: first });
+    clients[turn].send({ type: 'WORD_SUBMIT', word: first });
     const regularMine = await p1.wait('WORD_ACCEPTED');
     const regularOther = await p2.wait('WORD_ACCEPTED');
-    expect(regularMine).toMatchObject({ playerId: 'p1', word: first, wasGarbage: false });
-    expect(regularOther).toMatchObject({ playerId: 'p1', word: first, wasGarbage: false });
+    expect(regularMine).toMatchObject({ playerId: turn, word: first, wasGarbage: false });
+    expect(regularOther).toMatchObject({ playerId: turn, word: first, wasGarbage: false });
+    turn = turn === 'p1' ? 'p2' : 'p1';
 
+    // 5글자 이상 단어를 교대로 3회 제출하면 두 번째 차례를 맞은 플레이어가 게이지 100에 도달한다.
     const chargingWords = longChain(first.at(-1), 2, used);
     for (const word of chargingWords) {
       used.add(word);
-      p1.send({ type: 'WORD_SUBMIT', word });
+      clients[turn].send({ type: 'WORD_SUBMIT', word });
       await p1.wait('WORD_ACCEPTED');
       await p2.wait('WORD_ACCEPTED');
+      turn = turn === 'p1' ? 'p2' : 'p1';
     }
-    const garbage = await p2.wait('GARBAGE_RECEIVED');
-    expect(garbage).toMatchObject({ targetId: 'p2' });
+    const garbage = await p1.wait('GARBAGE_RECEIVED');
+    await p2.wait('GARBAGE_RECEIVED');
+    expect(garbage.targetId).toBe(turn);
 
     const responseWord = words.find((word) => (
       matchesStartChar(word[0], garbage.garbageChar) && !used.has(word)
     ));
     expect(responseWord).toBeTruthy();
-    p2.send({ type: 'WORD_SUBMIT', word: responseWord });
-    const forcedMine = await p2.wait('WORD_ACCEPTED');
-    const forcedOther = await p1.wait('WORD_ACCEPTED');
-    expect(forcedMine).toMatchObject({ playerId: 'p2', word: responseWord, wasGarbage: true });
-    expect(forcedOther).toMatchObject({ playerId: 'p2', word: responseWord, wasGarbage: true });
+    clients[turn].send({ type: 'WORD_SUBMIT', word: responseWord });
+    const forcedMine = await p1.wait('WORD_ACCEPTED');
+    const forcedOther = await p2.wait('WORD_ACCEPTED');
+    expect(forcedMine).toMatchObject({ playerId: turn, word: responseWord, wasGarbage: true });
+    expect(forcedOther).toMatchObject({ playerId: turn, word: responseWord, wasGarbage: true });
   } finally {
     p1.close();
     p2.close();

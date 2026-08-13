@@ -56,15 +56,17 @@
   {
     "id": "tetris-battle",
     "name": "테트리스 배틀",
-    "description": "가비지+아이템 대전! 한게임 스타일 1:1 테트리스 배틀",
+    "description": "가비지+아이템으로 겨루는 2~6인 테트리스 배틀",
     "port": 3005,
     "httpPath": "/tetris-battle/",
     "wsPath": "/tetris-battle/ws",
     "color": "#5DADE2",
     "emoji": "🟦",
     "botAvailable": true,
+    "botMaxPlayers": 2,
+    "aiFillTargetPlayers": 2,
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 6
   },
   {
     "id": "janggi",

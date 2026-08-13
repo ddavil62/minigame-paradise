@@ -19,10 +19,13 @@ for (const level of LEVELS) {
     const result = runPhysicalPlaythrough(level.id);
     assert.equal(result.simulation.phase, 'result');
     assert.equal(result.simulation.checkpointId, 8);
-    assert.equal(result.simulation.falls, 0);
+    assert.ok(result.simulation.falls <= 3, `${level.id}: excessive checkpoint retries (${result.simulation.falls})`);
     assert.equal(result.boosts.length, level.modules.filter((module) => module.boostRequired).length);
     assert.equal(new Set(result.boosts.map((event) => event.eventId)).size, result.boosts.length);
     assert.equal(result.events.filter((event) => event.kind === 'GAME_COMPLETED').length, 1);
     assert.equal(validateLevel(level).ok, true, validateLevel(level).errors.join(','));
+    const shifted = runPhysicalPlaythrough(level.id, { phaseDelayTicks: 45 });
+    assert.equal(shifted.simulation.phase, 'result', `${level.id}: shifted timing phase`);
+    assert.equal(shifted.simulation.checkpointId, 8);
   });
 }

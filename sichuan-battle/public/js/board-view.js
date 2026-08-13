@@ -12,7 +12,7 @@ export class BoardView {
    */
   constructor(root,options={}){
     this.root=root;this.interactive=options.interactive!==false;this.onPair=options.onPair||(()=>null);
-    this.pathLayer=options.pathLayer||null;this.feedback=options.feedback||null;this.hintBanner=options.hintBanner||null;this.onEvent=options.onEvent||(()=>{});this.tiles=[];this.effects=[];this.boardRevision=-1;
+    this.pathLayer=options.pathLayer||null;this.feedback=options.feedback||null;this.hintBanner=options.hintBanner||null;this.onEvent=options.onEvent||(()=>{});this.tiles=[];this.effects=[];this.autoHint=null;this.boardRevision=-1;
     this.matchId=null;this.phase='waiting';this.shufflePending=false;this.connectionReady=false;this.selectedTileId=null;this.pendingPair=null;
     this.feedbackKey=this.interactive?'selectFirst':null;this.successIds=new Set();this.invalidIds=new Set();this.feedbackTimer=null;
     /** @type {Map<string,HTMLElement>} tileId별로 경기 중 동일 객체를 유지한다. */
@@ -45,22 +45,24 @@ export class BoardView {
   isInteractionEnabled(){return this.interactive&&this.connectionReady&&this.phase==='playing'&&!this.shufflePending&&!this.pendingPair;}
 
   /** @param {object[]} tiles 서버 타일 @param {object[]} [effects=[]] 활성 효과 @param {number} [revision=0] 보드 revision */
-  render(tiles,effects=[],revision=0){
+  render(tiles,effects=[],revision=0,autoHint=this.autoHint){
     if(this.boardRevision>=0&&this.boardRevision!==revision){
       if(this.pendingPair)this.resetTransientState();
       else this.clearSelection(false);
     }
-    this.boardRevision=revision;this.tiles=tiles||[];this.effects=effects;
+    this.boardRevision=revision;this.tiles=tiles||[];this.effects=effects;this.autoHint=autoHint||null;
     const available=new Set(this.tiles.filter((tile)=>!tile.removed&&!tile.locked).map((tile)=>tile.tileId));
     if(this.selectedTileId&&!available.has(this.selectedTileId))this.clearSelection(false);
     const currentTiles=new Map(this.tiles.map((tile)=>[tile.tileId,tile]));
-    const hintEffect=effects.find((effect)=>effect?.itemId==='hint'&&Array.isArray(effect.targets));
-    const validHintTargets=(hintEffect?.targets||[]).filter((tileId,index,values)=>{
+    const manualHint=effects.find((effect)=>effect?.itemId==='hint'&&Array.isArray(effect.targets));
+    const hintEffect=manualHint||this.autoHint;
+    const requestedTargets=manualHint?.targets||(this.autoHint?.targets||[]).slice(0,this.autoHint?.stage===1?1:2);
+    const validHintTargets=requestedTargets.filter((tileId,index,values)=>{
       const tile=currentTiles.get(tileId);
       return typeof tileId==='string'&&index===values.indexOf(tileId)&&tile&&!tile.removed;
     }).slice(0,2);
-    const visibleHint=validHintTargets.length?{...hintEffect,targets:validHintTargets}:null;
-    const hintIds=new Map(validHintTargets.map((tileId,index)=>[tileId,index+1]));
+    const visibleHint=validHintTargets.length?{...hintEffect,itemId:manualHint?'hint':'auto_hint',targets:validHintTargets,path:manualHint?.path||(this.autoHint?.stage===3?this.autoHint.path:[])}:null;
+    const hintIds=new Map(validHintTargets.map((tileId,index)=>[tileId,{number:index+1,automatic:!manualHint}]));
     const currentIds=new Set(this.tiles.map((tile)=>tile.tileId));
     for(const [tileId,node] of this.tileNodes)if(!currentIds.has(tileId)){node.remove();this.tileNodes.delete(tileId);}
     this.tiles.forEach((tile,index)=>{
@@ -71,9 +73,11 @@ export class BoardView {
       if(this.root.children[index]!==node)this.root.insertBefore(node,this.root.children[index]||null);
     });
     this.root.setAttribute('aria-busy',this.pendingPair?'true':'false');
-    this.root.classList.toggle('has-hint',Boolean(visibleHint));
+    this.root.classList.toggle('has-hint',Boolean(manualHint&&visibleHint));
+    this.root.classList.toggle('has-auto-hint',Boolean(!manualHint&&visibleHint));
+    this.root.dataset.autoHintStage=!manualHint&&visibleHint?String(this.autoHint?.stage||1):'';
     this.renderHint(visibleHint);
-    this.renderHintBanner(visibleHint);
+    this.renderHintBanner(manualHint?visibleHint:null);
     this.updateFeedback();
   }
 
@@ -89,15 +93,15 @@ export class BoardView {
   /** @private @param {HTMLElement} node 기존 노드 @param {object} tile 서버 타일 @param {Map<string,number>} hintIds 힌트 ID와 순번 @returns {void} */
   updateTileNode(node,tile,hintIds){
     node.style.backgroundImage=`url('/sichuan-battle/assets/tiles/tile-${String(tile.faceId).padStart(2,'0')}.png')`;
-    const hintNumber=this.interactive?hintIds.get(tile.tileId):null;const hinted=Boolean(hintNumber);
+    const hint=this.interactive?hintIds.get(tile.tileId):null;const hinted=Boolean(hint);const automatic=Boolean(hint?.automatic);
     if(this.interactive){
       const label=tile.flipped?t('flippedTile'):t('tileLabel',{face:tile.faceId});
       node.setAttribute('aria-label',hinted?`${label}. ${t('hintTarget')}`:label);
       node.disabled=tile.removed||tile.locked||!this.isInteractionEnabled();
       node.setAttribute('aria-pressed',this.selectedTileId===tile.tileId?'true':'false');
     }
-    node.classList.toggle('removed',tile.removed);node.classList.toggle('locked',tile.locked);node.classList.toggle('flipped',tile.flipped);node.classList.toggle('fogged',tile.fogged);node.classList.toggle('hinted',hinted);
-    if(hinted)node.dataset.hintNumber=String(hintNumber);else delete node.dataset.hintNumber;
+    node.classList.toggle('removed',tile.removed);node.classList.toggle('locked',tile.locked);node.classList.toggle('flipped',tile.flipped);node.classList.toggle('fogged',tile.fogged);node.classList.toggle('hinted',hinted&&!automatic);node.classList.toggle('auto-hinted',automatic);
+    if(hinted)node.dataset.hintNumber=String(hint.number);else delete node.dataset.hintNumber;
     node.classList.toggle('selected',this.selectedTileId===tile.tileId);node.classList.toggle('pending',Boolean(this.pendingPair&&[this.pendingPair.tileAId,this.pendingPair.tileBId].includes(tile.tileId)));
     node.classList.toggle('match-success',this.successIds.has(tile.tileId));node.classList.toggle('match-invalid',this.invalidIds.has(tile.tileId));
     const back=node.querySelector('.tile-back');
@@ -186,8 +190,9 @@ export class BoardView {
     if(!this.interactive)return;
     if(!this.pathLayer)return;
     this.pathLayer.querySelector('[data-layer="hint"]')?.remove();
+    this.pathLayer.querySelector('[data-layer="auto-hint"]')?.remove();
     if(!effect||!Array.isArray(effect.path)||effect.path.length<2)return;
-    const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.dataset.layer='hint';
+    const line=document.createElementNS('http://www.w3.org/2000/svg','polyline');line.dataset.layer=effect.itemId==='auto_hint'?'auto-hint':'hint';
     line.setAttribute('points',effect.path.map((point)=>`${point.x+.5},${point.y+.5}`).join(' '));this.pathLayer.prepend(line);
   }
 }

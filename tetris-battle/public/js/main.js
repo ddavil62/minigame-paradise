@@ -115,11 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let resultShown = false; // P2-1: 결과 화면 중복 표시 방지 가드
   let currentPlayers = [];
   let eliminated = false;
+  let acceptingOpponentBoards = true;
   let pendingItemSlot = null;
   let pendingItemTimer = 0;
 
   function renderRoster(players) {
     currentPlayers = players;
+    els.gameMain?.classList.toggle('two-player-layout', players.length === 2);
+    els.gameMain?.classList.toggle('multiplayer-layout', players.length >= 3);
     if (els.waitingRoster) {
       els.waitingRoster.replaceChildren(...players.map((player) => {
         const row = document.createElement('div');
@@ -222,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
     onStart: (countdown) => {
       // 게임 화면으로 전환
       showScreen('game');
+      acceptingOpponentBoards = false;
+      ui.clearRoundVisuals();
       ui.hideResult();
       resultShown = false; // P2-1: 결과 표시 가드 리셋
       eliminated = false;
@@ -233,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Phase 3 LOW-2: 슬롯 클릭 재활성화 (이전 게임 종료 시 비활성화되었을 수 있음)
       ui.setItemSlotsInteractive(true);
       runCountdown(countdown, () => {
+        acceptingOpponentBoards = true;
         game.start();
         if (input) input.enable();
       });
@@ -242,12 +248,14 @@ document.addEventListener('DOMContentLoaded', () => {
       game.receiveGarbage(lines);
     },
     onOpponentBoard: (state) => {
+      if (!acceptingOpponentBoards) return;
       ui.renderOpponent(state);
     },
     onResult: (winner, reason) => {
       // P2-1: 중복 GAME_RESULT 수신 시 결과 화면 플리커 방지
       if (resultShown) return;
       resultShown = true;
+      ui.clearItemAttacks();
 
       const myId = net.getMyId();
       let msg, cssClass;
@@ -327,6 +335,22 @@ document.addEventListener('DOMContentLoaded', () => {
     onItemEffect: ({ itemId, duration }) => {
       console.log(`[main] 아이템 효과 수신: ${itemId} (${duration}ms)`);
       if (items) items.applyEffect(itemId, duration);
+    },
+    onItemAttack: ({ attackId, itemId, attackerId, targetId, legacyResolved, blocked }) => {
+      ui.animateItemAttack({
+        attackId,
+        itemId,
+        attackerId,
+        targetId,
+        myPlayerId: net.getMyId(),
+      });
+      // 재시작 전 서버는 별도 ITEM_ATTACK_RESULT 없이 최초 메시지에 판정을 포함한다.
+      if (legacyResolved) {
+        ui.resolveItemAttack({ attackId, targetId, blocked, myPlayerId: net.getMyId() });
+      }
+    },
+    onItemAttackResult: ({ attackId, targetId, blocked, cancelled }) => {
+      ui.resolveItemAttack({ attackId, targetId, blocked, cancelled, myPlayerId: net.getMyId() });
     },
     onItemUseRejected: ({ itemId, slotIndex }) => {
       if (items) items.grantItem(itemId, slotIndex);

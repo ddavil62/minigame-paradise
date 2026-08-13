@@ -36,6 +36,7 @@ export function validateClientMessage(value) {
       seq: Number(message.seq),
       left: message.left === true,
       right: message.right === true,
+      down: message.down === true,
       jump: message.jump === true,
       interact: message.interact === true,
     } };

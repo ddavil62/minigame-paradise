@@ -16,11 +16,14 @@ test('상대 미니맵이 가비지 구멍과 일반 블록을 실제 셀대로 
     const { createUI, MINIMAP_CELL } = await import('/js/ui.js');
     const { BOARD_HEIGHT, BOARD_WIDTH } = await import('/js/board.js');
     const byId = (id) => document.getElementById(id);
+    const opponentCanvas = document.createElement('canvas');
+    opponentCanvas.id = 'opponent-canvas';
+    byId('opponents-grid').append(opponentCanvas);
     const ui = createUI({
       boardCanvas: byId('board-canvas'),
       nextCanvas: byId('next-canvas'),
       holdCanvas: byId('hold-canvas'),
-      opponentCanvas: byId('opponent-canvas'),
+      opponentCanvas,
       scoreEl: byId('score'),
       levelEl: byId('level'),
       linesEl: byId('lines'),
@@ -35,7 +38,7 @@ test('상대 미니맵이 가비지 구멍과 일반 블록을 실제 셀대로 
     cells[BOARD_HEIGHT - 2][2] = 3;
     ui.renderOpponent({ height: 2, stack: [], cells });
 
-    const ctx = byId('opponent-canvas').getContext('2d');
+    const ctx = opponentCanvas.getContext('2d');
     const sample = (column, visibleRow) => Array.from(ctx.getImageData(
       column * MINIMAP_CELL + Math.floor(MINIMAP_CELL / 2),
       visibleRow * MINIMAP_CELL + Math.floor(MINIMAP_CELL / 2),

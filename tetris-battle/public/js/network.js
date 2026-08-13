@@ -27,6 +27,7 @@ export function createNetwork(handlers) {
   let ws = null;
   let myPlayerId = null;
   let reconnectAttempted = false;
+  let legacyAttackSequence = 0;
   // 입장 이름을 보관한다. WS open 이전에 join()이 호출돼도(레이스) open 직후 이 값으로 JOIN을 전송한다.
   // 재연결(close→connect) 시에도 동일 값으로 자동 재JOIN.
   let pendingJoinName = null;
@@ -225,6 +226,33 @@ export function createNetwork(handlers) {
           handlers.onItemEffect({
             itemId: msg.itemId,
             duration: msg.duration || 0,
+          });
+        }
+        break;
+      case 'ITEM_ATTACK':
+        if (handlers.onItemAttack) {
+          const hasServerAttackId = typeof msg.attackId === 'string' && msg.attackId.length > 0;
+          handlers.onItemAttack({
+            attackId: hasServerAttackId
+              ? msg.attackId
+              : `legacy-${Date.now()}-${legacyAttackSequence += 1}`,
+            itemId: msg.itemId,
+            attackerId: msg.attackerId || '',
+            targetId: msg.targetId || '',
+            legacyResolved: !hasServerAttackId,
+            blocked: msg.blocked === true,
+          });
+        }
+        break;
+      case 'ITEM_ATTACK_RESULT':
+        if (handlers.onItemAttackResult) {
+          handlers.onItemAttackResult({
+            attackId: msg.attackId || '',
+            itemId: msg.itemId,
+            attackerId: msg.attackerId || '',
+            targetId: msg.targetId || '',
+            blocked: msg.blocked === true,
+            cancelled: msg.cancelled === true,
           });
         }
         break;

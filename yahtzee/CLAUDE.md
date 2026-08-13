@@ -1,10 +1,10 @@
 # Yahtzee — 프로젝트별 작업 컨벤션
 
-> LAN 1:1 턴 교대 요트 다이스. Node.js + 바닐라 JS + Canvas. **1차 코어 완료 (2026-06-08)**.
+> 공개 HTTPS 통합 런처의 1:1 턴 교대 요트 다이스. Node.js + 바닐라 JS + Canvas. **1차 코어 완료 (2026-06-08)**.
 
 ## 정체성
 
-- **목적**: LAN으로 즉시 즐기는 정통 Yahtzee. 5다이스 1턴 3회 굴림 + 13 카테고리 점수표 + 26턴 후 총점 비교.
+- **목적**: 친구가 `https://112.155.2.238`로 접속해 즐기는 정통 Yahtzee. 같은 공유기에서도 개별 포트 직접 접속은 안내하지 않는다. 5다이스 1턴 3회 굴림 + 13 카테고리 점수표 + 26턴 후 총점 비교.
 - **레포 관리**: lazyslimestudio 하위 폴더(`yahtzee/`)로 관리. 미니게임 천국 8번째 종목.
 - **기술**: Node 18+ (ESM), 순수 `node:http` + `ws` 8 (Express 미사용), 바닐라 JS + HTML5 Canvas.
 - **외부 에셋**: 0. 다이스는 Canvas 2D pip 패턴, 점수표는 HTML 테이블 + CSS. 효과음도 외부 MP3/WAV 없이 Web Audio API로 코드 합성(`js/sounds.js`) — 헤더 🔊/🔇 토글, 음소거 상태 localStorage(`yahtzee.muted`) 영속.

@@ -8,7 +8,7 @@ import { createPrng, deriveSeed } from './lib/prng.js';
 
 export class AiController {
   /** @param {{url:string,random?:()=>number,setTimer?:typeof setTimeout,clearTimer?:typeof clearTimeout}} options 설정 */
-  constructor(options) { this.url = options.url; this.random = options.random || Math.random; this.setTimer = options.setTimer || setTimeout; this.clearTimer = options.clearTimer || clearTimeout; this.socket = null; this.snapshot = null; this.timer = null; this.pending = false; this.paused = false; this.ordinal = 0; this.lastMatchId = null; this.rematchMatchId = null; this.lastInventoryLength = 0; this.lastBoardRevision = 0; this.disruptionSignature = ''; this.disruptionActions = 0; }
+  constructor(options) { this.url = options.url; this.random = options.random || Math.random; this.setTimer = options.setTimer || setTimeout; this.clearTimer = options.clearTimer || clearTimeout; this.socket = null; this.snapshot = null; this.timer = null; this.pending = false; this.paused = false; this.ordinal = 0; this.lastMatchId = null; this.rematchMatchId = null; this.lastInventoryLength = 0; this.lastBoardRevision = 0; this.disruptionSignature = ''; this.disruptionActions = 0; this.resolvedDeadlockId = null; }
   /** @returns {void} 연결을 시작한다. */
   connect() { this.socket = new WebSocket(this.url); this.socket.on('message', (data) => this.onMessage(data)); this.socket.on('close', () => this.dispose()); }
   /** @param {object} payload 메시지 @returns {void} */
@@ -24,9 +24,18 @@ export class AiController {
   /** @param {boolean} first 새 경기 여부 @returns {void} */
   handleSnapshot(first) {
     if (!this.snapshot) return;
-    if (this.snapshot.matchId !== this.lastMatchId) { this.lastMatchId = this.snapshot.matchId; this.rematchMatchId = null; this.pending = false; this.ordinal = 0; this.random = createPrng(deriveSeed(this.snapshot.matchSeed, 'normal-ai')); this.lastInventoryLength = this.snapshot.me.inventory.length; this.lastBoardRevision = this.snapshot.me.board?.revision || 0; this.disruptionSignature = ''; this.disruptionActions = 0; }
+    if (this.snapshot.matchId !== this.lastMatchId) { this.lastMatchId = this.snapshot.matchId; this.rematchMatchId = null; this.pending = false; this.ordinal = 0; this.random = createPrng(deriveSeed(this.snapshot.matchSeed, 'normal-ai')); this.lastInventoryLength = this.snapshot.me.inventory.length; this.lastBoardRevision = this.snapshot.me.board?.revision || 0; this.disruptionSignature = ''; this.disruptionActions = 0; this.resolvedDeadlockId = null; }
     if (this.snapshot.phase === 'result') { if (this.rematchMatchId !== this.snapshot.matchId) { this.cancelTimer(); this.rematchMatchId = this.snapshot.matchId; const matchId = this.snapshot.matchId; this.timer = this.setTimer(() => { this.timer = null; this.send({ type: 'REMATCH', matchId }); }, 550); } return; }
     if (this.snapshot.phase === 'playing' || this.snapshot.phase === 'countdown') {
+      const deadlock = this.snapshot.me.deadlock;
+      if (deadlock) {
+        if (deadlock.phase === 'choice' && this.resolvedDeadlockId !== deadlock.deadlockId) {
+          this.resolvedDeadlockId = deadlock.deadlockId; this.cancelTimer();
+          const matchId = this.snapshot.matchId; const deadlockId = deadlock.deadlockId;
+          this.timer = this.setTimer(() => { this.timer = null; this.send({ type: 'DEADLOCK_DECISION', matchId, deadlockId, action: 'shuffle' }); }, 300 + Math.floor(this.random() * 350));
+        }
+        return;
+      }
       const disruptive = (this.snapshot.me.effects || []).filter((effect) => ['flip', 'fog'].includes(effect.itemId)).map((effect) => effect.effectId).sort().join('|');
       const disruptionChanged = disruptive && disruptive !== this.disruptionSignature; if (disruptionChanged) this.disruptionActions = 1 + Math.floor(this.random() * 2); this.disruptionSignature = disruptive;
       const inventoryLength = this.snapshot.me.inventory.length; const boardRevision = this.snapshot.me.board?.revision || 0;
@@ -44,7 +53,7 @@ export class AiController {
   }
   /** @param {'first'|'pair'|'item'} kind 예약 종류 @returns {void} 최신 스냅샷에서 행동 하나를 요청한다. */
   act(kind) {
-    const state = this.snapshot; if (!state || state.phase !== 'playing' || this.paused || this.pending || state.me.shuffleWarning) { this.schedule(); return; }
+    const state = this.snapshot; if (!state || state.phase !== 'playing' || this.paused || this.pending || state.me.deadlock) { this.schedule(); return; }
     if (kind === 'item') { const item = chooseAiItem(state, { actionOrdinal: this.ordinal }, this.random); if (item) { this.pending = true; this.send({ type: 'USE_ITEM', matchId: state.matchId, slotId: item.slotId, inventoryRevision: state.me.inventoryRevision }); return; } }
     const pair = chooseLegalPair(state, this.random); if (!pair) { this.schedule(); return; }
     if (this.disruptionActions > 0) this.disruptionActions -= 1;

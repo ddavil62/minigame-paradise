@@ -463,6 +463,22 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAi.disabled = true;
   });
 
+  // ── 로비 자동 입장 ──────────────────────────────────────────
+  // 런처 대기실에서 이미 닉네임을 입력하고 REDIRECT된 경우(lobbyReady=1),
+  // 닉네임을 다시 입력받지 않고 즉시 입장한다.
+  {
+    const lobbyParams = new URLSearchParams(location.search);
+    if (lobbyParams.get('lobbyReady') === '1') {
+      const lobbyName = (lobbyParams.get('name') || '').trim();
+      if (lobbyName) {
+        inputName.value = lobbyName.slice(0, 12);
+        document.querySelector('.name-input-area').classList.add('hidden');
+        document.querySelector('.btn-group').classList.add('hidden');
+        btnJoin.click();
+      }
+    }
+  }
+
   btnSubmit.addEventListener('click', () => {
     inputHandler.submit();
   });

@@ -1,6 +1,8 @@
 # 요트 다이스 (Yahtzee)
 
-LAN 1:1 턴 교대 5다이스 점수표 게임. 정통 Yahtzee 룰.
+1:1 턴 교대 5다이스 점수표 게임. 정통 Yahtzee 룰.
+
+> 친구는 같은 공유기에서도 `https://112.155.2.238`로 접속한다. 포트 3000과 개별 게임 포트는 내부·개발 전용이다.
 
 ## 실행
 
@@ -9,10 +11,10 @@ LAN 1:1 턴 교대 5다이스 점수표 게임. 정통 Yahtzee 룰.
 cd minigames/yahtzee
 node server.js --port 3010
 
-# 또는 통합 런처 (단일 포트 3000)
+# 또는 통합 런처 내부 프로세스
 cd minigames
 node launcher/server.js
-# 브라우저에서 http://localhost:3000 접속 → 요트 다이스 카드 클릭
+# 공개 운영은 start-public.ps1 실행 후 https://112.155.2.238 접속 → 요트 다이스 카드 클릭
 ```
 
 ## 게임 방법

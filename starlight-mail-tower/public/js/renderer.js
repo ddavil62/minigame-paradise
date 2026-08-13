@@ -229,25 +229,35 @@ export function createRenderer(canvas) {
     for (const platform of level().platforms) {
       const device = Number.isInteger(platform.deviceIndex) ? snapshot?.devices?.[platform.deviceIndex] : null;
       const active = !device || device.state !== 'IDLE';
-      const nonSolid = device?.solid === false;
+      const nonSolid = platform.solid === false || device?.solid === false;
+      const rotated = Number.isFinite(platform.angle);
+      const drawX = rotated ? -platform.width / 2 : platform.x;
+      const drawY = rotated ? -platform.height / 2 : platform.y;
+      context.save();
+      if (rotated) {
+        context.translate(platform.x + platform.width / 2, platform.y + platform.height / 2);
+        context.rotate(platform.angle);
+      }
       context.globalAlpha = nonSolid ? 0.12 : active ? 1 : 0.22;
       context.fillStyle = COLORS.steel;
       context.strokeStyle = nonSolid ? COLORS.steel : COLORS.cream;
       context.lineWidth = 2;
-      context.fillRect(platform.x, platform.y, platform.width, platform.height);
+      context.fillRect(drawX, drawY, platform.width, platform.height);
       if (nonSolid) context.setLineDash([6, 8]);
-      context.strokeRect(platform.x, platform.y, platform.width, platform.height);
+      context.strokeRect(drawX, drawY, platform.width, platform.height);
       context.setLineDash([]);
       if (nonSolid) {
-        context.globalAlpha = 0.72; context.beginPath(); const centerX = platform.x + platform.width / 2; const centerY = platform.y + platform.height / 2; context.moveTo(centerX, centerY - 7); context.lineTo(centerX + 7, centerY); context.lineTo(centerX, centerY + 7); context.lineTo(centerX - 7, centerY); context.closePath(); context.stroke();
+        const centerX = drawX + platform.width / 2; const centerY = drawY + platform.height / 2;
+        context.globalAlpha = 0.72; context.beginPath(); context.moveTo(centerX, centerY - 7); context.lineTo(centerX + 7, centerY); context.lineTo(centerX, centerY + 7); context.lineTo(centerX - 7, centerY); context.closePath(); context.stroke();
       } else {
-        context.fillStyle = COLORS.void; context.fillRect(platform.x, platform.y + platform.height - 4, platform.width, 4);
-        context.fillStyle = COLORS.brass; for (let x = platform.x + 18; x < platform.x + platform.width - 8; x += 56) context.fillRect(x, platform.y + 8, 18, 4);
+        context.fillStyle = COLORS.void; context.fillRect(drawX, drawY + platform.height - 4, platform.width, 4);
+        context.fillStyle = COLORS.brass; for (let x = drawX + 18; x < drawX + platform.width - 8; x += 56) context.fillRect(x, drawY + 8, 18, 4);
       }
       if (device?.warning) {
-        context.globalAlpha = 1; context.strokeStyle = COLORS.warning; context.lineWidth = 3; context.strokeRect(platform.x - 2, platform.y - 2, platform.width + 4, platform.height + 4);
-        context.lineWidth = 2; for (let mark = 0; mark < 12; mark += 1) { const x = platform.x + (mark + 0.5) * platform.width / 12; context.beginPath(); context.moveTo(x - 4, platform.y + platform.height + 3); context.lineTo(x + 4, platform.y + platform.height + 11); context.stroke(); }
+        context.globalAlpha = 1; context.strokeStyle = COLORS.warning; context.lineWidth = 3; context.strokeRect(drawX - 2, drawY - 2, platform.width + 4, platform.height + 4);
+        context.lineWidth = 2; for (let mark = 0; mark < 12; mark += 1) { const x = drawX + (mark + 0.5) * platform.width / 12; context.beginPath(); context.moveTo(x - 4, drawY + platform.height + 3); context.lineTo(x + 4, drawY + platform.height + 11); context.stroke(); }
       }
+      context.restore();
     }
     context.globalAlpha = 1;
     context.strokeStyle = COLORS.danger;
@@ -258,6 +268,32 @@ export function createRenderer(canvas) {
     for (let x = 18; x < level().world.width; x += 36) {
       context.beginPath(); context.moveTo(x, level().world.dangerY - 22); context.lineTo(x + 12, level().world.dangerY - 10); context.stroke();
       context.beginPath(); context.moveTo(x + 6, level().world.dangerY + 2); context.lineTo(x + 6, level().world.dangerY + 16); context.lineTo(x, level().world.dangerY + 10); context.moveTo(x + 6, level().world.dangerY + 16); context.lineTo(x + 12, level().world.dangerY + 10); context.stroke();
+    }
+  }
+
+  /** 점프대·배관·왕복 밀기벽을 서버 좌표로 그린다. @returns {void} */
+  function drawSpecials() {
+    for (const special of level().specials ?? []) {
+      context.save();
+      context.lineWidth = 3;
+      if (special.type === 'jump-pad') {
+        context.fillStyle = COLORS.gold; context.strokeStyle = COLORS.cream;
+        context.fillRect(special.x, special.y - special.height, special.width, special.height);
+        context.strokeRect(special.x, special.y - special.height, special.width, special.height);
+        context.strokeStyle = COLORS.cyan;
+        for (let x = special.x + 14; x < special.x + special.width - 8; x += 22) { context.beginPath(); context.moveTo(x - 7, special.y - 4); context.lineTo(x, special.y - 12); context.lineTo(x + 7, special.y - 4); context.stroke(); }
+      } else if (special.type === 'pipe') {
+        context.fillStyle = COLORS.green; context.strokeStyle = COLORS.cream;
+        context.fillRect(special.x + 10, special.y - special.height, special.width - 20, special.height);
+        context.strokeRect(special.x + 10, special.y - special.height, special.width - 20, special.height);
+        context.fillRect(special.x, special.y - special.height, special.width, 18); context.strokeRect(special.x, special.y - special.height, special.width, 18);
+        context.strokeStyle = COLORS.gold; context.beginPath(); context.moveTo(special.x + special.width / 2, special.y - 30); context.lineTo(special.x + special.width / 2, special.y - 8); context.moveTo(special.x + special.width / 2 - 8, special.y - 16); context.lineTo(special.x + special.width / 2, special.y - 8); context.lineTo(special.x + special.width / 2 + 8, special.y - 16); context.stroke();
+      } else if (special.type === 'pusher-wall') {
+        context.fillStyle = COLORS.panel; context.strokeStyle = COLORS.warning;
+        context.fillRect(special.x, special.y, special.width, special.height); context.strokeRect(special.x, special.y, special.width, special.height);
+        for (let y = special.y + 18; y < special.y + special.height; y += 34) { context.beginPath(); context.moveTo(special.x + 8, y); context.lineTo(special.x + special.width - 8, y + 12); context.stroke(); }
+      }
+      context.restore();
     }
   }
 
@@ -732,6 +768,7 @@ export function createRenderer(canvas) {
     context.save();
     context.translate(-Math.round(cameraX), -Math.round(cameraY));
     drawGeometry();
+    drawSpecials();
     level().modules.forEach((module, index) => { drawCheckpoint(module, index, elapsed); drawDevice(module, index); });
     drawFinale();
     drawCoopBoostEffects(elapsed);

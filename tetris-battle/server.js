@@ -26,6 +26,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 export const ITEM_GRANT_PROB = 0.8;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
+export const ITEM_ATTACK_TRAVEL_MS = 1000;
 
 /**
  * 아이템 지급 난수값이 80% 당첨 구간에 포함되는지 판정한다.
@@ -48,7 +49,7 @@ export function isWinningItemGrantRoll(roll) {
 // ──────────────────────────────────────────────────────────────
 /**
  * 테트리스 배틀 게임 앱 인스턴스를 생성한다.
- * @param {{ hostUrl?: string, getBotUrl?: (roomId: string) => (string|null), random?: () => number, heartbeatIntervalMs?: number }} [opts]
+ * @param {{ hostUrl?: string, getBotUrl?: (roomId: string) => (string|null), random?: () => number, heartbeatIntervalMs?: number, itemAttackDelayMs?: number }} [opts]
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
@@ -58,6 +59,9 @@ export function createApp(opts = {}) {
   const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
   // 테스트에서는 결정적 경계값을 주입하고, 실제 게임에서는 표준 난수를 사용한다.
   const random = typeof opts.random === 'function' ? opts.random : Math.random;
+  const itemAttackDelayMs = Number.isFinite(opts.itemAttackDelayMs)
+    ? Math.max(0, opts.itemAttackDelayMs)
+    : ITEM_ATTACK_TRAVEL_MS;
 
   // ── Express 정적 파일 서빙 ────────────────────────────────────
   const expressApp = express();
@@ -130,7 +134,7 @@ function generateRoomId() {
  * @returns {Room}
  */
 function createRoom(id) {
-  const room = { id, players: [], botChild: null, _botSpawnPending: false, phase: 'waiting' };
+  const room = { id, players: [], botChild: null, _botSpawnPending: false, phase: 'waiting', roundId: 0 };
   roomMap.set(id, room);
   return room;
 }
@@ -339,6 +343,7 @@ function publicPlayers(room) {
       name: p.name,
       ready: p.ready,
       eliminated: p.gameOver,
+      itemSlots: p.itemSlots.slice(),
     }));
 }
 
@@ -399,7 +404,7 @@ function broadcastReadyState(room) {
  * @param {Player} player 수혜자
  * @param {number} clearEventId 라운드 내 클리어 이벤트 식별자
  */
-function tryGrantItem(player, clearEventId) {
+function tryGrantItem(room, player, clearEventId) {
   if (!Number.isInteger(clearEventId) || clearEventId <= player.lastClearEventId) return;
   // 확률 실패 이벤트도 처리 완료로 기록해 동일 이벤트 재전송으로 재추첨하지 못하게 한다.
   player.lastClearEventId = clearEventId;
@@ -414,6 +419,7 @@ function tryGrantItem(player, clearEventId) {
     itemId,
     slotIndex,
   });
+  broadcastRoomState(room);
   console.log(`[server] ${player.id} 아이템 지급: ${itemId} (슬롯 ${slotIndex})`);
 }
 
@@ -571,6 +577,7 @@ wss.on('connection', (ws, req) => {
         broadcastReadyState(room);
         // 두 명 모두 READY면 카운트다운 시작
         if (room.players.length >= MIN_PLAYERS && room.players.every((p) => p.ready)) {
+          room.roundId += 1;
           room.phase = 'playing';
           console.log(`[server] 양쪽 READY → 게임 시작 카운트다운 (룸=${room.id})`);
           broadcastRoomState(room);
@@ -605,7 +612,7 @@ wss.on('connection', (ws, req) => {
           });
         }
         // 콤보 수와 무관하게 고유 라인 클리어 이벤트마다 80% 확률로 지급한다.
-        tryGrantItem(player, clearEventId);
+        tryGrantItem(room, player, clearEventId);
         break;
       }
 
@@ -662,6 +669,7 @@ wss.on('connection', (ws, req) => {
         }
         player.itemSlots[slotIndex] = null;
         player.slotCount = player.itemSlots.filter(Boolean).length;
+        broadcastRoomState(room);
 
         if (itemId === 'shield') {
           // 방어막은 자기 자신에게 적용 (서버가 권위적으로 추적)
@@ -676,22 +684,54 @@ wss.on('connection', (ws, req) => {
           console.log(`[server] ${player.id} 라인 클리어 사용 (룸=${room.id})`);
           break;
         }
-        // 공격형: garbage_bomb / dark / freeze
-        if (opp.shieldActive) {
-          // 방어막에 차단됨 → 수신자별 역할을 명시해 양쪽 방어막 동시 활성도 안전하게 구분한다.
-          opp.shieldActive = false;
-          console.log(`[server] ${opp.id} 방어막 발동: ${itemId} 차단 (룸=${room.id})`);
-          sendTo(player, { type: 'SHIELD_BLOCK', itemId, isDefender: false, playerId: opp.id });
-          sendTo(opp, { type: 'SHIELD_BLOCK', itemId, isDefender: true, playerId: opp.id });
-        } else {
-          // 정상 전달
-          sendTo(opp, {
-            type: 'ITEM_EFFECT',
+        // 공격형: 비행 애니메이션을 먼저 시작하고, 도착 시점에 방어막/효과를 판정한다.
+        const attackId = crypto.randomUUID();
+        const roundId = room.roundId;
+        broadcastAll(room, {
+          type: 'ITEM_ATTACK',
+          attackId,
+          itemId,
+          attackerId: player.id,
+          targetId: opp.id,
+        });
+        setTimeout(() => {
+          // 재대결, 게임 종료, 대상 이탈/탈락 뒤에는 이전 탄의 판정을 폐기한다.
+          if (room.roundId !== roundId || !isRoomPlaying(room)) return;
+          if (!room.players.includes(opp) || opp.gameOver || opp.ws.readyState !== WebSocket.OPEN) {
+            broadcastAll(room, {
+              type: 'ITEM_ATTACK_RESULT',
+              attackId,
+              itemId,
+              attackerId: player.id,
+              targetId: opp.id,
+              blocked: false,
+              cancelled: true,
+            });
+            return;
+          }
+          const blocked = opp.shieldActive;
+          broadcastAll(room, {
+            type: 'ITEM_ATTACK_RESULT',
+            attackId,
             itemId,
-            duration: ITEM_DURATIONS[itemId] || 0,
-            fromPlayerId: player.id,
+            attackerId: player.id,
+            targetId: opp.id,
+            blocked,
           });
-        }
+          if (blocked) {
+            opp.shieldActive = false;
+            console.log(`[server] ${opp.id} 방어막 발동: ${itemId} 차단 (룸=${room.id})`);
+            sendTo(player, { type: 'SHIELD_BLOCK', itemId, isDefender: false, playerId: opp.id });
+            sendTo(opp, { type: 'SHIELD_BLOCK', itemId, isDefender: true, playerId: opp.id });
+          } else {
+            sendTo(opp, {
+              type: 'ITEM_EFFECT',
+              itemId,
+              duration: ITEM_DURATIONS[itemId] || 0,
+              fromPlayerId: player.id,
+            });
+          }
+        }, itemAttackDelayMs);
         break;
       }
 
@@ -750,6 +790,7 @@ wss.on('connection', (ws, req) => {
           for (const p of room.players) {
             p.ready = true;
           }
+          room.roundId += 1;
           room.phase = 'playing';
           broadcastRoomState(room);
           broadcastAll(room, { type: 'START', countdown: 3 });

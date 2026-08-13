@@ -10,15 +10,15 @@ import test from 'node:test';
 import { createRecordStore } from '../game/records.js';
 import { DEVICE_STATE, createDevices, updateDevice } from '../game/devices.js';
 import { advanceModuleForTesting, applyInput, createSimulation, snapshotSimulation, stepSimulation, triggerFinishForTesting } from '../game/simulation.js';
-import { LEVELS, getLevel, getNextLevel, validateLevel } from '../shared/levels.js';
+import { LEVELS, analyzeLevelLayout, getLevel, getNextLevel, validateLevel } from '../shared/levels.js';
 import { validateClientMessage } from '../shared/protocol.js';
 
-test('카탈로그는 고유 테마와 8모듈을 가진 다섯 레벨을 제공한다', () => {
-  assert.equal(LEVELS.length, 5);
-  assert.equal(new Set(LEVELS.map((level) => level.id)).size, 5);
-  assert.equal(new Set(LEVELS.map((level) => level.motif)).size, 5);
+test('카탈로그는 고유 테마와 8모듈을 가진 17개 레벨을 제공한다', () => {
+  assert.equal(LEVELS.length, 17);
+  assert.equal(new Set(LEVELS.map((level) => level.id)).size, 17);
+  assert.equal(new Set(LEVELS.map((level) => level.motif)).size, 17);
   assert.equal(LEVELS.every((level) => level.modules.length === 8), true);
-  assert.equal(getNextLevel('orbital-post').id, 'starlight-tower');
+  assert.equal(getNextLevel('stellar-library').id, 'starlight-tower');
 });
 
 test('모든 레벨은 복제 코드 없이 주입되어 8/8까지 진행한다', () => {
@@ -51,6 +51,26 @@ test('신규 월드는 27개 기본 지형과 8개 장치 연동 복귀 발판�
   }
 });
 
+test('레벨마다 좌우 교대가 아닌 고유 진행 실루엣을 사용한다', () => {
+  const analyses = LEVELS.map(analyzeLevelLayout);
+  assert.equal(new Set(analyses.map((analysis) => analysis.directions)).size, LEVELS.length);
+  assert.equal(analyses.filter((analysis) => analysis.directions === 'RLRLRLRL').length, 1);
+  assert.equal(analyses.slice(1).every((analysis) => /RR|LL|C/.test(analysis.directions)), true);
+});
+
+test('정적 경로의 점프 간격과 상승량, 특수 장치 링크를 검증한다', () => {
+  for (const level of LEVELS) assert.deepEqual(validateLevel(level).errors.filter((error) => /^(reach|rise|pipe-link|special)/.test(error)), [], level.id);
+});
+
+test('합체 리프트와 신규 특수 기믹이 일부 레벨에 편중되지 않는다', () => {
+  assert.equal(LEVELS.filter((level) => level.modules.some((module) => module.type === 'merge-lift')).length, 7);
+  const specialLevels = (type) => LEVELS.filter((level) => level.specials.some((special) => special.type === type)).length;
+  assert.equal(specialLevels('jump-pad'), 4);
+  assert.equal(specialLevels('pipe'), 3);
+  assert.equal(specialLevels('pusher-wall'), 5);
+  assert.equal(LEVELS.every((level) => Math.max(...Object.values(analyzeLevelLayout(level).mechanics)) <= 3), true);
+});
+
 test('동일 레벨과 입력 시퀀스는 좌표·collider·장치 위상이 결정론적으로 같다', () => {
   const run = () => {
     const simulation = createSimulation('cloud-cargo'); simulation.phase = 'playing';
@@ -79,13 +99,14 @@ test('이동 객차는 POWERED 동안 서버 collider가 움직이고 해제하�
   assert.equal(simulation.dynamicPlatforms.find((platform) => platform.id === id).x, stopped);
 });
 
-test('셔터와 주기 발판은 서버 240ms 경고 및 solid 상태를 스냅샷에 제공한다', () => {
-  for (const [levelId, moduleIndex, warningAt, solid] of [['cloud-cargo', 1, 2000, false], ['moon-clock', 0, 1650, true]]) {
+test('힌지 게이트와 주기 발판은 서버 경고 및 충돌 상태를 스냅샷에 제공한다', () => {
+  for (const [levelId, moduleIndex, warningAt, solid] of [['cloud-cargo', 1, 3600, true], ['moon-clock', 0, 1650, true]]) {
     const module = getLevel(levelId).modules[moduleIndex]; const device = createDevices([module])[0];
     device.state = DEVICE_STATE.POWERED; device.anchorPlayerId = module.requiredPlayerId; device.stateChangedMs = 0;
     const players = [{ id: module.requiredPlayerId, x: module.anchor.x, y: module.anchor.y, vx: 0, vy: 0, input: { interact: true } }, { id: 'partner', x: -999, y: -999, vx: 0, vy: 0, input: { interact: false } }];
     updateDevice(device, players, 1 / 30, warningAt);
     assert.equal(device.solid, solid); assert.equal(device.warning, true);
+    if (device.type === 'timer-gate') assert.ok(device.gateProgress > 0.5);
   }
 });
 

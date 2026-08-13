@@ -34,8 +34,13 @@ test('힌트는 4초 뒤 유지되고 번호·경로·안내가 보이며 매칭
   await openAi(page);
   await grant(page, 'hint');
   await page.waitForTimeout(3_150);
+  const boardBeforeHint = await page.locator('#board-frame').boundingBox();
   await page.locator('[data-item-id="hint"]').click();
   await expect(page.locator('#board .tile.hinted')).toHaveCount(2);
+  const boardDuringHint = await page.locator('#board-frame').boundingBox();
+  const hintBanner = await page.locator('#hint-banner').boundingBox();
+  expect(Math.abs(boardDuringHint.y - boardBeforeHint.y)).toBeLessThanOrEqual(1);
+  expect(hintBanner.y).toBeGreaterThanOrEqual(boardDuringHint.y + boardDuringHint.height);
   await expect(page.locator('#board [data-hint-number="1"]')).toHaveCount(1);
   await expect(page.locator('#board [data-hint-number="2"]')).toHaveCount(1);
   await expect(page.locator('#path-layer [data-layer="hint"]')).toHaveCount(1);

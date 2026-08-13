@@ -17,6 +17,8 @@
 
   <!-- 게임 화면 -->
   <div id="game-screen" class="screen">
+    <button id="exit-btn" class="exit-btn" type="button">✕ 나가기</button>
+
     <!-- 상단: 플레이어 정보 -->
     <div class="player-panels">
       <div class="player-panel me" id="panel-me">
@@ -56,15 +58,13 @@
       </div>
     </div>
 
-    <!-- 체인 이력 -->
+    <div id="turn-banner" class="turn-banner" role="status" aria-live="polite">첫 턴을 정하는 중...</div>
+
+    <!-- 공유 체인 이력 -->
     <div class="chain-area">
       <div class="chain-col">
-        <h3>내 체인</h3>
-        <ul id="chain-me" class="chain-list"></ul>
-      </div>
-      <div class="chain-col">
-        <h3>상대 체인</h3>
-        <ul id="chain-opp" class="chain-list"></ul>
+        <h3>공유 단어 체인</h3>
+        <ul id="chain-shared" class="chain-list"></ul>
       </div>
     </div>
 
@@ -76,8 +76,9 @@
       </div>
       <div class="timer-display">
         <span>⏱</span>
-        <span id="timer-text">20</span><span>초</span>
+        <span id="timer-text">10</span><span>초</span>
       </div>
+      <div id="typing-indicator" class="typing-indicator hidden" role="status" aria-live="polite"></div>
       <div class="input-row">
         <input type="text" id="word-input" class="word-input" placeholder="단어를 입력하세요" autocomplete="off" disabled>
         <button id="submit-btn" class="submit-btn" disabled>제출</button>

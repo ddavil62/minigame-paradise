@@ -62,7 +62,13 @@ function buildIndependentLevel(definition) {
   if (finishYShift !== 0) finishDeck.y += finishYShift;
   const modules = definition.rows.map((row, index) => ({ id: `${definition.id}-m${index + 1}`, number: index + 1, type: row.type, section: definition.motif, requiredPlayerId: index % 2 === 0 ? 'p1' : 'p2', anchor: { x: row.anchor[0], y: row.anchor[1] }, switch: { x: row.switch[0], y: row.switch[1] }, checkpoint: rectangle(row.zone), mechanics: row.mechanics ?? {} }));
   const coop = addCoopRoutes(platforms, modules);
-  return Object.freeze({ id: definition.id, nameKey: definition.nameKey, themeKey: definition.themeKey, descriptionKey: definition.descriptionKey, minutes: definition.minutes, palette: definition.palette, motif: definition.motif, world: { ...definition.world }, physics: { ...definition.physics }, platforms: coop.platforms, checkpoints: definition.checkpoints.map((item, id) => ({ id, x1: item[0], y1: item[1], x2: item[2], y2: item[3] })), finish: { leftSwitch: { x: definition.finish[0], y: definition.finish[1] + finishYShift }, rightSwitch: { x: definition.finish[2], y: definition.finish[3] + finishYShift }, launcher: { x: definition.finish[4], y: definition.finish[5] + finishYShift }, windowMs: definition.finish[6], launchMs: definition.finish[7] }, modules: coop.modules, hazards: definition.hazards.map((item) => ({ ...item })) });
+  const checkpoints = definition.checkpoints.map((item, id) => {
+    if (id === 0 || !definition.layoutProfile) return { id, x1: item[0], y1: item[1], x2: item[2], y2: item[3] };
+    const support = platforms.find((platform) => platform.id === `m${id}-end`);
+    const center = support.x + support.width / 2;
+    return { id, x1: center - 33, y1: support.y - 20, x2: center + 33, y2: support.y - 20 };
+  });
+  return Object.freeze({ id: definition.id, nameKey: definition.nameKey, themeKey: definition.themeKey, descriptionKey: definition.descriptionKey, minutes: definition.minutes, palette: definition.palette, motif: definition.motif, world: { ...definition.world }, physics: { ...definition.physics }, platforms: coop.platforms, checkpoints, finish: { leftSwitch: { x: definition.finish[0], y: definition.finish[1] + finishYShift }, rightSwitch: { x: definition.finish[2], y: definition.finish[3] + finishYShift }, launcher: { x: definition.finish[4], y: definition.finish[5] + finishYShift }, windowMs: definition.finish[6], launchMs: definition.finish[7] }, modules: coop.modules, hazards: definition.hazards.map((item) => ({ ...item })), specials: (definition.specials ?? []).map((item) => ({ ...item })), layoutProfile: definition.layoutProfile ?? null });
 }
 
 const PALETTES = Object.freeze({
@@ -80,6 +86,111 @@ const PALETTES = Object.freeze({
   garden: { sky: '#070C1A', haze: '#1A3048', structure: '#2A5070', accent: '#80E8C8' },
   library: { sky: '#08090E', haze: '#14182E', structure: '#242840', accent: '#C8A050' },
 });
+
+// Each profile describes nine consecutive safe hubs. Route offsets bend the path
+// away from the straight midpoint so levels with similar endpoints still play differently.
+const LAYOUT_PROFILES = Object.freeze({
+  'cloud-cargo':       { nodes:[.18,.36,.55,.74,.82,.66,.48,.30,.50], bends:[-.04,-.03,.02,-.18,.06,.03,-.04,-.02] },
+  'moon-clock':        { nodes:[.18,.50,.82,.52,.22,.48,.78,.46,.50], bends:[.07,0,-.07,-.08,.02,.08,-.07,.03] },
+  'storm-station':     { nodes:[.18,.48,.82,.50,.42,.22,.52,.78,.50], bends:[.16,-.14,.15,-.15,.14,-.13,.12,0] },
+  'orbital-post':      { nodes:[.18,.42,.82,.30,.20,.72,.80,.32,.50], bends:[-.03,.08,.14,-.12,-.14,.11,.13,-.05] },
+  'deep-sea-post':     { nodes:[.18,.34,.52,.70,.80,.64,.46,.30,.50], bends:[.02,.03,.04,.02,-.03,-.04,-.02,.06] },
+  'volcanic-mail-base':{ nodes:[.18,.38,.60,.80,.66,.50,.34,.52,.50], bends:[-.10,-.08,-.06,.14,.12,.10,-.12,.03] },
+  'crystal-palace':    { nodes:[.18,.48,.78,.48,.24,.50,.76,.62,.50], bends:[-.15,.15,-.15,.15,-.13,.13,-.11,.08] },
+  'snowpeak-tower':    { nodes:[.18,.34,.52,.70,.56,.40,.58,.44,.50], bends:[-.10,.08,-.09,.11,.09,-.10,.08,-.04] },
+  'desert-route':      { nodes:[.18,.64,.78,.34,.22,.68,.82,.38,.50], bends:[.03,.02,-.02,-.03,.04,.03,-.04,.02] },
+  'space-station':     { nodes:[.18,.52,.78,.68,.34,.22,.48,.76,.50], bends:[.14,.14,-.12,-.14,.12,.16,.13,-.10] },
+  'glacier-bureau':    { nodes:[.18,.30,.44,.58,.72,.62,.50,.40,.50], bends:[-.06,.07,-.08,.09,-.10,.08,-.07,.05] },
+  'rainforest-post':   { nodes:[.18,.42,.58,.48,.68,.54,.38,.62,.50], bends:[.12,-.11,.13,-.12,.11,-.10,.14,-.08] },
+  'machine-factory':   { nodes:[.18,.58,.72,.36,.50,.68,.32,.52,.50], bends:[-.04,0,.04,-.16,-.03,.15,.03,-.12] },
+  'ancient-temple':    { nodes:[.18,.50,.70,.50,.30,.50,.40,.70,.50], bends:[-.16,.12,.16,-.12,-.15,.11,.15,-.09] },
+  'sky-garden':        { nodes:[.18,.38,.30,.54,.46,.70,.60,.42,.50], bends:[.15,-.13,.12,-.11,.16,-.14,.13,-.08] },
+  'stellar-library':   { nodes:[.18,.62,.48,.30,.54,.76,.52,.34,.50], bends:[.08,-.15,.09,.14,-.08,-.14,.10,.12] },
+});
+
+const FINAL_MECHANIC_OVERRIDES = Object.freeze({
+  'deep-sea-post': 'docking-lock',
+  'volcanic-mail-base': 'updraft',
+  'crystal-palace': 'signal-link',
+  'snowpeak-tower': 'moving-car',
+  'desert-route': 'cargo-lock',
+  'glacier-bureau': 'updraft',
+  'rainforest-post': 'updraft',
+  'machine-factory': 'moving-car',
+  'ancient-temple': 'relay',
+  'stellar-library': 'clock-latch',
+});
+
+const SPECIAL_LAYOUTS = Object.freeze({
+  'cloud-cargo': [{ id:'cloud-spring',type:'jump-pad',platformId:'m3-end',offset:24,launchSpeed:980 }],
+  'moon-clock': [{ id:'moon-pipe-in',type:'pipe',platformId:'floor-left',offset:210,linkId:'moon-pipe-out' },{ id:'moon-pipe-out',type:'pipe',platformId:'m2-start',offset:205,linkId:'moon-pipe-in' }],
+  'storm-station': [{ id:'storm-pusher',type:'pusher-wall',platformId:'m7-end',offset:18,travel:110,periodMs:3200,pushSpeed:620 }],
+  'volcanic-mail-base': [{ id:'volcano-spring',type:'jump-pad',platformId:'m3-start',offset:24,launchSpeed:1020 }],
+  'snowpeak-tower': [{ id:'snow-pusher',type:'pusher-wall',platformId:'m4-end',offset:18,travel:100,periodMs:3600,pushSpeed:570 }],
+  'desert-route': [{ id:'desert-pipe-in',type:'pipe',platformId:'floor-left',offset:250,linkId:'desert-pipe-out' },{ id:'desert-pipe-out',type:'pipe',platformId:'m2-start',offset:210,linkId:'desert-pipe-in' }],
+  'glacier-bureau': [{ id:'glacier-pusher',type:'pusher-wall',platformId:'m5-end',offset:18,travel:105,periodMs:3400,pushSpeed:590 }],
+  'rainforest-post': [{ id:'rainforest-spring',type:'jump-pad',platformId:'m5-end',offset:24,launchSpeed:1000 }],
+  'machine-factory': [{ id:'factory-pusher',type:'pusher-wall',platformId:'m4-end',offset:18,travel:120,periodMs:2800,pushSpeed:650 }],
+  'ancient-temple': [{ id:'temple-pusher',type:'pusher-wall',platformId:'m6-end',offset:18,travel:90,periodMs:3800,pushSpeed:560 }],
+  'sky-garden': [{ id:'garden-spring',type:'jump-pad',platformId:'m4-end',offset:24,launchSpeed:980 }],
+  'stellar-library': [{ id:'library-pipe-in',type:'pipe',platformId:'m3-end',offset:210,linkId:'library-pipe-out' },{ id:'library-pipe-out',type:'pipe',platformId:'m5-start',offset:210,linkId:'library-pipe-in' }],
+});
+
+function clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maximum, value)); }
+
+function applyMechanicOverrides(definition) {
+  const finalType = FINAL_MECHANIC_OVERRIDES[definition.id];
+  if (!finalType) return definition;
+  const rows = definition.rows.map((row, index) => index === definition.rows.length - 1 ? { ...row, type: finalType, mechanics: finalType === 'docking-lock' ? { maxRelativeSpeed: 120, maxHeightDelta: 300 } : { ...row.mechanics } } : row);
+  return { ...definition, rows };
+}
+
+function resolveSpecialLayout(level) {
+  return (SPECIAL_LAYOUTS[level.id] ?? []).map((definition) => {
+    const platform = level.platforms.find((item) => item.id === definition.platformId);
+    if (definition.type === 'jump-pad') return { id:definition.id,type:definition.type,x:clamp(platform.x+definition.offset,platform.x,platform.x+platform.width-84),y:platform.y,width:84,height:16,launchSpeed:definition.launchSpeed };
+    if (definition.type === 'pipe') return { id:definition.id,type:definition.type,x:clamp(platform.x+definition.offset,platform.x,platform.x+platform.width-92),y:platform.y,width:92,height:40,linkId:definition.linkId };
+    const from=clamp(platform.x+definition.offset,platform.x,platform.x+platform.width-42-definition.travel);
+    return { id:definition.id,type:definition.type,x:from,y:platform.y-150,width:42,height:150,axis:'x',from,to:from+definition.travel,periodMs:definition.periodMs,pushSpeed:definition.pushSpeed };
+  });
+}
+
+/** Applies a level-specific horizontal path while preserving the authored vertical rhythm. */
+function applyLayoutProfile(definition) {
+  const profile = LAYOUT_PROFILES[definition.id];
+  if (!profile) return definition;
+  const worldWidth = definition.world.width;
+  const rows = definition.rows.map((source, index) => {
+    const row = { ...source, platforms: source.platforms.map((platform) => [...platform]), anchor: [...source.anchor], switch: [...source.switch], zone: [...source.zone], dynamic: source.dynamic ? { ...source.dynamic } : null, mechanics: { ...source.mechanics } };
+    const [start, route, end] = row.platforms;
+    if (row.type === 'rotary') route[2] = Math.max(route[2], 300);
+    const previousWasLowGravity = index > 0 && definition.rows[index - 1].type === 'low-gravity';
+    const startCenter = clamp((profile.nodes[index] + (previousWasLowGravity ? .1 : 0)) * worldWidth, start[2] / 2 + 20, worldWidth - start[2] / 2 - 20);
+    const endCenter = profile.nodes[index + 1] * worldWidth;
+    const routeCenter = clamp(((profile.nodes[index] + profile.nodes[index + 1]) / 2 + profile.bends[index]) * worldWidth, route[2] / 2 + 24, worldWidth - route[2] / 2 - 24);
+    const oldRouteX = route[0];
+    start[0] = clamp(startCenter - start[2] / 2, 0, worldWidth - start[2]);
+    route[0] = clamp(routeCenter - route[2] / 2, 0, worldWidth - route[2]);
+    end[0] = clamp(endCenter - end[2] / 2, 0, worldWidth - end[2]);
+    row.anchor[0] = clamp(start[0] + start[2] * .42, 28, worldWidth - 28);
+    row.switch[0] = clamp(end[0] + end[2] * .58, 28, worldWidth - 28);
+    if (row.type === 'low-gravity') {
+      row.switch[1] = end[1] - 100;
+      row.zone[1] = end[1] - 240;
+      row.zone[3] = 280;
+    }
+    row.zone[0] = clamp(end[0] + (end[2] - row.zone[2]) / 2, 0, worldWidth - row.zone[2]);
+    if (row.dynamic?.axis === 'x') {
+      const delta = route[0] - oldRouteX;
+      const range = Math.abs(row.dynamic.to - row.dynamic.from);
+      const from = clamp(row.dynamic.from + delta, 0, worldWidth - route[2] - range);
+      row.dynamic.from = from; row.dynamic.to = from + range;
+    }
+    if (Array.isArray(row.dynamic?.pivot)) row.dynamic.pivot = [route[0] + route[2] / 2, row.dynamic.pivot[1]];
+    return row;
+  });
+  return { ...definition, rows, layoutProfile: profile };
+}
 
 const cloudRows = [
   ['moving-car',[90,3050,350,24],[520,2960,260,24],[990,2840,340,24],[250,3022],[1110,2812],[1010,2760,260,100],{axis:'x',from:520,to:850,periodMs:4200,carryRiders:true}],
@@ -422,9 +533,12 @@ const LEVEL_DEFINITIONS = [
   { id:'stellar-library',nameKey:'level.library.name',themeKey:'level.library.theme',descriptionKey:'level.library.description',minutes:'8–13',palette:PALETTES.library,motif:'library',world:{width:1280,height:3600,spawnY:3480,dangerY:3700},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},floor:[[0,3540,440,50],[860,3540,420,50]],finishDeck:[270,290,740,28],finish:[440,240,870,240,655,205,2400,2400],checkpoints:[[150,3480,215,3480],[900,3130,965,3130],[110,2770,175,2770],[900,2400,965,2400],[110,2040,175,2040],[900,1670,965,1670],[110,1310,175,1310],[900,950,965,950],[110,610,175,610]],rows:libraryRows.map(unpack),hazards:[] },
 ];
 
-const baseLevel = Object.freeze({ id:'starlight-tower',nameKey:'level.starlight.name',themeKey:'level.starlight.theme',descriptionKey:'level.starlight.description',minutes:'6–10',palette:PALETTES.tower,motif:'tower',world:{...WORLD},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},platforms:PLATFORMS.map((item)=>({...item})),checkpoints:CHECKPOINTS.map((item)=>({...item})),finish:{...FINISH,leftSwitch:{...FINISH.leftSwitch},rightSwitch:{...FINISH.rightSwitch},launcher:{...FINISH.launcher}},modules:MODULES.map((item)=>({...item,anchor:{...item.anchor},switch:{...item.switch},checkpoint:{...item.checkpoint}})),hazards:[] });
+const baseLevel = Object.freeze({ id:'starlight-tower',nameKey:'level.starlight.name',themeKey:'level.starlight.theme',descriptionKey:'level.starlight.description',minutes:'6–10',palette:PALETTES.tower,motif:'tower',world:{...WORLD},physics:{gravity:1450,jumpSpeed:650,moveSpeed:250},platforms:PLATFORMS.map((item)=>({...item})),checkpoints:CHECKPOINTS.map((item)=>({...item})),finish:{...FINISH,leftSwitch:{...FINISH.leftSwitch},rightSwitch:{...FINISH.rightSwitch},launcher:{...FINISH.launcher}},modules:MODULES.map((item)=>({...item,anchor:{...item.anchor},switch:{...item.switch},checkpoint:{...item.checkpoint}})),hazards:[],specials:[] });
 
-export const LEVELS = Object.freeze([baseLevel, ...LEVEL_DEFINITIONS.map(buildIndependentLevel)]);
+export const LEVELS = Object.freeze([baseLevel, ...LEVEL_DEFINITIONS.map((definition) => {
+  const level = buildIndependentLevel(applyLayoutProfile(applyMechanicOverrides({ ...definition, specials: [] })));
+  return Object.freeze({ ...level, specials: resolveSpecialLayout(level) });
+})]);
 export const DEFAULT_LEVEL_ID = baseLevel.id;
 export const LEVEL_IDS = Object.freeze(LEVELS.map((level)=>level.id));
 /** @param {string} id 레벨 ID @returns {object|null} */
@@ -433,6 +547,18 @@ export function getLevel(id) { return LEVELS.find((level)=>level.id===id) ?? nul
 export function getNextLevel(id) { const index=LEVELS.findIndex((level)=>level.id===id); return LEVELS[(index+1+LEVELS.length)%LEVELS.length]; }
 /** @returns {Array<object>} */
 export function getLevelCatalog() { return LEVELS.map(({id,nameKey,themeKey,descriptionKey,minutes,palette,motif})=>({id,nameKey,themeKey,descriptionKey,minutes,palette,motif})); }
+
+/** Summarizes path shape and mechanic distribution for level-design regression tests. */
+export function analyzeLevelLayout(level) {
+  const directions = level.modules.map((_, index) => {
+    const start = level.platforms.find((platform) => platform.id === `m${index + 1}-start`);
+    const end = level.platforms.find((platform) => platform.id === `m${index + 1}-end`);
+    const delta = (end.x + end.width / 2) - (start.x + start.width / 2);
+    return Math.abs(delta) < level.world.width * .1 ? 'C' : delta > 0 ? 'R' : 'L';
+  }).join('');
+  const mechanics = Object.fromEntries([...new Set(level.modules.map((module) => module.type))].map((type) => [type, level.modules.filter((module) => module.type === type).length]));
+  return { id: level.id, directions, mechanics, specials: (level.specials ?? []).map((special) => special.type) };
+}
 
 /**
  * 레벨 좌표·참조 무결성을 검증한다.
@@ -451,11 +577,25 @@ export function validateLevel(level) {
   const terrain=level.platforms.filter((platform)=>!platform.returnPlatform); const returns=level.platforms.filter((platform)=>platform.returnPlatform);
   if(terrain.length!==27)errors.push('platforms');
   for(const [index,module] of level.modules.entries()){
+    const start=level.platforms.find((platform)=>platform.id===`m${index+1}-start`); const route=level.platforms.find((platform)=>platform.id===`m${index+1}-route`); const end=level.platforms.find((platform)=>platform.id===`m${index+1}-end`);
     const landing=level.platforms.find((platform)=>platform.id===module.boostLandingPlatformId); const returning=level.platforms.find((platform)=>platform.id===module.returnPlatformId);
     if(module.boostRequired&&(!landing||landing.width<120))errors.push(`boost:${index}`);
     if(!returning||returning.deviceIndex!==index||returning.width<120||!level.platforms.some((platform)=>platform.id===returning.lowerPlatformId)||!level.platforms.some((platform)=>platform.id===returning.upperPlatformId))errors.push(`return:${index}`);
+    if(start&&route&&end){
+      const gap=(first,second)=>Math.max(first.x-(second.x+second.width),second.x-(first.x+first.width),0);
+      const safeRise=(level.physics.gravity??1450)<1000?175:122;
+      if(!route.dynamic&&gap(start,route)>125)errors.push(`reach-start:${index}`);
+      if(!route.dynamic&&gap(route,end)>125)errors.push(`reach-end:${index}`);
+      if(start.y-route.y>safeRise+1)errors.push(`rise-start:${index}`);
+      if(route.y-end.y>safeRise+1)errors.push(`rise-end:${index}`);
+    }
   }
   level.checkpoints.forEach((checkpoint,index)=>{if(checkpoint.x1<0||checkpoint.x2>level.world.width||checkpoint.y1<0||checkpoint.y2>level.world.height)errors.push(`checkpoint:${index}`);});
+  for(const special of level.specials??[]){
+    if(special.x<0||special.x+special.width>level.world.width||special.y<0||special.y>level.world.height)errors.push(`special-bounds:${special.id}`);
+    if(special.type==='pipe'&&!(level.specials??[]).some((candidate)=>candidate.id===special.linkId&&candidate.type==='pipe'))errors.push(`pipe-link:${special.id}`);
+    if(special.type==='pusher-wall'&&(Math.min(special.from,special.to)<0||Math.max(special.from,special.to)+special.width>level.world.width))errors.push(`special-motion:${special.id}`);
+  }
   if(level.finish.leftSwitch.x<0||level.finish.rightSwitch.x>level.world.width||level.finish.launcher.y<0)errors.push('finish');
   return {ok:errors.length===0,errors};
 }

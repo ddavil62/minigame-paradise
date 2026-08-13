@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import { WebSocket } from 'ws';
 import {
-  createGame, submitWord, applyTimerExpiry, isGameOver,
+  createGame, submitWord, applyTimerExpiry, isGameOver, calcGaugeGain,
 } from '../game.js';
 import { matchesStartChar, buildGarbageCandidates, loadWords } from '../words.js';
 import { createApp } from '../server.js';
@@ -152,6 +152,14 @@ async function startServer() {
 }
 
 test.describe('순수 서버 로직', () => {
+  test('게이지는 남은 시간에 비례해 초당 5% 충전한다', () => {
+    expect(calcGaugeGain(10)).toBe(50);
+    expect(calcGaugeGain(9)).toBe(45);
+    expect(calcGaugeGain(8)).toBe(40);
+    expect(calcGaugeGain(1)).toBe(5);
+    expect(calcGaugeGain(0)).toBe(0);
+  });
+
   test('유효/무효/중복/잘못된 시작과 게이지를 판정한다', () => {
     const game = createGame('A', 'B');
     game.phase = 'playing';
@@ -162,7 +170,8 @@ test.describe('순수 서버 로직', () => {
     expect(accepted.ok).toBe(true);
     expect(submitWord(game, 'p2', first, dictionary, candidates).reason).toBe('duplicate');
     const wrong = wrongStartWord(first.at(-1));
-    expect(submitWord(game, 'p1', wrong, dictionary, candidates).reason).toBe('wrong_start');
+    expect(submitWord(game, 'p2', wrong, dictionary, candidates).reason).toBe('wrong_start');
+    expect(submitWord(game, 'p1', second, dictionary, candidates).reason).toBe('not_your_turn');
     expect(game.players.p1.gauge).toBeGreaterThan(0);
     expect(second).toBeTruthy();
   });
@@ -181,12 +190,15 @@ test.describe('순수 서버 로직', () => {
     const pool = sameInitialWords(12);
     for (let index = 0; index < 10; index += 1) {
       game.players.p1.gauge = 85;
-      game.players.p1.lastSyllable = null;
+      game.turn = 'p1';
+      game.chain.lastSyllable = null;
+      game.chain.forced = null;
+      game.chain.deadEndAlts = null;
       const result = submitWord(game, 'p1', pool[index], dictionary, candidates);
       expect(result.ok).toBe(true);
       expect(result.garbageFired).toBe(true);
       expect(result.garbageChar).toBeTruthy();
-      expect(game.players.p2.forced).toBe(result.garbageChar);
+      expect(game.chain.forced).toBe(result.garbageChar);
     }
     expect(game.players.p2.hp).toBe(0);
     expect(isGameOver(game)).toMatchObject({ ended: true, winner: 'p1', loser: 'p2' });
@@ -201,12 +213,12 @@ test.describe('순수 서버 로직', () => {
     const forcedGame = createGame('A', 'B');
     forcedGame.phase = 'playing';
     const forcedWord = words.find((word) => word !== regularWord);
-    forcedGame.players.p1.forced = forcedWord[0];
+    forcedGame.chain.forced = forcedWord[0];
     const rejected = wrongStartWord(forcedWord[0]);
     expect(submitWord(forcedGame, 'p1', rejected, dictionary, candidates).ok).toBe(false);
-    expect(forcedGame.players.p1.forced).toBe(forcedWord[0]);
+    expect(forcedGame.chain.forced).toBe(forcedWord[0]);
     expect(submitWord(forcedGame, 'p1', forcedWord, dictionary, candidates).wasGarbage).toBe(true);
-    expect(forcedGame.players.p1.forced).toBeNull();
+    expect(forcedGame.chain.forced).toBeNull();
   });
 
   test('타임아웃 누적 피해가 음수 없이 HP 0에서 끝난다', () => {
@@ -284,15 +296,19 @@ test.describe('실제 WebSocket 프로토콜', () => {
       await p2.wait('GAME_START');
       await p1.wait('PLAYING');
       await p2.wait('PLAYING');
+      const initialState = await p1.wait('STATE');
+      await p2.wait('STATE');
 
-      const first = words[0];
-      p1.send({ type: 'WORD_SUBMIT', word: first });
-      p1.send({ type: 'WORD_SUBMIT', word: first });
+      const first = words.find((word) => matchesStartChar(word[0], initialState.chain.lastSyllable));
+      expect(first).toBeTruthy();
+      const actor = initialState.turn === 'p1' ? p1 : p2;
+      actor.send({ type: 'WORD_SUBMIT', word: first });
+      actor.send({ type: 'WORD_SUBMIT', word: first });
       expect((await p1.wait('WORD_ACCEPTED')).word).toBe(first);
-      expect((await p1.wait('WORD_REJECTED')).reason).toBe('duplicate');
+      expect((await actor.wait('WORD_REJECTED')).reason).toBe('not_your_turn');
 
-      p1.send({ type: 'RESIGN' });
-      expect((await p1.wait('GAME_OVER')).winner).toBe('p2');
+      actor.send({ type: 'RESIGN' });
+      expect((await p1.wait('GAME_OVER')).winner).toBe(initialState.turn === 'p1' ? 'p2' : 'p1');
       await p2.wait('GAME_OVER');
       p1.send({ type: 'REMATCH' });
       expect((await p1.wait('REMATCH_WAITING')).ready).toEqual(['p1']);
@@ -323,7 +339,7 @@ test.describe('실제 WebSocket 프로토콜', () => {
     }
   });
 
-  test('실제 20초 타임아웃이 양쪽에 5 HP 피해를 방송한다', async () => {
+  test('실제 10초 타임아웃이 현재 플레이어에게만 5 HP 피해를 주고 턴을 넘긴다', async () => {
     const { server, port } = await startServer();
     const p1 = await openClient(port);
     const p2 = await openClient(port);
@@ -335,10 +351,41 @@ test.describe('실제 WebSocket 프로토콜', () => {
       await p1.wait('PLAYING'); await p2.wait('PLAYING');
       // PLAYING 직후의 초기 스냅샷(HP 100)을 먼저 소비한다.
       await p1.wait('STATE');
-      const expired = await p1.wait('TIMER_EXPIRED', 25_000);
+      const expired = await p1.wait('TIMER_EXPIRED', 13_000);
       expect(expired).toMatchObject({ hpLoss: 5, newHp: 95 });
       const state = await p1.wait('STATE');
       expect(state.players.find((player) => player.id === expired.playerId).hp).toBe(95);
+      expect(state.players.find((player) => player.id !== expired.playerId).hp).toBe(100);
+      expect(state.turn).not.toBe(expired.playerId);
+    } finally {
+      p1.close(); p2.close();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  test('실제 제출 게이지는 서버 잔여 시간 9초에서 45% 충전된다', async () => {
+    const { server, port } = await startServer();
+    const p1 = await openClient(port);
+    const p2 = await openClient(port);
+    try {
+      await p1.wait('JOINED'); await p2.wait('JOINED');
+      p1.send({ type: 'JOIN', name: 'A' });
+      p2.send({ type: 'JOIN', name: 'B' });
+      await p1.wait('GAME_START'); await p2.wait('GAME_START');
+      await p1.wait('PLAYING'); await p2.wait('PLAYING');
+      const state = await p1.wait('STATE');
+      await p2.wait('STATE');
+      const actor = state.turn === 'p1' ? p1 : p2;
+      const word = words.find((candidate) => matchesStartChar(candidate[0], state.chain.lastSyllable));
+      expect(word).toBeTruthy();
+
+      let tick;
+      do {
+        tick = await p1.wait('TIMER_TICK');
+      } while (tick.remaining !== 9);
+
+      actor.send({ type: 'WORD_SUBMIT', word });
+      expect(await p1.wait('WORD_ACCEPTED')).toMatchObject({ word, gaugeGain: 45, newGauge: 45 });
     } finally {
       p1.close(); p2.close();
       await new Promise((resolve) => server.close(resolve));
@@ -415,70 +462,102 @@ test('모바일 두 브라우저 동시 플레이 UI와 콘솔을 검증한다',
     ]);
     await expect(page1.locator('#game-screen')).toHaveClass(/active/, { timeout: 8_000 });
     await expect(page2.locator('#game-screen')).toHaveClass(/active/, { timeout: 8_000 });
-    await expect(page1.locator('#word-input')).toBeEnabled({ timeout: 8_000 });
+    await expect(page1.locator('#turn-banner')).not.toHaveText('첫 턴을 정하는 중...', { timeout: 8_000 });
+    await expect(page2.locator('#turn-banner')).not.toHaveText('첫 턴을 정하는 중...', { timeout: 8_000 });
+    const page1Starts = await page1.locator('#word-input').isEnabled();
+    const firstPage = page1Starts ? page1 : page2;
+    const secondPage = page1Starts ? page2 : page1;
     expect(await page1.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }))).toEqual({ w: 360, h: 640 });
     // 입력 활성화 직후의 동기 상태를 검사해 0.5초 race를 eventual assertion이 가리지 않게 한다.
     expect(await page1.locator('#countdown-overlay').getAttribute('class')).toContain('hidden');
     await page1.screenshot({ path: 'tests/screenshots/qa-mobile-overlay-race.png', fullPage: true });
     await page1.screenshot({ path: 'tests/screenshots/qa-mobile-two-player.png', fullPage: true });
 
-    await page1.locator('#word-input').fill(words[0]);
-    await page1.locator('#submit-btn').dblclick();
-    await expect(page1.locator('#chain-me li')).toHaveCount(1);
+    const initialChar = (await firstPage.locator('#start-char').textContent()).replace(/^☄\s*/, '').trim();
+    expect(initialChar).not.toBe('자유');
+    const firstWord = words.find((word) => matchesStartChar(word[0], initialChar));
+    expect(firstWord).toBeTruthy();
+    await firstPage.locator('#word-input').fill(firstWord);
+    await expect(secondPage.locator('#typing-indicator')).toHaveText(`상대가 입력 중... (${firstWord.length}자)`);
+    await secondPage.screenshot({ path: 'tests/screenshots/qa-mobile-typing-preview.png', fullPage: true });
+    await firstPage.locator('#submit-btn').dblclick();
+    await expect(page1.locator('#chain-shared li')).toHaveCount(1);
     // 첫 클릭이 입력을 비우므로 두 번째 클릭은 서버 요청 없이 안전하게 무시된다.
     await expect(page1.locator('#feedback')).toHaveText('');
     await page1.screenshot({ path: 'tests/screenshots/qa-mobile-rapid-submit.png', fullPage: true });
 
-    await page2.evaluate(() => {
-      window.__qaHpMutations = [];
-      const text = document.querySelector('#hp-text-me');
-      const bar = document.querySelector('#hp-me');
-      const record = () => window.__qaHpMutations.push({
-        text: text ? text.textContent : null,
-        width: bar ? bar.style.width : null,
+    for (const observingPage of [firstPage, secondPage]) {
+      await observingPage.evaluate(() => {
+        window.__qaHpMutations = [];
+        const text = document.querySelector('#hp-text-me');
+        const bar = document.querySelector('#hp-me');
+        const record = () => window.__qaHpMutations.push({
+          text: text ? text.textContent : null,
+          width: bar ? bar.style.width : null,
+        });
+        record();
+        new MutationObserver(record).observe(text, { childList: true, characterData: true, subtree: true });
+        new MutationObserver(record).observe(bar, { attributes: true, attributeFilter: ['style', 'class'] });
       });
-      record();
-      new MutationObserver(record).observe(text, { childList: true, characterData: true, subtree: true });
-      new MutationObserver(record).observe(bar, { attributes: true, attributeFilter: ['style', 'class'] });
-    });
-
-    const chain = longChain(words[0].at(-1), 2);
-    for (const [index, word] of chain.entries()) {
-      await page1.locator('#word-input').fill(word);
-      await page1.locator('#submit-btn').click();
-      await expect(page1.locator('#chain-me li')).toHaveCount(index + 2);
     }
-    await expect(page2.locator('#garbage-popup')).not.toHaveClass(/hidden/);
-    await expect(page2.locator('#hp-text-me')).toHaveText('90');
-    const mobilePopupBox = await page2.locator('#garbage-popup').boundingBox();
-    const mobileInputBox = await page2.locator('.input-area').boundingBox();
+
+    const chain = longChain(firstWord.at(-1), 3);
+    const submittedChain = [];
+    let garbagePage = null;
+    let otherPage = null;
+    for (const [index, word] of chain.entries()) {
+      const actingPage = index % 2 === 0 ? secondPage : firstPage;
+      await expect(actingPage.locator('#word-input')).toBeEnabled();
+      await actingPage.locator('#word-input').fill(word);
+      await actingPage.locator('#submit-btn').click();
+      submittedChain.push(word);
+      await Promise.all([
+        expect(page1.locator('#chain-shared li')).toHaveCount(index + 2),
+        expect(page2.locator('#chain-shared li')).toHaveCount(index + 2),
+      ]);
+      if (await firstPage.locator('#garbage-popup').isVisible()) {
+        garbagePage = firstPage;
+        otherPage = secondPage;
+        break;
+      }
+      if (await secondPage.locator('#garbage-popup').isVisible()) {
+        garbagePage = secondPage;
+        otherPage = firstPage;
+        break;
+      }
+    }
+    expect(garbagePage).not.toBeNull();
+    await expect(garbagePage.locator('#garbage-popup')).not.toHaveClass(/hidden/);
+    await expect(garbagePage.locator('#hp-text-me')).toHaveText('90');
+    const mobilePopupBox = await garbagePage.locator('#garbage-popup').boundingBox();
+    const mobileInputBox = await garbagePage.locator('.input-area').boundingBox();
     expect(mobilePopupBox.y).toBeGreaterThanOrEqual(mobileInputBox.y + mobileInputBox.height + 4);
     expect(mobilePopupBox.y + mobilePopupBox.height).toBeLessThanOrEqual(640 - 4);
-    expect(await page2.locator('#garbage-popup').evaluate((element) => (
+    expect(await garbagePage.locator('#garbage-popup').evaluate((element) => (
       getComputedStyle(element).bottom
     ))).toBe('16px');
-    const hpMutations = await page2.evaluate(() => window.__qaHpMutations);
+    const hpMutations = await garbagePage.evaluate(() => window.__qaHpMutations);
     expect(hpMutations.length).toBeGreaterThan(0);
     expect(hpMutations.every(({ text, width }) => /^\d+$/.test(text) && /^\d+(?:\.\d+)?%$/.test(width))).toBe(true);
-    const forcedLabel = await page2.locator('#start-char').textContent();
+    const forcedLabel = await garbagePage.locator('#start-char').textContent();
     const forcedChar = forcedLabel.replace(/^☄\s*/, '').trim();
-    const usedInScenario = new Set([words[0], ...chain]);
+    const usedInScenario = new Set([firstWord, ...submittedChain]);
     const garbageResponse = words.find((word) => (
       matchesStartChar(word[0], forcedChar) && !usedInScenario.has(word)
     ));
     expect(garbageResponse).toBeTruthy();
-    await page2.locator('#word-input').fill(garbageResponse);
-    await page2.locator('#submit-btn').click();
-    await expect(page2.locator('#chain-me li').last()).toHaveClass(/garbage-word/);
-    await expect(page1.locator('#chain-opp li').last()).toHaveClass(/garbage-word/);
+    await garbagePage.locator('#word-input').fill(garbageResponse);
+    await garbagePage.locator('#submit-btn').click();
+    await expect(garbagePage.locator('#chain-shared li').last()).toHaveClass(/me.*garbage-word|garbage-word.*me/);
+    await expect(otherPage.locator('#chain-shared li').last()).toHaveClass(/opp.*garbage-word|garbage-word.*opp/);
     // fadeIn 첫 프레임의 낮은 opacity가 승인 캡처를 흐리지 않도록 전환 종료 후 기록한다.
     await page2.waitForTimeout(350);
-    await page2.screenshot({ path: 'tests/screenshots/qa-mobile-garbage.png', fullPage: true });
-    await page1.setViewportSize({ width: 800, height: 640 });
-    expect(await page1.locator('#garbage-popup').evaluate((element) => (
+    await garbagePage.screenshot({ path: 'tests/screenshots/qa-mobile-garbage.png', fullPage: true });
+    await garbagePage.setViewportSize({ width: 800, height: 640 });
+    expect(await garbagePage.locator('#garbage-popup').evaluate((element) => (
       getComputedStyle(element).top
     ))).toBe('128px');
-    await page1.screenshot({ path: 'tests/screenshots/qa-desktop-playing.png', fullPage: true });
+    await garbagePage.screenshot({ path: 'tests/screenshots/qa-desktop-playing.png', fullPage: true });
     expect(errors).toEqual([]);
   } finally {
     await context1.close();

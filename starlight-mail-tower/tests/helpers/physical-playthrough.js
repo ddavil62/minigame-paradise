@@ -6,6 +6,32 @@ import { applyInput, createSimulation, stepSimulation } from '../../game/simulat
 
 const STEP = 1 / 30;
 const PLAYER_HALF_HEIGHT = 28;
+const PLAYER_HALF_WIDTH = 20;
+
+/** @param {object} platform 발판 @returns {{left:number,right:number}} */
+function horizontalBounds(platform) {
+  if (!Number.isFinite(platform.angle)) return { left: platform.x, right: platform.x + platform.width };
+  const centerX = platform.x + platform.width / 2;
+  const halfSpan = Math.abs(Math.cos(platform.angle)) * platform.width / 2 + Math.abs(Math.sin(platform.angle)) * platform.height / 2;
+  return { left: centerX - halfSpan, right: centerX + halfSpan };
+}
+
+/** @param {object} platform 발판 @param {number} x 월드 X @returns {number|null} */
+function surfaceY(platform, x) {
+  if (!Number.isFinite(platform.angle)) return x >= platform.x && x <= platform.x + platform.width ? platform.y : null;
+  const cosine = Math.cos(platform.angle);
+  if (Math.abs(cosine) < 0.2) return null;
+  const sine = Math.sin(platform.angle);
+  const centerX = platform.x + platform.width / 2;
+  const centerY = platform.y + platform.height / 2;
+  const topOffsetY = cosine >= 0 ? -platform.height / 2 : platform.height / 2;
+  const firstX = centerX - platform.width / 2 * cosine - topOffsetY * sine;
+  const firstY = centerY - platform.width / 2 * sine + topOffsetY * cosine;
+  const secondX = centerX + platform.width / 2 * cosine - topOffsetY * sine;
+  const secondY = centerY + platform.width / 2 * sine + topOffsetY * cosine;
+  if (x < Math.min(firstX, secondX) || x > Math.max(firstX, secondX)) return null;
+  return firstY + (secondY - firstY) * ((x - firstX) / (secondX - firstX));
+}
 
 /**
  * 실패 진단에 필요한 현재 진행 정보를 문자열로 만든다.
@@ -16,7 +42,8 @@ const PLAYER_HALF_HEIGHT = 28;
  */
 function diagnostic(simulation, stage, events) {
   const players = simulation.players.map((player) => `${player.id}=(${player.x.toFixed(1)},${player.y.toFixed(1)}) v=(${player.vx.toFixed(1)},${player.vy.toFixed(1)})`).join(' ');
-  return `${simulation.levelId} cp=${simulation.checkpointId} stage=${stage} ${players} last=${events.at(-1)?.kind ?? 'none'}`;
+  const device = simulation.devices[simulation.checkpointId];
+  return `${simulation.levelId} cp=${simulation.checkpointId} device=${device?.type ?? 'finish'}:${device?.state ?? '-'} stage=${stage} ${players} last=${events.at(-1)?.kind ?? 'none'}`;
 }
 
 /**
@@ -64,12 +91,20 @@ export function createPhysicalDriver(levelId) {
     for (let index = 0; index < maxTicks; index += 1) {
       const actor = player(playerId);
       const target = platform(platformId);
-      const targetX = preferredX === null ? target.x + target.width / 2 : Math.max(target.x + 28, Math.min(target.x + target.width - 28, preferredX));
+      const targetBounds = horizontalBounds(target);
+      const targetCenterX = (targetBounds.left + targetBounds.right) / 2;
+      const targetInset = Math.min(28, Math.max(0, (targetBounds.right - targetBounds.left) / 2 - 2));
+      const targetX = preferredX === null ? targetCenterX : Math.max(targetBounds.left + targetInset, Math.min(targetBounds.right - targetInset, preferredX));
+      const targetSurface = surfaceY(target, targetX);
       const feet = actor.y + PLAYER_HALF_HEIGHT;
-      const support = actor.grounded ? simulation.dynamicPlatforms.find((item) => Math.abs(item.y - feet) <= 2 && actor.x >= item.x + 20 && actor.x <= item.x + item.width - 20) : null;
-      const climbing = actor.grounded && feet > target.y + 5;
-      const takeoffX = climbing && support ? Math.max(support.x + 28, Math.min(support.x + support.width - 28, targetX)) : targetX;
-      const horizontalGap = support ? Math.max(target.x - (support.x + support.width), support.x - (target.x + target.width), 0) : 0;
+      const support = actor.grounded ? simulation.dynamicPlatforms.find((item) => {
+        const y = surfaceY(item, actor.x);
+        return y !== null && Math.abs(y - feet) <= 2;
+      }) : null;
+      const supportBounds = support ? horizontalBounds(support) : null;
+      const climbing = actor.grounded && targetSurface !== null && feet > targetSurface + 5;
+      const takeoffX = climbing && support ? Math.max(supportBounds.left + 28, Math.min(supportBounds.right - 28, targetX)) : targetX;
+      const horizontalGap = support ? Math.max(targetBounds.left - supportBounds.right, supportBounds.left - targetBounds.right, 0) : 0;
 
       // 이동 발판(carryRiders=true, axis=x) 방향 추적: 발판이 멀어지는 방향으로 움직이면 점프를 보류한다.
       const isMovingCar = !!target.dynamic?.carryRiders && target.dynamic?.axis === 'x';
@@ -98,6 +133,8 @@ export function createPhysicalDriver(levelId) {
       const inLowGravityZone = checkpointDevType === 'low-gravity' && (checkpointDev?.active ?? false);
       const baseGravity = simulation.level.physics.gravity ?? 1450;
       const safeRise = inLowGravityZone ? 330 : baseGravity < 1000 ? 195 : 142;
+      const rotatedTargetUnsafe = Number.isFinite(target.angle) && Math.abs(Math.sin(target.angle)) > 0.16;
+      const rotatedSupportUnsafe = Number.isFinite(support?.angle) && Math.abs(Math.sin(support.angle)) > 0.16;
 
       // 타이머 게이트 / 사이클 플랫폼: 잔여 솔리드 윈도우가 부족하면 다음 사이클 시작까지 대기한다.
       // LATCHED 상태에서는 phaseMs가 동결되고 발판이 영구 솔리드이므로 solidWindowTooShort 계산을 생략한다.
@@ -128,7 +165,7 @@ export function createPhysicalDriver(levelId) {
       // 2) 발판이 목표보다 위에 있어 climbing=False인 구간에서도 점프로 수평 갭을 통과한다.
       const onYCarSupport = !!support?.dynamic?.carryRiders && support.dynamic.axis === 'y';
       const safeRiseEffective = (onYCarSupport && horizontalGap > 40) ? Math.min(safeRise, 100) : safeRise;
-      const targetSlightlyBelowOnYCar = onYCarSupport && !climbing && target.y >= feet && target.y - feet <= 80 && horizontalGap > 40;
+      const targetSlightlyBelowOnYCar = onYCarSupport && !climbing && targetSurface !== null && targetSurface >= feet && targetSurface - feet <= 80 && horizontalGap > 40;
       const climbingEffective = climbing || targetSlightlyBelowOnYCar;
       // climbingEffective가 True이면 support 범위 내로 이착륙 X를 재계산한다.
       // (climbing=False지만 Y축 이동 발판 위에서 수평 점프가 필요할 때 takeoffX를 support 범위 내로 클램프)
@@ -149,7 +186,7 @@ export function createPhysicalDriver(levelId) {
       const jSpd = simulation.level.physics.jumpSpeed ?? 650;
       const gAcc = simulation.level.physics.gravity ?? 1450;
       const mSpd = simulation.level.physics.moveSpeed ?? simulation.level.physics.maxSpeed ?? 250;
-      const hRise = onCyclePlatformSupport ? support.y - target.y : 0;
+      const hRise = onCyclePlatformSupport && targetSurface !== null ? surfaceY(support, actor.x) - targetSurface : 0;
       const flightSec = (onCyclePlatformSupport && hRise > 0)
         ? (jSpd + Math.sqrt(Math.max(0, jSpd * jSpd - 2 * gAcc * hRise))) / gAcc : 0;
       // 진행 방향(목표 중심 vs 지지 발판 중심)으로 착지 X 예측
@@ -175,8 +212,13 @@ export function createPhysicalDriver(levelId) {
       // updraft 구역 통과 중 interact를 유지하여 상승 기류 억제 (applyZoneForces 보호)
       if (updraftActive) controls.interact = true;
 
+      // 회전 발판이 수직에 가까운 동안에는 안전한 윗면이 돌아올 때까지 현재 지지면에서 대기한다.
+      if ((targetSurface === null || rotatedTargetUnsafe || rotatedSupportUnsafe) && actor.grounded) {
+        controls.left = false; controls.right = false; tick(); continue;
+      }
+
       // wind-shutter 활성 구간 또는 X축 이동 발판이 from 위치에서 멀면 점프를 보류한다.
-      const waitingForRange = climbingEffective && support && (horizontalGap > jumpReach || target.y < feet - safeRiseEffective || targetDevice?.solid === false || solidWindowTooShort || windActive || carMovingAway || carTooClose || xCarNotAtFrom);
+      const waitingForRange = climbingEffective && support && (targetSurface === null || horizontalGap > jumpReach || targetSurface < feet - safeRiseEffective || targetDevice?.solid === false || solidWindowTooShort || windActive || carMovingAway || carTooClose || xCarNotAtFrom);
       const steeringX = climbingEffective && (Math.abs(takeoffXEffective - actor.x) > 10 || waitingForRange) ? takeoffXEffective : targetX;
       const dx = steeringX - actor.x;
       const braking = Number.isFinite(simulation.level.physics.moveAcceleration) && Math.abs(dx) < 28 && Math.abs(actor.vx) > 45;
@@ -187,8 +229,18 @@ export function createPhysicalDriver(levelId) {
       tick();
       const landedTarget = platform(platformId);
       const upper = landedTarget.returnPlatform ? platform(landedTarget.upperPlatformId) : null;
-      const passedReturn = upper && Math.abs(actor.y + PLAYER_HALF_HEIGHT - upper.y) <= 2;
-      const landed = actor.grounded && (Math.abs(actor.y + PLAYER_HALF_HEIGHT - landedTarget.y) <= 2 || passedReturn) && actor.x >= landedTarget.x + 20 && actor.x <= landedTarget.x + landedTarget.width - 20;
+      const landedSurface = surfaceY(landedTarget, actor.x);
+      const upperSurface = upper ? surfaceY(upper, actor.x) : null;
+      const passedReturn = upperSurface !== null && Math.abs(actor.y + PLAYER_HALF_HEIGHT - upperSurface) <= 2;
+      const landingSupport = actor.grounded ? simulation.dynamicPlatforms.find((item) => {
+        const y = surfaceY(item, actor.x);
+        return y !== null && Math.abs(actor.y + PLAYER_HALF_HEIGHT - y) <= 2;
+      }) : null;
+      const advancedReturn = landedTarget.returnPlatform && landingSupport?.deviceIndex === landedTarget.deviceIndex && landingSupport.y < landedTarget.y;
+      const advancedStart = platformId.endsWith('-start') && landingSupport?.deviceIndex === simulation.checkpointId && landingSupport.y < landedTarget.y;
+      const advancedEnd = platformId.endsWith('-end') && landingSupport && landingSupport.y < landedTarget.y;
+      const landedBounds = horizontalBounds(landedTarget);
+      const landed = actor.grounded && ((landedSurface !== null && Math.abs(actor.y + PLAYER_HALF_HEIGHT - landedSurface) <= 2) || passedReturn || advancedReturn || advancedStart || advancedEnd) && actor.x >= landedBounds.left + 20 && actor.x <= landedBounds.right - 20;
       if (landed) { controls.left = false; controls.right = false; return; }
     }
     throw new Error(diagnostic(simulation, `reach:${playerId}:${platformId}`, events));
@@ -216,6 +268,35 @@ export function createPhysicalDriver(levelId) {
     throw new Error(diagnostic(simulation, `move:${playerId}:${targetX}`, events));
   }
 
+  /** Falls through successive supports using normal input, then waits for checkpoint respawn. */
+  function retryFromCheckpoint(playerId) {
+    const controls = desired.get(playerId);
+    const fallsBefore = simulation.falls;
+    for (let index = 0; index < 2400 && simulation.falls === fallsBefore; index += 1) {
+      const actor = player(playerId);
+      if (actor.grounded) {
+        const feet = actor.y + PLAYER_HALF_HEIGHT;
+        const support = simulation.dynamicPlatforms.find((item) => {
+          const y = surfaceY(item, actor.x);
+          return y !== null && Math.abs(y - feet) <= 2;
+        });
+        const bounds = support ? horizontalBounds(support) : { left: actor.x - 30, right: actor.x + 30 };
+        const exits = [bounds.left - PLAYER_HALF_WIDTH - 8, bounds.right + PLAYER_HALF_WIDTH + 8];
+        const score = (x) => x < PLAYER_HALF_WIDTH || x > simulation.level.world.width - PLAYER_HALF_WIDTH ? Infinity : simulation.dynamicPlatforms.filter((item) => {
+          const candidateBounds = horizontalBounds(item);
+          return item.solid !== false && item.y > feet + 20 && x >= candidateBounds.left && x <= candidateBounds.right;
+        }).length;
+        const leftScore = score(exits[0]); const rightScore = score(exits[1]);
+        const direction = leftScore === rightScore ? (actor.x < simulation.level.world.width / 2 ? 1 : -1) : leftScore < rightScore ? -1 : 1;
+        controls.left = direction < 0; controls.right = direction > 0; controls.jump = index % 24 === 0;
+      }
+      tick();
+    }
+    controls.left = false; controls.right = false; controls.jump = false;
+    for (let index = 0; index < 90 && simulation.players.some((item) => item.respawnTimer > 0); index += 1) tick();
+    if (simulation.falls === fallsBefore) throw new Error(diagnostic(simulation, `retry:${playerId}`, events));
+  }
+
   /**
    * 하단 발판에서 역할 플레이어를 실제 점프 충돌로 상단 발판에 올린다.
    * @param {object} module 모듈
@@ -229,6 +310,15 @@ export function createPhysicalDriver(levelId) {
     const left = Math.max(lower.x + 28, upper.x + 28);
     const right = Math.min(lower.x + lower.width - 28, upper.x + upper.width - 28);
     const alignX = (left + right) / 2;
+    for (const playerId of [receiverId, strikerId]) {
+      const actor = player(playerId);
+      const feet = actor.y + PLAYER_HALF_HEIGHT;
+      const onApproach = actor.grounded && actor.x >= lower.x && actor.x <= lower.x + lower.width && Math.abs(feet - lower.y) <= 2;
+      if (!onApproach) {
+        try { reachPlatform(playerId, lower.id, 720); }
+        catch { retryFromCheckpoint(playerId); reachPlatform(playerId, lower.id, 720); }
+      }
+    }
     moveToX(receiverId, alignX);
     moveToX(strikerId, alignX);
     const before = events.length;
@@ -249,7 +339,7 @@ export function createPhysicalDriver(levelId) {
     throw new Error(diagnostic(simulation, `boost:${module.id}`, events));
   }
 
-  return { simulation, desired, events, tick, player, platform, reachPlatform, moveToX, boostToModule };
+  return { simulation, desired, events, tick, player, platform, reachPlatform, moveToX, retryFromCheckpoint, boostToModule };
 }
 
 /**
@@ -257,9 +347,9 @@ export function createPhysicalDriver(levelId) {
  * @param {string} levelId 레벨 ID
  * @returns {{simulation:object,events:Array<object>,boosts:Array<object>}}
  */
-export function runPhysicalPlaythrough(levelId) {
+export function runPhysicalPlaythrough(levelId, options = {}) {
   const driver = createPhysicalDriver(levelId);
-  const { simulation, desired, events, tick, reachPlatform, moveToX, boostToModule } = driver;
+  const { simulation, desired, events, tick, reachPlatform, moveToX, retryFromCheckpoint, boostToModule } = driver;
   const boosts = [];
   const gravity = simulation.level.physics.gravity ?? 1450;
   const safeRisePx = gravity < 1000 ? 195 : 142;
@@ -275,6 +365,7 @@ export function runPhysicalPlaythrough(levelId) {
     if (simulation.devices[index].state !== 'POWERED') throw new Error(diagnostic(simulation, `power:${module.id}`, events));
     // 위험/상승 구역 장치는 스위치 반경에 들어오는 첫 틱을 놓치지 않도록 E를 미리 유지한다.
     desired.get(partnerId).interact = true;
+    if ((options.phaseDelayTicks ?? 0) > 0) tick(options.phaseDelayTicks);
     const route = driver.platform(`m${index + 1}-route`);
     const end = driver.platform(`m${index + 1}-end`);
     // X축 이동 발판은 현재 위치(route.x)가 매 틱 변하므로 안정적인 from 위치 기준으로 이탈 X를 계산한다.
@@ -288,7 +379,7 @@ export function runPhysicalPlaythrough(levelId) {
       : null;
 
     // rotary·이동 발판·명멸 발판·기류·바람 루트는 대기 시간이 길어질 수 있으므로 최대 틱을 늘린다.
-    const routeMaxTicks = (deviceType === 'rotary' || deviceType === 'moving-car' || deviceType === 'cycle-platform' || deviceType === 'updraft' || deviceType === 'wind-shutter') ? 720 : 360;
+    const routeMaxTicks = (deviceType === 'rotary' || deviceType === 'merge-lift' || deviceType === 'moving-car' || deviceType === 'cycle-platform' || deviceType === 'updraft' || deviceType === 'wind-shutter') ? 720 : 360;
 
     let partnerCrossed = false;
     for (let attempt = 0; attempt < 4 && !partnerCrossed; attempt += 1) {
@@ -310,7 +401,7 @@ export function runPhysicalPlaythrough(levelId) {
           }
           reachPlatform(partnerId, module.approachPlatformId, 360);
         }
-        reachPlatform(partnerId, module.returnPlatformId, 360);
+        reachPlatform(partnerId, module.returnPlatformId, 720);
         reachPlatform(partnerId, module.boostLandingPlatformId, 360);
         // low-gravity 모듈: boostLanding에서 바로 end로 점프 후, 오버슛 시 route 경유로 재시도한다.
         if (deviceType === 'low-gravity') {
@@ -324,17 +415,29 @@ export function runPhysicalPlaythrough(levelId) {
           reachPlatform(partnerId, `m${index + 1}-end`, 360, endPreferredX);
         }
         partnerCrossed = true;
-      } catch (error) { if (attempt === 3) throw error; }
+      } catch (error) {
+        if (attempt === 3) throw error;
+        const checkpointSupport = simulation.checkpointId === 0 ? driver.platform('floor-left') : driver.platform(`m${simulation.checkpointId}-end`);
+        if (driver.player(partnerId).y + PLAYER_HALF_HEIGHT > checkpointSupport.y + 300) retryFromCheckpoint(partnerId);
+        if (simulation.devices[index].state === 'IDLE') {
+          desired.get(anchorId).interact = false;
+          boostToModule(module);
+          moveToX(anchorId, module.anchor.x);
+          desired.get(anchorId).interact = true;
+          for (let wait = 0; wait < 30 && simulation.devices[index].state !== 'POWERED'; wait += 1) tick();
+        }
+      }
     }
     desired.get(partnerId).interact = true;
     moveToX(partnerId, module.switch.x);
     for (let wait = 0; wait < 240 && simulation.devices[index].state !== 'LATCHED'; wait += 1) tick();
     if (simulation.devices[index].state !== 'LATCHED') throw new Error(diagnostic(simulation, `latch:${module.id}`, events));
-    desired.get(anchorId).interact = false;
-    desired.get(partnerId).interact = false;
+    desired.get(anchorId).interact = deviceType === 'merge-lift';
+    desired.get(partnerId).interact = deviceType === 'merge-lift';
     let anchorCrossed = false;
     for (let attempt = 0; attempt < 4 && !anchorCrossed; attempt += 1) {
       try {
+        if (simulation.checkpointId > index) { anchorCrossed = true; break; }
         const anchorActor = driver.player(anchorId);
         const approach = driver.platform(module.approachPlatformId);
         const aFeet = anchorActor.y + PLAYER_HALF_HEIGHT;
@@ -352,21 +455,27 @@ export function runPhysicalPlaythrough(levelId) {
           }
           reachPlatform(anchorId, module.approachPlatformId, 360);
         }
-        reachPlatform(anchorId, module.returnPlatformId, 360);
+        reachPlatform(anchorId, module.returnPlatformId, 720);
+        if (simulation.checkpointId > index) { anchorCrossed = true; break; }
         reachPlatform(anchorId, module.boostLandingPlatformId, 360);
+        if (simulation.checkpointId > index) { anchorCrossed = true; break; }
         // low-gravity 모듈: boostLanding에서 바로 end로 점프 후, 오버슛 시 route 경유로 재시도한다.
         if (deviceType === 'low-gravity') {
           try { reachPlatform(anchorId, `m${index + 1}-end`, 360, endPreferredX); }
           catch {
             reachPlatform(anchorId, `m${index + 1}-route`, routeMaxTicks, routeExitX);
-            reachPlatform(anchorId, `m${index + 1}-end`, 360, endPreferredX);
+            if (simulation.checkpointId === index) reachPlatform(anchorId, `m${index + 1}-end`, 360, endPreferredX);
           }
         } else {
           reachPlatform(anchorId, `m${index + 1}-route`, routeMaxTicks, routeExitX);
-          reachPlatform(anchorId, `m${index + 1}-end`, 360, endPreferredX);
+          if (simulation.checkpointId === index) reachPlatform(anchorId, `m${index + 1}-end`, 360, endPreferredX);
         }
         anchorCrossed = true;
-      } catch (error) { if (attempt === 3) throw error; }
+      } catch (error) {
+        if (attempt === 3) throw error;
+        const checkpointSupport = simulation.checkpointId === 0 ? driver.platform('floor-left') : driver.platform(`m${simulation.checkpointId}-end`);
+        if (driver.player(anchorId).y + PLAYER_HALF_HEIGHT > checkpointSupport.y + 300) retryFromCheckpoint(anchorId);
+      }
     }
     const checkpointX = module.checkpoint.x + module.checkpoint.width / 2;
     moveToX(anchorId, checkpointX - 24);
@@ -374,8 +483,26 @@ export function runPhysicalPlaythrough(levelId) {
     for (let wait = 0; wait < 30 && simulation.checkpointId === index; wait += 1) tick();
     if (simulation.checkpointId !== index + 1) throw new Error(diagnostic(simulation, `checkpoint:${module.id}`, events));
   }
-  reachPlatform('p1', 'finish-deck');
-  reachPlatform('p2', 'finish-deck');
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    for (const playerId of ['p1', 'p2']) {
+      try { reachPlatform(playerId, 'finish-deck', 360); }
+      catch {
+        const actor = driver.player(playerId);
+        const lastEnd = driver.platform('m8-end');
+        if (actor.y + PLAYER_HALF_HEIGHT > lastEnd.y + 300) retryFromCheckpoint(playerId);
+        try { reachPlatform(playerId, 'm8-route', 720); } catch { void 0; }
+        try { reachPlatform(playerId, 'm8-end', 360); } catch { void 0; }
+        reachPlatform(playerId, 'finish-deck', 360);
+      }
+    }
+    const deck = driver.platform('finish-deck');
+    const bothAboard = simulation.players.every((actor) => {
+      const surface = surfaceY(deck, actor.x);
+      return actor.grounded && surface !== null && Math.abs(actor.y + PLAYER_HALF_HEIGHT - surface) <= 2;
+    });
+    if (bothAboard) break;
+    if (attempt === 4) throw new Error(diagnostic(simulation, 'finish-deck', events));
+  }
   moveToX('p1', simulation.level.finish.leftSwitch.x);
   moveToX('p2', simulation.level.finish.rightSwitch.x);
   desired.get('p1').interact = true;

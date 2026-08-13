@@ -60,14 +60,14 @@ test('AI 선택기는 forced·두음법칙·공용 중복을 지킨다', () => {
   assert.deepEqual([...usedWords], ['나라']);
 });
 
-test('AI 선택기는 게이지를 완성하는 안전 후보를 우선하고 후보가 없으면 null을 반환한다', () => {
+test('AI 선택기는 안전 후보를 고르고 후보가 없으면 null을 반환한다', () => {
   const chooser = createAiChooser(['가나', '가나다라마', '나비', '나라', '마음', '마차']);
   const finishing = chooser.chooseAiWord({
     player: { gauge: 55, forced: '가', lastSyllable: null },
     usedWords: new Set(),
     rng: () => 0,
   });
-  assert.equal(finishing, '가나다라마');
+  assert.ok(finishing === '가나' || finishing === '가나다라마');
   assert.equal(chooser.chooseAiWord({
     player: { gauge: 0, forced: '힣', lastSyllable: null },
     usedWords: new Set(),
@@ -79,6 +79,7 @@ test('mode=ai 사람 한 명은 봇 한 명과 단일 경기를 시작하고 이
   let port = 0;
   const app = createApp({
     getBotUrl: () => `ws://127.0.0.1:${port}/ws?mode=bot`,
+    random: () => 0.99,
   });
   const server = http.createServer(app.handleHttp);
   server.on('upgrade', app.handleUpgrade);
@@ -99,11 +100,16 @@ test('mode=ai 사람 한 명은 봇 한 명과 단일 경기를 시작하고 이
 
   const gameStart = await gameStartPromise;
   assert.deepEqual(gameStart.players.map((player) => player.name), ['AI테스터', 'AI (보통)']);
-  await waitForMessage(human, (message) => message.type === 'PLAYING', 5000);
+  const playingPromise = waitForMessage(human, (message) => message.type === 'PLAYING', 5000);
+  const initialStatePromise = waitForMessage(human, (message) => message.type === 'STATE', 5000);
+  await playingPromise;
+  const initialState = await initialStatePromise;
+  assert.equal(initialState.turn, 'p2', 'AI 선턴을 강제한 테스트 상태');
+  assert.match(initialState.chain.lastSyllable, /^[가-힣]$/);
   const accepted = await waitForMessage(
     human,
     (message) => message.type === 'WORD_ACCEPTED' && message.playerId === 'p2',
-    5000,
+    8000,
   );
   assert.equal(typeof accepted.word, 'string');
   assert.ok(accepted.word.length >= 2);

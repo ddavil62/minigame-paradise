@@ -92,6 +92,28 @@ body {
   gap: 12px;
 }
 
+/* ── 나가기 버튼 ─────────────────────────────────────────── */
+.exit-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  background: var(--color-panel-item);
+  color: var(--color-text-dim);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 50;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.exit-btn:hover {
+  background: var(--color-danger);
+  color: white;
+  border-color: var(--color-danger);
+}
+
 /* ── 플레이어 패널 ───────────────────────────────────────── */
 .player-panels {
   display: flex;
@@ -112,6 +134,10 @@ body {
 }
 .player-panel.opp {
   border-color: var(--color-opponent);
+}
+.player-panel.active-turn {
+  box-shadow: 0 0 0 2px var(--color-warning), 0 0 22px rgba(255, 193, 7, 0.22);
+  transform: translateY(-2px);
 }
 .player-name {
   font-size: 1.1rem;
@@ -195,8 +221,7 @@ body {
 
 /* ── 체인 이력 ───────────────────────────────────────────── */
 .chain-area {
-  display: flex;
-  gap: 12px;
+  display: block;
   width: 100%;
 }
 .chain-col {
@@ -216,7 +241,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 140px;
+  max-height: 180px;
   overflow-y: auto;
 }
 .chain-list li {
@@ -225,10 +250,27 @@ body {
   background: var(--color-panel-item);
   border-radius: 6px;
   animation: fadeIn 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
+.chain-list li.me { border-left: 3px solid var(--color-primary); }
+.chain-list li.opp { border-left: 3px solid var(--color-opponent); }
+.chain-speaker {
+  min-width: 34px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-dim);
+}
+.chain-word { font-weight: 700; }
 .chain-list li.garbage-word {
   color: var(--color-warning);
   border-left: 3px solid var(--color-warning);
+}
+.chain-list li.auto-word {
+  color: var(--color-text-muted, #888);
+  border-left: 3px dashed var(--color-text-dim);
+  font-style: italic;
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-8px); }
@@ -236,6 +278,30 @@ body {
 }
 
 /* ── 입력 영역 ───────────────────────────────────────────── */
+.turn-banner {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-panel);
+  color: var(--color-text-muted);
+  text-align: center;
+  font-weight: 700;
+}
+.turn-banner.mine {
+  border-color: var(--color-primary);
+  color: var(--color-primary-light);
+  background: rgba(102, 126, 234, 0.12);
+}
+.typing-indicator {
+  min-height: 20px;
+  color: var(--color-opponent);
+  text-align: center;
+  font-size: 0.9rem;
+  animation: blink 1s infinite;
+}
+.typing-indicator.hidden { display: none; }
+
 .input-area {
   width: 100%;
   background: var(--color-panel);
@@ -256,6 +322,10 @@ body {
 }
 .start-char.forced {
   color: var(--color-warning);
+}
+.start-char.pending {
+  color: var(--color-text-muted, #888);
+  font-weight: normal;
 }
 
 .timer-display {
@@ -459,17 +529,12 @@ body {
   .vs-label {
     font-size: 0.85rem;
   }
-  .chain-area {
-    gap: 6px;
-  }
   .chain-col {
     min-width: 0;
     min-height: 92px;
     padding: 8px;
   }
-  .chain-list {
-    max-height: 64px;
-  }
+  .chain-list { max-height: 96px; }
   .input-area {
     padding: 12px;
     gap: 8px;
@@ -477,6 +542,12 @@ body {
   #game-screen {
     padding: 8px;
     gap: 8px;
+  }
+  .exit-btn {
+    top: 6px;
+    right: 6px;
+    padding: 5px 10px;
+    font-size: 0.72rem;
   }
   .garbage-popup {
     top: auto;

@@ -25,7 +25,7 @@
   <div class="view hidden" id="portal-view">
     <header class="hero">
       <h1 class="hero-title">미니게임 천국</h1>
-      <p class="hero-sub">친구랑 한 판 — LAN 파티</p>
+      <p class="hero-sub">친구랑 한 판 — 온라인 파티</p>
     </header>
 
     <div class="portal-meta">
@@ -34,6 +34,20 @@
 
     <!-- 게임 카드 그리드 -->
     <main class="container">
+      <section id="invite-panel" class="invite-panel hidden" aria-labelledby="invite-title">
+        <div class="invite-copy">
+          <span class="invite-kicker">FRIEND INVITE</span>
+          <h2 id="invite-title">친구 초대 주소</h2>
+          <p>이 주소를 친구에게 보내세요. 처음 접속할 때 비밀번호를 한 번 입력합니다.</p>
+        </div>
+        <div class="invite-controls">
+          <label class="sr-only" for="invite-url">친구 초대 주소</label>
+          <input id="invite-url" type="text" readonly value="">
+          <button id="btn-copy-invite" type="button">주소 복사</button>
+        </div>
+        <div id="invite-status" class="invite-status" role="status" aria-live="polite"></div>
+      </section>
+      <div id="portal-toast" class="lobby-toast portal-toast" role="status" aria-live="polite"></div>
       <section id="game-grid" class="game-grid" aria-label="게임 목록">
         <!-- app.js가 games.json을 fetch하여 카드 동적 생성 -->
       </section>
@@ -58,7 +72,7 @@
   </div>
 
   <footer class="site-footer">
-    <p>게임 서버가 모두 실행 중이어야 접속이 가능합니다 · 친구는 호스트 IP로 접속하세요</p>
+    <p>게임 서버가 실행 중이어야 접속할 수 있습니다 · 친구는 공개 HTTPS 초대 주소로 접속하세요</p>
   </footer>
 
   <script src="app.js" type="module"></script>

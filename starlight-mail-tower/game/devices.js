@@ -35,6 +35,10 @@ export function createDevices(modules) {
     relativeSpeed: 0,
     heightDelta: 0,
     closeAtMs: null,
+    motionStartedMs: null,
+    motionPhaseMs: 0,
+    coordinated: false,
+    gateProgress: 0,
     shutterCycleMs: module.type === 'wind-shutter' ? SHUTTER_CYCLE_MS : null,
   }));
 }
@@ -53,16 +57,23 @@ function updateRuntime(device, players, elapsedMs) {
   const runningMs = powered ? Math.max(0, elapsedMs - device.stateChangedMs) : device.phaseMs;
   device.active = powered;
   if (device.type === 'timer-gate') {
-    device.phaseMs = runningMs % (mechanics.cycleMs ?? 3600);
-    device.solid = !powered || device.phaseMs >= (mechanics.openMs ?? 2100);
-    device.warning = powered && !device.solid && device.phaseMs >= (mechanics.openMs ?? 2100) - (mechanics.transitionMs ?? 240);
+    const cycleMs = mechanics.cycleMs ?? 3600;
+    device.phaseMs = runningMs % cycleMs;
+    const phase = device.phaseMs / cycleMs;
+    // Closed dwell -> downward opening -> open dwell -> upward closing.
+    device.gateProgress = !powered || phase < 0.45 || phase >= 0.95 ? 0
+      : phase < 0.55 ? (phase - 0.45) / 0.1
+      : phase < 0.8 ? 1
+      : 1 - (phase - 0.8) / 0.15;
+    device.solid = true;
+    device.warning = powered && device.gateProgress > 0.72;
   } else if (device.type === 'cycle-platform') {
     const cycleMs = mechanics.cycleMs ?? 3000;
     device.phaseMs = (runningMs + (mechanics.phaseOffsetMs ?? 0)) % cycleMs;
     device.solid = latched || (powered && device.phaseMs < (mechanics.solidMs ?? 1800));
     device.warning = device.solid && device.phaseMs >= (mechanics.solidMs ?? 1800) - 240;
   } else if (device.type === 'rotary') {
-    const periodMs = device.dynamic?.periodMs ?? 4200;
+    const periodMs = (device.dynamic?.periodMs ?? 4200) * (mechanics.periodScale ?? 2);
     device.phaseMs = runningMs % periodMs;
     // 잠금 뒤에는 귀환자가 양쪽 고정 발판을 건널 수 있는 수평 위치로 정렬한다.
     device.angle = latched ? 0 : powered ? (device.phaseMs / periodMs) * Math.PI * 2 : device.angle;
@@ -99,8 +110,8 @@ function updateRuntime(device, players, elapsedMs) {
  * @param {{x:number,y:number}} b 둘째 좌표
  * @returns {boolean}
  */
-function isNear(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y) <= INTERACTION_RADIUS;
+function isNear(a, b, radius = INTERACTION_RADIUS) {
+  return Math.hypot(a.x - b.x, a.y - b.y) <= radius;
 }
 
 /**
@@ -113,6 +124,10 @@ function isNear(a, b) {
  */
 export function updateDevice(device, players, dt, elapsedMs = 0) {
   const events = [];
+  if (device.type === 'merge-lift') {
+    device.coordinated = players.every((player) => player.input.interact);
+    if (device.coordinated && (device.state === DEVICE_STATE.POWERED || device.state === DEVICE_STATE.LATCHED)) device.motionPhaseMs += dt * 1000;
+  }
   updateRuntime(device, players, elapsedMs);
   if (device.state === DEVICE_STATE.LATCHED) return events;
   if (device.state === DEVICE_STATE.IDLE) {
@@ -125,6 +140,7 @@ export function updateDevice(device, players, dt, elapsedMs = 0) {
     if (device.holdSeconds >= HOLD_SECONDS) {
       device.state = DEVICE_STATE.POWERED;
       device.stateChangedMs = elapsedMs;
+      device.motionStartedMs = elapsedMs;
       if (device.type === 'wind-shutter') device.closeAtMs = elapsedMs + SHUTTER_FIRST_CLOSE_MS;
       device.anchorPlayerId = candidate.id;
       candidate.anchored = true;
@@ -140,7 +156,7 @@ export function updateDevice(device, players, dt, elapsedMs = 0) {
     if (device.releaseSeconds <= dt) events.push({ kind: 'DEVICE_WARNING', payload: { deviceId: device.id } });
     if (device.releaseSeconds < RELEASE_WARNING_SECONDS) return events;
     if (anchorPlayer) anchorPlayer.anchored = false;
-    Object.assign(device, { state: DEVICE_STATE.IDLE, anchorPlayerId: null, holdSeconds: 0, releaseSeconds: 0, stateChangedMs: elapsedMs, closeAtMs: null });
+    Object.assign(device, { state: DEVICE_STATE.IDLE, anchorPlayerId: null, holdSeconds: 0, releaseSeconds: 0, stateChangedMs: elapsedMs, closeAtMs: null, motionStartedMs: null });
     events.push({ kind: 'DEVICE_RELEASED', payload: { deviceId: device.id } });
     return events;
   }
@@ -152,7 +168,7 @@ export function updateDevice(device, players, dt, elapsedMs = 0) {
   anchorPlayer.x = device.anchor.x;
   anchorPlayer.y = device.anchor.y;
   const partner = players.find((player) => player.id !== anchorPlayer.id);
-  if (partner && partner.input.interact && isNear(partner, device.switch)) {
+  if (partner && partner.input.interact && isNear(partner, device.switch, device.type === 'low-gravity' ? 130 : INTERACTION_RADIUS)) {
     if (device.type === 'rotary' && device.warning) return events;
     if (device.type === 'docking-lock' && (Math.abs(partner.vx - anchorPlayer.vx) > (device.mechanics?.maxRelativeSpeed ?? 45) || Math.abs(partner.y - anchorPlayer.y) > (device.mechanics?.maxHeightDelta ?? 12))) return events;
     if (device.type === 'safe-ground' && !device.shelterSafe.every(Boolean)) return events;

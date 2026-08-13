@@ -44,7 +44,7 @@ const endedOverlay = document.querySelector('#session-ended-overlay');
 const endedMessage = document.querySelector('#session-ended-message');
 const lobbyConfirmOverlay = document.querySelector('#lobby-confirm-overlay');
 const continueButton = document.querySelector('#continue-button');
-const input = { left: false, right: false, jump: false, interact: false };
+const input = { left: false, right: false, down: false, jump: false, interact: false };
 const parameters = new URLSearchParams(location.search);
 let pendingLobbyReadyHandoff = parameters.get('lobbyReady') === '1';
 const RESUME_TOKEN_KEY = 'starlight-resume-token';
@@ -239,7 +239,11 @@ function updateHud() {
   } else {
     finishClock.hidden = true;
     const showBoostHint = latestSnapshot.checkpointId === 0 && device?.state === 'IDLE' && !hasSeenCoopBoost && latestSnapshot.players.every((player) => player.boostConsumed === false);
-    actionHint.textContent = t(showBoostHint ? 'hint.boost' : device?.state === 'POWERED' ? device.anchorPlayerId === playerId ? 'hint.checkpoint' : 'hint.switch' : device?.state === 'LATCHED' ? 'hint.checkpoint' : 'hint.anchor');
+    const hintKey = showBoostHint ? 'hint.boost'
+      : device?.state === 'POWERED' ? device.anchorPlayerId === playerId ? 'hint.checkpoint' : 'hint.switch'
+      : device?.state === 'LATCHED' && device.type === 'merge-lift' ? 'hint.mergeLift'
+      : device?.state === 'LATCHED' ? 'hint.checkpoint' : 'hint.anchor';
+    actionHint.textContent = t(hintKey);
   }
   respawnOverlay.hidden = !latestSnapshot.players.some((player) => player.respawnTimer > 0);
 }
@@ -393,7 +397,7 @@ function connect() {
 }
 
 /** @param {string} code 키 코드 @returns {keyof typeof input|null} */
-function mapKey(code) { if (code === 'KeyA' || code === 'ArrowLeft') return 'left'; if (code === 'KeyD' || code === 'ArrowRight') return 'right'; if (code === 'Space') return 'jump'; if (code === 'KeyE' || code === 'Enter') return 'interact'; return null; }
+function mapKey(code) { if (code === 'KeyA' || code === 'ArrowLeft') return 'left'; if (code === 'KeyD' || code === 'ArrowRight') return 'right'; if (code === 'KeyS' || code === 'ArrowDown') return 'down'; if (code === 'Space') return 'jump'; if (code === 'KeyE' || code === 'Enter') return 'interact'; return null; }
 
 /** @returns {void} */
 function returnToLobby() { audio.setScene('silent'); intentionalClose = true; localStorage.removeItem(RESUME_TOKEN_KEY); send({ type: CLIENT_MESSAGE.LEAVE_GAME }); window.setTimeout(() => { socket?.close(); location.href = '/'; }, 120); }

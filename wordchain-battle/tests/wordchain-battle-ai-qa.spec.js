@@ -89,7 +89,7 @@ test('런처 AI 채우기로 mode=ai 경기에 진입하고 AI (보통)을 표�
     await page.waitForURL(/wordchain-battle\/\?.*mode=ai/, { timeout: 10_000 });
     await expect(page.locator('#name-opp')).toHaveText('AI (보통)', { timeout: 10_000 });
     await expect(page.locator('#hp-opp')).toBeVisible();
-    await expect(page.locator('#gauge-opp')).toBeVisible();
+    await expect(page.locator('#gauge-text-opp')).toBeVisible();
     expect(pageErrors).toEqual([]);
   } finally {
     await stopLauncher(launcher.child);

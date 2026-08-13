@@ -80,6 +80,7 @@
    * @returns {void}
    */
   function openPanel() {
+    window.dispatchEvent(new CustomEvent('minigame-presence-close'));
     document.getElementById('bw-panel').hidden = false;
     document.getElementById('bw-textarea').focus();
   }

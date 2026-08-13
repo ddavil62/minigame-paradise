@@ -125,30 +125,36 @@ export function getLastSyllable(word) {
 }
 
 /**
+ * 글자의 두음법칙 변환형을 계산한다. 받침(종성)과 무관하게 초성+중성 조합에만
+ * 적용되므로, 자모 분해해 받침을 보존한 채 초성+중성만 변환한다.
+ * 예: "력"(려+ㄱ) → "역". 변환은 DUEUM_MAP이 정의한 방향(라→나 계열)으로만
+ * 적용되며 역방향은 허용하지 않는다.
+ * @param {string} syllable 변환 대상 글자
+ * @returns {string|null} 두음법칙 변환형. 적용 대상이 아니면 null
+ */
+export function getDueumAlt(syllable) {
+  const d = decomposeHangul(syllable);
+  if (!d) return null;
+
+  const base = composeHangul(d.cho, d.jung, 0);
+  const mappedBase = DUEUM_MAP[base];
+  if (!mappedBase) return null;
+
+  const mapped = decomposeHangul(mappedBase);
+  const alt = composeHangul(mapped.cho, mapped.jung, d.jong);
+  return alt !== syllable ? alt : null;
+}
+
+/**
  * 시작 글자가 요구 글자와 일치하는지 두음법칙 포함 검증한다.
- * 두음법칙은 받침(종성)과 무관하게 초성+중성 조합에만 적용되므로, requiredChar를
- * 자모 분해해 받침을 보존한 채 초성+중성만 변환한 뒤 비교한다.
- * 예: 요구 글자가 "력"(려+ㄱ)이면 "력" 또는 "역"(두음법칙 적용형)으로 시작하는 단어를 허용.
- * 변환은 DUEUM_MAP이 정의한 방향(라→나 계열)으로만 적용되며 역방향은 허용하지 않는다.
  * @param {string} wordFirstChar 제출 단어의 첫 글자
  * @param {string} requiredChar 요구되는 시작 글자
  * @returns {boolean}
  */
 export function matchesStartChar(wordFirstChar, requiredChar) {
   if (wordFirstChar === requiredChar) return true;
-
-  const required = decomposeHangul(requiredChar);
-  if (!required) return false;
-
-  // 요구 글자의 초성+중성(받침 제외)에 두음법칙이 적용되는지 조회
-  const requiredBase = composeHangul(required.cho, required.jung, 0);
-  const mappedBase = DUEUM_MAP[requiredBase];
-  if (!mappedBase) return false;
-
-  // 변환된 초성+중성에 원래 받침을 재적용해 비교
-  const mapped = decomposeHangul(mappedBase);
-  const expected = composeHangul(mapped.cho, mapped.jung, required.jong);
-  return expected === wordFirstChar;
+  const alt = getDueumAlt(requiredChar);
+  return alt !== null && wordFirstChar === alt;
 }
 
 // ── 가비지 음절 후보 ────────────────────────────────────────────
@@ -254,23 +260,18 @@ export function computeDeadEndAlts(syllable, followerCountMap, threshold = DEAD_
   alts.add(syllable); // 항상 원래 글자 포함
 
   // 기존 두음법칙 변환 (matchesStartChar와 동일 로직)
-  const base = composeHangul(d.cho, d.jung, 0);
-  const mappedBase = DUEUM_MAP[base];
-  if (mappedBase) {
-    const mappedD = decomposeHangul(mappedBase);
-    if (mappedD) {
-      const dueumAlt = composeHangul(mappedD.cho, mappedD.jung, d.jong);
-      if (dueumAlt !== syllable) {
-        alts.add(dueumAlt);
-      }
-    }
+  const dueumAlt = getDueumAlt(syllable);
+  if (dueumAlt) {
+    alts.add(dueumAlt);
   }
 
   // 받침 제거 확장 — 받침이 있는 경우에만 적용
   if (d.jong > 0) {
-    const noJong = composeHangul(d.cho, d.jung, 0); // 받침 없는 형태
+    const base = composeHangul(d.cho, d.jung, 0);
+    const noJong = base; // 받침 없는 형태
     alts.add(noJong);
     // 받침 제거 후에도 두음법칙 적용 가능하면 추가
+    const mappedBase = DUEUM_MAP[base];
     if (mappedBase) {
       alts.add(mappedBase); // DUEUM_MAP의 변환값(받침 없는 형태)
     }

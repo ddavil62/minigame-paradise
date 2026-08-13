@@ -23,9 +23,12 @@ const el = {
   gaugeOpp: $('#gauge-opp'),
   gaugeTextMe: $('#gauge-text-me'),
   gaugeTextOpp: $('#gauge-text-opp'),
+  panelMe: $('#panel-me'),
+  panelOpp: $('#panel-opp'),
 
-  chainMe: $('#chain-me'),
-  chainOpp: $('#chain-opp'),
+  chainShared: $('#chain-shared'),
+  turnBanner: $('#turn-banner'),
+  typingIndicator: $('#typing-indicator'),
 
   startChar: $('#start-char'),
   timerText: $('#timer-text'),
@@ -44,6 +47,8 @@ const el = {
   resultDetail: $('#result-detail'),
   rematchBtn: $('#rematch-btn'),
   rematchStatus: $('#rematch-status'),
+
+  exitBtn: $('#exit-btn'),
 };
 
 // 타이머 display 부모 요소 찾기
@@ -140,30 +145,62 @@ export function setName(who, name) {
  * @param {'me'|'opp'} who
  * @param {string} word
  * @param {boolean} [isGarbage=false] 가비지 음절로 시작한 단어인지
+ * @param {boolean} [isAuto=false] 타임아웃으로 서버가 자동 진행한 단어인지
  */
-export function addChainWord(who, word, isGarbage = false) {
-  const list = who === 'me' ? el.chainMe : el.chainOpp;
+export function addChainWord(who, word, isGarbage = false, isAuto = false) {
+  const list = el.chainShared;
   if (!list) return;
 
   const li = document.createElement('li');
-  li.textContent = word;
+  li.classList.add(who);
+  const speaker = document.createElement('span');
+  speaker.className = 'chain-speaker';
+  speaker.textContent = who === 'me' ? '나' : '상대';
+  const value = document.createElement('span');
+  value.className = 'chain-word';
+  value.textContent = isAuto ? `${word} (자동)` : word;
+  li.append(speaker, value);
   if (isGarbage) li.classList.add('garbage-word');
+  if (isAuto) li.classList.add('auto-word');
 
-  // 최상단에 추가
-  list.prepend(li);
+  list.append(li);
 
-  // 5개 초과 시 마지막 제거
-  while (list.children.length > 5) {
-    list.removeChild(list.lastChild);
+  // 최근 10개만 유지
+  while (list.children.length > 10) {
+    list.removeChild(list.firstChild);
   }
+  list.scrollTop = list.scrollHeight;
 }
 
 /**
  * 체인 이력을 초기화한다.
  */
 export function clearChains() {
-  if (el.chainMe) el.chainMe.innerHTML = '';
-  if (el.chainOpp) el.chainOpp.innerHTML = '';
+  if (el.chainShared) el.chainShared.innerHTML = '';
+}
+
+/**
+ * 현재 턴을 표시하고 플레이어 패널을 강조한다.
+ * @param {boolean|null} isMyTurn null이면 선공 결정 전 상태
+ */
+export function setTurn(isMyTurn) {
+  if (el.turnBanner) {
+    el.turnBanner.textContent = isMyTurn === null
+      ? '첫 턴을 정하는 중...'
+      : isMyTurn ? '내 차례 — 10초 안에 이어주세요!' : '상대 차례 — 단어를 기다리는 중...';
+    el.turnBanner.classList.toggle('mine', isMyTurn === true);
+  }
+  if (el.panelMe) el.panelMe.classList.toggle('active-turn', isMyTurn === true);
+  if (el.panelOpp) el.panelOpp.classList.toggle('active-turn', isMyTurn === false);
+  if (isMyTurn !== false) setTypingProgress(0);
+}
+
+/** 상대가 입력 중인 글자 수를 표시한다. */
+export function setTypingProgress(count) {
+  if (!el.typingIndicator) return;
+  const visible = Number(count) > 0;
+  el.typingIndicator.textContent = visible ? `상대가 입력 중... (${count}자)` : '';
+  el.typingIndicator.classList.toggle('hidden', !visible);
 }
 
 // ── 시작 글자 표시 ──────────────────────────────────────────
@@ -172,20 +209,32 @@ export function clearChains() {
  * 시작 글자 표시를 업데이트한다.
  * @param {string|null} char 시작 글자 (null이면 '자유')
  * @param {boolean} [isForced=false] 가비지 강제 여부
+ * @param {string[]|Set<string>|null} [altChars=null] 막힘/희귀 종성 대체 시작 글자 목록.
+ *   char 자신은 자동으로 제외되며, 있으면 "글자 (또는 대체글자, ...)" 형식으로 표시된다.
  */
-export function setStartChar(char, isForced = false) {
+export function setStartChar(char, isForced = false, altChars = null) {
   if (!el.startChar) return;
+  el.startChar.classList.remove('pending');
   if (!char) {
     el.startChar.textContent = '자유';
     el.startChar.classList.remove('forced');
-  } else {
-    el.startChar.textContent = isForced ? `☄ ${char}` : char;
-    if (isForced) {
-      el.startChar.classList.add('forced');
-    } else {
-      el.startChar.classList.remove('forced');
-    }
+    return;
   }
+  const alts = altChars ? [...altChars].filter((c) => c && c !== char) : [];
+  const altSuffix = alts.length > 0 ? ` (또는 ${alts.join(', ')})` : '';
+  el.startChar.textContent = (isForced ? `☄ ${char}` : char) + altSuffix;
+  el.startChar.classList.toggle('forced', isForced);
+}
+
+/**
+ * 시작 글자가 아직 공개되지 않았음을 표시한다 (카운트다운 중 사용).
+ * "자유"로 오인되지 않도록 별도의 대기 표시를 쓴다.
+ */
+export function setStartCharPending() {
+  if (!el.startChar) return;
+  el.startChar.textContent = '?';
+  el.startChar.classList.remove('forced');
+  el.startChar.classList.add('pending');
 }
 
 // ── 타이머 ──────────────────────────────────────────────────
@@ -364,8 +413,10 @@ export function resetGameUI() {
   updateGauge('me', 0);
   updateGauge('opp', 0);
   clearChains();
-  setStartChar(null);
-  updateTimer(20);
+  setStartCharPending();
+  updateTimer(10);
+  setTurn(null);
+  setTypingProgress(0);
   clearInput();
   showFeedback('');
   hideResult();
@@ -409,6 +460,21 @@ export function onInputEnter(handler) {
       if (e.key === 'Enter') handler();
     });
   }
+}
+
+/** 입력값 변경 핸들러를 등록한다. */
+export function onInputChange(handler) {
+  if (el.wordInput) {
+    el.wordInput.addEventListener('input', () => handler(el.wordInput.value.length));
+  }
+}
+
+/**
+ * 나가기 버튼에 클릭 핸들러를 등록한다.
+ * @param {Function} handler
+ */
+export function onExitClick(handler) {
+  if (el.exitBtn) el.exitBtn.addEventListener('click', handler);
 }
 
 /**

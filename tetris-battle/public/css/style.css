@@ -357,12 +357,57 @@ body {
 
 .opponents-area { flex-direction: column; align-items: center; gap: 8px; }
 .opponents-grid { display: grid; grid-template-columns: repeat(3, auto); gap: 12px; }
+.game-main.two-player-layout { --board-h: min(600px, calc(100vh - 160px), calc(100vw - 440px)); }
+.opponents-grid.two-player { grid-template-columns: auto; }
+.opponents-grid.two-player .minimap canvas,
+.opponents-grid.two-player .minimap #opponent-canvas { height: var(--board-h); }
+.opponents-grid.two-player .opponent-card-label { max-width: calc(var(--board-h) / 2); font-size: 14px; }
 .opponent-card { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .opponent-card-label { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--hud-text); }
+.opponent-item-slots { display: flex; justify-content: center; gap: 4px; min-height: 20px; }
+.opponent-item-slot { display: grid; place-items: center; width: 18px; height: 18px; border: 1px solid var(--board-border); border-radius: 3px; background: rgba(30,30,58,0.72); font-size: 12px; line-height: 1; }
+.opponent-item-slot.empty { opacity: 0.32; }
+.opponent-item-slot.item-garbage { color: var(--item-garbage); }
+.opponent-item-slot.item-dark { color: var(--item-dark); }
+.opponent-item-slot.item-freeze { color: var(--item-freeze); }
+.opponent-item-slot.item-lineclear { color: var(--item-lineclear); }
+.opponent-item-slot.item-shield { color: var(--item-shield); }
+.opponents-grid.two-player .opponent-item-slots { gap: 6px; min-height: 40px; }
+.opponents-grid.two-player .opponent-item-slot { width: 30px; height: 38px; font-size: 18px; }
+.opponent-card.eliminated .opponent-item-slots { filter: grayscale(1); opacity: 0.35; }
 .minimap canvas { display: block; height: min(180px, calc(var(--board-h) * 0.3)); width: auto; aspect-ratio: 1 / 2; background: var(--bg); box-shadow: 0 0 8px rgba(0,0,0,0.4); }
 .opponent-eliminated { position: absolute; inset: 0; display: none; place-items: center; background: rgba(8,8,18,0.72); color: #ff6b7a; font-weight: 800; letter-spacing: 2px; }
 .opponent-card.eliminated .opponent-eliminated { display: grid; }
 .opponent-card.eliminated canvas { filter: grayscale(1) brightness(0.45); }
+
+.item-attack-flight {
+  position: fixed;
+  z-index: 190;
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 0 10px currentColor);
+}
+.item-attack-flight .flight-icon { font-size: 48px; opacity: 0.78; }
+.item-attack-flight .flight-route { position: absolute; top: 63px; padding: 2px 6px; border-radius: 8px; background: rgba(8,8,18,0.78); color: #fff; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.item-attack-flight.item-garbage, .item-attack-trail.item-garbage { color: var(--item-garbage); }
+.item-attack-flight.item-dark, .item-attack-trail.item-dark { color: var(--item-dark); }
+.item-attack-flight.item-freeze, .item-attack-trail.item-freeze { color: var(--item-freeze); }
+.item-attack-trail { position: fixed; z-index: 189; height: 2px; transform-origin: left center; pointer-events: none; background: linear-gradient(90deg, transparent, currentColor 25%, currentColor 75%, transparent); box-shadow: 0 0 8px currentColor; }
+.item-attack-flight.arrived:not(.blocked) { animation: item-attack-arrive 0.18s ease-out forwards; }
+.item-attack-flight.blocked.arrived { animation: item-attack-shatter 0.32s ease-out forwards; }
+.board-wrap.item-attack-launch { animation: item-attack-launch 0.32s ease-out; }
+.board-wrap.item-attack-impact { animation: item-attack-impact 0.42s ease-out; }
+.board-wrap.item-attack-blocked { animation: item-attack-blocked 0.42s ease-out; }
+
+@keyframes item-attack-launch { 0% { filter: brightness(1); } 35% { filter: brightness(1.65); } 100% { filter: brightness(1); } }
+@keyframes item-attack-arrive { 0% { opacity: 0.78; filter: drop-shadow(0 0 10px currentColor); } 45% { opacity: 1; filter: drop-shadow(0 0 24px currentColor); } 100% { opacity: 0; filter: drop-shadow(0 0 2px currentColor); } }
+@keyframes item-attack-shatter { 0% { opacity: 0.82; filter: drop-shadow(0 0 10px var(--item-shield)); } 40% { opacity: 1; transform: translate(-50%, -50%) scale(1.6) rotate(12deg); filter: drop-shadow(0 0 28px var(--item-shield)); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2) rotate(-18deg); filter: blur(5px); } }
+@keyframes item-attack-impact { 0% { filter: brightness(1); } 30% { filter: brightness(1.8); } 55% { transform: translateX(-5px); } 72% { transform: translateX(4px); } 100% { filter: brightness(1); transform: none; } }
+@keyframes item-attack-blocked { 0% { filter: brightness(1); } 35% { filter: brightness(2.1) drop-shadow(0 0 18px var(--item-shield)); transform: scale(1.025); } 100% { filter: brightness(1); transform: none; } }
 
 .item-rule {
   margin: -2px 0 7px;
@@ -968,6 +1013,11 @@ body {
 
 /* ── 모션 감소 환경 ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
+  .item-attack-trail { display: none; }
+  .board-wrap.item-attack-launch,
+  .board-wrap.item-attack-impact,
+  .board-wrap.item-attack-blocked { animation-duration: 0.16s; transform: none; }
+
   .shield-frame.active {
     animation: none;
     filter: none;
@@ -1025,6 +1075,10 @@ body {
     overflow-y: auto;
   }
 
+  .game-main.two-player-layout {
+    --board-h: min(330px, calc((100vw - 225px) * 2), calc(100vh - 500px));
+  }
+
   .player-area.me {
     display: grid;
     grid-template-columns: 120px calc(var(--board-h) / 2) 70px;
@@ -1065,6 +1119,9 @@ body {
 
   .opponents-grid { grid-template-columns: repeat(2, auto); gap: 8px; }
   .minimap canvas { height: 140px; }
+  .opponents-grid.two-player { grid-template-columns: auto; }
+  .opponents-grid.two-player .minimap canvas,
+  .opponents-grid.two-player .minimap #opponent-canvas { height: var(--board-h); }
 
   .game-footer {
     padding: 5px 8px;

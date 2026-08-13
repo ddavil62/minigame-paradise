@@ -1,0 +1,21 @@
+{
+	default_bind {$MINIGAME_PUBLIC_IP}
+}
+
+{$MINIGAME_PUBLIC_IP} {
+	tls {
+		issuer acme {$MINIGAME_ACME_CA} {
+			profile shortlived
+		}
+	}
+
+	encode zstd gzip
+	reverse_proxy {$MINIGAME_UPSTREAM}
+
+	header {
+		Strict-Transport-Security "max-age=604800"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+}

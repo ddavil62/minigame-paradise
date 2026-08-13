@@ -1,11 +1,12 @@
 {
   "name": "minigames",
   "version": "0.1.0",
-  "description": "미니게임 천국 — 친구랑 즐기는 LAN 1:1 미니게임 패키지 (matgo, tetris-battle, davinci-code, yutnori, codenames-duet). 단일 포트(3000) 통합 라우터 구조.",
+  "description": "미니게임 천국 — 공인 IP HTTPS로 친구와 즐기는 멀티플레이 미니게임 패키지. Caddy 뒤의 내부 포트 3000 통합 라우터 구조.",
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node launcher/server.js"
+    "start": "node launcher/server.js",
+    "test:auth": "node --test tests/access-control.test.js tests/presence.test.js"
   },
   "dependencies": {
     "express": "^5.2.1",

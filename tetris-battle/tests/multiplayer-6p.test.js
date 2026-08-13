@@ -70,10 +70,25 @@ test('2~6인 준비, 대상 공격, 탈락 관전, 최후 생존 승리', async 
 
   players[0].send({ type: 'GARBAGE_SEND', lines: 1, combo: 0, clearEventId: 1 });
   const grant = await players[0].waitFor((m) => m.type === 'ITEM_GRANT');
+  const heldState = await players[3].waitFor((m) => (
+    m.type === 'ROOM_STATE'
+    && m.players.find((player) => player.id === 'p1')?.itemSlots[grant.slotIndex] === grant.itemId
+  ));
+  assert.equal(heldState.players.find((player) => player.id === 'p1').itemSlots[grant.slotIndex], grant.itemId);
   players[0].send({ type: 'ITEM_USE', itemId: grant.itemId, slotIndex: grant.slotIndex, targetPlayerId: 'p1' });
   const rejected = await players[0].waitFor((m) => m.type === 'ITEM_USE_REJECTED');
   assert.equal(rejected.reason, 'invalid_target');
+  players[3].messages.length = 0;
   players[0].send({ type: 'ITEM_USE', itemId: grant.itemId, slotIndex: grant.slotIndex, targetPlayerId: 'p4' });
+  const attackEvents = await Promise.all(players.map((client) => client.waitFor((m) => (
+    m.type === 'ITEM_ATTACK' && m.attackerId === 'p1' && m.targetId === 'p4'
+  ))));
+  assert.equal(attackEvents.every((event) => event.itemId === grant.itemId && !('blocked' in event)), true);
+  const usedState = await players[3].waitFor((m) => (
+    m.type === 'ROOM_STATE'
+    && m.players.find((player) => player.id === 'p1')?.itemSlots[grant.slotIndex] === null
+  ));
+  assert.equal(usedState.players.find((player) => player.id === 'p1').itemSlots[grant.slotIndex], null);
   const effect = await players[3].waitFor((m) => m.type === 'ITEM_EFFECT');
   assert.equal(effect.fromPlayerId, 'p1');
 

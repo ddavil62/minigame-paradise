@@ -1,6 +1,8 @@
-# 루미큐브 (Rummikub) — LAN 1:1
+# 루미큐브 (Rummikub) — 멀티플레이
 
 타일 그룹/런을 만들어 손을 비우면 승리하는 1:1 두뇌 대결 게임. 미니게임 천국 9번째 종목.
+
+> 친구는 같은 공유기에서도 `https://112.155.2.238`로 접속한다. 포트 3000과 개별 게임 포트는 내부·개발 전용이다.
 
 ## 실행
 
@@ -9,10 +11,10 @@
 cd C:\LazySlimeStudio\minigames\rummikub
 node server.js --port 3011
 
-# 통합 런처(권장, 포트 3000)
+# 통합 런처 내부 프로세스
 cd C:\LazySlimeStudio\minigames
 node launcher/server.js
-# → 브라우저 http://localhost:3000 → "🀄 루미큐브" 카드 클릭
+# → 공개 운영은 start-public.ps1 실행 후 https://112.155.2.238 → "🀄 루미큐브" 카드 클릭
 ```
 
 ## 룰 요약
