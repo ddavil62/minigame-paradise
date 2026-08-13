@@ -4,18 +4,28 @@
  * 5종 아이템:
  *  - garbage_bomb  (공격): 상대 보드 하단에 즉시 가비지 2줄 추가
  *  - dark          (공격): 상대 보드를 5초간 검은 오버레이로 덮음
- *  - freeze        (공격): 상대 블록 조작 3초간 차단 (중력은 유지)
+ *  - freeze        (공격): 상대 블록 조작 최대 3초간 차단 (중력은 유지).
+ *                          받는 쪽의 현재 레벨이 높을수록(중력이 빠를수록) 그 시간 동안
+ *                          자동으로 쌓이는 피스가 많아져 치명타가 되므로, 지속시간을
+ *                          받는 쪽 레벨의 중력 배율에 비례해 최소 1초까지 줄인다.
  *  - line_clear    (방어): 자신의 하단 2줄 즉시 제거
  *  - shield        (방어): 다음 공격 1회 무효화
  *
  * 흐름:
  *  - 라인 클리어 → 서버가 80% 확률로 ITEM_GRANT 전송 → 첫 빈 슬롯 채움
- *  - Z/X/C → useItem(slot) → 방어형은 즉시 로컬 적용, 공격형은 서버 경유로 상대에게 전달
+ *  - 숫자 1/2/3 → useItem(slot) → 방어형은 즉시 로컬 적용, 공격형은 서버 경유로 지정 상대에게 전달
  *  - 상대로부터 ITEM_EFFECT 수신 → applyEffect(id, duration) → 다크/프리즈/가비지폭탄 처리
  *  - 공격을 받기 직전 서버가 shieldActive 확인 → 활성이면 SHIELD_BLOCK으로 양쪽 통보
  */
 
 import { GARBAGE_BOMB_LINES, LINE_CLEAR_LINES } from './board.js';
+import { GRAVITY_BASE_MS, GRAVITY_DECREMENT_MS, GRAVITY_MIN_MS } from './game.js';
+
+/**
+ * 프리즈 지속시간 축소의 하한값(ms). 고레벨에서도 아이템이 완전히 무의미해지지
+ * 않도록 최소한의 조작 차단 시간을 보장한다.
+ */
+const MIN_FREEZE_DURATION_MS = 1000;
 
 // ── 아이템 정의 ──────────────────────────────────────────────────
 /**
@@ -136,6 +146,21 @@ export function createItems(deps) {
   }
 
   /**
+   * 받는 쪽의 현재 레벨(중력 속도)에 반비례하도록 프리즈 지속시간을 축소한다.
+   * 레벨이 높아 중력 간격이 짧을수록(=속도가 빠를수록) 같은 3초라도 자동으로
+   * 쌓이는 피스 수가 늘어 치명적이므로, 중력 배율만큼 지속시간을 줄이되
+   * MIN_FREEZE_DURATION_MS 밑으로는 내려가지 않게 한다.
+   * @param {number} baseDuration 서버/기본 정의 기준 지속시간(ms, 보통 레벨1 기준 3000)
+   * @returns {number} 실제 적용할 지속시간(ms)
+   */
+  function computeFreezeDuration(baseDuration) {
+    const level = typeof deps.game.getLevel === 'function' ? deps.game.getLevel() : 1;
+    const gravityMs = Math.max(GRAVITY_MIN_MS, GRAVITY_BASE_MS - (level - 1) * GRAVITY_DECREMENT_MS);
+    const speedRatio = gravityMs / GRAVITY_BASE_MS; // 레벨1: 1.0 → 레벨10+: 0.1
+    return Math.max(MIN_FREEZE_DURATION_MS, Math.round(baseDuration * speedRatio));
+  }
+
+  /**
    * 프리즈(조작 차단) 효과를 적용한다. duration 후 자동 해제.
    * 중력은 게임 루프가 계속 처리하므로 별도 처리 없음.
    * @param {number} duration ms
@@ -202,11 +227,11 @@ export function createItems(deps) {
   // ── 공개 API ──────────────────────────────────────────────────
 
   /**
-   * 슬롯 사용 (Z/X/C 또는 클릭).
+   * 슬롯 사용 (숫자 1/2/3 또는 클릭).
    * 프리즈는 블록 조작만 차단하므로 키보드와 슬롯 클릭 모두 아이템 사용을 허용한다.
    * @param {number} slotIndex 0~2
    */
-  function useItem(slotIndex) {
+  function useItem(slotIndex, targetPlayerId = null) {
     if (slotIndex < 0 || slotIndex >= SLOT_COUNT) return;
     const itemId = itemSlots[slotIndex];
     if (!itemId) return;
@@ -228,7 +253,7 @@ export function createItems(deps) {
     // 공격형은 상대에게 ITEM_EFFECT 중계, 방어형(shield/line_clear)은 slotCount만 차감.
     // line_clear가 sendItemUse를 생략하던 버그: slotCount가 차감되지 않아
     // MAX_ITEM_SLOTS 도달 후 아이템이 더 이상 지급되지 않는 문제를 유발했음.
-    deps.net.sendItemUse(itemId, slotIndex);
+    deps.net.sendItemUse(itemId, slotIndex, targetPlayerId);
 
     // 슬롯 비우기
     itemSlots[slotIndex] = null;
@@ -278,7 +303,7 @@ export function createItems(deps) {
         applyDark(duration || def.duration);
         break;
       case 'freeze':
-        applyFreeze(duration || def.duration);
+        applyFreeze(computeFreezeDuration(duration || def.duration));
         break;
       default:
         // line_clear / shield는 자기 자신에게만 적용되므로 ITEM_EFFECT로 도착할 일이 없음
@@ -337,6 +362,10 @@ export function createItems(deps) {
     reset,
     /** 외부에서 슬롯 상태 조회 (테스트용). */
     getSlots() { return itemSlots.slice(); },
+    getItemDefinition(slotIndex) {
+      const id = itemSlots[slotIndex];
+      return id ? ITEMS[id] : null;
+    },
     /** 외부에서 shield 활성 조회 (테스트용). */
     isShieldActive() { return shieldActive; },
     /** 슬롯이 가득 찼는지 (테스트용). */

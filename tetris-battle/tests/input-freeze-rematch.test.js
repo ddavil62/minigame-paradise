@@ -131,14 +131,14 @@ await run('프리즈 중 블록 조작은 모두 차단', () => {
   h.input.disable();
 });
 
-await run('프리즈 중 Z/X/C 아이템은 각 1회 사용되고 repeat는 무시', () => {
+await run('프리즈 중 숫자 1/2/3 아이템은 각 1회 사용되고 repeat는 무시', () => {
   const h = createHarness();
   h.items.grantItem('dark', 0);
   h.items.grantItem('freeze', 1);
   h.items.grantItem('garbage_bomb', 2);
   h.input.enable();
   h.input.setFrozen(true);
-  for (const key of ['z', 'X', 'c']) {
+  for (const key of ['1', '2', '3']) {
     assert.equal(h.fire('keydown', key).defaultPrevented, true);
     h.fire('keydown', key, true);
   }

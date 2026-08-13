@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     myReadyMark: document.getElementById('my-ready-mark'),
     oppReadyMark: document.getElementById('opp-ready-mark'),
     btnReady: document.getElementById('btn-ready'),
+    waitingRoster: document.getElementById('waiting-roster'),
     // 닉네임 게이트
     nameGateInline: document.getElementById('name-gate-inline'),
     inlineNameInput: document.getElementById('inline-name-input'),
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     boardCanvas: document.getElementById('board-canvas'),
     nextCanvas: document.getElementById('next-canvas'),
     holdCanvas: document.getElementById('hold-canvas'),
-    opponentCanvas: document.getElementById('opponent-canvas'),
+    opponentsGrid: document.getElementById('opponents-grid'),
     scoreEl: document.getElementById('score'),
     levelEl: document.getElementById('level'),
     linesEl: document.getElementById('lines'),
@@ -112,6 +113,56 @@ document.addEventListener('DOMContentLoaded', () => {
   let input = null;
   let items = null;
   let resultShown = false; // P2-1: 결과 화면 중복 표시 방지 가드
+  let currentPlayers = [];
+  let eliminated = false;
+  let pendingItemSlot = null;
+  let pendingItemTimer = 0;
+
+  function renderRoster(players) {
+    currentPlayers = players;
+    if (els.waitingRoster) {
+      els.waitingRoster.replaceChildren(...players.map((player) => {
+        const row = document.createElement('div');
+        row.className = `waiting-player${player.ready ? ' ready' : ''}`;
+        row.textContent = `${player.number}. ${player.name} · ${player.ready ? '준비 완료' : '대기 중'}`;
+        return row;
+      }));
+    }
+    ui.syncOpponents(players, net?.getMyId());
+    const me = players.find((player) => player.id === net?.getMyId());
+    if (me) els.playerLabel.textContent = `나 (${me.number}번 · ${me.name})`;
+    els.opponentStatus.textContent = `${Math.max(0, players.length - 1)}명`;
+  }
+
+  function useItemDigit(slotIndex) {
+    if (!items || eliminated) return;
+    if (pendingItemSlot !== null) {
+      clearTimeout(pendingItemTimer);
+      const targetNumber = slotIndex + 1;
+      const target = currentPlayers.find((player) => player.number === targetNumber && !player.eliminated);
+      const chosenSlot = pendingItemSlot;
+      pendingItemSlot = null;
+      if (!target || target.id === net.getMyId()) {
+        ui.showToast('유효한 생존 상대 번호를 입력하세요.', 'error');
+        return;
+      }
+      items.useItem(chosenSlot, target.id);
+      return;
+    }
+    const def = items.getItemDefinition(slotIndex);
+    if (!def) return;
+    const aliveOpponents = currentPlayers.filter((player) => player.id !== net.getMyId() && !player.eliminated);
+    if (def.type === 'defense' || aliveOpponents.length === 1) {
+      items.useItem(slotIndex, aliveOpponents[0]?.id || null);
+      return;
+    }
+    pendingItemSlot = slotIndex;
+    ui.showToast(`${slotIndex + 1}번 아이템: 대상 플레이어 번호를 입력하세요.`);
+    pendingItemTimer = setTimeout(() => {
+      pendingItemSlot = null;
+      ui.showToast('대상 입력 시간이 초과되었습니다.', 'error');
+    }, 600);
+  }
 
   const game = createGame({
     renderBoard: ui.renderBoard,
@@ -145,8 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // hasName=true인 경우 network.js가 이미 자동 JOIN을 보냈다.
     },
-    onJoined: ({ playerId, waiting }) => {
-      els.playerLabel.textContent = playerId === 'p1' ? '나 (P1)' : '나 (P2)';
+    onJoined: ({ playerId, waiting, players }) => {
+      renderRoster(players);
       if (waiting) {
         ui.setStatus('상대방을 기다리는 중...');
         els.opponentStatus.textContent = '대기 중';
@@ -164,11 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
       }
-      // 상대가 이미 있는 방에 입장(P2) → 바로 READY 전송, ready 패널 불필요
-      if (!waiting) {
-        updateWaitingTitle(true);
-        autoReady();
-      }
+      if (els.readyPanel) els.readyPanel.hidden = false;
+      if (els.btnReady) els.btnReady.hidden = false;
       showScreen('waiting');
     },
     onStart: (countdown) => {
@@ -176,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showScreen('game');
       ui.hideResult();
       resultShown = false; // P2-1: 결과 표시 가드 리셋
+      eliminated = false;
       els.rematchBtn.classList.add('hidden');
       ui.setStatus('');
       els.opponentStatus.textContent = '대전 중';
@@ -237,15 +286,28 @@ document.addEventListener('DOMContentLoaded', () => {
         showOpponentLeftBanner();
       }
     },
-    onReadyState: () => {
-      // 상대 입장이 확인되면 바로 READY 전송 — 준비 버튼 불필요
-      updateWaitingTitle(true);
-      if (els.waitingSolo) els.waitingSolo.classList.add('hidden');
-      autoReady();
+    onReadyState: ({ myReady, opponentReady, players }) => {
+      renderRoster(players);
+      updateReadyUI(myReady, opponentReady);
+      updateWaitingTitle(players.length >= 2);
+      if (players.length >= 2 && els.waitingSolo) els.waitingSolo.classList.add('hidden');
+      if (els.btnReady) els.btnReady.disabled = myReady;
     },
     onOpponentLeft: ({ name }) => {
       readySent = false; // 상대가 나가면 초기화 — 새 상대 입장 시 autoReady 재발동
       showOpponentLeftBanner(name);
+    },
+    onRoomState: ({ players }) => {
+      renderRoster(players);
+    },
+    onPlayerEliminated: ({ playerId }) => {
+      if (playerId !== net.getMyId()) return;
+      eliminated = true;
+      game.stop();
+      if (input) input.disable();
+      if (items) items.reset();
+      ui.setItemSlotsInteractive(false);
+      ui.setStatus('탈락 · 관전 중');
     },
     onRematchStatus: ({ p1Ready, p2Ready }) => {
       const myId = net.getMyId();
@@ -266,14 +328,19 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[main] 아이템 효과 수신: ${itemId} (${duration}ms)`);
       if (items) items.applyEffect(itemId, duration);
     },
-    onShieldBlock: ({ itemId, isDefender }) => {
+    onItemUseRejected: ({ itemId, slotIndex }) => {
+      if (items) items.grantItem(itemId, slotIndex);
+      ui.showToast('대상이 유효하지 않아 아이템을 사용하지 않았습니다.', 'error');
+    },
+    onShieldBlock: ({ itemId, isDefender, playerId }) => {
       console.log(`[main] 방어막으로 ${itemId} 차단됨 (방어자=${isDefender})`);
       if (items) items.onShieldBlocked(itemId, isDefender);
+      if (!isDefender) ui.setOppShieldBadge(false, playerId);
     },
-    onShieldActive: () => {
+    onShieldActive: ({ playerId }) => {
       // 상대방이 방어막 발동 — 상대 미니맵 위에 배지 표시
       console.log('[main] 상대방 방어막 활성화');
-      if (ui) ui.setOppShieldBadge(true);
+      if (ui) ui.setOppShieldBadge(true, playerId);
     },
   });
 
@@ -287,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hardDrop: () => game.hardDrop(),
     hold: () => game.hold(),
     useItem: (slot) => {
-      if (items) items.useItem(slot);
+      useItemDigit(slot);
     },
   });
 
@@ -297,9 +364,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── 아이템 시스템 (Phase 2) ──
   items = createItems({ game, input, net, ui });
   // 슬롯 클릭으로도 아이템 사용 가능 (UI에서 이벤트 등록)
-  ui.bindItemSlotClick((slot) => items.useItem(slot));
+  ui.bindItemSlotClick((slot) => useItemDigit(slot));
   // 초기 슬롯 렌더링 (모두 비어있음)
   items.reset();
+
+  if (els.btnReady) {
+    els.btnReady.addEventListener('click', () => {
+      if (readySent) return;
+      readySent = true;
+      els.btnReady.disabled = true;
+      net.ready();
+    });
+  }
 
   // ── 버튼 이벤트 ── (준비 버튼 제거 — 자동 READY로 대체)
 

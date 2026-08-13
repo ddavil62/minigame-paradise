@@ -149,6 +149,8 @@ export function createNetwork(handlers) {
         // Phase 4 C-2: 서버가 알려준 호스트 LAN URL을 함께 전달 (없으면 빈 문자열).
         handlers.onJoined({
           playerId: msg.playerId,
+          playerNumber: msg.playerNumber,
+          players: Array.isArray(msg.players) ? msg.players : [],
           waiting: msg.waiting,
           hostUrl: typeof msg.hostUrl === 'string' ? msg.hostUrl : '',
           roomId: msg.roomId || '',
@@ -162,6 +164,8 @@ export function createNetwork(handlers) {
         break;
       case 'OPPONENT_BOARD':
         handlers.onOpponentBoard({
+          playerId: msg.playerId,
+          playerName: msg.playerName || '',
           height: msg.height || 0,
           stack: msg.stack || [],
           cells: Array.isArray(msg.cells) ? msg.cells : [],
@@ -182,7 +186,21 @@ export function createNetwork(handlers) {
           handlers.onReadyState({
             myReady: !!msg.myReady,
             opponentReady: !!msg.opponentReady,
+            players: Array.isArray(msg.players) ? msg.players : [],
           });
+        }
+        break;
+      case 'ROOM_STATE':
+        if (typeof handlers.onRoomState === 'function') {
+          handlers.onRoomState({
+            phase: msg.phase || 'waiting',
+            players: Array.isArray(msg.players) ? msg.players : [],
+          });
+        }
+        break;
+      case 'PLAYER_ELIMINATED':
+        if (typeof handlers.onPlayerEliminated === 'function') {
+          handlers.onPlayerEliminated({ playerId: msg.playerId, reason: msg.reason || 'topout' });
         }
         break;
       case 'OPPONENT_LEFT':
@@ -210,19 +228,29 @@ export function createNetwork(handlers) {
           });
         }
         break;
+      case 'ITEM_USE_REJECTED':
+        if (handlers.onItemUseRejected) {
+          handlers.onItemUseRejected({
+            itemId: msg.itemId,
+            slotIndex: Number.isInteger(msg.slotIndex) ? msg.slotIndex : -1,
+            reason: msg.reason || 'rejected',
+          });
+        }
+        break;
       case 'SHIELD_BLOCK':
         if (handlers.onShieldBlock) {
           handlers.onShieldBlock({
             itemId: msg.itemId,
             // 최신 서버의 명시적 역할은 보존하고, 레거시/비정상 값은 미지정으로 넘긴다.
             isDefender: typeof msg.isDefender === 'boolean' ? msg.isDefender : undefined,
+            playerId: msg.playerId || '',
           });
         }
         break;
       case 'SHIELD_ACTIVE':
         // 상대방이 방어막을 사용했음 — 상대 보드에 배지 표시
         if (handlers.onShieldActive) {
-          handlers.onShieldActive();
+          handlers.onShieldActive({ playerId: msg.playerId || '' });
         }
         break;
       default:
@@ -280,6 +308,8 @@ export function createNetwork(handlers) {
       location.href = `${base}?mode=ai`;
     },
     // Phase 2 placeholder
-    sendItemUse(itemId, slotIndex) { send({ type: 'ITEM_USE', itemId, slotIndex }); },
+    sendItemUse(itemId, slotIndex, targetPlayerId = null) {
+      send({ type: 'ITEM_USE', itemId, slotIndex, targetPlayerId });
+    },
   };
 }

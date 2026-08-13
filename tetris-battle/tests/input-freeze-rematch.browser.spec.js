@@ -51,8 +51,8 @@ test('프리즈 중 아이템 사용과 5회 재대결 후 키 입력이 정상 
     items.grantItem('shield', 1);
     items.applyEffect('freeze', 10_000);
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', cancelable: true }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', repeat: true, cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', repeat: true, cancelable: true }));
     items.useItem(1); // 실제 슬롯 클릭과 동일한 공개 경로
 
     const rematches = [];

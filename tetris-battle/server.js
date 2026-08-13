@@ -24,6 +24,8 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 
 /** 라인 클리어 한 번당 아이템 지급 확률(2026-07-20 상향 결정 복원). */
 export const ITEM_GRANT_PROB = 0.8;
+export const MIN_PLAYERS = 2;
+export const MAX_PLAYERS = 6;
 
 /**
  * 아이템 지급 난수값이 80% 당첨 구간에 포함되는지 판정한다.
@@ -128,7 +130,7 @@ function generateRoomId() {
  * @returns {Room}
  */
 function createRoom(id) {
-  const room = { id, players: [], botChild: null, _botSpawnPending: false };
+  const room = { id, players: [], botChild: null, _botSpawnPending: false, phase: 'waiting' };
   roomMap.set(id, room);
   return room;
 }
@@ -160,7 +162,7 @@ function findWaitingRoom() {
   for (const room of roomMap.values()) {
     // AI 전용 룸(_botSpawnPending=true)은 봇 spawn 대기 중이므로 일반 사용자의
     // 자동 합류 대상에서 제외한다 (DEFECT-1: 200ms 레이스 윈도우 차단).
-    if (room.players.length === 1 && !room._botSpawnPending) return room;
+    if (room.phase === 'waiting' && room.players.length < MAX_PLAYERS && !room._botSpawnPending) return room;
   }
   return null;
 }
@@ -217,10 +219,7 @@ function killBotChild(room) {
  * @returns {boolean}
  */
 function isRoomPlaying(room) {
-  if (room.players.length < 2) return false;
-  if (!room.players.every((p) => p.ready)) return false;
-  if (room.players.some((p) => p.gameOver)) return false;
-  return true;
+  return room.phase === 'playing';
 }
 
 /**
@@ -241,7 +240,7 @@ function sweepZombiesInRoom(room) {
  * @param {Room} room
  */
 function clearGameOverRoom(room) {
-  if (room.players.length > 0 && room.players.some((p) => p.gameOver)) {
+  if (room.players.length > 0 && room.phase === 'finished') {
     console.log(`[server] 룸 ${room.id}: 게임 종료 방치 — 초기화`);
     for (const p of room.players) {
       try { p.ws.close(); } catch { /* 무시 */ }
@@ -275,6 +274,7 @@ function pickRandomItem() {
  * @returns {void}
  */
 function resetRoomFlags(room) {
+  room.phase = 'waiting';
   for (const p of room.players) {
     p.ready = false;
     p.shieldActive = false;
@@ -283,6 +283,7 @@ function resetRoomFlags(room) {
     p.lastClearEventId = 0;
     p.rematchReady = false;
     p.gameOver = false;
+    p.lastItemTargetId = null;
   }
 }
 
@@ -329,6 +330,51 @@ function sendTo(player, payload) {
   }
 }
 
+function publicPlayers(room) {
+  return room.players
+    .filter((p) => p.name)
+    .map((p) => ({
+      id: p.id,
+      number: Number(p.id.slice(1)),
+      name: p.name,
+      ready: p.ready,
+      eliminated: p.gameOver,
+    }));
+}
+
+function broadcastRoomState(room) {
+  broadcastAll(room, {
+    type: 'ROOM_STATE',
+    phase: room.phase,
+    players: publicPlayers(room),
+  });
+}
+
+function livingOpponents(room, player) {
+  return room.players.filter((p) => p !== player && !p.gameOver && p.ws.readyState === WebSocket.OPEN);
+}
+
+function pickGarbageTarget(room, player) {
+  const candidates = livingOpponents(room, player);
+  if (candidates.length === 0) return null;
+  const recent = candidates.find((p) => p.id === player.lastItemTargetId);
+  return recent || candidates[Math.floor(random() * candidates.length)];
+}
+
+function finishIfLastSurvivor(room, reason = 'topout') {
+  if (room.phase !== 'playing') return false;
+  const alive = room.players.filter((p) => !p.gameOver && p.ws.readyState === WebSocket.OPEN);
+  if (alive.length > 1) return false;
+  room.phase = 'finished';
+  broadcastAll(room, {
+    type: 'GAME_RESULT',
+    winner: alive[0]?.id || null,
+    reason: alive.length === 0 ? 'simultaneous_topout' : reason,
+  });
+  broadcastRoomState(room);
+  return true;
+}
+
 /**
  * 각 플레이어에게 개별 관점으로 READY_STATE를 전송한다 (오목 파일럿 패턴).
  * myReady: 자기 자신의 ready, opponentReady: 상대의 ready.
@@ -338,11 +384,11 @@ function sendTo(player, payload) {
 function broadcastReadyState(room) {
   for (const me of room.players) {
     if (me.ws.readyState !== 1) continue;
-    const opp = room.players.find((p) => p.id !== me.id);
     sendTo(me, {
       type: 'READY_STATE',
       myReady: me.ready,
-      opponentReady: opp ? opp.ready : false,
+      opponentReady: room.players.filter((p) => p !== me).every((p) => p.ready),
+      players: publicPlayers(room),
     });
   }
 }
@@ -401,7 +447,7 @@ wss.on('connection', (ws, req) => {
       sweepZombiesInRoom(room);
       clearGameOverRoom(room);
     }
-    if (room.players.length >= 2) {
+    if (room.phase !== 'waiting' || room.players.length >= MAX_PLAYERS) {
       ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
       ws.close();
       console.log(`[server] 연결 거절: 룸 ${roomParam} 정원 초과`);
@@ -421,7 +467,7 @@ wss.on('connection', (ws, req) => {
         sweepZombiesInRoom(candidate);
         clearGameOverRoom(candidate);
         // 정리 후 인원이 여전히 1명이면 합류, 아니면 룸이 비었거나 만석이므로 스킵
-        if (candidate.players.length === 1) {
+        if (candidate.phase === 'waiting' && candidate.players.length < MAX_PLAYERS) {
           room = candidate;
         } else if (candidate.players.length === 0) {
           // 좀비 정리 후 빈 룸이 됨 → 소멸 후 새 룸 생성
@@ -438,7 +484,13 @@ wss.on('connection', (ws, req) => {
 
   // 비어있는 슬롯 ID에 할당 — players.length 기반은 재접속 시 ID 충돌 발생 (P0-B fix)
   const usedIds = new Set(room.players.map((p) => p.id));
-  const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
+  const playerId = Array.from({ length: MAX_PLAYERS }, (_, i) => `p${i + 1}`)
+    .find((id) => !usedIds.has(id));
+  if (!playerId) {
+    ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
+    ws.close();
+    return;
+  }
   /** @type {Player} */
   const player = {
     id: playerId,
@@ -450,6 +502,7 @@ wss.on('connection', (ws, req) => {
     lastClearEventId: 0,
     rematchReady: false,
     gameOver: false,
+    lastItemTargetId: null,
     mode: wsMode,
     ws,
   };
@@ -457,7 +510,7 @@ wss.on('connection', (ws, req) => {
   // 역참조: ws → room (close 핸들러에서 룸 추적용)
   ws._room = room;
 
-  console.log(`[server] ${playerId} 연결됨 (룸=${room.id}, 현재 인원: ${room.players.length}/2)`);
+  console.log(`[server] ${playerId} 연결됨 (룸=${room.id}, 현재 인원: ${room.players.length}/${MAX_PLAYERS})`);
 
   // ── 메시지 라우터 (기존과 동일, players → room.players, 함수 호출에 room 추가) ──
   ws.on('message', (data) => {
@@ -484,7 +537,9 @@ wss.on('connection', (ws, req) => {
         sendTo(player, {
           type: 'JOINED',
           playerId: player.id,
-          waiting: room.players.length < 2,
+          waiting: room.players.length < MIN_PLAYERS,
+          playerNumber: Number(player.id.slice(1)),
+          players: publicPlayers(room),
           // 멀티룸: hostUrl에 ?room=<roomId>를 포함시켜 초대 링크가 특정 룸을 가리키도록 한다.
           hostUrl: HOST_URL ? `${HOST_URL}/tetris-battle/?room=${room.id}` : '',
           roomId: room.id,
@@ -504,6 +559,8 @@ wss.on('connection', (ws, req) => {
           }, 200);
         }
         // 두 명 모두 입장 시 양쪽에 상대 입장 알림 가능 (현재는 JOINED만 사용)
+        broadcastRoomState(room);
+        broadcastReadyState(room);
         break;
 
       case 'READY':
@@ -513,8 +570,10 @@ wss.on('connection', (ws, req) => {
         console.log(`[server] ${player.id} READY (룸=${room.id})`);
         broadcastReadyState(room);
         // 두 명 모두 READY면 카운트다운 시작
-        if (room.players.length === 2 && room.players.every((p) => p.ready)) {
+        if (room.players.length >= MIN_PLAYERS && room.players.every((p) => p.ready)) {
+          room.phase = 'playing';
           console.log(`[server] 양쪽 READY → 게임 시작 카운트다운 (룸=${room.id})`);
+          broadcastRoomState(room);
           broadcastAll(room, { type: 'START', countdown: 3 });
         }
         break;
@@ -537,10 +596,12 @@ wss.on('connection', (ws, req) => {
 
         // lines>0일 때만 가비지를 상대에 중계한다.
         if (safeLines > 0) {
-          broadcastOthers(room, player.id, {
+          const target = pickGarbageTarget(room, player);
+          sendTo(target, {
             type: 'GARBAGE_RECV',
             lines: safeLines,
             combo: safeCombo,
+            fromPlayerId: player.id,
           });
         }
         // 콤보 수와 무관하게 고유 라인 클리어 이벤트마다 80% 확률로 지급한다.
@@ -561,6 +622,8 @@ wss.on('connection', (ws, req) => {
           : [];
         broadcastOthers(room, player.id, {
           type: 'OPPONENT_BOARD',
+          playerId: player.id,
+          playerName: player.name,
           height: msg.height || 0,
           stack: msg.stack || [],
           cells: safeCells,
@@ -583,20 +646,29 @@ wss.on('connection', (ws, req) => {
         }
         // 서버 슬롯에서 실제 사용 위치를 비워 다음 지급이 그 빈칸을 재사용하게 한다.
         const slotIndex = Number.isInteger(msg.slotIndex) ? msg.slotIndex : -1;
-        if (slotIndex >= 0 && slotIndex < MAX_ITEM_SLOTS) {
-          player.itemSlots[slotIndex] = null;
-          player.slotCount = player.itemSlots.filter(Boolean).length;
+        if (slotIndex < 0 || slotIndex >= MAX_ITEM_SLOTS || player.itemSlots[slotIndex] !== itemId) break;
+        const isSelfItem = itemId === 'shield' || itemId === 'line_clear';
+        const livingTargets = livingOpponents(room, player);
+        let opp = null;
+        if (!isSelfItem) {
+          opp = livingTargets.length === 1
+            ? livingTargets[0]
+            : livingTargets.find((p) => p.id === msg.targetPlayerId);
+          if (!opp) {
+            sendTo(player, { type: 'ITEM_USE_REJECTED', itemId, slotIndex, reason: 'invalid_target' });
+            break;
+          }
+          player.lastItemTargetId = opp.id;
         }
-
-        const opp = room.players.find((p) => p.id !== player.id);
-        if (!opp) break;
+        player.itemSlots[slotIndex] = null;
+        player.slotCount = player.itemSlots.filter(Boolean).length;
 
         if (itemId === 'shield') {
           // 방어막은 자기 자신에게 적용 (서버가 권위적으로 추적)
           player.shieldActive = true;
           console.log(`[server] ${player.id} 방어막 활성화 (룸=${room.id})`);
           // 상대에게 방어막 활성 알림 (상대 보드에 배지 표시용)
-          sendTo(opp, { type: 'SHIELD_ACTIVE' });
+          broadcastOthers(room, player.id, { type: 'SHIELD_ACTIVE', playerId: player.id });
           break;
         }
         if (itemId === 'line_clear') {
@@ -609,14 +681,15 @@ wss.on('connection', (ws, req) => {
           // 방어막에 차단됨 → 수신자별 역할을 명시해 양쪽 방어막 동시 활성도 안전하게 구분한다.
           opp.shieldActive = false;
           console.log(`[server] ${opp.id} 방어막 발동: ${itemId} 차단 (룸=${room.id})`);
-          sendTo(player, { type: 'SHIELD_BLOCK', itemId, isDefender: false });
-          sendTo(opp, { type: 'SHIELD_BLOCK', itemId, isDefender: true });
+          sendTo(player, { type: 'SHIELD_BLOCK', itemId, isDefender: false, playerId: opp.id });
+          sendTo(opp, { type: 'SHIELD_BLOCK', itemId, isDefender: true, playerId: opp.id });
         } else {
           // 정상 전달
           sendTo(opp, {
             type: 'ITEM_EFFECT',
             itemId,
             duration: ITEM_DURATIONS[itemId] || 0,
+            fromPlayerId: player.id,
           });
         }
         break;
@@ -628,6 +701,14 @@ wss.on('connection', (ws, req) => {
           break;
         }
         player.gameOver = true;
+        broadcastAll(room, {
+          type: 'PLAYER_ELIMINATED',
+          playerId: player.id,
+          reason: 'topout',
+        });
+        broadcastRoomState(room);
+        finishIfLastSurvivor(room, 'topout');
+        return;
 
         // P2-1: 상대가 이미 topout한 경우 → 무승부(double topout). 1회만 브로드캐스트.
         const alreadyOut = room.players.find((p) => p.id !== player.id && p.gameOver);
@@ -658,8 +739,9 @@ wss.on('connection', (ws, req) => {
           type: 'REMATCH_STATUS',
           p1Ready: room.players.find((p) => p.id === 'p1')?.rematchReady || false,
           p2Ready: room.players.find((p) => p.id === 'p2')?.rematchReady || false,
+          players: room.players.map((p) => ({ id: p.id, ready: p.rematchReady })),
         });
-        if (room.players.length === 2 && room.players.every((p) => p.rematchReady)) {
+        if (room.players.length >= MIN_PLAYERS && room.players.every((p) => p.rematchReady)) {
           console.log(`[server] 양쪽 REMATCH → 새 게임 시작 (룸=${room.id})`);
           resetRoomFlags(room);
           // Phase 3 LOW-2: resetRoomFlags가 ready를 false로 되돌리지만 재대결 START 직후에는
@@ -668,6 +750,8 @@ wss.on('connection', (ws, req) => {
           for (const p of room.players) {
             p.ready = true;
           }
+          room.phase = 'playing';
+          broadcastRoomState(room);
           broadcastAll(room, { type: 'START', countdown: 3 });
         }
         break;
@@ -690,6 +774,38 @@ wss.on('connection', (ws, req) => {
       console.log(`[server] ${player.id} 지연 close 무시 (이미 교체된 슬롯)`);
       return;
     }
+    const leaverNameNow = player.name || '(알 수 없음)';
+    if (r.phase === 'waiting') {
+      r.players = r.players.filter((p) => p !== player);
+      broadcastAll(r, { type: 'OPPONENT_LEFT', name: leaverNameNow, playerId: player.id });
+      broadcastRoomState(r);
+      broadcastReadyState(r);
+      if (r.players.length === 0) {
+        killBotChild(r);
+        roomMap.delete(r.id);
+      }
+      return;
+    }
+    if (r.phase === 'playing') {
+      player.gameOver = true;
+      broadcastAll(r, { type: 'PLAYER_ELIMINATED', playerId: player.id, reason: 'disconnect' });
+      r.players = r.players.filter((p) => p !== player);
+      broadcastAll(r, { type: 'OPPONENT_LEFT', name: leaverNameNow, playerId: player.id });
+      broadcastRoomState(r);
+      finishIfLastSurvivor(r, 'disconnect');
+      if (r.players.length === 0) {
+        killBotChild(r);
+        roomMap.delete(r.id);
+      }
+      return;
+    }
+    r.players = r.players.filter((p) => p !== player);
+    broadcastRoomState(r);
+    if (r.players.length === 0) {
+      killBotChild(r);
+      roomMap.delete(r.id);
+    }
+    return;
     // 원인 B 수정: 봇 WS가 종료될 때 게임이 아직 진행 중이고 봇이 gameOver 상태가 아니면
     // 서버가 직접 봇의 게임오버를 처리한다.
     // GAME_OVER 메시지가 WS 불안정 타이밍에 DROP된 경우도 이 경로로 복구된다.

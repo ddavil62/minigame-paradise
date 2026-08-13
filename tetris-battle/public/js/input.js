@@ -26,7 +26,7 @@ export const ARR_MS = 33;
  * @param {() => void} actions.rotateCCW
  * @param {() => void} actions.hardDrop
  * @param {() => void} actions.hold
- * @param {(slot: number) => void} [actions.useItem] - Phase 2 아이템 사용 (slot 0=Z, 1=X, 2=C)
+ * @param {(slot: number) => void} [actions.useItem] - 아이템/대상 숫자 입력 (0=1번 키 ... 5=6번 키)
  * @returns {{ enable: () => void, disable: () => void, setFrozen: (v: boolean) => void }}
  */
 export function createInput(actions) {
@@ -99,8 +99,7 @@ export function createInput(actions) {
    * @returns {number} 슬롯 번호. 아이템 키가 아니면 -1
    */
   function getItemSlot(key) {
-    const normalized = typeof key === 'string' ? key.toLowerCase() : '';
-    return normalized === 'z' ? 0 : normalized === 'x' ? 1 : normalized === 'c' ? 2 : -1;
+    return /^[1-6]$/.test(key) ? Number(key) - 1 : -1;
   }
 
   /**
@@ -149,11 +148,7 @@ export function createInput(actions) {
       case 'X':
         // Phase 1: 회전 (X는 회전과 공유)
         // Phase 2 활성화 시 X는 슬롯 1 아이템 사용으로 분리
-        if (ITEMS_ENABLED) {
-          actions.useItem?.(1);
-        } else {
-          actions.rotateCW();
-        }
+        actions.rotateCW();
         return true;
       case 'Control':
         actions.rotateCCW();
@@ -169,21 +164,13 @@ export function createInput(actions) {
       case 'Z':
         // Phase 1: 반시계 회전
         // Phase 2 활성화 시: 슬롯 0 아이템 사용
-        if (ITEMS_ENABLED) {
-          actions.useItem?.(0);
-        } else {
-          actions.rotateCCW();
-        }
+        actions.rotateCCW();
         return true;
       case 'c':
       case 'C':
         // Phase 1: 홀드 보조 키
         // Phase 2 활성화 시: 슬롯 2 아이템 사용
-        if (ITEMS_ENABLED) {
-          actions.useItem?.(2);
-        } else {
-          actions.hold();
-        }
+        actions.hold();
         return true;
       default:
         return false;

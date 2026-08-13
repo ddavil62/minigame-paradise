@@ -351,6 +351,19 @@ body {
   justify-content: center;
 }
 
+.waiting-roster { display: grid; gap: 6px; margin: 12px 0; text-align: left; }
+.waiting-player { padding: 7px 10px; border: 1px solid var(--board-border); border-radius: 4px; color: var(--hud-text); }
+.waiting-player.ready { border-color: var(--accent); color: var(--accent); }
+
+.opponents-area { flex-direction: column; align-items: center; gap: 8px; }
+.opponents-grid { display: grid; grid-template-columns: repeat(3, auto); gap: 12px; }
+.opponent-card { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.opponent-card-label { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--hud-text); }
+.minimap canvas { display: block; height: min(180px, calc(var(--board-h) * 0.3)); width: auto; aspect-ratio: 1 / 2; background: var(--bg); box-shadow: 0 0 8px rgba(0,0,0,0.4); }
+.opponent-eliminated { position: absolute; inset: 0; display: none; place-items: center; background: rgba(8,8,18,0.72); color: #ff6b7a; font-weight: 800; letter-spacing: 2px; }
+.opponent-card.eliminated .opponent-eliminated { display: grid; }
+.opponent-card.eliminated canvas { filter: grayscale(1) brightness(0.45); }
+
 .item-rule {
   margin: -2px 0 7px;
   color: var(--accent);
@@ -1043,12 +1056,15 @@ body {
     font-size: 48px;
   }
 
-  .player-area.opponent {
+  .opponents-area {
     flex-direction: row;
     justify-content: center;
     gap: 10px;
     width: 100%;
   }
+
+  .opponents-grid { grid-template-columns: repeat(2, auto); gap: 8px; }
+  .minimap canvas { height: 140px; }
 
   .game-footer {
     padding: 5px 8px;

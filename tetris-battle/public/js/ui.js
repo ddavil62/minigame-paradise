@@ -33,7 +33,7 @@ export function createUI(els) {
   const boardCtx = els.boardCanvas.getContext('2d');
   const nextCtx = els.nextCanvas.getContext('2d');
   const holdCtx = els.holdCanvas.getContext('2d');
-  const oppCtx = els.opponentCanvas ? els.opponentCanvas.getContext('2d') : null;
+  const opponentViews = new Map();
 
   // Phase 2 DOM 참조 (없을 수도 있는 환경에 대비해 안전하게 조회)
   const itemSlotEls = Array.from(document.querySelectorAll('.item-slot'));
@@ -41,7 +41,7 @@ export function createUI(els) {
   const darkOverlayEl = document.getElementById('dark-overlay');
   const freezeBadgeEl = document.getElementById('freeze-badge');
   const shieldFrameEl = document.getElementById('shield-frame');
-  const oppShieldBadgeEl = document.getElementById('opp-shield-badge');
+  const legacyOppShieldBadgeEl = document.getElementById('opp-shield-badge');
   // 토스트 DOM
   const toastEl = document.getElementById('toast');
 
@@ -54,9 +54,58 @@ export function createUI(els) {
   els.holdCanvas.width = 4 * PREVIEW_CELL;
   els.holdCanvas.height = 4 * PREVIEW_CELL;
   if (els.opponentCanvas) {
-    // 미니맵도 visible 영역(20줄)만 표시
     els.opponentCanvas.width = BOARD_WIDTH * MINIMAP_CELL;
     els.opponentCanvas.height = VISIBLE_HEIGHT * MINIMAP_CELL;
+    opponentViews.set('_legacy', {
+      card: els.opponentCanvas.closest?.('.player-area') || els.opponentCanvas,
+      canvas: els.opponentCanvas,
+      ctx: els.opponentCanvas.getContext('2d'),
+      shield: legacyOppShieldBadgeEl,
+    });
+  }
+
+  function syncOpponents(players, myPlayerId) {
+    if (!els.opponentsGrid) return;
+    const opponents = players.filter((player) => player.id !== myPlayerId);
+    const wanted = new Set(opponents.map((player) => player.id));
+    for (const [id, view] of opponentViews) {
+      if (!wanted.has(id)) {
+        view.card.remove();
+        opponentViews.delete(id);
+      }
+    }
+    for (const player of opponents) {
+      let view = opponentViews.get(player.id);
+      if (!view) {
+        const card = document.createElement('article');
+        card.className = 'opponent-card';
+        card.dataset.playerId = player.id;
+        const label = document.createElement('div');
+        label.className = 'opponent-card-label';
+        const wrap = document.createElement('div');
+        wrap.className = 'board-wrap minimap';
+        const canvas = document.createElement('canvas');
+        canvas.width = BOARD_WIDTH * MINIMAP_CELL;
+        canvas.height = VISIBLE_HEIGHT * MINIMAP_CELL;
+        const shield = document.createElement('div');
+        shield.className = 'opp-shield-badge';
+        shield.textContent = '🛡️';
+        if (opponentViews.size === 0) {
+          canvas.id = 'opponent-canvas';
+          shield.id = 'opp-shield-badge';
+        }
+        const eliminated = document.createElement('div');
+        eliminated.className = 'opponent-eliminated';
+        eliminated.textContent = '탈락';
+        wrap.append(canvas, shield, eliminated);
+        card.append(label, wrap);
+        els.opponentsGrid.appendChild(card);
+        view = { card, label, canvas, ctx: canvas.getContext('2d'), shield };
+        opponentViews.set(player.id, view);
+      }
+      view.label.textContent = `${player.number} · ${player.name}`;
+      view.card.classList.toggle('eliminated', !!player.eliminated);
+    }
   }
 
   /**
@@ -249,9 +298,11 @@ export function createUI(els) {
    * @param {{height: number, stack: number[], cells?: number[][]}} state
    */
   function renderOpponent(state) {
-    if (!oppCtx) return;
-    const w = els.opponentCanvas.width;
-    const h = els.opponentCanvas.height;
+    const view = opponentViews.get(state.playerId) || opponentViews.get('_legacy');
+    if (!view) return;
+    const { ctx: oppCtx, canvas } = view;
+    const w = canvas.width;
+    const h = canvas.height;
     oppCtx.fillStyle = COLOR_HEX[0];
     oppCtx.fillRect(0, 0, w, h);
     // 그리드 — visible 영역(20줄)만
@@ -329,7 +380,7 @@ export function createUI(els) {
     itemSlotEls.forEach((el, idx) => {
       const item = slots[idx];
       // 키 라벨(Z/X/C)은 항상 표시
-      const keyLabel = ['Z', 'X', 'C'][idx] || '';
+      const keyLabel = ['1', '2', '3'][idx] || '';
       el.classList.remove('filled', 'item-garbage', 'item-dark', 'item-freeze', 'item-lineclear', 'item-shield');
       if (item) {
         el.classList.add('filled', item.cssClass);
@@ -417,10 +468,12 @@ export function createUI(els) {
    * 상대방 방어막 활성 배지 표시/숨김.
    * @param {boolean} on
    */
-  function setOppShieldBadge(on) {
-    if (!oppShieldBadgeEl) return;
-    if (on) oppShieldBadgeEl.classList.add('active');
-    else oppShieldBadgeEl.classList.remove('active');
+  function setOppShieldBadge(on, playerId) {
+    if (playerId && opponentViews.has(playerId)) {
+      opponentViews.get(playerId).shield.classList.toggle('active', on);
+      return;
+    }
+    for (const view of opponentViews.values()) view.shield?.classList.toggle('active', on);
   }
 
   /**
@@ -543,6 +596,7 @@ export function createUI(els) {
     renderHold,
     renderHUD,
     renderOpponent,
+    syncOpponents,
     setStatus,
     showResult,
     hideResult,

@@ -43,6 +43,7 @@
       <div id="opponent-info" class="opponent-info hidden">
         <span id="opponent-name-label"></span>님과 대전
       </div>
+      <div id="waiting-roster" class="waiting-roster" aria-live="polite"></div>
 
       <!-- 양방향 READY 패널 — 자동 READY로 대체하여 숨김 -->
       <div id="ready-panel" class="ready-panel" hidden>
@@ -132,13 +133,9 @@
     </section>
 
     <!-- 우측: 상대방 미니맵 -->
-    <section class="player-area opponent">
-      <div class="opponent-label">상대방</div>
-      <div class="board-wrap minimap">
-        <canvas id="opponent-canvas"></canvas>
-        <!-- 상대방 방어막 활성 배지 -->
-        <div id="opp-shield-badge" class="opp-shield-badge">🛡️</div>
-      </div>
+    <section class="player-area opponent opponents-area">
+      <div class="opponent-label">상대 플레이어</div>
+      <div id="opponents-grid" class="opponents-grid"></div>
     </section>
   </main>
 
@@ -154,7 +151,7 @@
   </div>
 
   <footer class="game-footer">
-    <span>키: ←→ 이동 | ↑ 회전 | Ctrl 반회전 | ↓ 소프트드롭 | Space 하드드롭 | Shift 홀드 | Z/X/C 아이템</span>
+    <span>키: ←→ 이동 | ↑ 회전 | Ctrl 반회전 | ↓ 소프트드롭 | Space 하드드롭 | Shift 홀드 | 숫자 1/2/3 아이템</span>
   </footer>
 
   <!-- Phase 4 C-2: 토스트 메시지 (주소 복사 성공 등). JS가 .show 클래스로 토글. -->

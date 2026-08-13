@@ -335,6 +335,9 @@ export function createGame(deps) {
     /** 현재 상태를 반환. */
     getState() { return state; },
 
+    /** 현재 레벨을 반환 (아이템 지속시간 등 외부 계산용). */
+    getLevel() { return level; },
+
     /** 입력 모듈의 소프트 드롭 폴링 함수 등록. */
     bindSoftDropPoll(fn) { softDropHeldFn = fn; },
 

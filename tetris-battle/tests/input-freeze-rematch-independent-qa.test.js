@@ -106,16 +106,16 @@ async function verifyPlayerPerspective(playerLabel) {
     `${playerLabel}: 프리즈 중 블록 콜백 0회`,
   );
 
-  // Z/X/C는 프리즈보다 먼저 분기되고 repeat 및 빈 슬롯 연타는 송신하지 않아야 한다.
+  // 숫자 1/2/3은 프리즈보다 먼저 분기되고 repeat 및 빈 슬롯 연타는 송신하지 않아야 한다.
   h.items.grantItem('dark', 0);
   h.items.grantItem('freeze', 1);
   h.items.grantItem('garbage_bomb', 2);
-  for (const key of ['z', 'X', 'c']) {
+  for (const key of ['1', '2', '3']) {
     h.fire('keydown', key);
     h.fire('keydown', key, true);
     h.fire('keydown', key);
   }
-  assert.deepEqual(h.calls.sent.map((entry) => entry.itemId), ['dark', 'freeze', 'garbage_bomb'], `${playerLabel}: Z/X/C 각 1회 송신`);
+  assert.deepEqual(h.calls.sent.map((entry) => entry.itemId), ['dark', 'freeze', 'garbage_bomb'], `${playerLabel}: 숫자키 각 1회 송신`);
 
   // 슬롯 클릭 역시 프리즈 중 허용되며 같은 빈 슬롯의 연타는 한 번만 송신한다.
   h.items.grantItem('shield', 1);
