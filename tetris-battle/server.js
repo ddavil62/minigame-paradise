@@ -828,12 +828,24 @@ wss.on('connection', (ws, req) => {
       return;
     }
     if (r.phase === 'playing') {
+      // 원인 B 수정(2026-08-06) 계승: 종료되는 연결이 봇이면 topout으로 취급한다.
+      // GAME_OVER 메시지가 WS 불안정 타이밍에 DROP된 경우도 이 경로로 복구된다.
+      const reason = isBot ? 'topout' : 'disconnect';
       player.gameOver = true;
-      broadcastAll(r, { type: 'PLAYER_ELIMINATED', playerId: player.id, reason: 'disconnect' });
+      broadcastAll(r, { type: 'PLAYER_ELIMINATED', playerId: player.id, reason });
       r.players = r.players.filter((p) => p !== player);
       broadcastAll(r, { type: 'OPPONENT_LEFT', name: leaverNameNow, playerId: player.id });
       broadcastRoomState(r);
-      finishIfLastSurvivor(r, 'disconnect');
+      finishIfLastSurvivor(r, reason);
+      // 사람(비봇)이 나가면 이 룸에 남은 봇은 더 이상 쓸모가 없다 — 좀비 프로세스 방지를 위해 정리한다.
+      if (!isBot) {
+        const botSlot = r.players.find((p) => p.mode === 'bot');
+        if (botSlot) {
+          r.players = r.players.filter((p) => p.mode !== 'bot');
+          botSlot.ws.terminate();
+        }
+        killBotChild(r);
+      }
       if (r.players.length === 0) {
         killBotChild(r);
         roomMap.delete(r.id);
@@ -842,65 +854,17 @@ wss.on('connection', (ws, req) => {
     }
     r.players = r.players.filter((p) => p !== player);
     broadcastRoomState(r);
-    if (r.players.length === 0) {
-      killBotChild(r);
-      roomMap.delete(r.id);
-    }
-    return;
-    // 원인 B 수정: 봇 WS가 종료될 때 게임이 아직 진행 중이고 봇이 gameOver 상태가 아니면
-    // 서버가 직접 봇의 게임오버를 처리한다.
-    // GAME_OVER 메시지가 WS 불안정 타이밍에 DROP된 경우도 이 경로로 복구된다.
-    //
-    // 발동 조건:
-    //   1. 종료되는 연결이 봇(isBot === true)
-    //   2. 봇이 아직 gameOver 상태가 아님 (player.gameOver === false)
-    //   3. 상대(사람 플레이어)가 룸에 아직 있고 OPEN 상태
-    //   → 사람 disconnect 직후 서버가 봇을 terminate()한 경우(상대 없음)에는 발동하지 않음.
-    if (isBot && !player.gameOver) {
-      const opponent = r.players.find((p) => p !== player && p.ws.readyState === WebSocket.OPEN);
-      if (opponent) {
-        console.log(`[server] 봇(${player.id}) WS close 감지 — gameOver 직접 처리 (룸=${r.id})`);
-        player.gameOver = true;
-        // 봇이 패배 → 상대(사람)가 승리
-        broadcastAll(r, {
-          type: 'GAME_RESULT',
-          winner: opponent.id,
-          reason: 'topout',
-        });
-      }
-    }
-
-    const leaverName = player.name || '(알 수 없음)';
-    r.players = r.players.filter((p) => p !== player);
-    // 사람(비봇)이 끊긴 경우 봇 슬롯을 동기적으로 정리한다 (#13 좀비 봇 차단).
     if (!isBot) {
-      // killBotChild()의 SIGTERM은 비동기라 봇 WS가 실제 close될 때까지 players에 좀비로 남는다.
-      // 따라서 짝 봇 슬롯을 players에서 즉시 제거하고 ws.terminate()로 TCP를 강제 종료한다.
-      // (terminate 후 봇 close 핸들러가 연달아 발화돼도 이미 제거된 상태라 filter는 no-op)
       const botSlot = r.players.find((p) => p.mode === 'bot');
       if (botSlot) {
         r.players = r.players.filter((p) => p.mode !== 'bot');
         botSlot.ws.terminate();
       }
-      // 봇 자식 프로세스도 종료 (프로세스 자원 정리 병행).
       killBotChild(r);
     }
-    // 상대가 있으면 이탈 배너 + disconnect 결과 알림
-    if (r.players.length > 0) {
-      // 상대 이탈 배너용 OPPONENT_LEFT 메시지 전송
-      broadcastAll(r, { type: 'OPPONENT_LEFT', name: leaverName });
-      const remainingId = r.players[0].id;
-      broadcastAll(r, {
-        type: 'GAME_RESULT',
-        winner: remainingId,
-        reason: 'disconnect',
-      });
-      // 남은 플레이어의 상태 리셋 (재대결 대기)
-      resetRoomFlags(r);
-    } else {
-      // 인원 0명 → 룸 즉시 소멸
+    if (r.players.length === 0) {
+      killBotChild(r);
       roomMap.delete(r.id);
-      console.log(`[server] 룸 소멸: ${r.id}`);
     }
   });
 
