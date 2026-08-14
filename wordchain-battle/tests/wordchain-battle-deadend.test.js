@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadWords, buildFollowerCountMap, computeDeadEndAlts } from '../words.js';
-import { createGame, submitWord, snapshot } from '../game.js';
+import { createGame, submitWord, resolveCombatTurn, snapshot } from '../game.js';
 
 // ── 사전 및 맵 초기화 ────────────────────────────────────────────
 const wordSet = loadWords();
@@ -100,15 +100,12 @@ function findWordStartingWith(startChar, exclude = new Set()) {
   throw new Error(`"${startChar}"으로 시작하는 단어를 찾지 못했다`);
 }
 
-/** 빈 가비지 후보 맵 (가비지 발동을 방지하기 위해) */
-const emptyGarbageCandidates = new Map();
-
 test('p1이 "팍"으로 끝나는 단어 제출 시 공유 체인에 deadEndAlts 주입', () => {
   const game = createGame('A', 'B');
   game.phase = 'playing';
 
   const deadEndWord = findWordEndingWith('팍');
-  const result = submitWord(game, 'p1', deadEndWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  const result = submitWord(game, 'p1', deadEndWord, wordSet, followerCountMap);
   assert.equal(result.ok, true);
   assert.equal(result.deadEndExpanded, true);
 
@@ -123,10 +120,11 @@ test('"가슴팍" 수락 후 p2가 "파"로 시작하는 단어 제출 → 수�
 
   // p1이 "가슴팍" 제출 (사전에 있는지 확인)
   const deadEndWord = findWordEndingWith('팍');
-  submitWord(game, 'p1', deadEndWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  submitWord(game, 'p1', deadEndWord, wordSet, followerCountMap);
+  resolveCombatTurn(game, 'p1', null);
 
   const paWord = findWordStartingWith('파', game.usedWords);
-  const result = submitWord(game, 'p2', paWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  const result = submitWord(game, 'p2', paWord, wordSet, followerCountMap);
   assert.equal(result.ok, true, `"파"로 시작하는 단어 "${paWord}" 수락되어야 한다`);
 });
 
@@ -135,49 +133,29 @@ test('"가슴팍" 수락 후 p2가 관련 없는 글자로 시작하는 단어 �
   game.phase = 'playing';
 
   const deadEndWord = findWordEndingWith('팍');
-  submitWord(game, 'p1', deadEndWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  submitWord(game, 'p1', deadEndWord, wordSet, followerCountMap);
+  resolveCombatTurn(game, 'p1', null);
 
   // "도"로 시작하는 단어 시도
   const wrongWord = findWordStartingWith('도', game.usedWords);
-  const result = submitWord(game, 'p2', wrongWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  const result = submitWord(game, 'p2', wrongWord, wordSet, followerCountMap);
   assert.equal(result.ok, false);
   assert.equal(result.reason, 'wrong_start');
 });
 
-test('p2가 deadEndAlts 상태에서 단어 제출 성공 후 deadEndAlts 소거', () => {
+test('p2가 deadEndAlts 상태에서 단어 제출 성공 후 새 끝 글자 기준으로 갱신', () => {
   const game = createGame('A', 'B');
   game.phase = 'playing';
 
   const deadEndWord = findWordEndingWith('팍');
-  submitWord(game, 'p1', deadEndWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  submitWord(game, 'p1', deadEndWord, wordSet, followerCountMap);
   assert.ok(game.chain.deadEndAlts !== null, '제출 전 deadEndAlts 존재');
+  resolveCombatTurn(game, 'p1', null);
 
   const paWord = findWordStartingWith('파', game.usedWords);
-  submitWord(game, 'p2', paWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  submitWord(game, 'p2', paWord, wordSet, followerCountMap);
 
-  assert.equal(game.chain.deadEndAlts, null, '제출 후 deadEndAlts 소거');
-});
-
-test('forced가 있는 상태에서 deadEndAlts가 있어도 forced 판정 우선', () => {
-  const game = createGame('A', 'B');
-  game.phase = 'playing';
-
-  game.turn = 'p2';
-  game.chain.forced = '가';
-  game.chain.deadEndAlts = new Set(['팍', '파']);
-  game.chain.lastSyllable = '팍';
-
-  // "파"로 시작하는 단어 → forced가 "가"이므로 거부되어야 함
-  const paWord = findWordStartingWith('파', game.usedWords);
-  const result = submitWord(game, 'p2', paWord, wordSet, emptyGarbageCandidates, followerCountMap);
-  // forced가 "가"인데 "파"로 시작 → wrong_start
-  assert.equal(result.ok, false);
-  assert.equal(result.reason, 'wrong_start');
-
-  // "가"로 시작하는 단어 → forced 조건 충족
-  const gaWord = findWordStartingWith('가', game.usedWords);
-  const result2 = submitWord(game, 'p2', gaWord, wordSet, emptyGarbageCandidates, followerCountMap);
-  assert.equal(result2.ok, true);
+  assert.equal(game.chain.lastSyllable, paWord.at(-1));
 });
 
 test('"름"으로 끝나는 단어 제출 → deadEndExpanded: false, 두음법칙 대체 글자("늠")는 표시용으로 남는다', () => {
@@ -185,7 +163,7 @@ test('"름"으로 끝나는 단어 제출 → deadEndExpanded: false, 두음법�
   game.phase = 'playing';
 
   const reumWord = findWordEndingWith('름');
-  const result = submitWord(game, 'p1', reumWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  const result = submitWord(game, 'p1', reumWord, wordSet, followerCountMap);
   assert.equal(result.ok, true);
   assert.equal(result.deadEndExpanded, false, '희귀 종성 확장(받침 제거)은 발동하지 않아야 한다');
 
@@ -202,7 +180,7 @@ test('"리"로 끝나는 단어 제출 → 두음법칙 대체 글자("이")가 
   game.phase = 'playing';
 
   const riWord = findWordEndingWith('리');
-  const result = submitWord(game, 'p1', riWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  const result = submitWord(game, 'p1', riWord, wordSet, followerCountMap);
   assert.equal(result.ok, true);
 
   assert.ok(game.chain.deadEndAlts instanceof Set, '"리"는 두음법칙 대체("이")가 있으므로 deadEndAlts가 채워져야 한다');
@@ -216,7 +194,7 @@ test('정상 임계값 단어 수락 후 SubmitResult.deadEndExpanded === false'
 
   // 아무 단어 제출 (끝 글자가 정상 범위인 것 찾기)
   const normalWord = findWordStartingWith('사');
-  const result = submitWord(game, 'p1', normalWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  const result = submitWord(game, 'p1', normalWord, wordSet, followerCountMap);
   assert.equal(result.ok, true);
   assert.equal(result.deadEndExpanded, false);
 });
@@ -226,7 +204,7 @@ test('막힘 단어 수락 후 SubmitResult.deadEndExpanded === true', () => {
   game.phase = 'playing';
 
   const deadEndWord = findWordEndingWith('팍');
-  const result = submitWord(game, 'p1', deadEndWord, wordSet, emptyGarbageCandidates, followerCountMap);
+  const result = submitWord(game, 'p1', deadEndWord, wordSet, followerCountMap);
   assert.equal(result.ok, true);
   assert.equal(result.deadEndExpanded, true);
 });
@@ -253,7 +231,7 @@ test('followerCountMap이 undefined이면 확장 로직 건너뜀 (하위 호환
 
   const deadEndWord = findWordEndingWith('팍');
   // followerCountMap 없이 호출
-  const result = submitWord(game, 'p1', deadEndWord, wordSet, emptyGarbageCandidates);
+  const result = submitWord(game, 'p1', deadEndWord, wordSet);
   assert.equal(result.ok, true);
   assert.equal(result.deadEndExpanded, false);
   assert.equal(game.chain.deadEndAlts, null);

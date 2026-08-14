@@ -237,7 +237,7 @@
     "wsPath": "/wordchain-battle/ws",
     "color": "#A855F7",
     "emoji": "",
-    "keyArt": "/wordchain-battle/assets/key-art.svg",
+    "keyArt": "/wordchain-battle/assets/key-art.webp",
     "botAvailable": true,
     "minPlayers": 2,
     "maxPlayers": 2,

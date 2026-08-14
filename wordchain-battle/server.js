@@ -2,9 +2,9 @@
  * @fileoverview 끝말잇기 배틀 WebSocket + 정적 파일 서버.
  *
  * 아키텍처: **서버 권위(Server Authoritative)**
- *  - 단어 유효성 검증, HP 계산, 게이지 계산, 가비지 발동, 타이머 관리, 승패 판정
+ *  - 단어 유효성 검증, 전투 계산, 보상 적용, 타이머 관리, 승패 판정
  *    모두 서버 game.js 순수 함수에서 처리한다.
- *  - 클라이언트는 WORD_SUBMIT { word } 입력만 전송한다.
+ *  - 클라이언트는 WORD_SUBMIT { word }, REWARD_SELECT { rewardId } 의도만 전송한다.
  *  - 의존성 최소화: Node 내장 http + ws (Express 미사용).
  *
  * 입장 흐름:
@@ -26,10 +26,12 @@ import { randomBytes, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import {
-  createGame, submitWord, applyTimerExpiry, applyResign,
-  isGameOver, snapshot, TURN_TIMER_SEC,
+  createGame, submitWord, resolveCombatTurn, applyTimerExpiry, applyResign,
+  isGameOver, snapshot, getEffectiveAnswerTime, REWARD_TIMER_SEC, TURN_STATE,
 } from './game.js';
-import { loadWords, getWordSet, buildGarbageCandidates, buildFollowerCountMap } from './words.js';
+import { publicCombatConfig } from './combat-config.js';
+import { loadWords, getWordSet, buildFollowerCountMap } from './words.js';
+import { createMissingWordLogger } from './missing-word-log.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -55,7 +57,6 @@ const COUNTDOWN_SEC = 3;
 
 // ── 단어 DB 초기화 ──────────────────────────────────────────────
 const wordSet = loadWords();
-const garbageCandidates = buildGarbageCandidates(50);
 const followerCountMap = buildFollowerCountMap();
 
 // ── createApp ───────────────────────────────────────────────────
@@ -68,6 +69,7 @@ const followerCountMap = buildFollowerCountMap();
  * @param {string} [opts.hostUrl] LAN 접속 URL
  * @param {() => string|null} [opts.getBotUrl] 서버 관리형 봇 접속 URL 반환 함수
  * @param {typeof spawn} [opts.spawnBotProcess] 테스트용 봇 프로세스 생성 함수
+ * @param {{log: Function, flush?: Function}} [opts.missingWordLogger] 사전 누락 후보 기록기
  * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
  */
 export function createApp(opts = {}) {
@@ -75,6 +77,10 @@ export function createApp(opts = {}) {
   const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
   const spawnBotProcess = typeof opts.spawnBotProcess === 'function' ? opts.spawnBotProcess : spawn;
   const random = typeof opts.random === 'function' ? opts.random : Math.random;
+  const missingWordLogger = opts.missingWordLogger || createMissingWordLogger({
+    directory: path.join(__dirname, 'logs', 'dictionary-candidates'),
+  });
+  const loggedMissingWords = new WeakMap();
 
   // ── 룸 상태 (closure 격리, 2인 1룸 고정) ─────────────────
 
@@ -100,10 +106,7 @@ export function createApp(opts = {}) {
   /** @type {NodeJS.Timeout|null} 현재 턴 tick 인터벌 핸들 */
   let turnTickInterval = null;
 
-  /** 현재 턴의 서버 권위 잔여 시간(정수 초). */
-  let turnRemaining = 0;
-
-  /** 오래된 턴 타이머 콜백을 무효화하는 세대 번호. */
+  /** 오래된 State 타이머 콜백을 무효화하는 세대 번호. */
   let turnTimerGeneration = 0;
 
   /** 리매치 동의한 playerId Set. */
@@ -298,22 +301,24 @@ export function createApp(opts = {}) {
 
   // ── 타이머 관리 ────────────────────────────────────────────
 
-  /** 현재 턴의 단일 제출 타이머를 시작한다. */
-  function startTurnTimer() {
+  /** 현재 WORD_INPUT 또는 REWARD_SELECT State의 타이머를 시작한다. */
+  function startStateTimer() {
     clearAllTimers();
     if (!game || game.phase !== 'playing') return;
 
     const playerId = game.turn;
+    const turnState = game.turnState;
     const generation = turnTimerGeneration;
-    let remaining = TURN_TIMER_SEC;
-    turnRemaining = remaining;
-    broadcastAll({ type: 'TIMER_TICK', playerId, remaining });
+    const duration = turnState === TURN_STATE.REWARD_SELECT
+      ? REWARD_TIMER_SEC
+      : getEffectiveAnswerTime(game.players[playerId]);
+    let remaining = duration;
+    broadcastAll({ type: 'TIMER_TICK', playerId, turnState, remaining, duration });
 
     turnTickInterval = setInterval(() => {
       if (generation !== turnTimerGeneration) return;
       remaining -= 1;
-      turnRemaining = remaining;
-      broadcastAll({ type: 'TIMER_TICK', playerId, remaining });
+      broadcastAll({ type: 'TIMER_TICK', playerId, turnState, remaining, duration });
       if (remaining <= 0 && turnTickInterval) {
         clearInterval(turnTickInterval);
         turnTickInterval = null;
@@ -321,17 +326,26 @@ export function createApp(opts = {}) {
     }, 1000);
 
     turnTimer = setTimeout(() => {
-      if (generation !== turnTimerGeneration || !game || game.phase !== 'playing' || game.turn !== playerId) return;
+      if (generation !== turnTimerGeneration
+        || !game
+        || game.phase !== 'playing'
+        || game.turn !== playerId
+        || game.turnState !== turnState) return;
       turnTimer = null;
-      turnRemaining = 0;
 
-      const {
-        hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
-      } = applyTimerExpiry(game, playerId, wordSet, followerCountMap);
-      broadcastAll({
-        type: 'TIMER_EXPIRED', playerId, hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
-      });
-      broadcastAll({ type: 'TYPING', playerId, count: 0 });
+      if (turnState === TURN_STATE.REWARD_SELECT) {
+        const combat = resolveCombatTurn(game, playerId, null);
+        broadcastAll({ type: 'REWARD_EXPIRED', playerId, combat });
+        broadcastAll({ type: 'COMBAT_RESOLVED', ...combat });
+      } else {
+        const {
+          hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
+        } = applyTimerExpiry(game, playerId, wordSet, followerCountMap);
+        broadcastAll({
+          type: 'TIMER_EXPIRED', playerId, hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
+        });
+        broadcastAll({ type: 'TYPING', playerId, count: 0 });
+      }
       broadcastState();
 
       const over = isGameOver(game);
@@ -340,8 +354,8 @@ export function createApp(opts = {}) {
         return;
       }
 
-      startTurnTimer();
-    }, TURN_TIMER_SEC * 1000);
+      startStateTimer();
+    }, duration * 1000);
   }
 
   /**
@@ -353,7 +367,6 @@ export function createApp(opts = {}) {
     if (turnTickInterval) clearInterval(turnTickInterval);
     turnTimer = null;
     turnTickInterval = null;
-    turnRemaining = 0;
   }
 
   // ── 게임 시작/종료 ─────────────────────────────────────────
@@ -378,15 +391,11 @@ export function createApp(opts = {}) {
     cancelCountdown();
     const p1 = players.find((p) => p.id === 'p1');
     const p2 = players.find((p) => p.id === 'p2');
-    const initialSyllables = [...garbageCandidates.keys()];
-    const initialSyllable = initialSyllables.length > 0
-      ? initialSyllables[Math.floor(random() * initialSyllables.length)]
-      : null;
     game = createGame(
       p1 ? p1.name : '플레이어1',
       p2 ? p2.name : '플레이어2',
       random() < 0.5 ? 'p1' : 'p2',
-      initialSyllable,
+      null,
       followerCountMap,
     );
     game.phase = 'countdown';
@@ -401,9 +410,10 @@ export function createApp(opts = {}) {
         id: p.id,
         name: p.name,
         hp: p.hp,
-        gauge: p.gauge,
       })),
       countdown: COUNTDOWN_SEC,
+      firstTurn: game.turn,
+      combatConfig: publicCombatConfig(),
     });
 
     console.log('[wordchain] 카운트다운 시작');
@@ -426,7 +436,7 @@ export function createApp(opts = {}) {
       broadcastAll({ type: 'PLAYING' });
       broadcastState();
 
-      startTurnTimer();
+      startStateTimer();
       console.log('[wordchain] 게임 시작');
     }, COUNTDOWN_SEC * 1000);
     countdownTimeout = timeoutHandle;
@@ -525,7 +535,7 @@ export function createApp(opts = {}) {
       let msg;
       try { msg = JSON.parse(data.toString()); } catch (e) { return; }
       if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return;
-      if (player._isBot && msg.type !== 'WORD_SUBMIT' && msg.type !== 'REMATCH') return;
+      if (player._isBot && !['WORD_SUBMIT', 'REWARD_SELECT', 'REMATCH'].includes(msg.type)) return;
 
       switch (msg.type) {
         case 'JOIN': {
@@ -557,12 +567,32 @@ export function createApp(opts = {}) {
             player.id,
             word,
             wordSet,
-            garbageCandidates,
             followerCountMap,
-            turnRemaining,
+            random,
           );
 
           if (!result.ok) {
+            if (result.reason === 'invalid' && /^[가-힣]{2,30}$/.test(word.normalize('NFC'))) {
+              let loggedForGame = loggedMissingWords.get(game);
+              if (!loggedForGame) {
+                loggedForGame = new Set();
+                loggedMissingWords.set(game, loggedForGame);
+              }
+              const normalizedWord = word.normalize('NFC');
+              const dedupeKey = `${player.id}\u0000${normalizedWord}`;
+              if (!loggedForGame.has(dedupeKey)) {
+                loggedForGame.add(dedupeKey);
+                Promise.resolve(missingWordLogger.log({
+                  word: normalizedWord,
+                  expectedStart: game.chain.lastSyllable || null,
+                  acceptedStartChars: game.chain.deadEndAlts ? [...game.chain.deadEndAlts] : [],
+                  previousWord: game.chain.lastWord || null,
+                  playerMode: player.mode,
+                })).catch((error) => {
+                  console.warn('[wordchain] 사전 누락 후보 기록 실패:', error?.message || error);
+                });
+              }
+            }
             // 거절된 시도 단어는 상대에게 노출하지 않는다.
             sendJson(ws, {
               type: 'WORD_REJECTED',
@@ -579,42 +609,51 @@ export function createApp(opts = {}) {
           broadcastAll({
             type: 'WORD_ACCEPTED',
             playerId: player.id,
-            word,
-            gaugeGain: result.gaugeGain,
-            newGauge: result.newGauge,
+            word: result.word,
+            wordLength: result.wordLength,
+            wordEffect: result.wordEffect,
             newLastSyllable: result.newLastSyllable,
-            wasGarbage: result.wasGarbage,
-            garbagedOpponent: result.garbageFired,
-            garbageChar: result.garbageChar,
             deadEndExpanded: result.deadEndExpanded,
           });
-
-          // 가비지 발동 시 알림
-          if (result.garbageFired) {
-            broadcastAll({
-              type: 'GARBAGE_RECEIVED',
-              targetId: result.garbageTargetId,
-              garbageChar: result.garbageChar,
-            });
-          }
 
           // 상태 브로드캐스트
           broadcastState();
 
-          // HP 체크
+          // 같은 플레이어의 보상 선택 State 타이머 시작
+          startStateTimer();
+          break;
+        }
+
+        case 'REWARD_SELECT': {
+          if (!game || game.phase !== 'playing') {
+            sendJson(ws, { type: 'REWARD_REJECTED', reason: 'not_playing' });
+            break;
+          }
+          const rewardId = typeof msg.rewardId === 'string' ? msg.rewardId : '';
+          const combat = resolveCombatTurn(game, player.id, rewardId);
+          if (!combat.ok) {
+            sendJson(ws, { type: 'REWARD_REJECTED', reason: combat.reason, rewardId });
+            break;
+          }
+          broadcastAll({ type: 'REWARD_SELECTED', playerId: player.id, rewardId });
+          broadcastAll({ type: 'COMBAT_RESOLVED', ...combat });
+          broadcastState();
+
           const over = isGameOver(game);
           if (over.ended) {
             handleGameEnd();
             break;
           }
-
-          // 상대 턴의 타이머 시작
-          startTurnTimer();
+          startStateTimer();
           break;
         }
 
         case 'TYPING': {
-          if (!game || game.phase !== 'playing' || game.turn !== player.id || player._isBot) break;
+          if (!game
+            || game.phase !== 'playing'
+            || game.turn !== player.id
+            || game.turnState !== TURN_STATE.WORD_INPUT
+            || player._isBot) break;
           const count = Number.isFinite(msg.count)
             ? Math.max(0, Math.min(30, Math.floor(msg.count)))
             : 0;

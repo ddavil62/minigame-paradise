@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build-words": "node scripts/build-wordlist.js"
+    "build-words": "node scripts/build-wordlist.js",
+    "review-missing-words": "node scripts/review-missing-words.js"
   },
   "keywords": [
     "wordchain",

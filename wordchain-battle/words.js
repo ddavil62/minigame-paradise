@@ -2,7 +2,7 @@
  * @fileoverview 한국어 단어 DB 로드 + 검증 유틸리티.
  *
  * 서버 시작 시 data/words.json을 메모리에 완전 로드(Set)하고,
- * 단어 유효성 검증·두음법칙 처리·가비지 후보 맵 생성을 제공한다.
+ * 단어 유효성 검증, 두음법칙과 막힘 종성 대체 글자 계산을 제공한다.
  * 런타임에 외부 API 호출 없이 완전 오프라인으로 동작한다.
  */
 
@@ -157,33 +157,6 @@ export function matchesStartChar(wordFirstChar, requiredChar) {
   return alt !== null && wordFirstChar === alt;
 }
 
-// ── 가비지 음절 후보 ────────────────────────────────────────────
-
-/**
- * 가비지 음절 후보 맵을 생성한다. (서버 시작 시 1회)
- * 각 글자로 시작하는 유효 단어 수를 세고, minCount 이상인 글자만 포함한다.
- * @param {number} [minCount=50] 최소 유효 단어 수
- * @returns {Map<string, number>} syllable -> 해당 글자로 시작하는 단어 수
- */
-export function buildGarbageCandidates(minCount = 50) {
-  const initialsMap = new Map();
-  for (const word of WORD_SET) {
-    const first = word[0];
-    initialsMap.set(first, (initialsMap.get(first) || 0) + 1);
-  }
-
-  /** @type {Map<string, number>} */
-  const candidates = new Map();
-  for (const [syllable, count] of initialsMap) {
-    if (count >= minCount) {
-      candidates.set(syllable, count);
-    }
-  }
-
-  console.log(`[words] 가비지 후보: ${candidates.size}개 글자 (N>=${minCount})`);
-  return candidates;
-}
-
 // ── 막힘/희귀 종성 판정 ────────────────────────────────────────
 
 /** 막힘/희귀 종성 발동 임계값. 후속 단어 수가 이 값 미만이면 대체 글자 확장 대상. */
@@ -278,27 +251,4 @@ export function computeDeadEndAlts(syllable, followerCountMap, threshold = DEAD_
   }
 
   return alts;
-}
-
-/**
- * 랜덤 가비지 음절을 선택한다.
- * 상대의 현재 lastSyllable과 동일하거나 두음법칙 변환값인 글자는 제외한다.
- * @param {Map<string, number>} candidates 가비지 후보 맵
- * @param {string|null} excludeChar 제외할 글자 (상대의 현재 시작 글자)
- * @returns {string} 선택된 가비지 음절
- */
-export function pickGarbageSyllable(candidates, excludeChar = null) {
-  const keys = [...candidates.keys()].filter((ch) => {
-    if (!excludeChar) return true;
-    // 상대가 이미 이 글자로 시작해야 하는 상황이면 제외
-    return !matchesStartChar(ch, excludeChar) && !matchesStartChar(excludeChar, ch);
-  });
-
-  if (keys.length === 0) {
-    // 후보가 없으면 제외 없이 선택
-    const allKeys = [...candidates.keys()];
-    return allKeys[Math.floor(Math.random() * allKeys.length)];
-  }
-
-  return keys[Math.floor(Math.random() * keys.length)];
 }

@@ -89,14 +89,16 @@ test('런처 AI 채우기로 mode=ai 경기에 진입하고 AI (보통)을 표�
     await page.waitForURL(/wordchain-battle\/\?.*mode=ai/, { timeout: 10_000 });
     await expect(page.locator('#name-opp')).toHaveText('AI (보통)', { timeout: 10_000 });
     await expect(page.locator('#hp-opp')).toBeVisible();
-    await expect(page.locator('#gauge-text-opp')).toBeVisible();
+    await expect(page.locator('#attack-opp')).toBeVisible();
+    await expect(page.locator('#defense-opp')).toBeVisible();
+    await expect(page.locator('#answer-time-opp')).toBeVisible();
     expect(pageErrors).toEqual([]);
   } finally {
     await stopLauncher(launcher.child);
   }
 });
 
-test('360x640 AI 경기에서 상대 이름·HP·게이지가 뷰포트 안에 유지된다', async ({ page }) => {
+test('360x640 AI 경기에서 상대 이름·HP·전투 스탯이 뷰포트 안에 유지된다', async ({ page }) => {
   const launcher = await startLauncher();
   try {
     await page.setViewportSize({ width: 360, height: 640 });
@@ -104,7 +106,7 @@ test('360x640 AI 경기에서 상대 이름·HP·게이지가 뷰포트 안에 �
       waitUntil: 'domcontentloaded',
     });
     await expect(page.locator('#name-opp')).toHaveText('AI (보통)', { timeout: 10_000 });
-    for (const selector of ['#name-opp', '#hp-opp', '#gauge-opp']) {
+    for (const selector of ['#name-opp', '#hp-opp', '#attack-opp', '#answer-time-opp']) {
       const box = await page.locator(selector).boundingBox();
       expect(box).not.toBeNull();
       expect(box.x).toBeGreaterThanOrEqual(0);

@@ -3,13 +3,9 @@
  */
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
-import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import { WebSocket } from 'ws';
 import { createApp } from '../server.js';
-import { matchesStartChar } from '../words.js';
-
-const words = JSON.parse(fs.readFileSync(new URL('../data/words.json', import.meta.url), 'utf8')).words;
 
 /** 임의 포트에 실제 HTTP/WS 서버를 연다. */
 async function startServer() {
@@ -99,23 +95,6 @@ async function waitForLauncher(port, child) {
 }
 
 /** 지정 끝 글자에서 이어지는 사용하지 않은 장문 체인을 찾는다. */
-function longChain(required, count, used = new Set()) {
-  const chain = [];
-  let current = required;
-  for (let index = 0; index < count; index += 1) {
-    const word = words.find((candidate) => (
-      candidate.length >= 5
-      && matchesStartChar(candidate[0], current)
-      && !used.has(candidate)
-      && !chain.includes(candidate)
-    ));
-    if (!word) throw new Error(`${current} 장문 체인을 찾지 못했다.`);
-    chain.push(word);
-    current = word.at(-1);
-  }
-  return chain;
-}
-
 test.describe('카운트다운 세대 격리', () => {
   test('반복 이탈 뒤 마지막 JOIN부터 3초 후 PLAYING을 한 번만 방송한다', async () => {
     const { server, port } = await startServer();
@@ -155,7 +134,6 @@ test.describe('카운트다운 세대 격리', () => {
     }
   });
 });
-
 test.describe('정적 경로 우회 공격', () => {
   const traversalPaths = [
     '/assets/../server.js',
@@ -208,62 +186,4 @@ test.describe('정적 경로 우회 공격', () => {
       await new Promise((resolve) => child.once('exit', resolve));
     }
   });
-});
-
-test('실제 WORD_ACCEPTED는 일반 단어 false와 forced 대응 true를 양쪽에 동일 방송한다', async () => {
-  const { server, port } = await startServer();
-  const p1 = await openClient(port);
-  const p2 = await openClient(port);
-  try {
-    await p1.wait('JOINED');
-    await p2.wait('JOINED');
-    p1.send({ type: 'JOIN', name: '공격자' });
-    p2.send({ type: 'JOIN', name: '수비자' });
-    await p1.wait('GAME_START');
-    await p2.wait('GAME_START');
-    await p1.wait('PLAYING');
-    await p2.wait('PLAYING');
-    const initialState = await p1.wait('STATE');
-    await p2.wait('STATE');
-    const clients = { p1, p2 };
-    let turn = initialState.turn;
-
-    const used = new Set();
-    const first = words.find((word) => matchesStartChar(word[0], initialState.chain.lastSyllable));
-    expect(first).toBeTruthy();
-    used.add(first);
-    clients[turn].send({ type: 'WORD_SUBMIT', word: first });
-    const regularMine = await p1.wait('WORD_ACCEPTED');
-    const regularOther = await p2.wait('WORD_ACCEPTED');
-    expect(regularMine).toMatchObject({ playerId: turn, word: first, wasGarbage: false });
-    expect(regularOther).toMatchObject({ playerId: turn, word: first, wasGarbage: false });
-    turn = turn === 'p1' ? 'p2' : 'p1';
-
-    // 5글자 이상 단어를 교대로 3회 제출하면 두 번째 차례를 맞은 플레이어가 게이지 100에 도달한다.
-    const chargingWords = longChain(first.at(-1), 2, used);
-    for (const word of chargingWords) {
-      used.add(word);
-      clients[turn].send({ type: 'WORD_SUBMIT', word });
-      await p1.wait('WORD_ACCEPTED');
-      await p2.wait('WORD_ACCEPTED');
-      turn = turn === 'p1' ? 'p2' : 'p1';
-    }
-    const garbage = await p1.wait('GARBAGE_RECEIVED');
-    await p2.wait('GARBAGE_RECEIVED');
-    expect(garbage.targetId).toBe(turn);
-
-    const responseWord = words.find((word) => (
-      matchesStartChar(word[0], garbage.garbageChar) && !used.has(word)
-    ));
-    expect(responseWord).toBeTruthy();
-    clients[turn].send({ type: 'WORD_SUBMIT', word: responseWord });
-    const forcedMine = await p1.wait('WORD_ACCEPTED');
-    const forcedOther = await p2.wait('WORD_ACCEPTED');
-    expect(forcedMine).toMatchObject({ playerId: turn, word: responseWord, wasGarbage: true });
-    expect(forcedOther).toMatchObject({ playerId: turn, word: responseWord, wasGarbage: true });
-  } finally {
-    p1.close();
-    p2.close();
-    await new Promise((resolve) => server.close(resolve));
-  }
 });

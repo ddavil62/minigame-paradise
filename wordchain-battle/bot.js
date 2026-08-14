@@ -1,6 +1,6 @@
 /**
  * @fileoverview 끝말잇기 배틀 보통 난이도 WebSocket AI 클라이언트.
- * 서버가 보낸 공개 상태를 추적해 일반 참가자와 같은 WORD_SUBMIT/REMATCH만 전송한다.
+ * 서버가 보낸 공개 상태를 추적해 일반 참가자와 같은 WORD_SUBMIT/REWARD_SELECT/REMATCH만 전송한다.
  */
 
 import { WebSocket } from 'ws';
@@ -24,6 +24,10 @@ let myId = null;
 let latestPlayer = null;
 /** 최신 STATE의 현재 턴. */
 let latestTurn = null;
+/** 최신 STATE의 턴 내부 State. */
+let latestTurnState = null;
+/** 서버가 공개한 선택 가능 보상 ID. */
+let rewardIds = [];
 /** 경기 전체에서 수락된 단어 집합. */
 let usedWords = new Set();
 /** 최신 상태에서 거절된 후보 집합. */
@@ -38,6 +42,8 @@ let scheduledKey = null;
 let actionTimer = null;
 /** @type {NodeJS.Timeout|null} 거절 재시도 예약. */
 let retryTimer = null;
+/** @type {NodeJS.Timeout|null} 보상 선택 예약. */
+let rewardTimer = null;
 /** @type {NodeJS.Timeout|null} 리매치 예약. */
 let rematchTimer = null;
 /** 현재 결과 화면에서 이미 리매치 동의를 보냈는지 여부. */
@@ -45,14 +51,17 @@ let rematchRequested = false;
 
 /**
  * 지정 timeout을 취소한다.
- * @param {'action'|'retry'|'rematch'} kind 타이머 종류
+ * @param {'action'|'retry'|'reward'|'rematch'} kind 타이머 종류
  * @returns {void}
  */
 function clearScheduled(kind) {
-  const handle = kind === 'action' ? actionTimer : kind === 'retry' ? retryTimer : rematchTimer;
+  const handle = kind === 'action'
+    ? actionTimer
+    : kind === 'retry' ? retryTimer : kind === 'reward' ? rewardTimer : rematchTimer;
   if (handle) clearTimeout(handle);
   if (kind === 'action') actionTimer = null;
   else if (kind === 'retry') retryTimer = null;
+  else if (kind === 'reward') rewardTimer = null;
   else rematchTimer = null;
 }
 
@@ -60,25 +69,43 @@ function clearScheduled(kind) {
 function clearAllScheduled() {
   clearScheduled('action');
   clearScheduled('retry');
+  clearScheduled('reward');
   clearScheduled('rematch');
   scheduledKey = null;
 }
 
 /**
  * 서버에 허용된 봇 메시지를 전송한다.
- * @param {{type:'WORD_SUBMIT', word:string}|{type:'REMATCH'}} payload 전송 내용
+ * @param {{type:'WORD_SUBMIT', word:string}|{type:'REWARD_SELECT', rewardId:string}|{type:'REMATCH'}} payload 전송 내용
  * @returns {void}
  */
 function send(payload) {
   if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
 }
 
+/** 보상 선택 State에서 공개된 보상 중 하나를 0.4~0.9초 뒤 고른다. */
+function scheduleReward() {
+  clearScheduled('reward');
+  if (!playing || latestTurn !== myId || latestTurnState !== 'reward_select' || rewardIds.length === 0) return;
+  const generation = matchGeneration;
+  const rewardId = rewardIds[Math.floor(Math.random() * rewardIds.length)];
+  rewardTimer = setTimeout(() => {
+    rewardTimer = null;
+    if (!playing
+      || latestTurn !== myId
+      || latestTurnState !== 'reward_select'
+      || generation !== matchGeneration
+      || ws.readyState !== WebSocket.OPEN) return;
+    send({ type: 'REWARD_SELECT', rewardId });
+  }, 400 + Math.floor(Math.random() * 501));
+}
+
 /** 최신 자기 상태에 따라 1.2~2.0초 뒤 제출을 예약한다. */
 function scheduleWord() {
   clearScheduled('action');
-  if (!playing || !latestPlayer || !myId || latestTurn !== myId) return;
+  if (!playing || !latestPlayer || !myId || latestTurn !== myId || latestTurnState !== 'word_input') return;
   const decisionStartedAt = Date.now();
-  const key = `${matchGeneration}|${latestPlayer.forced || ''}|${latestPlayer.lastSyllable || ''}|${usedWords.size}|${latestPlayer.lastWord || ''}`;
+  const key = `${matchGeneration}|${latestPlayer.lastSyllable || ''}|${usedWords.size}|${latestPlayer.lastWord || ''}`;
   if (key === scheduledKey) return;
   scheduledKey = key;
   const generation = matchGeneration;
@@ -97,7 +124,7 @@ function scheduleWord() {
 /** 거절된 최신 상태에서 다른 후보를 한 번 재시도한다. */
 function scheduleRetry() {
   clearScheduled('retry');
-  if (!playing || !latestPlayer || latestTurn !== myId) return;
+  if (!playing || !latestPlayer || latestTurn !== myId || latestTurnState !== 'word_input') return;
   const generation = matchGeneration;
   const word = chooser.chooseAiWord({ player: latestPlayer, usedWords, excludedWords: rejectedWords });
   if (!word) return;
@@ -133,6 +160,8 @@ ws.on('message', (data) => {
       playing = false;
       latestPlayer = null;
       latestTurn = null;
+      latestTurnState = null;
+      rewardIds = [];
       usedWords = new Set();
       rejectedWords = new Set();
       rematchRequested = false;
@@ -142,17 +171,23 @@ ws.on('message', (data) => {
       break;
     case 'STATE': {
       clearScheduled('action');
+      clearScheduled('retry');
+      clearScheduled('reward');
       const own = Array.isArray(msg.players) ? msg.players.find((player) => player.id === myId) : null;
       latestTurn = msg.turn || null;
+      latestTurnState = msg.turnState || null;
+      rewardIds = latestTurnState === 'reward_select' && Array.isArray(msg.pendingCombat?.rewardOptions)
+        ? msg.pendingCombat.rewardOptions.filter((rewardId) => typeof rewardId === 'string')
+        : [];
       latestPlayer = own ? {
         ...own,
-        forced: msg.chain?.forced || null,
         lastSyllable: msg.chain?.lastSyllable || null,
         lastWord: msg.chain?.lastWord || null,
       } : null;
       rejectedWords = new Set();
       scheduledKey = null;
-      scheduleWord();
+      if (latestTurnState === 'reward_select') scheduleReward();
+      else scheduleWord();
       break;
     }
     case 'WORD_ACCEPTED':
@@ -176,6 +211,7 @@ ws.on('message', (data) => {
       playing = false;
       clearScheduled('action');
       clearScheduled('retry');
+      clearScheduled('reward');
       scheduleRematch();
       break;
     case 'REMATCH_WAITING':
@@ -186,6 +222,7 @@ ws.on('message', (data) => {
       playing = false;
       latestPlayer = null;
       latestTurn = null;
+      latestTurnState = null;
       usedWords = new Set();
       rejectedWords = new Set();
       rematchRequested = false;

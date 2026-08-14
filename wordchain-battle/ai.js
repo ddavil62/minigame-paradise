@@ -29,8 +29,6 @@ const MISTAKE_PROBABILITY = 0.25;
 
 /**
  * @typedef {Object} AiPlayerState
- * @property {number} gauge 현재 공격 게이지
- * @property {string|null} forced 가비지로 강제된 시작 글자
  * @property {string|null} lastSyllable 자기 체인의 다음 시작 글자
  */
 
@@ -94,7 +92,7 @@ export function createAiChooser(words) {
    */
   function chooseAiWord({ player, usedWords, rng = Math.random, excludedWords = new Set() }) {
     if (!player || !(usedWords instanceof Set)) return null;
-    const required = player.forced || player.lastSyllable || null;
+    const required = player.lastSyllable || null;
     const unavailable = new Set([...usedWords, ...excludedWords]);
     const candidates = getCandidates(required).filter((word) => !unavailable.has(word));
     if (candidates.length === 0) return null;

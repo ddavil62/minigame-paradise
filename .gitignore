@@ -26,6 +26,7 @@ Thumbs.db
 # 로그
 *.log
 npm-debug.log*
+logs/
 
 # 버그 신고 (런타임 데이터, 커밋 제외)
 bug-reports.jsonl

@@ -66,11 +66,11 @@ function terminate(ws) {
   if (ws && ws.readyState !== WebSocket.CLOSED) ws.terminate();
 }
 
-test('선택기는 forced·두음·공용 중복을 지키며 막다른 후보를 피한다', () => {
+test('선택기는 두음·공용 중복을 지키며 막다른 후보를 피한다', () => {
   const chooser = createAiChooser(['가힣', '가나', '나라', '나비', '라디오']);
   const usedWords = new Set(['라디오']);
   const selected = chooser.chooseAiWord({
-    player: { gauge: 0, forced: '가', lastSyllable: '라' },
+    player: { lastSyllable: '가' },
     usedWords,
     rng: () => 0,
   });
@@ -78,7 +78,7 @@ test('선택기는 forced·두음·공용 중복을 지키며 막다른 후보�
   expect(usedWords).toEqual(new Set(['라디오']));
 
   const dueum = chooser.chooseAiWord({
-    player: { gauge: 0, forced: '라', lastSyllable: null },
+    player: { lastSyllable: '라' },
     usedWords,
     rng: () => 0,
   });
@@ -102,7 +102,7 @@ test('실제 AI 첫 제출은 AI 턴 시작 후 1.2~2.0초 범위이며 한 봇�
     await human.wait((message) => message.type === 'PLAYING', 5_000);
     const initialState = await human.wait((message) => message.type === 'STATE', 5_000);
     expect(initialState.turn).toBe('p2');
-    expect(initialState.chain.lastSyllable).toMatch(/^[가-힣]$/);
+    expect(initialState.chain.lastSyllable).toBeNull();
     const startedAt = performance.now();
     const accepted = await human.wait(
       (message) => message.type === 'WORD_ACCEPTED' && message.playerId === 'p2',

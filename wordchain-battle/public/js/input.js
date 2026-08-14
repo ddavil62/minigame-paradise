@@ -25,6 +25,8 @@ export function rejectReasonToKo(reason) {
     case 'wrong_start': return '잘못된 시작 글자입니다.';
     case 'not_korean':  return '한글 단어를 입력해주세요.';
     case 'not_your_turn': return '상대 차례입니다.';
+    case 'wrong_state': return '지금은 단어를 제출할 수 없습니다.';
+    case 'unsupported_length': return '2글자 이상의 단어를 입력하세요.';
     default:            return '단어가 거부되었습니다.';
   }
 }

@@ -47,11 +47,11 @@ function openBotAttempt(port, token) {
   return { ws, message: waitForMessage(ws, () => true) };
 }
 
-test('AI 선택기는 forced·두음법칙·공용 중복을 지킨다', () => {
+test('AI 선택기는 두음법칙·공용 중복을 지킨다', () => {
   const chooser = createAiChooser(['나라', '나비', '라디오', '비누', '누리', '라마']);
   const usedWords = new Set(['나라']);
   const word = chooser.chooseAiWord({
-    player: { gauge: 0, forced: '라', lastSyllable: '비' },
+    player: { lastSyllable: '라' },
     usedWords,
     rng: () => 0,
   });
@@ -63,13 +63,13 @@ test('AI 선택기는 forced·두음법칙·공용 중복을 지킨다', () => {
 test('AI 선택기는 안전 후보를 고르고 후보가 없으면 null을 반환한다', () => {
   const chooser = createAiChooser(['가나', '가나다라마', '나비', '나라', '마음', '마차']);
   const finishing = chooser.chooseAiWord({
-    player: { gauge: 55, forced: '가', lastSyllable: null },
+    player: { lastSyllable: '가' },
     usedWords: new Set(),
     rng: () => 0,
   });
   assert.ok(finishing === '가나' || finishing === '가나다라마');
   assert.equal(chooser.chooseAiWord({
-    player: { gauge: 0, forced: '힣', lastSyllable: null },
+    player: { lastSyllable: '힣' },
     usedWords: new Set(),
     rng: () => 0,
   }), null);
@@ -105,7 +105,7 @@ test('mode=ai 사람 한 명은 봇 한 명과 단일 경기를 시작하고 이
   await playingPromise;
   const initialState = await initialStatePromise;
   assert.equal(initialState.turn, 'p2', 'AI 선턴을 강제한 테스트 상태');
-  assert.match(initialState.chain.lastSyllable, /^[가-힣]$/);
+  assert.equal(initialState.chain.lastSyllable, null, '첫 단어는 자유 입력이어야 한다');
   const accepted = await waitForMessage(
     human,
     (message) => message.type === 'WORD_ACCEPTED' && message.playerId === 'p2',
