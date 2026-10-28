@@ -53,6 +53,7 @@ export function createSounds() {
 
   const SOUNDS = {
     discard: () => clack(0.4),
+    land: () => { clack(0.55); tone(120, 0, 0.12, 'sine', 0.2); },
     draw: () => clack(0.18),
     deal: () => { clack(0.25); setTimeout(() => ctx && clack(0.25), 90); },
     call: () => { tone(520, 0, 0.12, 'triangle'); tone(780, 0.08, 0.16, 'triangle'); },

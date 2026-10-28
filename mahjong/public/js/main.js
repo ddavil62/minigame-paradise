@@ -7,6 +7,7 @@
  */
 import { tileHtml, backHtml, sideHtml, codeOf, codeOfKind, kindName, esc } from './tiles.js';
 import { createSounds } from './sounds.js';
+import { createFx } from './fx.js';
 
 const WIND_KANJI = ['東', '南', '西', '北'];
 const WIND_KO = ['동', '남', '서', '북'];
@@ -20,6 +21,7 @@ const OVER_REASON = { tobi: '누군가 0점 미만이 되어 대국이 끝났어
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
 const sounds = createSounds();
+const fx = createFx(stage);
 
 const params = new URLSearchParams(location.search);
 const store = {
@@ -46,6 +48,8 @@ const S = {
   toast: '',
   busy: false,
   kanPick: false,
+  anims: [], // 재렌더로 끊기지 않게 이어서 재생하는 짧은 연출 {at, ttl, run(elapsed)}
+  shown: null, // 결과/종료 화면 연출을 이미 시작한 키
 };
 
 // ── 접속 ────────────────────────────────────────────────────
@@ -61,7 +65,7 @@ function playerName() {
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const seg = location.pathname.split('/').filter(Boolean)[0] || 'mahjong';
-  const url = `${proto}://${location.host}/${seg}/ws?key=${encodeURIComponent(playerKey())}&name=${encodeURIComponent(playerName())}`;
+  const url = `${proto}://${location.host}/${seg}/ws?key=${encodeURIComponent(playerKey())}&name=${encodeURIComponent(playerName())}${params.get('role') ? `&role=${encodeURIComponent(params.get('role'))}` : ''}`;
   const ws = new WebSocket(url);
   S.ws = ws;
   ws.addEventListener('open', () => {
@@ -106,17 +110,19 @@ function onMessage(m) {
       if (m.phase === 'lobby') { S.st = null; S.selected = null; S.riichiMode = false; }
       render();
       break;
-    case 'STATE':
+    case 'STATE': {
+      const prev = captureRects();
       S.st = m;
       S.recvAt = Date.now();
       S.offset = m.serverNow - Date.now();
       S.busy = false;
       if (!m.view.legal || m.view.legal.kind !== 'turn') { S.riichiMode = false; S.kanPick = false; }
       if (S.selected != null && !(m.view.myHand.includes(S.selected) || m.view.myDrawn === S.selected)) S.selected = null;
-      handleEvents(m.events || [], m.view);
       render();
+      playEvents(m.events || [], m.view, prev);
       if (params.get('auto')) autoPlay(m.view);
       break;
+    }
     case 'ERROR':
       if (m.code === 'room_full' || m.code === 'in_progress') {
         stage.innerHTML = `<div class="connecting">${esc(m.message || '입장할 수 없어요.')}</div>`;
@@ -160,45 +166,178 @@ function autoPlay(v) {
     return { type: 'discard', id: v.myDrawn != null && l.discard.includes(v.myDrawn) ? v.myDrawn : l.discard[0] };
   };
   const base = Number(params.get('auto')) > 1 ? Number(params.get('auto')) : 40;
-  setTimeout(() => { if (S.st?.view === v) act(pick()); }, l.kind === 'ack' ? 2200 : base);
+  setTimeout(() => { if (S.st?.view === v) act(pick()); }, l.kind === 'ack' ? Math.max(2200, base * 5) : base);
 }
 
 // ── 이벤트(효과음·콜아웃) ──────────────────────────────────
 function relOf(seat, me = S.seat) { return (seat - me + 4) % 4; }
 
-function callout(seat, text, big = false) {
-  const fx = $('fx');
-  if (!fx) return;
-  const el = document.createElement('div');
-  el.className = `callout c-${relOf(seat)}${big ? ' big' : ''}`;
-  el.textContent = text;
-  fx.appendChild(el);
-  setTimeout(() => el.remove(), 1200);
+/** 재렌더 직전의 손패·상대 패 더미 위치(버린 패가 날아오는 출발점) */
+function captureRects() {
+  const hand = new Map();
+  stage.querySelectorAll('.my-hand .tile[data-id]').forEach((t) => hand.set(+t.dataset.id, t.getBoundingClientRect()));
+  const opp = {};
+  [['.side-hand.right', 1], ['.top-hand', 2], ['.side-hand.left', 3]].forEach(([sel, rel]) => {
+    const last = [...stage.querySelectorAll(`${sel} > .tile.back`)].pop();
+    if (last) opp[rel] = last.getBoundingClientRect();
+  });
+  return { hand, opp };
 }
 
-function handleEvents(events, view) {
+const SEAT_ANCHOR = [[600, 548], [800, 330], [600, 196], [400, 330]]; // 내 기준 상대 좌석(0=나,1=오른쪽,2=맞은편,3=왼쪽) 연출 중심
+const POND_ANGLE = [0, -90, 180, 90]; // 좌석별 연못 회전각
+const CALL_STYLE = {
+  pon: { text: '퐁!', color: '#ff9f43' }, chi: { text: '치!', color: '#4dabf7' },
+  minkan: { text: '깡!', color: '#c77dff' }, ankan: { text: '깡!', color: '#c77dff' }, kakan: { text: '깡!', color: '#c77dff' },
+};
+
+/** 짧은 연출을 등록하고 즉시 시작한다. 재렌더 때는 resumeAnims가 이어서 재생한다. */
+function addAnim(ttl, run) {
+  S.anims.push({ at: performance.now(), ttl, run });
+  run(0);
+}
+
+function resumeAnims() {
+  const now = performance.now();
+  S.anims = S.anims.filter((a) => now - a.at < a.ttl);
+  for (const a of S.anims) a.run(now - a.at);
+}
+
+/** 좌석 → 연출 위치(내 시점 기준) */
+function anchorOf(seat) { return SEAT_ANCHOR[relOf(seat)]; }
+
+function dealIn(elapsed) {
+  const from = [{ transform: 'translateY(-200px) rotate(-14deg) scale(.5)', opacity: 0 }, { transform: 'none', opacity: 1 }];
+  fx.stagger([...stage.querySelectorAll('.my-hand > .tile')], from, { step: 45, dur: 420, elapsed });
+  const back = [{ transform: 'scale(.2) translateY(30px)', opacity: 0 }, { transform: 'none', opacity: 1 }];
+  fx.stagger([...stage.querySelectorAll('.top-hand > .tile, .side-hand > .tile')], back, { step: 25, dur: 320, delay: 250, elapsed });
+}
+
+function drawIn(elapsed) {
+  const t = stage.querySelector('.my-hand > .tile.drawn');
+  if (t) fx.stagger([t], [{ transform: 'translate(70px,-90px) scale(1.35) rotate(8deg)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 280, elapsed });
+}
+
+function doraPop(index, elapsed) {
+  const t = stage.querySelectorAll('.dora-row > .tile')[index];
+  if (!t) return;
+  fx.stagger([t], [
+    { transform: 'scale(0) rotate(-200deg)', filter: 'brightness(3)', opacity: 0 },
+    { transform: 'scale(2.2) rotate(10deg)', filter: 'brightness(2)', opacity: 1, offset: 0.55 },
+    { transform: 'scale(1)', filter: 'brightness(1)', opacity: 1 },
+  ], { dur: 650, elapsed });
+}
+
+function riichiStick(rel, elapsed) {
+  const t = stage.querySelector(`.layer.s${rel} .stick`);
+  if (t) fx.stagger([t], [{ transform: 'translateY(-70px) scaleX(.2)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, elapsed });
+}
+
+/** 결과/종료 화면 등장: 화료 연출 뒤에 팝업이 뜨고 역·점수가 차례로 나온다 */
+function overlayIn(elapsed, { late = 0, final = false } = {}) {
+  const ov = stage.querySelector('.overlay');
+  if (!ov) return;
+  const base = late;
+  fx.stagger([ov], [{ opacity: 0 }, { opacity: 1 }], { dur: 300, delay: base, easing: 'ease-out', elapsed });
+  const box = ov.querySelector('.result');
+  if (box) fx.stagger([box], [{ transform: 'scale(.6) translateY(60px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 520, delay: base, easing: 'cubic-bezier(.2,1.35,.4,1)', elapsed });
+  const heads = ov.querySelectorAll('.res-head .limit, .res-head h2');
+  fx.stagger([...heads], [{ transform: 'scale(3.2) rotate(-14deg)', opacity: 0 }, { transform: 'scale(1) rotate(0)', opacity: 1 }], { dur: 420, delay: base + 250, step: 220, easing: 'cubic-bezier(.2,1.6,.4,1)', elapsed });
+  fx.stagger([...ov.querySelectorAll('.yaku > span')], [{ transform: 'translateX(-40px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 320, delay: base + 600, step: 90, easing: 'ease-out', elapsed });
+  fx.stagger([...ov.querySelectorAll('.total, .tenpai-row')], [{ transform: 'scale(.6)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, delay: base + 900, step: 120, elapsed });
+  fx.stagger([...ov.querySelectorAll('.delta, .rank-row')], [{ transform: 'translateX(60px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, delay: base + (final ? 350 : 1000), step: final ? 260 : 140, easing: 'cubic-bezier(.2,1.2,.4,1)', elapsed });
+  ov.querySelectorAll('.delta .plus, .delta .minus').forEach((e, i) => {
+    const sign = e.classList.contains('minus') ? '-' : '+';
+    const abs = Math.abs(parseInt(e.textContent.replace(/[^\d-]/g, '') || '0', 10));
+    fx.countUp(e, abs, (n) => `(${sign}${n.toLocaleString()})`, { delay: base + 1000 + i * 140, dur: 900, elapsed });
+  });
+}
+
+/** 이벤트별 소리·비행·이펙트. 렌더가 끝난 뒤(새 DOM 기준)에 호출한다. */
+function playEvents(events, view, prev) {
   for (const ev of events) {
     switch (ev.t) {
-      case 'hand_start': sounds.play('deal'); break;
-      case 'discard': sounds.play('discard'); break;
-      case 'draw': if (ev.seat === S.seat) sounds.play('draw'); break;
-      case 'dora': sounds.play('dora'); break;
-      case 'call': {
-        const label = { pon: '퐁!', chi: '치!', minkan: '깡!', ankan: '깡!', kakan: '깡!' }[ev.type] || '';
-        callout(ev.seat, label);
-        sounds.play('call');
+      case 'hand_start':
+        sounds.play('deal');
+        fx.banner(ev.label, { color: '#ffe27a', sub: ev.honba ? `${ev.honba}본장` : '', y: 330, dur: 1300 });
+        addAnim(1500, dealIn);
+        break;
+      case 'discard': {
+        const rel = relOf(ev.seat);
+        const src = rel === 0 ? prev.hand.get(ev.id) : prev.opp[rel];
+        const flying = fx.flyDiscard(ev.id, src, POND_ANGLE[rel], { riichi: ev.riichi, onLand: () => sounds.play('land') });
+        if (!flying) sounds.play('discard');
         break;
       }
-      case 'riichi': callout(ev.seat, ev.double ? '더블리치!' : '리치!', true); sounds.play('riichi'); break;
-      case 'agari':
-        for (const w of ev.winners) callout(w, ev.tsumo ? '쯔모!' : '론!', true);
-        sounds.play('win');
+      case 'draw':
+        if (ev.seat === S.seat) { sounds.play('draw'); addAnim(320, drawIn); }
         break;
-      case 'game_over': sounds.play('over'); break;
+      case 'dora': {
+        sounds.play('dora');
+        const idx = (ev.count || view.dora.length) - 1;
+        addAnim(700, (el) => doraPop(idx, el));
+        const t = stage.querySelectorAll('.dora-row > .tile')[idx];
+        if (t) {
+          const p = fx.toStage(t.getBoundingClientRect());
+          fx.ring(p.x, p.y, { r: 50, color: '#ffe27a' });
+          fx.sparks(p.x, p.y, { n: 12, dist: 60, size: 5 });
+        }
+        break;
+      }
+      case 'call': {
+        const st = CALL_STYLE[ev.type];
+        if (!st) break;
+        const [x, y] = anchorOf(ev.seat);
+        sounds.play('call');
+        fx.flash(st.color, 0.22, 360);
+        fx.pop(st.text, x, y, { color: st.color, size: 72 });
+        fx.ring(x, y, { r: 120, color: st.color, width: 6 });
+        fx.ring(x, y, { r: 80, color: '#fff', width: 3, delay: 90 });
+        fx.sparks(x, y, { n: 16, dist: 120, size: 7, colors: [st.color, '#fff'] });
+        fx.shake(4, 220);
+        break;
+      }
+      case 'riichi': {
+        const rel = relOf(ev.seat);
+        const [x, y] = SEAT_ANCHOR[rel];
+        sounds.play('riichi');
+        fx.flash('#ff3b2f', 0.3, 520);
+        fx.banner(ev.double ? '더블 리치!' : '리치!', { color: '#ff6a5a', sub: seatInfo(ev.seat).name, y: 330, dur: 1200 });
+        fx.ring(x, y, { r: 150, color: '#ff6a5a', width: 7 });
+        fx.ring(x, y, { r: 100, color: '#ffe27a', width: 4, delay: 120 });
+        fx.sparks(x, y, { n: 22, dist: 150, size: 7, colors: ['#ff6a5a', '#ffe27a', '#fff'] });
+        fx.shake(7, 380);
+        addAnim(450, (el) => riichiStick(rel, el));
+        break;
+      }
+      case 'agari': {
+        sounds.play('win');
+        const n = ev.winners.length;
+        const label = n > 1 ? `${n === 2 ? '더블' : '트리플'} 론!` : (ev.tsumo ? '쯔모!' : '론!');
+        fx.flash('#fff', 0.7, 700);
+        fx.banner(label, { color: '#ffd23f', sub: ev.winners.map((w) => seatInfo(w).name).join(' · '), y: 330, dur: 1500 });
+        fx.shake(11, 520);
+        ev.winners.forEach((w) => {
+          const [x, y] = anchorOf(w);
+          fx.ring(x, y, { r: 190, color: '#ffd23f', width: 8 });
+          fx.ring(x, y, { r: 130, color: '#ff6a3d', width: 5, delay: 140 });
+          fx.ring(x, y, { r: 80, color: '#fff', width: 3, delay: 260 });
+          fx.confetti(x, y, { n: 46, up: 260, fall: 360 });
+        });
+        fx.confettiRain(36);
+        break;
+      }
+      case 'ryuukyoku':
+        sounds.play('over');
+        fx.banner('유국', { color: '#9fb4ff', sub: DRAW_REASON[ev.reason] || '', y: 330, dur: 1400 });
+        break;
+      case 'game_over':
+        sounds.play('over');
+        fx.confettiRain(80);
+        break;
       default: break;
     }
   }
-  void view;
 }
 
 // ── 공통 렌더 헬퍼 ─────────────────────────────────────────
@@ -296,7 +435,7 @@ function renderLobby() {
       ${r.isHost
         ? `<button class="start" data-do="start">대국 시작<small>${humans.length === 1 ? 'AI 3명과 시작' : `AI ${4 - humans.length}명이 빈자리를 채워요`}</small></button>`
         : '<div class="waiting-note">방장이 대국을 시작하길 기다리는 중이에요…</div>'}
-    </div></div></div><div id="fx"></div>`;
+    </div></div></div>`;
 }
 
 // ── 대국 화면 ──────────────────────────────────────────────
@@ -313,7 +452,7 @@ function plateHtml(seat, v, posCls) {
   if (info.type === 'ai' && info.level) sub += ` · ${LEVEL_KO[info.level]}`;
   if (info.type === 'human' && !isMe) sub = `<span class="${info.connected ? 'dot-online' : 'dot-offline'}"></span>${info.connected ? '접속 중' : '끊김'} · ${sub}`;
   const timer = isMe && turn ? '<div class="timer" id="my-timer"><span>-</span></div>' : '';
-  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${info.away ? ' away' : ''}">
+  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${info.away ? ' away' : ''}">
     <div class="avatar ${avatarClass(info, seat)}">${esc(avatarChar(info))}<span class="wind">${WIND_KANJI[p.wind]}</span>${seat === v.dealer ? '<span class="dealer">親</span>' : ''}</div>
     <div><div class="name">${esc(info.name)}${badge}</div><div class="sub">${sub}</div></div>${timer}</div>`;
 }
@@ -322,8 +461,8 @@ function pondHtml(p, v) {
   return p.discards.map((d) => {
     const isLast = v.lastDiscard && v.lastDiscard.id === d.id && (v.phase === 'reaction');
     const cls = `${isLast ? 'last' : ''}${d.called ? ' taken' : ''}`.trim();
-    if (d.riichi) return sideHtml(code(d.id), 't-pond', cls);
-    return tileHtml(code(d.id), 't-pond', cls);
+    if (d.riichi) return sideHtml(code(d.id), 't-pond', cls, '', { id: d.id });
+    return tileHtml(code(d.id), 't-pond', cls, '', { id: d.id });
   }).join('');
 }
 
@@ -468,7 +607,16 @@ function renderGame() {
   }
   if (v.phase === 'ack' && v.result) html += resultHtml(v);
   if (v.phase === 'over' && v.final) html += finalHtml(v);
-  stage.innerHTML = `<div id="content">${html}</div><div id="fx"></div>`;
+  stage.innerHTML = `<div id="content">${html}</div>`;
+  fx.attach();
+  fx.rehide();
+  const overKey = v.phase === 'ack' && v.result ? `r${v.handNo}` : (v.phase === 'over' && v.final ? 'final' : null);
+  if (overKey && S.shown !== overKey) {
+    S.shown = overKey;
+    const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? 1250 : 350);
+    S.anims.push({ at: performance.now(), ttl: late + 3500, run: (el) => overlayIn(el, { late, final: overKey === 'final' }) });
+  }
+  resumeAnims();
   updateTimers();
 }
 
@@ -560,7 +708,8 @@ setInterval(updateTimers, 250);
 // ── 렌더 진입 ──────────────────────────────────────────────
 function render() {
   if (S.st && S.room && S.room.phase !== 'lobby') renderGame();
-  else renderLobby();
+  else { renderLobby(); S.shown = null; S.anims = []; }
+  fx.attach();
   document.getElementById('btn-assist').classList.toggle('on', S.assist);
   document.getElementById('btn-names').classList.toggle('on', S.showNames);
 }

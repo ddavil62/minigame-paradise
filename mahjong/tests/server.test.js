@@ -29,8 +29,8 @@ async function boot(timing = FAST) {
 }
 
 /** 사람 대신 AI 로직으로 행동하는 테스트 클라이언트 */
-function client(port, { key, name, play = true, level = 'normal' }, t) {
-  const ws = new WebSocket(`ws://127.0.0.1:${port}/mahjong/ws?key=${key}&name=${encodeURIComponent(name)}`);
+function client(port, { key, name, play = true, level = 'normal', role = '' }, t) {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/mahjong/ws?key=${key}&name=${encodeURIComponent(name)}${role ? `&role=${role}` : ''}`);
   const c = { ws, room: null, state: null, joined: null, errors: [], states: 0, hints: null, events: [] };
   let lastSig = '';
   c.send = (m) => ws.send(JSON.stringify(m));
@@ -113,6 +113,21 @@ test('친구와 + AI 2명: 두 사람은 마주 보는 자리(동·서)에 앉�
   a.ws.close();
   b.ws.close();
   srv.close();
+});
+
+test('런처 대기실 호스트(role=p1)가 늦게 접속해도 방장이 된다', async (t) => {
+  const srv = await boot();
+  t.after(srv.close);
+  const guest = client(srv.port, { key: 'g1', name: '도윤', role: 'p2', play: false }, t);
+  await until(() => guest.room && guest.room.isHost);
+  const host = client(srv.port, { key: 'h1', name: '서윤', role: 'p1', play: false }, t);
+  await until(() => host.room && guest.room.seats[2]?.type === 'human' && host.room.isHost);
+  assert.equal(host.joined.host, true);
+  assert.equal(guest.room.isHost, false);
+  const third = client(srv.port, { key: 'x1', name: '끼어듦', role: 'p1', play: false }, t);
+  await until(() => third.room);
+  assert.equal(third.room.isHost, false, '방장 가져가기는 최초 1회만 인정한다');
+  assert.equal(host.room.isHost, true);
 });
 
 test('상대 손패는 STATE에 담기지 않는다', async (t) => {

@@ -98,6 +98,7 @@ export function createApp(opts = {}) {
     /** @type {(null|{seat:number,type:'human'|'ai',name:string,key?:string,ws?:WebSocket|null,connected?:boolean,level?:string,bank?:number,assist?:boolean,autoPlay?:boolean,timeouts?:number,turnStart?:number})[]} */
     slots: [null, null, null, null],
     hostKey: null,
+    lobbyHostClaimed: false, // 런처 대기실 호스트(role=p1)가 방장을 가져갔는지
     /** @type {MahjongGame|null} */ game: null,
     pendingRef: null,
     seatTimers: {},
@@ -164,6 +165,7 @@ export function createApp(opts = {}) {
       room.phase = 'lobby';
       room.slots = [null, null, null, null];
       room.hostKey = null;
+      room.lobbyHostClaimed = false;
       room.settings = { length: 'east', aka: true, kuitan: true, aiLevel: 'normal' };
     }, T.emptyResetMs);
     room.emptyTimer.unref?.();
@@ -430,6 +432,11 @@ export function createApp(opts = {}) {
       return;
     }
     const { slot } = attached;
+    // 런처 대기실 호스트(role=p1)가 방장이어야 한다. 리디렉션 후 먼저 접속한 사람이 방장이 되는 것을 바로잡는다(최초 1회만).
+    if (params.get('role') === 'p1' && !room.lobbyHostClaimed && room.phase === 'lobby') {
+      room.lobbyHostClaimed = true;
+      room.hostKey = key;
+    }
     send(ws, { type: 'JOINED', seat: slot.seat, key, host: key === room.hostKey, phase: room.phase });
     broadcastRoom();
     if (room.game) {

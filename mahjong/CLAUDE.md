@@ -12,7 +12,8 @@ mahjong/
 ├── lib/ai.js       # AI(easy/normal/hard). viewFor() 뷰만 사용한다
 ├── lib/hints.js    # 초보 도우미(향청수·대기패·안전패·추천 버림)
 ├── server.js       # WebSocket 룸, AI 스케줄러, 타이머, 정적 파일
-└── public/         # index.html, css/style.css, js/{main,tiles,sounds}.js
+├── public/         # index.html, css/style.css, js/{main,tiles,sounds,fx}.js
+└── tests/          # node:test + Playwright UI, record-demo.mjs(두 가상 플레이어 시연 영상 녹화)
 ```
 
 ## 룰 (일본식 리치마작)
@@ -40,7 +41,7 @@ mahjong/
 
 ## WebSocket 계약
 
-연결: `/{gameId}/ws?key=<세션키>&name=<닉네임>`. `key`로 재접속하면 같은 좌석을 이어받는다.
+연결: `/{gameId}/ws?key=<세션키>&name=<닉네임>[&role=p1]`. `key`로 재접속하면 같은 좌석을 이어받는다. 런처 대기실 호스트는 리디렉션 URL의 `role=p1`을 그대로 넘기고, 서버는 방 설정 단계에서 **최초 1회만** 그 연결을 방장으로 인정한다(리디렉션 후 먼저 접속한 사람이 방장이 되는 것을 바로잡음). 이후 `role=p1`은 방장을 바꾸지 못한다.
 
 | 방향 | 메시지 | 역할 |
 |---|---|---|
@@ -51,6 +52,13 @@ mahjong/
 | S→C | `JOINED` `ROOM` `STATE` `ERROR` | 좌석·방 설정·대국 뷰(`view`, `seats`, `timers`, `hints`, `events`) |
 
 `STATE.view.legal`은 지금 내가 할 수 있는 행동 목록이며 클라이언트는 이것만 신뢰한다. `events`는 효과음·콜아웃용이다.
+
+## 연출(fx)
+
+- `public/js/fx.js`는 비행 패·착지 충격·배너·파티클을 **재렌더로 지워지지 않는 `#fx` 레이어**에 그린다. 클라이언트는 매 STATE마다 `stage.innerHTML`을 갈아엎으므로 연출 DOM을 `#content` 안에 두면 안 된다(렌더 직후 `fx.attach()`).
+- 이벤트 연출은 **렌더 후** `playEvents()`에서 한다. 버림 패는 렌더 직전 `captureRects()`로 잡아 둔 손패/상대 패 더미 위치에서 연못의 실제 자리(`.pond [data-id]`)까지 날아가며, 날아가는 동안 실제 패는 `visibility:hidden`(렌더 때마다 `fx.rehide()`)이다.
+- 손패 돌리기·뽑기·도라·결과창처럼 재렌더에 끊길 수 있는 연출은 `addAnim`/`S.anims`에 시작 시각을 기억하고 `resumeAnims()`가 경과 시간(`currentTime`)만큼 이어서 재생한다. 새 연출도 이 경로를 쓴다.
+- `prefers-reduced-motion`이면 연출은 건너뛰고 효과음만 낸다. 테스트 전용 `?auto=N`은 결과 확인 대기를 `max(2200, N×5)`ms로 둔다(연출 확인용).
 
 ## 타이머·자동 진행
 
@@ -76,6 +84,7 @@ npx playwright test --config=playwright.config.js   # UI 회귀(격리 포트에
 - `tests/helpers.js`의 `playFullMatch(seed)`가 AI 4명으로 한 대국을 끝까지 돌린다. 규칙을 바꾸면 퍼즈(game.test.js 마지막)가 점수 보존과 종료를 확인한다.
 - 시나리오 테스트는 `setup()`으로 `game.h`를 직접 구성한다. 같은 종류 패는 4장을 넘기지 않도록 손패를 짠다.
 - 고정된 PASS 개수는 문서에 적지 않는다.
+- 시연 영상: 런처를 격리 포트(예: 3055)로 띄우고 `node mahjong/tests/record-demo.mjs`(minigame-paradise 루트에서). 가상 플레이어 2명이 입장→준비→대국→첫 국 결과까지 진행하며 영상은 `tests/screenshots/demo-video/`에 남는다.
 - 화면 검증용: `MAHJONG_FAST=1 node server.js --port 3042` 후 `/?name=테스터&auto=1`은 자동 진행 모드(테스트 전용)다.
 
 ## 변경 시 주의할 점
