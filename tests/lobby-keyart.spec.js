@@ -4,6 +4,7 @@ const expectedKeyArt = {
   'starlight-mail-tower': '/starlight-mail-tower/assets/key-art.webp',
   'moonlight-kitchen-express': '/moonlight-kitchen-express/assets/key-art.webp',
   'wordchain-battle': '/wordchain-battle/assets/key-art.webp',
+  'mahjong': '/mahjong/assets/key-art.webp',
 };
 
 test('generated lobby key art replaces the SVG card assets', async ({ page }, testInfo) => {
