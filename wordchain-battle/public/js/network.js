@@ -48,10 +48,17 @@ export function connect(playerName) {
   // 통합 라우터: /wordchain-battle/ws, 단독: /ws
   const pathname = location.pathname.replace(/\/$/, '');
   const wsPath = pathname ? `${pathname}/ws` : '/ws';
-  const pageMode = new URLSearchParams(location.search).get('mode');
+  const pageParams = new URLSearchParams(location.search);
+  const pageMode = pageParams.get('mode');
   // 브라우저는 사람용 AI 매칭 표식만 전달하며 mode=bot은 절대 전달하지 않는다.
-  const modeQuery = pageMode === 'ai' ? '?mode=ai' : '';
-  const url = `${proto}://${location.host}${wsPath}${modeQuery}`;
+  const socketParams = new URLSearchParams();
+  if (pageMode === 'ai') socketParams.set('mode', 'ai');
+  for (const key of ['matchId', 'role']) {
+    const value = pageParams.get(key);
+    if (value) socketParams.set(key, value);
+  }
+  const query = socketParams.size > 0 ? `?${socketParams}` : '';
+  const url = `${proto}://${location.host}${wsPath}${query}`;
 
   ws = new WebSocket(url);
 
@@ -66,6 +73,7 @@ export function connect(playerName) {
     if (!msg || typeof msg.type !== 'string') return;
 
     const handler = handlers[msg.type];
+    if (msg.type === 'ERROR' && msg.retryable === false) shouldReconnect = false;
     if (handler) handler(msg);
   };
 

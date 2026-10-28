@@ -27,11 +27,14 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import {
   createGame, submitWord, resolveCombatTurn, applyTimerExpiry, applyResign,
-  isGameOver, snapshot, getEffectiveAnswerTime, REWARD_TIMER_SEC, TURN_STATE,
+  isGameOver, snapshot, getEffectiveAnswerTime, beginWordInput, REWARD_TIMER_SEC, TURN_STATE,
 } from './game.js';
 import { publicCombatConfig } from './combat-config.js';
-import { loadWords, getWordSet, buildFollowerCountMap } from './words.js';
+import {
+  loadWords, getWordSet, buildFollowerCountMap, buildEndingCharacterCountMap,
+} from './words.js';
 import { createMissingWordLogger } from './missing-word-log.js';
+import { createConditionalRewardLogger } from './conditional-reward-log.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -54,10 +57,61 @@ const MIME = {
 
 /** 카운트다운 시간 (초) */
 const COUNTDOWN_SEC = 3;
+/** 첫 제시 글자가 막힘 없이 충분히 이어지기 위한 최소 후보 단어 수. */
+const START_SYLLABLE_MIN_FOLLOWERS = 50;
 
 // ── 단어 DB 초기화 ──────────────────────────────────────────────
 const wordSet = loadWords();
 const followerCountMap = buildFollowerCountMap();
+const endingCharacterCountMap = buildEndingCharacterCountMap();
+const initialSyllables = [...followerCountMap.entries()]
+  .filter(([, followerCount]) => followerCount >= START_SYLLABLE_MIN_FOLLOWERS)
+  .map(([syllable]) => syllable);
+
+// ── 단어 DB 핫리로드 ────────────────────────────────────────────
+/**
+ * initialSyllables를 followerCountMap 기준으로 다시 채운다. wordSet·followerCountMap은
+ * words.js에서 in-place로 갱신되어 참조가 그대로 유효하지만, initialSyllables는 로드
+ * 시점에 뽑아낸 스냅샷 배열이라 reload 후 별도로 다시 채워야 한다.
+ */
+function refreshInitialSyllables() {
+  const next = [...followerCountMap.entries()]
+    .filter(([, followerCount]) => followerCount >= START_SYLLABLE_MIN_FOLLOWERS)
+    .map(([syllable]) => syllable);
+  initialSyllables.length = 0;
+  initialSyllables.push(...next);
+}
+
+let reloadDebounceTimer = null;
+/**
+ * data/words.json 변경을 감지했을 때 호출한다. 여러 번 연속 발생하는 변경 이벤트를
+ * 짧게 debounce해 한 번만 재로드한다.
+ */
+function scheduleWordsReload() {
+  if (reloadDebounceTimer) clearTimeout(reloadDebounceTimer);
+  reloadDebounceTimer = setTimeout(() => {
+    reloadDebounceTimer = null;
+    try {
+      loadWords();
+      buildFollowerCountMap();
+      buildEndingCharacterCountMap();
+      refreshInitialSyllables();
+      console.log('[words] 사전 핫리로드 완료 (서버 재시작 없이 적용됨)');
+    } catch (error) {
+      console.warn('[words] 사전 핫리로드 실패:', error?.message || error);
+    }
+  }, 300);
+  reloadDebounceTimer.unref();
+}
+
+try {
+  const wordsJsonPath = path.join(__dirname, 'data', 'words.json');
+  // persistent: false — 감시 자체가 프로세스 종료를 막지 않게 한다.
+  // HTTP/WS 리스너가 이미 프로세스를 살려두므로 감시 동작에는 영향 없다.
+  fs.watch(wordsJsonPath, { persistent: false }, () => scheduleWordsReload());
+} catch (error) {
+  console.warn('[words] 사전 파일 감시 설정 실패:', error?.message || error);
+}
 
 // ── createApp ───────────────────────────────────────────────────
 
@@ -70,17 +124,43 @@ const followerCountMap = buildFollowerCountMap();
  * @param {() => string|null} [opts.getBotUrl] 서버 관리형 봇 접속 URL 반환 함수
  * @param {typeof spawn} [opts.spawnBotProcess] 테스트용 봇 프로세스 생성 함수
  * @param {{log: Function, flush?: Function}} [opts.missingWordLogger] 사전 누락 후보 기록기
- * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function, prepareMatch: Function }}
  */
 export function createApp(opts = {}) {
   let HOST_URL = typeof opts.hostUrl === 'string' ? opts.hostUrl : '';
   const getBotUrl = typeof opts.getBotUrl === 'function' ? opts.getBotUrl : (() => null);
   const spawnBotProcess = typeof opts.spawnBotProcess === 'function' ? opts.spawnBotProcess : spawn;
   const random = typeof opts.random === 'function' ? opts.random : Math.random;
+  const now = typeof opts.now === 'function' ? opts.now : Date.now;
   const missingWordLogger = opts.missingWordLogger || createMissingWordLogger({
     directory: path.join(__dirname, 'logs', 'dictionary-candidates'),
   });
   const loggedMissingWords = new WeakMap();
+  const conditionalRewardLogger = opts.conditionalRewardLogger || createConditionalRewardLogger({
+    directory: path.join(__dirname, 'logs', 'conditional-rewards'),
+  });
+
+  function precisionTargetPool() {
+    const minimum = publicCombatConfig().conditionalRewards.precisionMinEndingWordCount;
+    return [...endingCharacterCountMap.entries()]
+      .filter(([, count]) => count >= minimum)
+      .map(([character]) => character);
+  }
+
+  function logConditionalReward(result, playerId) {
+    if (!result) return;
+    const connection = players.find((candidate) => candidate.id === playerId);
+    const entry = {
+      ...result,
+      matchId: game?.matchId || null,
+      playerId,
+      playerMode: connection?.mode || 'human',
+    };
+    console.log('[wordchain] conditionalReward', JSON.stringify(entry));
+    Promise.resolve(conditionalRewardLogger.log(entry)).catch((error) => {
+      console.warn('[wordchain] 조건부 보상 로그 기록 실패:', error?.message || error);
+    });
+  }
 
   // ── 룸 상태 (closure 격리, 2인 1룸 고정) ─────────────────
 
@@ -96,6 +176,9 @@ export function createApp(opts = {}) {
 
   /** @type {Player[]} */
   let players = [];
+
+  /** 통합 런처가 가장 최근에 발급한 사람 대전 매치 ID. 단독 실행은 null이다. */
+  let expectedMatchId = null;
 
   /** @type {import('./game.js').GameState|null} */
   let game = null;
@@ -167,13 +250,50 @@ export function createApp(opts = {}) {
    * @param {http.IncomingMessage} req WebSocket upgrade 요청
    * @returns {'human'|'ai'|'bot'} 정규화된 연결 모드
    */
-  function parseConnectionMode(req) {
+  function parseConnectionRequest(req) {
     try {
-      const mode = new URL(req.url || '/ws', 'http://localhost').searchParams.get('mode');
-      return mode === 'ai' || mode === 'bot' ? mode : 'human';
+      const params = new URL(req.url || '/ws', 'http://localhost').searchParams;
+      const rawMode = params.get('mode');
+      const mode = rawMode === 'ai' || rawMode === 'bot' ? rawMode : 'human';
+      const rawMatchId = params.get('matchId');
+      const matchId = typeof rawMatchId === 'string' && /^[a-zA-Z0-9-]{8,64}$/.test(rawMatchId)
+        ? rawMatchId
+        : null;
+      const rawRole = params.get('role');
+      const role = rawRole === 'p1' || rawRole === 'p2' ? rawRole : null;
+      return { mode, matchId, role };
     } catch (_) {
-      return 'human';
+      return { mode: 'human', matchId: null, role: null };
     }
+  }
+
+  /**
+   * 런처가 새 사람 대전을 시작하기 직전에 호출한다. 이전 브라우저의 재접속 슬롯을
+   * 모두 폐기하고 이번 매치 ID를 가진 두 역할만 입장할 수 있게 한다.
+   */
+  function prepareMatch(matchId) {
+    if (typeof matchId !== 'string' || !/^[a-zA-Z0-9-]{8,64}$/.test(matchId)) {
+      throw new Error('invalid wordchain matchId');
+    }
+    if (game && (game.phase === 'countdown' || game.phase === 'playing')) return false;
+    expectedMatchId = matchId;
+    cancelCountdown();
+    clearAllTimers();
+    killBotChild();
+    const stalePlayers = players;
+    players = [];
+    game = null;
+    rematchPending = new Set();
+    for (const stale of stalePlayers) {
+      sendJson(stale.ws, {
+        type: 'ERROR',
+        code: 'match_replaced',
+        retryable: false,
+        message: '새 경기가 시작되어 이전 연결을 종료합니다.',
+      });
+      try { stale.ws.close(4001, 'MATCH_REPLACED'); } catch (_) { /* 이미 닫힌 연결은 무시한다. */ }
+    }
+    return true;
   }
 
   /**
@@ -312,6 +432,7 @@ export function createApp(opts = {}) {
     const duration = turnState === TURN_STATE.REWARD_SELECT
       ? REWARD_TIMER_SEC
       : getEffectiveAnswerTime(game.players[playerId]);
+    if (turnState === TURN_STATE.WORD_INPUT) beginWordInput(game, now());
     let remaining = duration;
     broadcastAll({ type: 'TIMER_TICK', playerId, turnState, remaining, duration });
 
@@ -339,10 +460,12 @@ export function createApp(opts = {}) {
         broadcastAll({ type: 'COMBAT_RESOLVED', ...combat });
       } else {
         const {
-          hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
+          hpLoss, newHp, nextTurn, autoWord, deadEndExpanded, conditionalRewardResult,
         } = applyTimerExpiry(game, playerId, wordSet, followerCountMap);
+        logConditionalReward(conditionalRewardResult, playerId);
         broadcastAll({
           type: 'TIMER_EXPIRED', playerId, hpLoss, newHp, nextTurn, autoWord, deadEndExpanded,
+          conditionalRewardResult,
         });
         broadcastAll({ type: 'TYPING', playerId, count: 0 });
       }
@@ -391,13 +514,17 @@ export function createApp(opts = {}) {
     cancelCountdown();
     const p1 = players.find((p) => p.id === 'p1');
     const p2 = players.find((p) => p.id === 'p2');
+    const initialSyllable = initialSyllables.length > 0
+      ? initialSyllables[Math.floor(random() * initialSyllables.length)]
+      : null;
     game = createGame(
       p1 ? p1.name : '플레이어1',
       p2 ? p2.name : '플레이어2',
       random() < 0.5 ? 'p1' : 'p2',
-      null,
+      initialSyllable,
       followerCountMap,
     );
+    game.matchId = randomBytes(6).toString('hex');
     game.phase = 'countdown';
     rematchPending = new Set();
     const countdownGame = game;
@@ -464,7 +591,7 @@ export function createApp(opts = {}) {
   const wss = new WebSocketServer({ noServer: true });
 
   wss.on('connection', (ws, req) => {
-    const mode = parseConnectionMode(req);
+    const { mode, matchId, role } = parseConnectionRequest(req);
     // 좀비 슬롯 정리
     const dead = players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
     if (dead.length > 0) {
@@ -488,6 +615,20 @@ export function createApp(opts = {}) {
       && hasValidBotToken(req);
     const humanBlockedByAiSession = mode !== 'bot' && Boolean(aiHuman);
     const aiMustOwnEmptyRoom = mode === 'ai' && players.length > 0;
+    const matchRequired = mode !== 'bot' && expectedMatchId !== null;
+    const invalidMatch = matchRequired && matchId !== expectedMatchId;
+    const unregisteredMatch = mode !== 'bot' && expectedMatchId === null && matchId !== null;
+
+    if (invalidMatch || unregisteredMatch) {
+      sendJson(ws, {
+        type: 'ERROR',
+        code: 'invalid_match',
+        retryable: false,
+        message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.',
+      });
+      ws.close(4002, 'INVALID_MATCH');
+      return;
+    }
 
     // 서버가 실행하지 않은 봇이나 AI 세션 중 추가 사람 연결은 슬롯을 차지하지 못한다.
     if ((mode === 'bot' && !botAllowed) || humanBlockedByAiSession || aiMustOwnEmptyRoom) {
@@ -501,14 +642,19 @@ export function createApp(opts = {}) {
 
     // 정원 초과 거절
     if (players.length >= 2) {
-      sendJson(ws, { type: 'ERROR', message: '방이 가득 찼다 (2/2)' });
-      ws.close();
+      sendJson(ws, { type: 'ERROR', code: 'room_full', retryable: false, message: '방이 가득 찼습니다. 로비에서 다시 입장해 주세요.' });
+      ws.close(4003, 'ROOM_FULL');
       return;
     }
 
     // 슬롯 배정
     const usedIds = new Set(players.map((p) => p.id));
-    const playerId = ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
+    if (role && usedIds.has(role)) {
+      sendJson(ws, { type: 'ERROR', code: 'role_taken', retryable: false, message: '이미 연결된 플레이어 역할입니다. 로비에서 다시 입장해 주세요.' });
+      ws.close(4004, 'ROLE_TAKEN');
+      return;
+    }
+    const playerId = role || ['p1', 'p2'].find((id) => !usedIds.has(id)) || 'p1';
     const player = {
       id: playerId,
       ws,
@@ -516,6 +662,7 @@ export function createApp(opts = {}) {
       joined: mode === 'bot',
       mode,
       _isBot: mode === 'bot',
+      matchId: mode === 'bot' ? expectedMatchId : matchId,
     };
     players.push(player);
     console.log(`[wordchain] ${playerId} 연결됨 (${players.length}/2)`);
@@ -551,6 +698,7 @@ export function createApp(opts = {}) {
         }
 
         case 'WORD_SUBMIT': {
+          const submittedAtMs = now();
           if (!game || game.phase !== 'playing') {
             sendJson(ws, { type: 'ERROR', message: '게임이 진행 중이 아닙니다.' });
             break;
@@ -569,6 +717,7 @@ export function createApp(opts = {}) {
             wordSet,
             followerCountMap,
             random,
+            { submittedAtMs, precisionTargetPool: precisionTargetPool() },
           );
 
           if (!result.ok) {
@@ -604,6 +753,7 @@ export function createApp(opts = {}) {
           }
 
           broadcastAll({ type: 'TYPING', playerId: player.id, count: 0 });
+          logConditionalReward(result.conditionalRewardResult, player.id);
 
           // 단어 수락
           broadcastAll({
@@ -614,6 +764,7 @@ export function createApp(opts = {}) {
             wordEffect: result.wordEffect,
             newLastSyllable: result.newLastSyllable,
             deadEndExpanded: result.deadEndExpanded,
+            conditionalRewardResult: result.conditionalRewardResult,
           });
 
           // 상태 브로드캐스트
@@ -814,7 +965,7 @@ export function createApp(opts = {}) {
     HOST_URL = typeof url === 'string' ? url : '';
   }
 
-  return { handleHttp, handleUpgrade, setHostUrl };
+  return { handleHttp, handleUpgrade, setHostUrl, prepareMatch };
 }
 
 // ──────────────────────────────────────────────────────────────

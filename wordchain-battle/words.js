@@ -15,18 +15,36 @@ const __dirname = path.dirname(__filename);
 
 // ── 단어 DB 로드 ────────────────────────────────────────────────
 
-/** @type {Set<string>} 전체 단어 집합 (서버 시작 시 1회 로드) */
-let WORD_SET = new Set();
+/**
+ * 전체 단어 집합. 항상 같은 Set 인스턴스를 in-place로 갱신한다(재할당 금지).
+ * server.js가 이 Set을 한 번 참조로 받아 계속 쓰기 때문에, reload 시에도 참조가
+ * 유지되어야 진행 중인 게임과 이후 게임 모두 새 단어를 즉시 인식한다.
+ * @type {Set<string>}
+ */
+const WORD_SET = new Set();
 
 /**
- * data/words.json을 로드하여 WORD_SET을 초기화한다.
- * @returns {Set<string>} 로드된 단어 Set
+ * 글자별 후속 단어 수 맵. WORD_SET과 동일하게 항상 같은 Map 인스턴스를
+ * in-place로 갱신한다.
+ * @type {Map<string, number>}
+ */
+const FOLLOWER_COUNT_MAP = new Map();
+
+/** 정밀타 목표 후보 생성에 사용하는 사전 끝 글자 빈도 맵. */
+const ENDING_CHARACTER_COUNT_MAP = new Map();
+
+/**
+ * data/words.json을 (재)로드하여 WORD_SET을 in-place로 갱신한다.
+ * 서버 시작 시 1회 호출되며, 사전 파일이 바뀌면(예: `npm run build-words` 재실행)
+ * 다시 호출해 핫리로드할 수 있다.
+ * @returns {Set<string>} 갱신된 단어 Set (항상 동일 인스턴스)
  */
 export function loadWords() {
   const jsonPath = path.join(__dirname, 'data', 'words.json');
   const raw = fs.readFileSync(jsonPath, 'utf8');
   const data = JSON.parse(raw);
-  WORD_SET = new Set(data.words);
+  WORD_SET.clear();
+  for (const word of data.words) WORD_SET.add(word);
   console.log(`[words] 단어 DB 로드 완료: ${WORD_SET.size}개`);
   return WORD_SET;
 }
@@ -37,6 +55,21 @@ export function loadWords() {
  */
 export function getWordSet() {
   return WORD_SET;
+}
+
+/** 사전 단어의 마지막 글자 빈도를 in-place로 다시 계산한다. */
+export function buildEndingCharacterCountMap() {
+  ENDING_CHARACTER_COUNT_MAP.clear();
+  for (const word of WORD_SET) {
+    const ending = [...word].at(-1);
+    if (ending) ENDING_CHARACTER_COUNT_MAP.set(ending, (ENDING_CHARACTER_COUNT_MAP.get(ending) ?? 0) + 1);
+  }
+  return ENDING_CHARACTER_COUNT_MAP;
+}
+
+/** 현재 끝 글자 빈도 맵을 반환한다. */
+export function getEndingCharacterCountMap() {
+  return ENDING_CHARACTER_COUNT_MAP;
 }
 
 // ── 두음법칙 변환 테이블 ─────────────────────────────────────────
@@ -182,7 +215,8 @@ export function buildFollowerCountMap() {
     endSyllables.add(word[word.length - 1]);
   }
 
-  const followerCountMap = new Map();
+  // WORD_SET과 동일한 이유로 in-place 갱신: server.js가 참조를 계속 들고 쓴다.
+  FOLLOWER_COUNT_MAP.clear();
   for (const syllable of endSyllables) {
     const d = decomposeHangul(syllable);
     let directCount = directCountMap.get(syllable) ?? 0;
@@ -203,11 +237,11 @@ export function buildFollowerCountMap() {
       }
     }
 
-    followerCountMap.set(syllable, directCount + altCount);
+    FOLLOWER_COUNT_MAP.set(syllable, directCount + altCount);
   }
 
-  console.log(`[words] 후속 단어 수 맵 빌드 완료: ${followerCountMap.size}개 글자`);
-  return followerCountMap;
+  console.log(`[words] 후속 단어 수 맵 빌드 완료: ${FOLLOWER_COUNT_MAP.size}개 글자`);
+  return FOLLOWER_COUNT_MAP;
 }
 
 /**

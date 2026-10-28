@@ -32,6 +32,8 @@ test('2인 실제 화면에서 단어 제출 → 보상 선택 → 전투 적용
     await expect(b.locator('#game-screen')).toHaveClass(/active/, { timeout: 8_000 });
     await expect(a.locator('#start-char')).toHaveText('???');
     await expect(b.locator('#start-char')).toHaveText('???');
+    await expect(a.locator('#game-screen')).not.toContainText('자유');
+    await expect(a.locator('#sound-btn')).toHaveAttribute('aria-pressed', 'false');
     const countdownTurns = await Promise.all([
       a.locator('#countdown-first-turn').innerText(),
       b.locator('#countdown-first-turn').innerText(),
@@ -52,8 +54,11 @@ test('2인 실제 화면에서 단어 제출 → 보상 선택 → 전투 적용
     await expect.poll(async () => (
       await a.locator('#word-input').isEnabled() || await b.locator('#word-input').isEnabled()
     ), { timeout: 8_000 }).toBe(true);
+    await expect(a.locator('#start-char')).toHaveText(/^[가-힣]$/);
+    await expect(b.locator('#start-char')).toHaveText(/^[가-힣]$/);
     const actor = await a.locator('#word-input').isEnabled() ? a : b;
     const observer = actor === a ? b : a;
+    expect(await actor.evaluate(async () => (await import('/js/audio.js')).audio.playing)).toBe(true);
     await actor.locator('#word-input').fill('가게');
     await actor.locator('#submit-btn').click();
     await expect(actor.locator('#reward-action')).toBeVisible();
@@ -79,7 +84,10 @@ test('치명타 공격은 단어 비행 뒤 HP 0, 균열, K.O. 순서로 재생�
   try {
     await page.goto(`http://127.0.0.1:${server.port}/?name=KO-QA`);
     await page.evaluate(async () => {
+      const { audio } = await import('/js/audio.js');
       const ui = await import('/js/ui.js');
+      window.__wordchainAudioEvents = [];
+      audio.play = (name) => window.__wordchainAudioEvents.push(name);
       ui.showGame();
       ui.updatePlayer('opp', { hp: 14, maxHp: 100, attack: 0, defense: 0, baseAnswerTime: 10 });
       ui.playCombatSequence({ attackerWho: 'me', targetWho: 'opp', word: '라벤더빛', damage: 14, targetHp: 0, lethal: true });
@@ -93,6 +101,7 @@ test('치명타 공격은 단어 비행 뒤 HP 0, 균열, K.O. 순서로 재생�
     await expect(page.locator('#panel-opp')).toHaveClass(/defeated/);
     await expect(page.locator('#defeat-opp .ko-stamp')).toBeVisible();
     await page.waitForTimeout(700);
+    expect(await page.evaluate(() => window.__wordchainAudioEvents)).toEqual(['projectile', 'impact', 'ko']);
     await page.screenshot({ path: 'tests/screenshots/ko-finisher-desktop.png', fullPage: true });
   } finally {
     await page.close();
@@ -105,7 +114,10 @@ test('시간초과는 타이머 폭발 뒤 해당 전장에 20 피해를 표시�
   try {
     await page.goto(`http://127.0.0.1:${server.port}/?name=TIMEOUT-QA`);
     await page.evaluate(async () => {
+      const { audio } = await import('/js/audio.js');
       const ui = await import('/js/ui.js');
+      window.__wordchainAudioEvents = [];
+      audio.play = (name) => window.__wordchainAudioEvents.push(name);
       ui.showGame();
       ui.updatePlayer('me', { hp: 92, maxHp: 100, attack: 0, defense: 0, baseAnswerTime: 10 });
       ui.playTimeoutSequence({ who: 'me', damage: 20, targetHp: 72, lethal: false });
@@ -118,6 +130,7 @@ test('시간초과는 타이머 폭발 뒤 해당 전장에 20 피해를 표시�
     await expect(page.locator('#panel-me')).toHaveClass(/timeout-hit/);
     await expect(page.locator('#damage-float')).toContainText('-20');
     await expect(page.locator('#damage-float')).toHaveClass(/timeout-damage/);
+    expect(await page.evaluate(() => window.__wordchainAudioEvents)).toEqual(['timeout', 'impact']);
     await page.screenshot({ path: 'tests/screenshots/timeout-damage-desktop.png', fullPage: true });
   } finally {
     await page.close();

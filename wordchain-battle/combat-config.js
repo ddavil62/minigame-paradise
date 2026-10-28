@@ -26,6 +26,10 @@ export const COMBAT_CONFIG = Object.freeze({
   damage: Object.freeze({
     minimum: 1,
   }),
+  conditionalRewards: Object.freeze({
+    maxPerDraft: 1,
+    precisionMinEndingWordCount: 50,
+  }),
   wordEffects: Object.freeze([
     Object.freeze({
       id: 'guard_2', minLength: 2, maxLength: 2, label: '견제',
@@ -47,31 +51,49 @@ export const COMBAT_CONFIG = Object.freeze({
   rewards: Object.freeze([
     Object.freeze({
       id: 'bonus_damage', name: '추가 공격', icon: '⚔️', effectType: 'bonus_damage', amount: 5,
-      duration: 'turn', description: '이번 공격 +5 피해',
+      category: 'immediate', duration: 'turn', description: '이번 공격 +5 피해',
     }),
     Object.freeze({
       id: 'attack_up', name: '공격 강화', icon: '💪', effectType: 'self_attack', amount: 1,
-      duration: 'match', description: 'ATK +1 (영구)',
+      category: 'permanent', duration: 'match', description: 'ATK +1 (영구)',
     }),
     Object.freeze({
       id: 'defense_up', name: '방어 강화', icon: '🛡️', effectType: 'self_defense', amount: 1,
-      duration: 'match', description: 'DEF +1 (영구)',
+      category: 'permanent', duration: 'match', description: 'DEF +1 (영구)',
     }),
     Object.freeze({
       id: 'heal', name: '흡혈 / 회복', icon: '❤️', effectType: 'self_heal', amount: 5,
-      duration: 'turn', requiresDamage: true, description: 'HP +5',
+      category: 'recovery', duration: 'turn', requiresDamage: true, description: 'HP +5',
     }),
     Object.freeze({
       id: 'next_turn_pressure', name: '시간 압박', icon: '⏳', effectType: 'opponent_next_time', amount: -5,
-      duration: 'next_turn', description: '상대 다음 -5초',
+      category: 'time', duration: 'next_turn', description: '상대 다음 -5초',
     }),
     Object.freeze({
       id: 'opponent_time_down', name: '시간 약화', icon: '⌛', effectType: 'opponent_answer_time', amount: -1,
-      duration: 'match', description: '상대 영구 -1초',
+      category: 'time', duration: 'match', description: '상대 영구 -1초',
     }),
     Object.freeze({
       id: 'self_time_up', name: '시간 강화', icon: '⏱️', effectType: 'self_answer_time', amount: 1,
-      duration: 'match', description: '내 영구 +1초',
+      category: 'time', duration: 'match', description: '내 영구 +1초',
+    }),
+    Object.freeze({
+      id: 'conditional_long_word', name: '장문 공격', icon: '📜', effectType: 'conditional_bonus', amount: 8,
+      category: 'conditional', duration: 'next_own_word',
+      condition: Object.freeze({ type: 'min_word_length', minLength: 4 }),
+      description: '다음 단어 4글자 이상 · +8 DAMAGE',
+    }),
+    Object.freeze({
+      id: 'conditional_quick', name: '속공', icon: '⚡', effectType: 'conditional_bonus', amount: 8,
+      category: 'conditional', duration: 'next_own_word',
+      condition: Object.freeze({ type: 'max_elapsed_seconds', maxSeconds: 3 }),
+      description: '다음 단어 3초 내 제출 · +8 DAMAGE',
+    }),
+    Object.freeze({
+      id: 'conditional_precision', name: '정밀타', icon: '🎯', effectType: 'conditional_bonus', amount: 10,
+      category: 'conditional', duration: 'next_own_word',
+      condition: Object.freeze({ type: 'target_ending' }),
+      description: '다음 단어 목표 글자로 끝내기 · +10 DAMAGE',
     }),
   ]),
 });

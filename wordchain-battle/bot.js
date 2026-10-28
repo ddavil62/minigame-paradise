@@ -177,7 +177,9 @@ ws.on('message', (data) => {
       latestTurn = msg.turn || null;
       latestTurnState = msg.turnState || null;
       rewardIds = latestTurnState === 'reward_select' && Array.isArray(msg.pendingCombat?.rewardOptions)
-        ? msg.pendingCombat.rewardOptions.filter((rewardId) => typeof rewardId === 'string')
+        ? msg.pendingCombat.rewardOptions
+          .map((option) => (typeof option === 'string' ? option : option?.rewardId))
+          .filter((rewardId) => typeof rewardId === 'string')
         : [];
       latestPlayer = own ? {
         ...own,

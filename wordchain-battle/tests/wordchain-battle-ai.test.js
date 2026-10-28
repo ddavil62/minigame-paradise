@@ -105,7 +105,7 @@ test('mode=ai 사람 한 명은 봇 한 명과 단일 경기를 시작하고 이
   await playingPromise;
   const initialState = await initialStatePromise;
   assert.equal(initialState.turn, 'p2', 'AI 선턴을 강제한 테스트 상태');
-  assert.equal(initialState.chain.lastSyllable, null, '첫 단어는 자유 입력이어야 한다');
+  assert.match(initialState.chain.lastSyllable, /^[가-힣]$/, '첫 단어의 무작위 시작 글자가 공개되어야 한다');
   const accepted = await waitForMessage(
     human,
     (message) => message.type === 'WORD_ACCEPTED' && message.playerId === 'p2',

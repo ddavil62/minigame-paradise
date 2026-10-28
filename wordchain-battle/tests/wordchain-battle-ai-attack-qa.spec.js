@@ -102,7 +102,7 @@ test('실제 AI 첫 제출은 AI 턴 시작 후 1.2~2.0초 범위이며 한 봇�
     await human.wait((message) => message.type === 'PLAYING', 5_000);
     const initialState = await human.wait((message) => message.type === 'STATE', 5_000);
     expect(initialState.turn).toBe('p2');
-    expect(initialState.chain.lastSyllable).toBeNull();
+    expect(initialState.chain.lastSyllable).toMatch(/^[가-힣]$/);
     const startedAt = performance.now();
     const accepted = await human.wait(
       (message) => message.type === 'WORD_ACCEPTED' && message.playerId === 'p2',

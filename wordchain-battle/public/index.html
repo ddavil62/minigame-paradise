@@ -19,6 +19,7 @@
     <header class="game-topbar">
       <h1>끝말잇기 <span>BATTLE</span></h1>
       <div id="turn-banner" class="turn-banner" role="status" aria-live="polite">첫 턴을 정하는 중...</div>
+      <button id="sound-btn" class="sound-btn" type="button" aria-label="게임 소리 끄기" aria-pressed="false">♪</button>
       <button id="exit-btn" class="exit-btn" type="button">✕ 나가기</button>
     </header>
 
@@ -37,6 +38,7 @@
           <div class="stat-card time-stat"><span class="time-ring"><b id="time-ring-me">10</b></span><strong id="answer-time-me">10초</strong><small>기본 답변시간</small></div>
         </div>
         <div id="temp-time-me" class="temp-effect hidden"></div>
+        <div id="conditional-me" class="conditional-status hidden" aria-live="polite"></div>
         <div class="arena-status"><i></i><span id="status-me">전투 준비 중</span></div>
         <div class="defeat-fx" id="defeat-me" aria-hidden="true">
           <div class="defeat-flash"></div>
@@ -53,6 +55,7 @@
       <section class="chain-core" aria-label="현재 단어 흐름">
         <span class="core-kicker">COUNTER WORD</span>
         <div class="start-orb"><small>START</small><strong id="start-char" class="start-char pending">???</strong></div>
+        <div id="start-char-alt" class="start-char-alt hidden" role="status" aria-live="polite"></div>
         <div id="typing-indicator" class="typing-indicator hidden" role="status" aria-live="polite"></div>
         <section class="chain-area">
           <h2>최근 단어 흐름</h2>
@@ -74,6 +77,7 @@
           <div class="stat-card time-stat"><span class="time-ring opponent"><b id="time-ring-opp">10</b></span><strong id="answer-time-opp">10초</strong><small>기본 답변시간</small></div>
         </div>
         <div id="temp-time-opp" class="temp-effect hidden"></div>
+        <div id="conditional-opp" class="conditional-status rival hidden"></div>
         <div class="arena-status rival"><span id="status-opp">전투 준비 중</span><i></i></div>
         <div class="defeat-fx" id="defeat-opp" aria-hidden="true">
           <div class="defeat-flash"></div>
@@ -105,6 +109,7 @@
           <input type="text" id="word-input" class="word-input" placeholder="이어갈 단어를 입력하세요" autocomplete="off" disabled>
           <button id="submit-btn" class="submit-btn" disabled>공격</button>
         </div>
+        <div id="conditional-input" class="conditional-input-hint hidden"></div>
       </div>
       <div id="feedback" class="feedback" aria-live="polite"></div>
       <div id="timeout-banner" class="timeout-banner" aria-hidden="true">TIME OUT</div>

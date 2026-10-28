@@ -5,9 +5,9 @@ import { WebSocket } from 'ws';
 import { createApp } from '../server.js';
 import { loadWords } from '../words.js';
 
-function openClient(port) {
+function openClient(port, query = '') {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws${query}`);
     const messages = [];
     const waiters = [];
     ws.on('message', (raw) => {
@@ -53,18 +53,18 @@ test('실제 WebSocket이 State별 의도 검증과 보상 전투를 서버 권�
     await p1.wait('JOINED'); await p2.wait('JOINED');
     p1.send({ type: 'JOIN', name: 'A' }); p2.send({ type: 'JOIN', name: 'B' });
     const start = await p1.wait('GAME_START'); await p2.wait('GAME_START');
-    assert.equal(start.combatConfig.rewards.length, 7);
+    assert.equal(start.combatConfig.rewards.length, 10);
     assert.equal(start.firstTurn, 'p1');
     await p1.wait('PLAYING', 5_000); await p2.wait('PLAYING', 5_000);
     const initial = await p1.wait('STATE'); await p2.wait('STATE');
     assert.equal(initial.turn, 'p1');
     assert.equal(initial.turnState, 'word_input');
-    assert.equal(initial.chain.lastSyllable, null);
+    assert.match(initial.chain.lastSyllable, /^[가-힣]$/);
 
     p1.send({ type: 'REWARD_SELECT', rewardId: 'bonus_damage' });
     assert.equal((await p1.wait('REWARD_REJECTED')).reason, 'wrong_state');
 
-    const word = [...loadWords()].find((candidate) => [...candidate].length === 3);
+    const word = [...loadWords()].find((candidate) => [...candidate].length === 3 && candidate[0] === initial.chain.lastSyllable);
     assert.ok(word);
     p1.send({ type: 'WORD_SUBMIT', word });
     const accepted = await p1.wait('WORD_ACCEPTED'); await p2.wait('WORD_ACCEPTED');
@@ -73,8 +73,8 @@ test('실제 WebSocket이 State별 의도 검증과 보상 전투를 서버 권�
     await p2.wait((message) => message.type === 'STATE' && message.turnState === 'reward_select');
     assert.equal(rewardState.turn, 'p1');
     assert.equal(rewardState.pendingCombat.rewardOptions.length, 3);
-    assert.equal(new Set(rewardState.pendingCombat.rewardOptions).size, 3);
-    assert.ok(rewardState.pendingCombat.rewardOptions.includes('bonus_damage'));
+    assert.equal(new Set(rewardState.pendingCombat.rewardOptions.map((option) => option.rewardId)).size, 3);
+    assert.ok(rewardState.pendingCombat.rewardOptions.some((option) => option.rewardId === 'bonus_damage'));
 
     p1.send({ type: 'WORD_SUBMIT', word });
     assert.equal((await p1.wait('WORD_REJECTED')).reason, 'wrong_state');
@@ -99,6 +99,51 @@ test('실제 WebSocket이 State별 의도 검증과 보상 전투를 서버 권�
   }
 });
 
+test('런처 매치 등록은 오래된 슬롯을 제거하고 지정된 p1·p2만 같은 경기에 입장시킨다', async () => {
+  const app = createApp({ hostUrl: '', random: () => 0 });
+  const server = http.createServer(app.handleHttp);
+  server.on('upgrade', app.handleUpgrade);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  const stale = await openClient(port);
+  let p1;
+  let p2;
+  let rejected;
+  try {
+    await stale.wait('JOINED');
+    stale.send({ type: 'JOIN', name: '오래된 탭' });
+
+    const matchId = 'match-session-12345678';
+    app.prepareMatch(matchId);
+    const staleError = await stale.wait('ERROR');
+    assert.equal(staleError.code, 'match_replaced');
+    assert.equal(staleError.retryable, false);
+
+    rejected = await openClient(port, '?matchId=old-session-12345678&role=p1');
+    const rejectedError = await rejected.wait('ERROR');
+    assert.equal(rejectedError.code, 'invalid_match');
+    assert.equal(rejectedError.retryable, false);
+
+    p2 = await openClient(port, `?matchId=${matchId}&role=p2`);
+    p1 = await openClient(port, `?matchId=${matchId}&role=p1`);
+    const joinedP2 = await p2.wait('JOINED');
+    const joinedP1 = await p1.wait('JOINED');
+    assert.equal(joinedP2.yourId, 'p2');
+    assert.equal(joinedP1.yourId, 'p1');
+    p2.send({ type: 'JOIN', name: 'B' });
+    p1.send({ type: 'JOIN', name: 'A' });
+    const [startP1, startP2] = await Promise.all([p1.wait('GAME_START'), p2.wait('GAME_START')]);
+    assert.equal(startP1.players.length, 2);
+    assert.equal(startP2.players.length, 2);
+  } finally {
+    stale.ws.close();
+    rejected?.ws.close();
+    p1?.ws.close();
+    p2?.ws.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('실제 10초 보상 타이머 만료는 보상 없이 공격하고 상대 턴을 시작한다', async () => {
   const app = createApp({ hostUrl: '', random: () => 0 });
   const server = http.createServer(app.handleHttp);
@@ -112,8 +157,8 @@ test('실제 10초 보상 타이머 만료는 보상 없이 공격하고 상대 
     p1.send({ type: 'JOIN', name: 'A' }); p2.send({ type: 'JOIN', name: 'B' });
     await p1.wait('GAME_START'); await p2.wait('GAME_START');
     await p1.wait('PLAYING', 5_000); await p2.wait('PLAYING', 5_000);
-    await p1.wait('STATE'); await p2.wait('STATE');
-    const word = [...loadWords()].find((candidate) => [...candidate].length === 3);
+    const initial = await p1.wait('STATE'); await p2.wait('STATE');
+    const word = [...loadWords()].find((candidate) => [...candidate].length === 3 && candidate[0] === initial.chain.lastSyllable);
     p1.send({ type: 'WORD_SUBMIT', word });
     await p1.wait('WORD_ACCEPTED'); await p2.wait('WORD_ACCEPTED');
     await p1.wait((message) => message.type === 'STATE' && message.turnState === 'reward_select');

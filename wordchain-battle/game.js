@@ -39,6 +39,7 @@ function createPlayer(id, name) {
     defense: COMBAT_CONFIG.player.initialDefense,
     answerTimeModifier: 0,
     nextTurnTimeModifier: 0,
+    pendingConditionalReward: null,
   };
 }
 
@@ -57,6 +58,7 @@ export function createGame(p1Name, p2Name, firstTurn = 'p1', initialSyllable = n
     chain: { lastWord: null, lastSyllable: validInitialSyllable, deadEndAlts: alts },
     turn: firstTurn === 'p2' ? 'p2' : 'p1',
     pendingCombat: null,
+    wordInputStartedAtMs: null,
     usedWords: new Set(),
     winner: null,
     loser: null,
@@ -77,16 +79,113 @@ export function getReward(rewardId) {
   return COMBAT_CONFIG.rewards.find((reward) => reward.id === rewardId) || null;
 }
 
-/** 설정된 보상 중 중복 없이 이번 턴에 노출할 후보를 뽑는다. */
-export function drawRewardOptions(random = Math.random) {
-  const pool = COMBAT_CONFIG.rewards.map((reward) => reward.id);
+function normalizedRandom(random) {
+  return Math.max(0, Math.min(0.999999, Number(random()) || 0));
+}
+
+/** 설정된 보상 중 중복 없이 후보를 뽑되 조건부 보상은 설정된 최대 개수를 넘기지 않는다. */
+export function drawRewardOptions(random = Math.random, precisionTargetPool = []) {
+  const pool = COMBAT_CONFIG.rewards.filter((reward) => (
+    reward.id !== 'conditional_precision' || precisionTargetPool.length > 0
+  ));
   const count = Math.min(COMBAT_CONFIG.timers.rewardOptionCount, pool.length);
   const options = [];
+  let conditionalCount = 0;
   while (options.length < count) {
-    const picked = Math.floor(Math.max(0, Math.min(0.999999, Number(random()) || 0)) * pool.length);
-    options.push(pool.splice(picked, 1)[0]);
+    const eligible = pool.filter((reward) => (
+      reward.category !== 'conditional'
+      || conditionalCount < COMBAT_CONFIG.conditionalRewards.maxPerDraft
+    ));
+    if (eligible.length === 0) break;
+    const reward = eligible[Math.floor(normalizedRandom(random) * eligible.length)];
+    pool.splice(pool.indexOf(reward), 1);
+    const option = { rewardId: reward.id };
+    if (reward.id === 'conditional_precision') {
+      option.targetCharacter = precisionTargetPool[
+        Math.floor(normalizedRandom(random) * precisionTargetPool.length)
+      ];
+    }
+    options.push(option);
+    if (reward.category === 'conditional') conditionalCount += 1;
   }
   return options;
+}
+
+/** 서버가 WORD_INPUT State를 연 시각을 기록한다. */
+export function beginWordInput(game, startedAtMs) {
+  game.wordInputStartedAtMs = Number.isFinite(startedAtMs) ? startedAtMs : null;
+}
+
+function optionRewardId(option) {
+  return typeof option === 'string' ? option : option?.rewardId;
+}
+
+function matchesCurrentChain(word, chain) {
+  if (!chain.lastSyllable) return true;
+  return chain.deadEndAlts
+    ? chain.deadEndAlts.has(word[0])
+    : matchesStartChar(word[0], chain.lastSyllable);
+}
+
+function countPrecisionCandidates(game, wordSet, targetCharacter) {
+  let count = 0;
+  for (const candidate of wordSet || []) {
+    if (game.usedWords.has(candidate) || !getWordEffect(candidate)) continue;
+    if (!matchesCurrentChain(candidate, game.chain)) continue;
+    if (getLastSyllable(candidate) === targetCharacter) count += 1;
+  }
+  return count;
+}
+
+function evaluateConditionalReward(game, player, word, wordSet, submittedAtMs) {
+  const pending = player.pendingConditionalReward;
+  if (!pending) return null;
+  const reward = getReward(pending.rewardId);
+  const wordLength = [...word].length;
+  const submittedEnd = getLastSyllable(word);
+  const elapsedMs = Number.isFinite(submittedAtMs) && Number.isFinite(game.wordInputStartedAtMs)
+    ? Math.max(0, submittedAtMs - game.wordInputStartedAtMs)
+    : null;
+  let success = false;
+  let status = 'FAILED_CONDITION';
+  let possibleWordCount = null;
+
+  switch (reward?.condition?.type) {
+    case 'min_word_length':
+      success = wordLength >= reward.condition.minLength;
+      break;
+    case 'max_elapsed_seconds':
+      success = elapsedMs !== null && elapsedMs <= reward.condition.maxSeconds * 1000;
+      break;
+    case 'target_ending':
+      possibleWordCount = countPrecisionCandidates(game, wordSet, pending.targetCharacter);
+      success = submittedEnd === pending.targetCharacter;
+      status = success
+        ? 'SUCCESS'
+        : possibleWordCount > 0 ? 'FAILED_PLAYER_CHOICE' : 'FAILED_IMPOSSIBLE';
+      break;
+    default:
+      break;
+  }
+  if (success) status = 'SUCCESS';
+  player.pendingConditionalReward = null;
+  return {
+    rewardId: pending.rewardId,
+    rewardName: reward?.name || pending.rewardId,
+    conditionType: reward?.condition?.type || null,
+    targetCharacter: pending.targetCharacter || null,
+    submittedWord: word,
+    submittedEnd,
+    wordLength,
+    elapsedMs,
+    possibleWordCount,
+    status,
+    success,
+    bonusDamage: success ? reward.amount : 0,
+    configuredBonusDamage: reward?.amount || 0,
+    requiredStart: game.chain.lastSyllable || null,
+    acceptedStartChars: game.chain.deadEndAlts ? [...game.chain.deadEndAlts] : null,
+  };
 }
 
 export function getBaseAnswerTime(player) {
@@ -125,7 +224,7 @@ export function calculateDamage({ baseWordDamage, attackerAttack, bonusDamage = 
   );
 }
 
-export function submitWord(game, playerId, word, wordSet, followerCountMap, random = Math.random) {
+export function submitWord(game, playerId, word, wordSet, followerCountMap, random = Math.random, context = {}) {
   const player = game.players[playerId];
   if (!player) return { ok: false, reason: 'invalid' };
   if (game.turn !== playerId) return { ok: false, reason: 'not_your_turn' };
@@ -148,6 +247,14 @@ export function submitWord(game, playerId, word, wordSet, followerCountMap, rand
   const wordEffect = getWordEffect(normalizedWord);
   if (!wordEffect) return { ok: false, reason: 'unsupported_length' };
 
+  const conditionalRewardResult = evaluateConditionalReward(
+    game,
+    player,
+    normalizedWord,
+    wordSet,
+    context.submittedAtMs,
+  );
+
   game.usedWords.add(normalizedWord);
   chain.lastWord = normalizedWord;
   chain.lastSyllable = getLastSyllable(normalizedWord);
@@ -161,7 +268,9 @@ export function submitWord(game, playerId, word, wordSet, followerCountMap, rand
     word: normalizedWord,
     wordLength: [...normalizedWord].length,
     wordEffectId: wordEffect.id,
-    rewardOptions: drawRewardOptions(random),
+    conditionalBonusDamage: conditionalRewardResult?.bonusDamage || 0,
+    conditionalRewardResult,
+    rewardOptions: drawRewardOptions(random, context.precisionTargetPool || []),
   };
   game.turnState = TURN_STATE.REWARD_SELECT;
 
@@ -172,6 +281,7 @@ export function submitWord(game, playerId, word, wordSet, followerCountMap, rand
     wordEffect,
     newLastSyllable: chain.lastSyllable,
     deadEndExpanded: resolved.expanded,
+    conditionalRewardResult,
     nextState: game.turnState,
   };
 }
@@ -186,7 +296,8 @@ export function resolveCombatTurn(game, playerId, rewardId = null) {
   }
   const reward = rewardId === null ? null : getReward(rewardId);
   if (rewardId !== null && !reward) return { ok: false, reason: 'invalid_reward' };
-  if (rewardId !== null && !game.pendingCombat.rewardOptions?.includes(rewardId)) {
+  const selectedOption = game.pendingCombat.rewardOptions?.find((option) => optionRewardId(option) === rewardId);
+  if (rewardId !== null && !selectedOption) {
     return { ok: false, reason: 'reward_not_offered' };
   }
 
@@ -194,12 +305,15 @@ export function resolveCombatTurn(game, playerId, rewardId = null) {
   const defenderId = opponentOf(playerId);
   const defender = game.players[defenderId];
   const wordEffect = COMBAT_CONFIG.wordEffects.find((effect) => effect.id === game.pendingCombat.wordEffectId);
-  const bonusDamage = reward?.effectType === 'bonus_damage' ? reward.amount : 0;
+  const immediateBonusDamage = reward?.effectType === 'bonus_damage' ? reward.amount : 0;
+  const conditionalBonusDamage = Number(game.pendingCombat.conditionalBonusDamage) || 0;
+  const bonusDamage = immediateBonusDamage + conditionalBonusDamage;
   // 공격 강화는 이번 선택으로 즉시 획득하므로 현재 공격부터 Damage에 반영한다.
   const rewardAttack = reward?.effectType === 'self_attack' ? reward.amount : 0;
+  const effectiveAttackerAttack = attacker.attack + rewardAttack;
   const damage = calculateDamage({
     baseWordDamage: wordEffect.baseDamage,
-    attackerAttack: attacker.attack + rewardAttack,
+    attackerAttack: effectiveAttackerAttack,
     bonusDamage,
     defenderDefense: defender.defense,
   });
@@ -212,6 +326,7 @@ export function resolveCombatTurn(game, playerId, rewardId = null) {
     attackerAnswerTime: 0,
     defenderAnswerTime: 0,
     defenderNextTime: 0,
+    pendingConditionalReward: null,
   };
 
   if (reward) {
@@ -248,6 +363,15 @@ export function resolveCombatTurn(game, playerId, rewardId = null) {
         changes.attackerAnswerTime = after - before;
         break;
       }
+      case 'conditional_bonus':
+        attacker.pendingConditionalReward = {
+          rewardId: reward.id,
+          conditionType: reward.condition.type,
+          targetCharacter: selectedOption?.targetCharacter || null,
+          bonusDamage: reward.amount,
+        };
+        changes.pendingConditionalReward = { ...attacker.pendingConditionalReward };
+        break;
       default:
         break;
     }
@@ -269,6 +393,15 @@ export function resolveCombatTurn(game, playerId, rewardId = null) {
     targetHp: defender.hp,
     attackerHp: attacker.hp,
     changes,
+    conditionalRewardResult: pending.conditionalRewardResult || null,
+    damageBreakdown: {
+      baseWordDamage: wordEffect.baseDamage,
+      attackerAttack: effectiveAttackerAttack,
+      immediateBonusDamage,
+      conditionalBonusDamage,
+      defenderDefense: defender.defense,
+      finalDamage: damage,
+    },
     nextTurn: game.turn,
     nextState: game.turnState,
   };
@@ -293,6 +426,21 @@ export function applyTimerExpiry(game, playerId, wordSet, followerCountMap) {
   }
   player.hp = Math.max(0, player.hp - TIMER_PENALTY);
   player.nextTurnTimeModifier = 0;
+  const pendingConditional = player.pendingConditionalReward;
+  const pendingReward = pendingConditional ? getReward(pendingConditional.rewardId) : null;
+  const conditionalRewardResult = pendingConditional ? {
+    rewardId: pendingConditional.rewardId,
+    rewardName: pendingReward?.name || pendingConditional.rewardId,
+    conditionType: pendingConditional.conditionType,
+    targetCharacter: pendingConditional.targetCharacter || null,
+    status: 'FAILED_TIMEOUT',
+    success: false,
+    bonusDamage: 0,
+    configuredBonusDamage: pendingReward?.amount || pendingConditional.bonusDamage || 0,
+    requiredStart: game.chain.lastSyllable || null,
+    acceptedStartChars: game.chain.deadEndAlts ? [...game.chain.deadEndAlts] : null,
+  } : null;
+  player.pendingConditionalReward = null;
   const autoWord = wordSet ? pickAutoWord(game.chain, wordSet, game.usedWords) : null;
   let deadEndExpanded = false;
   if (autoWord) {
@@ -311,6 +459,7 @@ export function applyTimerExpiry(game, playerId, wordSet, followerCountMap) {
     nextTurn: game.turn,
     autoWord,
     deadEndExpanded,
+    conditionalRewardResult,
   };
 }
 
@@ -354,6 +503,9 @@ export function snapshot(game) {
       baseAnswerTime: getBaseAnswerTime(player),
       nextTurnTimeModifier: player.nextTurnTimeModifier,
       effectiveAnswerTime: getEffectiveAnswerTime(player),
+      pendingConditionalReward: player.pendingConditionalReward
+        ? { ...player.pendingConditionalReward }
+        : null,
     })),
     usedWordsCount: game.usedWords.size,
   };

@@ -1,18 +1,21 @@
 /** @fileoverview 끝말잇기 배틀 DOM 렌더링. 서버 스냅샷만 화면에 반영한다. */
 
+import { audio } from './audio.js';
+
 const $ = (selector) => document.querySelector(selector);
 const el = {
-  waitingScreen: $('#waiting-screen'), gameScreen: $('#game-screen'),
+  waitingScreen: $('#waiting-screen'), waitingMsg: $('#waiting-msg'), gameScreen: $('#game-screen'),
   nameMe: $('#name-me'), nameOpp: $('#name-opp'), panelMe: $('#panel-me'), panelOpp: $('#panel-opp'),
   hpMe: $('#hp-me'), hpOpp: $('#hp-opp'), hpTextMe: $('#hp-text-me'), hpTextOpp: $('#hp-text-opp'),
   attackMe: $('#attack-me'), attackOpp: $('#attack-opp'), defenseMe: $('#defense-me'), defenseOpp: $('#defense-opp'),
   answerTimeMe: $('#answer-time-me'), answerTimeOpp: $('#answer-time-opp'), tempTimeMe: $('#temp-time-me'), tempTimeOpp: $('#temp-time-opp'),
+  conditionalMe: $('#conditional-me'), conditionalOpp: $('#conditional-opp'), conditionalInput: $('#conditional-input'),
   attackMeterMe: $('#attack-meter-me'), attackMeterOpp: $('#attack-meter-opp'), defenseMeterMe: $('#defense-meter-me'), defenseMeterOpp: $('#defense-meter-opp'),
   timeRingMe: $('#time-ring-me'), timeRingOpp: $('#time-ring-opp'), statusMe: $('#status-me'), statusOpp: $('#status-opp'),
   wordEffectList: $('#word-effect-list'), rewardList: $('#reward-list'), rewardAction: $('#reward-action'),
   rewardPrompt: $('#reward-prompt'), wordAction: $('#word-action'), stateLabel: $('#state-label'),
   chainShared: $('#chain-shared'), turnBanner: $('#turn-banner'), typingIndicator: $('#typing-indicator'),
-  startChar: $('#start-char'), inputCharPreview: $('#input-char-preview'), timerText: $('#timer-text'), rewardTimerText: $('#reward-timer-text'), wordInput: $('#word-input'), submitBtn: $('#submit-btn'),
+  startChar: $('#start-char'), startCharAlt: $('#start-char-alt'), inputCharPreview: $('#input-char-preview'), timerText: $('#timer-text'), rewardTimerText: $('#reward-timer-text'), wordInput: $('#word-input'), submitBtn: $('#submit-btn'),
   menuAttack: $('#menu-atk'), menuDefense: $('#menu-def'),
   feedback: $('#feedback'), combatPopup: $('#combat-popup'), countdownOverlay: $('#countdown-overlay'), countdownNum: $('#countdown-num'), countdownFirstTurn: $('#countdown-first-turn'),
   projectile: $('#word-projectile'), impactRing: $('#impact-ring'), damageFloat: $('#damage-float'),
@@ -30,6 +33,7 @@ let combatTimers = [];
 const hpLocks = new Map();
 let timeoutTimerLocked = false;
 let pendingTimerRemaining = null;
+let ownPendingConditional = null;
 export const LETHAL_FINISHER_MS = 2300;
 const playerState = {
   me: { attack: 0, defense: 0 },
@@ -38,6 +42,11 @@ const playerState = {
 
 export function showWaiting() { el.waitingScreen.classList.add('active'); el.gameScreen.classList.remove('active'); }
 export function showGame() { el.waitingScreen.classList.remove('active'); el.gameScreen.classList.add('active'); }
+export function showConnectionError(message) {
+  showWaiting();
+  el.waitingMsg.textContent = message || '경기에 입장할 수 없습니다. 로비에서 다시 시도해 주세요.';
+  el.waitingMsg.classList.add('error');
+}
 
 export function setName(who, name) { (who === 'me' ? el.nameMe : el.nameOpp).textContent = name; }
 
@@ -78,7 +87,43 @@ export function updatePlayer(who, player) {
     : Math.max(0, baseAnswerTime + modifier);
   temp.textContent = modifier < 0 ? `다음 턴 추가 압박 ${modifier}초 → 실제 ${effectiveAnswerTime}초` : '';
   temp.classList.toggle('hidden', modifier >= 0);
+  renderConditionalStatus(who, player.pendingConditionalReward);
   updateDamageMenu();
+}
+
+function conditionalCopy(pending) {
+  if (!pending) return null;
+  const reward = rewardById.get(pending.rewardId);
+  if (!reward) return null;
+  const condition = reward.condition || {};
+  let objective = '다음 단어에서 조건 달성';
+  if (condition.type === 'min_word_length') objective = `${condition.minLength}글자 이상`;
+  if (condition.type === 'max_elapsed_seconds') objective = `${condition.maxSeconds}초 내 제출`;
+  if (condition.type === 'target_ending') objective = `'${pending.targetCharacter}'으로 끝내기`;
+  return { reward, objective, bonusDamage: pending.bonusDamage ?? reward.amount };
+}
+
+function renderConditionalStatus(who, pending) {
+  const target = who === 'me' ? el.conditionalMe : el.conditionalOpp;
+  const copy = conditionalCopy(pending);
+  target.textContent = copy
+    ? `${copy.reward.icon || '◆'} ${copy.reward.name} · ${copy.objective} · +${copy.bonusDamage}`
+    : '';
+  target.classList.toggle('hidden', !copy);
+  if (who === 'me') {
+    ownPendingConditional = pending || null;
+    el.conditionalInput.textContent = copy
+      ? `${copy.reward.name}: ${copy.objective} → +${copy.bonusDamage} DAMAGE`
+      : '';
+    el.conditionalInput.classList.toggle('hidden', !copy);
+    updatePrecisionTypingMatch();
+  }
+}
+
+function updatePrecisionTypingMatch() {
+  const matches = ownPendingConditional?.conditionType === 'target_ending'
+    && [...el.wordInput.value.normalize('NFC')].at(-1) === ownPendingConditional.targetCharacter;
+  el.conditionalInput.classList.toggle('matched', Boolean(matches));
 }
 
 export function animateHpHit(who) {
@@ -154,6 +199,7 @@ export function playCombatSequence({ attackerWho, targetWho, word = '', damage =
   el.damageFloat.textContent = `-${damage}`;
   void el.projectile.offsetWidth;
   attacker.classList.add('attacking');
+  audio.play('projectile');
 
   scheduleCombat(() => {
     releaseHpLock(targetWho, Number.isFinite(targetHp) ? targetHp : 0);
@@ -161,6 +207,7 @@ export function playCombatSequence({ attackerWho, targetWho, word = '', damage =
     animateHpHit(targetWho);
     el.impactRing.classList.add('active');
     el.damageFloat.classList.add('active');
+    audio.play('impact');
   }, 620);
 
   if (lethal) {
@@ -168,6 +215,7 @@ export function playCombatSequence({ attackerWho, targetWho, word = '', damage =
       target.classList.add('defeated');
       defeatFx.classList.add('active');
       defeatFx.setAttribute('aria-hidden', 'false');
+      audio.play('ko');
     }, 760);
   }
 
@@ -203,6 +251,7 @@ export function playTimeoutSequence({ who, damage = 0, targetHp = null, lethal =
   timerDisplay.classList.add('urgent', 'timeout-zero');
   el.timeoutBanner.classList.add('active');
   el.timeoutBanner.setAttribute('aria-hidden', 'false');
+  audio.play('timeout');
 
   scheduleCombat(() => {
     releaseHpLock(who, Number.isFinite(targetHp) ? targetHp : 0);
@@ -210,6 +259,7 @@ export function playTimeoutSequence({ who, damage = 0, targetHp = null, lethal =
     animateHpHit(who);
     el.impactRing.classList.add('active');
     el.damageFloat.classList.add('active');
+    audio.play('impact');
   }, 150);
 
   if (lethal) {
@@ -217,6 +267,7 @@ export function playTimeoutSequence({ who, damage = 0, targetHp = null, lethal =
       target.classList.add('defeated');
       defeatFx.classList.add('active');
       defeatFx.setAttribute('aria-hidden', 'false');
+      audio.play('ko');
     }, 430);
   }
 
@@ -299,9 +350,11 @@ function updateDamageMenu() {
 }
 
 /** 서버가 이번 턴에 추첨한 보상 3개만 순서대로 표시한다. */
-export function setRewardOptions(rewardIds = []) {
+export function setRewardOptions(rewardOptions = []) {
   el.rewardList.innerHTML = '';
-  for (const [index, rewardId] of rewardIds.entries()) {
+  for (const [index, optionValue] of rewardOptions.entries()) {
+    const option = typeof optionValue === 'string' ? { rewardId: optionValue } : optionValue;
+    const rewardId = option?.rewardId;
     const reward = rewardById.get(rewardId);
     if (!reward) continue;
     const button = document.createElement('button');
@@ -310,7 +363,17 @@ export function setRewardOptions(rewardIds = []) {
     button.dataset.rewardId = reward.id;
     button.setAttribute('aria-label', `${index + 1}번 ${reward.name}: ${reward.description}`);
     button.title = reward.description;
-    button.innerHTML = `<kbd>${index + 1}</kbd><strong class="reward-icon" aria-hidden="true">${reward.icon || '◆'}</strong><span>${reward.description}</span>`;
+    if (reward.category === 'conditional') {
+      const pending = { ...option, conditionType: reward.condition?.type, bonusDamage: reward.amount };
+      const copy = conditionalCopy(pending);
+      const description = copy ? `${copy.objective} · +${copy.bonusDamage} DAMAGE` : reward.description;
+      button.classList.add('conditional');
+      button.setAttribute('aria-label', `${index + 1}번 ${reward.name}: ${description}`);
+      button.title = description;
+      button.innerHTML = `<kbd>${index + 1}</kbd><strong class="reward-icon" aria-hidden="true">${reward.icon || '◆'}</strong><b class="reward-name">${reward.name}</b><span>${description}</span>`;
+    } else {
+      button.innerHTML = `<kbd>${index + 1}</kbd><strong class="reward-icon" aria-hidden="true">${reward.icon || '◆'}</strong><span>${reward.description}</span>`;
+    }
     button.addEventListener('click', () => rewardHandler?.(reward.id));
     el.rewardList.append(button);
   }
@@ -360,16 +423,30 @@ export function setTypingProgress(count) {
   el.typingIndicator.classList.toggle('hidden', !visible);
 }
 export function setStartChar(char, altChars = null) {
+  if (!char) { setStartCharPending(); return; }
   el.startChar.classList.remove('pending');
-  if (!char) { el.startChar.textContent = '자유'; el.inputCharPreview.textContent = '자유'; return; }
   const alts = altChars ? [...altChars].filter((value) => value && value !== char) : [];
   const label = char + (alts.length ? ` (또는 ${alts.join(', ')})` : '');
   el.startChar.textContent = char;
   el.startChar.title = label;
   el.startChar.setAttribute('aria-label', label);
   el.inputCharPreview.textContent = char;
+  if (el.startCharAlt) {
+    if (alts.length) {
+      el.startCharAlt.textContent = `또는 ${alts.join(', ')}(으)로 시작 가능`;
+      el.startCharAlt.classList.remove('hidden');
+    } else {
+      el.startCharAlt.textContent = '';
+      el.startCharAlt.classList.add('hidden');
+    }
+  }
 }
-export function setStartCharPending() { el.startChar.textContent = '???'; el.startChar.classList.add('pending'); el.inputCharPreview.textContent = '?'; }
+export function setStartCharPending() {
+  el.startChar.textContent = '???';
+  el.startChar.classList.add('pending');
+  el.inputCharPreview.textContent = '?';
+  if (el.startCharAlt) { el.startCharAlt.textContent = ''; el.startCharAlt.classList.add('hidden'); }
+}
 export function updateTimer(remaining) {
   if (timeoutTimerLocked) { pendingTimerRemaining = remaining; return; }
   el.timerText.textContent = remaining;
@@ -382,7 +459,7 @@ export function updateTimer(remaining) {
   }
 }
 export function setInputEnabled(enabled) { el.wordInput.disabled = !enabled; el.submitBtn.disabled = !enabled; if (enabled) el.wordInput.focus(); }
-export function clearInput() { el.wordInput.value = ''; }
+export function clearInput() { el.wordInput.value = ''; updatePrecisionTypingMatch(); }
 export function getInputValue() { return el.wordInput.value.trim(); }
 export function showInputError() { el.wordInput.classList.remove('error'); void el.wordInput.offsetWidth; el.wordInput.classList.add('error'); }
 export function showFeedback(message, duration = 2000) {
@@ -397,8 +474,8 @@ export function showCombatResult(message) {
 export function showCountdown(seconds, isMyFirstTurn) {
   el.countdownFirstTurn.textContent = isMyFirstTurn ? '내가 선공!' : '상대가 선공!';
   el.countdownFirstTurn.classList.toggle('mine', isMyFirstTurn);
-  el.countdownOverlay.classList.remove('hidden'); let count = seconds; el.countdownNum.textContent = count;
-  const interval = setInterval(() => { count -= 1; if (count <= 0) { clearInterval(interval); el.countdownOverlay.classList.add('hidden'); } else el.countdownNum.textContent = count; }, 1000);
+  el.countdownOverlay.classList.remove('hidden'); let count = seconds; el.countdownNum.textContent = count; audio.play('countdown', count);
+  const interval = setInterval(() => { count -= 1; if (count <= 0) { clearInterval(interval); el.countdownOverlay.classList.add('hidden'); } else { el.countdownNum.textContent = count; audio.play('countdown', count); } }, 1000);
 }
 export function hideCountdown() { el.countdownOverlay.classList.add('hidden'); }
 export function showResult(title, detail) { el.resultTitle.textContent = title; el.resultDetail.textContent = detail; el.rematchStatus.textContent = ''; el.resultModal.classList.remove('hidden'); }
@@ -427,5 +504,10 @@ export function onRewardHotkey(handler) {
 export function onRematchClick(handler) { el.rematchBtn.addEventListener('click', handler); }
 export function onSubmitClick(handler) { el.submitBtn.addEventListener('click', handler); }
 export function onInputEnter(handler) { el.wordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handler(); }); }
-export function onInputChange(handler) { el.wordInput.addEventListener('input', () => handler(el.wordInput.value.length)); }
+export function onInputChange(handler) {
+  el.wordInput.addEventListener('input', () => {
+    updatePrecisionTypingMatch();
+    handler(el.wordInput.value.length);
+  });
+}
 export function onExitClick(handler) { el.exitBtn.addEventListener('click', handler); }

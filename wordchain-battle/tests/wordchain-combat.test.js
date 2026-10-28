@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {
   createGame, submitWord, resolveCombatTurn, getEffectiveAnswerTime, getBaseAnswerTime,
   calculateDamage, applyTimerExpiry, isGameOver, snapshot, TURN_STATE, COMBAT_CONFIG,
+  beginWordInput, drawRewardOptions,
 } from '../game.js';
 
 const words = new Set([
-  '가가', '가나다', '다라마바', '다라마바사', '바나나', '나가나다', '다다', '다가라',
+  '가가', '가나다', '가자력', '자력', '다라마바', '다라마바사', '바나나', '나가나다', '다다', '다가라',
 ]);
 
 function playingGame() {
@@ -34,7 +35,7 @@ test('정상 단어 제출은 턴을 넘기지 않고 REWARD_SELECT로 전환한
   assert.equal(game.turn, 'p1');
   assert.equal(game.turnState, TURN_STATE.REWARD_SELECT);
   assert.equal(game.pendingCombat.word, '가나다');
-  assert.deepEqual(game.pendingCombat.rewardOptions, ['bonus_damage', 'attack_up', 'defense_up']);
+  assert.deepEqual(game.pendingCombat.rewardOptions.map((option) => option.rewardId), ['bonus_damage', 'attack_up', 'defense_up']);
 });
 
 test('보상 선택은 공격을 확정하고 상대 WORD_INPUT 턴을 시작한다', () => {
@@ -165,4 +166,96 @@ test('2글자와 5글자 이상 Word Effect는 능력치를 올리지 않고 Dam
   accept(game, 'p1', '다라마바사');
   resolveCombatTurn(game, 'p1', null);
   assert.equal(game.players.p1.attack, 0);
+});
+
+test('보상 3개 중 조건부 보상은 최대 1개이며 정밀타 목표가 옵션에 고정된다', () => {
+  const options = drawRewardOptions(() => 0.999999, ['력']);
+  const conditional = options.filter((option) => option.rewardId.startsWith('conditional_'));
+  assert.equal(options.length, 3);
+  assert.equal(conditional.length, 1);
+  assert.equal(conditional[0].rewardId, 'conditional_precision');
+  assert.equal(conditional[0].targetCharacter, '력');
+});
+
+test('장문 공격 성공 보너스와 현재 추가 공격 보상은 같은 Damage에 가산 중첩된다', () => {
+  const game = playingGame();
+  game.players.p1.pendingConditionalReward = {
+    rewardId: 'conditional_long_word', conditionType: 'min_word_length', bonusDamage: 8,
+  };
+  const accepted = submitWord(game, 'p1', '다라마바', words, undefined, () => 0, { submittedAtMs: 1000 });
+  assert.equal(accepted.conditionalRewardResult.status, 'SUCCESS');
+  game.pendingCombat.rewardOptions = [{ rewardId: 'bonus_damage' }];
+  const combat = resolveCombatTurn(game, 'p1', 'bonus_damage');
+  assert.equal(combat.damageBreakdown.conditionalBonusDamage, 8);
+  assert.equal(combat.damageBreakdown.immediateBonusDamage, 5);
+  assert.equal(combat.damage, 25);
+  assert.equal(game.players.p1.pendingConditionalReward, null);
+});
+
+test('장문 공격은 3글자 정상 제출에 실패하고 시간초과에도 소멸한다', () => {
+  const game = playingGame();
+  game.players.p1.pendingConditionalReward = {
+    rewardId: 'conditional_long_word', conditionType: 'min_word_length', bonusDamage: 8,
+  };
+  const accepted = submitWord(game, 'p1', '가나다', words, undefined, () => 0, { submittedAtMs: 1000 });
+  assert.equal(accepted.conditionalRewardResult.success, false);
+  assert.equal(game.players.p1.pendingConditionalReward, null);
+
+  const timeoutGame = playingGame();
+  timeoutGame.players.p1.pendingConditionalReward = {
+    rewardId: 'conditional_long_word', conditionType: 'min_word_length', bonusDamage: 8,
+  };
+  const expired = applyTimerExpiry(timeoutGame, 'p1', words);
+  assert.equal(expired.conditionalRewardResult.status, 'FAILED_TIMEOUT');
+  assert.equal(timeoutGame.players.p1.pendingConditionalReward, null);
+});
+
+test('속공은 서버 WORD_INPUT 시작 시각부터 3초 이내 경계를 포함해 판정한다', () => {
+  for (const [elapsedMs, success] of [[3000, true], [3001, false]]) {
+    const game = playingGame();
+    game.players.p1.pendingConditionalReward = {
+      rewardId: 'conditional_quick', conditionType: 'max_elapsed_seconds', bonusDamage: 8,
+    };
+    beginWordInput(game, 10_000);
+    const result = submitWord(game, 'p1', '가나다', words, undefined, () => 0, {
+      submittedAtMs: 10_000 + elapsedMs,
+    });
+    assert.equal(result.conditionalRewardResult.success, success);
+    assert.equal(result.conditionalRewardResult.elapsedMs, elapsedMs);
+  }
+});
+
+test('거절된 입력은 조건부 보상을 소모하지 않는다', () => {
+  const game = playingGame();
+  game.players.p1.pendingConditionalReward = {
+    rewardId: 'conditional_precision', conditionType: 'target_ending', targetCharacter: '력', bonusDamage: 10,
+  };
+  assert.equal(submitWord(game, 'p1', '없는말', words).ok, false);
+  assert.equal(game.players.p1.pendingConditionalReward.rewardId, 'conditional_precision');
+});
+
+test('정밀타 로그 판정은 성공·플레이어 선택·사전상 불가능을 구분한다', () => {
+  const cases = [
+    { word: '가자력', expected: 'SUCCESS', possible: 1 },
+    { word: '가나다', expected: 'FAILED_PLAYER_CHOICE', possible: 1 },
+  ];
+  for (const sample of cases) {
+    const game = playingGame();
+    game.chain.lastSyllable = '가';
+    game.players.p1.pendingConditionalReward = {
+      rewardId: 'conditional_precision', conditionType: 'target_ending', targetCharacter: '력', bonusDamage: 10,
+    };
+    const result = submitWord(game, 'p1', sample.word, words, undefined, () => 0, { submittedAtMs: 1000 });
+    assert.equal(result.conditionalRewardResult.status, sample.expected);
+    assert.equal(result.conditionalRewardResult.possibleWordCount, sample.possible);
+  }
+
+  const impossible = playingGame();
+  impossible.chain.lastSyllable = '다';
+  impossible.players.p1.pendingConditionalReward = {
+    rewardId: 'conditional_precision', conditionType: 'target_ending', targetCharacter: '력', bonusDamage: 10,
+  };
+  const result = submitWord(impossible, 'p1', '다라마바', words, undefined, () => 0, { submittedAtMs: 1000 });
+  assert.equal(result.conditionalRewardResult.status, 'FAILED_IMPOSSIBLE');
+  assert.equal(result.conditionalRewardResult.possibleWordCount, 0);
 });
