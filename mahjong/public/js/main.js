@@ -1,0 +1,675 @@
+/**
+ * @fileoverview 마작 클라이언트: 접속, 방 설정, 대국 화면, 결과 화면.
+ *
+ * 서버 권위 모델이라 이 파일은 상태를 그리고 행동 의도(ACT)만 보낸다.
+ * 프로토콜: C→S JOIN은 쿼리(key,name)로 대체, CONFIG/START/ACT/ASSIST/REMATCH/LEAVE.
+ *           S→C JOINED/ROOM/STATE/ERROR. 자세한 계약은 mahjong/CLAUDE.md 참고.
+ */
+import { tileHtml, backHtml, sideHtml, codeOf, codeOfKind, kindName, esc } from './tiles.js';
+import { createSounds } from './sounds.js';
+
+const WIND_KANJI = ['東', '南', '西', '北'];
+const WIND_KO = ['동', '남', '서', '북'];
+const AI_CHAR = { 주작: '雀', 백호: '虎', 현무: '武', 청룡: '龍' };
+const LEVEL_KO = { easy: '쉬움', normal: '보통', hard: '어려움' };
+const DRAW_REASON = {
+  exhaustive: '유국', kyuushu: '구종구패', suufon: '사풍연타', suucha: '사가립직', suukan: '사깡산료', sanchahou: '삼가화',
+};
+const OVER_REASON = { tobi: '누군가 0점 미만이 되어 대국이 끝났어요.', all_last: '마지막 국에서 친이 1위로 마쳤어요.', end: '정해진 국을 모두 마쳤어요.' };
+
+const $ = (id) => document.getElementById(id);
+const stage = $('stage');
+const sounds = createSounds();
+
+const params = new URLSearchParams(location.search);
+const store = {
+  get(k, d = '') { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* noop */ } },
+};
+const session = {
+  get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch { /* noop */ } },
+};
+
+const S = {
+  ws: null,
+  seat: -1,
+  room: null,
+  st: null,
+  recvAt: 0,
+  offset: 0,
+  selected: null,
+  riichiMode: false,
+  showNames: store.get('mahjong:names') === '1',
+  assist: store.get('mahjong:assist') === '1',
+  connected: false,
+  toast: '',
+  busy: false,
+  kanPick: false,
+};
+
+// ── 접속 ────────────────────────────────────────────────────
+function playerKey() {
+  let k = session.get('mahjong:key');
+  if (!k) { k = `k${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`; session.set('mahjong:key', k); }
+  return k;
+}
+function playerName() {
+  return params.get('name') || store.get('minigames:nickname') || '플레이어';
+}
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const seg = location.pathname.split('/').filter(Boolean)[0] || 'mahjong';
+  const url = `${proto}://${location.host}/${seg}/ws?key=${encodeURIComponent(playerKey())}&name=${encodeURIComponent(playerName())}`;
+  const ws = new WebSocket(url);
+  S.ws = ws;
+  ws.addEventListener('open', () => {
+    S.connected = true;
+    $('conn').classList.add('hidden');
+    if (S.assist) send({ type: 'ASSIST', on: true });
+  });
+  ws.addEventListener('message', (e) => {
+    let m;
+    try { m = JSON.parse(e.data); } catch { return; }
+    onMessage(m);
+  });
+  ws.addEventListener('close', (e) => {
+    S.connected = false;
+    if (e.code === 1000 && (e.reason === 'LEAVE' || e.reason === 'room_full' || e.reason === 'in_progress')) return;
+    if (e.code === 4000) { showToast('다른 창에서 접속해 이 창은 연결이 끊겼어요.'); return; }
+    $('conn').classList.remove('hidden');
+    setTimeout(connect, 1500);
+  });
+}
+
+function send(msg) {
+  if (S.ws && S.ws.readyState === WebSocket.OPEN) S.ws.send(JSON.stringify(msg));
+}
+
+function act(action) {
+  S.busy = true;
+  S.selected = null;
+  S.riichiMode = false;
+  S.kanPick = false;
+  send({ type: 'ACT', action });
+  setTimeout(() => { S.busy = false; }, 500);
+}
+
+function onMessage(m) {
+  switch (m.type) {
+    case 'JOINED':
+      S.seat = m.seat;
+      break;
+    case 'ROOM':
+      S.room = m;
+      if (m.phase === 'lobby') { S.st = null; S.selected = null; S.riichiMode = false; }
+      render();
+      break;
+    case 'STATE':
+      S.st = m;
+      S.recvAt = Date.now();
+      S.offset = m.serverNow - Date.now();
+      S.busy = false;
+      if (!m.view.legal || m.view.legal.kind !== 'turn') { S.riichiMode = false; S.kanPick = false; }
+      if (S.selected != null && !(m.view.myHand.includes(S.selected) || m.view.myDrawn === S.selected)) S.selected = null;
+      handleEvents(m.events || [], m.view);
+      render();
+      if (params.get('auto')) autoPlay(m.view);
+      break;
+    case 'ERROR':
+      if (m.code === 'room_full' || m.code === 'in_progress') {
+        stage.innerHTML = `<div class="connecting">${esc(m.message || '입장할 수 없어요.')}</div>`;
+      } else {
+        showToast(m.message || '할 수 없는 행동이에요.');
+        sounds.play('error');
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+function showToast(text) {
+  S.toast = text;
+  const old = document.querySelector('.err-toast');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'err-toast';
+  el.textContent = text;
+  stage.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+/** 테스트 전용(`?auto=1`): 단순 전략으로 자동 진행해 결과·종료 화면과 울기 렌더링을 빠르게 확인한다. */
+function autoPlay(v) {
+  const l = v.legal;
+  if (!l) return;
+  const pick = () => {
+    if (l.kind === 'ack') return { type: 'next' };
+    if (l.kind === 'reaction') {
+      if (l.ron) return { type: 'ron' };
+      if (l.daiminkan) return { type: 'daiminkan' };
+      if (l.pon) return { type: 'pon' };
+      if (l.chi?.length) return { type: 'chi', ids: l.chi[0].ids };
+      return { type: 'pass' };
+    }
+    if (l.tsumo) return { type: 'tsumo' };
+    if (l.ankan.length) return { type: 'ankan', kind: l.ankan[0] };
+    if (l.riichi.length && v.players[v.me].riichi === false) return { type: 'discard', id: l.riichi[l.riichi.length - 1], riichi: true };
+    return { type: 'discard', id: v.myDrawn != null && l.discard.includes(v.myDrawn) ? v.myDrawn : l.discard[0] };
+  };
+  const base = Number(params.get('auto')) > 1 ? Number(params.get('auto')) : 40;
+  setTimeout(() => { if (S.st?.view === v) act(pick()); }, l.kind === 'ack' ? 2200 : base);
+}
+
+// ── 이벤트(효과음·콜아웃) ──────────────────────────────────
+function relOf(seat, me = S.seat) { return (seat - me + 4) % 4; }
+
+function callout(seat, text, big = false) {
+  const fx = $('fx');
+  if (!fx) return;
+  const el = document.createElement('div');
+  el.className = `callout c-${relOf(seat)}${big ? ' big' : ''}`;
+  el.textContent = text;
+  fx.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+function handleEvents(events, view) {
+  for (const ev of events) {
+    switch (ev.t) {
+      case 'hand_start': sounds.play('deal'); break;
+      case 'discard': sounds.play('discard'); break;
+      case 'draw': if (ev.seat === S.seat) sounds.play('draw'); break;
+      case 'dora': sounds.play('dora'); break;
+      case 'call': {
+        const label = { pon: '퐁!', chi: '치!', minkan: '깡!', ankan: '깡!', kakan: '깡!' }[ev.type] || '';
+        callout(ev.seat, label);
+        sounds.play('call');
+        break;
+      }
+      case 'riichi': callout(ev.seat, ev.double ? '더블리치!' : '리치!', true); sounds.play('riichi'); break;
+      case 'agari':
+        for (const w of ev.winners) callout(w, ev.tsumo ? '쯔모!' : '론!', true);
+        sounds.play('win');
+        break;
+      case 'game_over': sounds.play('over'); break;
+      default: break;
+    }
+  }
+  void view;
+}
+
+// ── 공통 렌더 헬퍼 ─────────────────────────────────────────
+const aka = () => !!S.st?.view?.settings?.aka;
+const code = (id) => codeOf(id, aka());
+
+function seatInfo(seat) { return S.st?.seats?.[seat] || S.room?.seats?.[seat] || { name: '', type: 'empty' }; }
+function avatarChar(info) { return AI_CHAR[info.name] || (info.name || '?').slice(0, 1); }
+function avatarClass(info, seat) { return info.type === 'ai' ? 'av-ai' : `av-${seat}`; }
+
+function meldHtml(m, owner, size) {
+  const rotCls = size === 't-meld' ? 'meld' : 'meldo';
+  const rot = (id, extra = '') => sideHtml(code(id), size, rotCls, extra);
+  const up = (id) => tileHtml(code(id), size);
+  if (m.type === 'ankan') {
+    const [, b, c] = m.tiles;
+    return `<div class="meld-g">${backHtml(size)}${up(b)}${up(c)}${backHtml(size)}</div>`;
+  }
+  const called = m.called;
+  const rest = m.tiles.filter((id) => id !== called && !(m.type === 'kakan' && id === m.tiles[3]));
+  const added = m.type === 'kakan' ? m.tiles[3] : null;
+  const dir = (m.from - owner + 4) % 4; // 3 왼쪽, 2 맞은편, 1 오른쪽
+  const parts = rest.map((id) => up(id));
+  const calledHtml = added != null ? rot(called) + rot(added) : rot(called);
+  let idx;
+  if (m.type === 'chi' || dir === 3) idx = 0;
+  else if (dir === 2) idx = 1;
+  else idx = parts.length;
+  parts.splice(idx, 0, calledHtml);
+  return `<div class="meld-g">${parts.join('')}</div>`;
+}
+
+function visibleCounts(view) {
+  const vis = new Array(34).fill(0);
+  const add = (id) => { vis[id >> 2] += 1; };
+  view.myHand.forEach(add);
+  if (view.myDrawn != null) add(view.myDrawn);
+  view.dora.forEach(add);
+  for (const p of view.players) {
+    p.discards.forEach((d) => { if (!d.called) add(d.id); });
+    p.melds.forEach((m) => m.tiles.forEach(add));
+  }
+  return vis;
+}
+
+function miniTiles(kinds) {
+  return `<span class="mini-tiles">${kinds.map((k) => tileHtml(codeOfKind(k), 't-mini')).join('')}</span>`;
+}
+
+// ── 방 설정 화면 ───────────────────────────────────────────
+function renderLobby() {
+  const r = S.room;
+  if (!r) { stage.innerHTML = '<div class="connecting">접속 중…</div>'; return; }
+  const me = r.me;
+  const set = r.settings;
+  const humans = r.seats.filter((s) => s.type === 'human');
+  const pos = ['b', 'r', 't', 'l'];
+  const seatCard = (seat) => {
+    const s = r.seats[seat];
+    const p = pos[relOf(seat, me)];
+    const windKo = WIND_KO[seat];
+    let body;
+    let av;
+    if (s.type === 'human') {
+      const isMe = seat === me;
+      av = `<div class="avatar ${avatarClass(s, seat)}">${esc(avatarChar(s))}<span class="wind">${WIND_KANJI[seat]}</span></div>`;
+      body = `<div class="sname">${windKo}가 · ${esc(s.name)} ${isMe ? '<span class="badge me">YOU</span>' : '<span class="badge human">친구</span>'}${s.host ? ' <span class="badge ai">방장</span>' : ''}</div>
+        <div class="ssub"><span class="${s.connected ? 'dot-online' : 'dot-offline'}"></span>${s.connected ? '접속 중' : '연결 끊김'}</div>`;
+    } else {
+      av = `<div class="avatar av-ai">${s.type === 'ai' ? esc(avatarChar(s)) : '🤖'}<span class="wind">${WIND_KANJI[seat]}</span></div>`;
+      body = `<div class="sname">${windKo}가 · ${s.type === 'ai' ? esc(s.name) : 'AI'}</div><div class="ssub">${LEVEL_KO[set.aiLevel]} AI가 앉아요</div>`;
+    }
+    return `<div class="seat s-${p}${s.type === 'human' ? '' : ' empty'}">${av}<div>${body}</div></div>`;
+  };
+  const optRow = (label, key, options) => `<div class="rule">${label}<div class="opts">${options.map(([v, t]) => `<button class="opt${set[key] === v ? ' on' : ''}" data-cfg="${key}" data-val="${v}" ${r.isHost ? '' : 'disabled'}>${t}</button>`).join('')}</div></div>`;
+  const toggleRow = (label, key) => `<div class="rule">${label}<button class="toggle${set[key] ? '' : ' off'}" data-cfg="${key}" data-val="${set[key] ? 'off' : 'on'}" data-bool="1" ${r.isHost ? '' : 'disabled'}></button></div>`;
+  const note = humans.length === 1
+    ? '친구가 들어오면 마주 보는 자리에 앉아요. 혼자 시작하면 AI 3명과 대국해요.'
+    : `사람 ${humans.length}명 + AI ${4 - humans.length}명으로 시작해요.${humans.length === 2 ? ' 두 사람은 마주 보는 자리예요.' : ''}`;
+  stage.innerHTML = `<div id="content"><div class="setup"><div>
+    <h2>마작 방 설정<small>4인 일본식 리치마작</small></h2>
+    <p class="lead">${note}</p>
+    <div class="seat-map"><div class="mini-table"><span>${set.length === 'half' ? '반장전' : '동풍전'}<br><small style="font-size:11px">자리 배치</small></span></div>
+      ${[0, 1, 2, 3].map(seatCard).join('')}
+    </div></div>
+    <div class="rules"><h3>규칙</h3>
+      ${optRow('대국 길이', 'length', [['east', '동풍전'], ['half', '반장전']])}
+      ${optRow('AI 난이도', 'aiLevel', [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']])}
+      ${toggleRow('적도라 (5만·5통·5삭 각 1장)', 'aka')}
+      ${toggleRow('쿠이탕 (울고 탕야오)', 'kuitan')}
+      <div class="rule">시작 점수 <b style="color:var(--accent)">25,000</b></div>
+      <div class="rule">한글 패 이름 표시 <button class="toggle${S.showNames ? '' : ' off'}" data-local="names"></button></div>
+      <div class="rule">대기패·안전패 도우미 <button class="toggle${S.assist ? '' : ' off'}" data-local="assist"></button></div>
+      <div class="rule-note">생각 시간 15초 + 여유 20초(대국 전체). 시간이 지나면 자동으로 버려요.</div>
+      ${r.isHost
+        ? `<button class="start" data-do="start">대국 시작<small>${humans.length === 1 ? 'AI 3명과 시작' : `AI ${4 - humans.length}명이 빈자리를 채워요`}</small></button>`
+        : '<div class="waiting-note">방장이 대국을 시작하길 기다리는 중이에요…</div>'}
+    </div></div></div><div id="fx"></div>`;
+}
+
+// ── 대국 화면 ──────────────────────────────────────────────
+function plateHtml(seat, v, posCls) {
+  const info = seatInfo(seat);
+  const p = v.players[seat];
+  const isMe = seat === v.me;
+  const turn = v.waitingOn.includes(seat) && v.phase !== 'ack' && v.phase !== 'over';
+  let badge = isMe ? '<span class="badge me">YOU</span>' : (info.type === 'human' ? '<span class="badge human">친구</span>' : '<span class="badge ai">AI</span>');
+  if (p.riichi) badge += '<span class="badge riichi">리치</span>';
+  if (isMe && v.furiten) badge += '<span class="badge furiten">후리텐</span>';
+  if (info.away) badge += '<span class="badge away">자동</span>';
+  let sub = `${p.score.toLocaleString()}점`;
+  if (info.type === 'ai' && info.level) sub += ` · ${LEVEL_KO[info.level]}`;
+  if (info.type === 'human' && !isMe) sub = `<span class="${info.connected ? 'dot-online' : 'dot-offline'}"></span>${info.connected ? '접속 중' : '끊김'} · ${sub}`;
+  const timer = isMe && turn ? '<div class="timer" id="my-timer"><span>-</span></div>' : '';
+  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${info.away ? ' away' : ''}">
+    <div class="avatar ${avatarClass(info, seat)}">${esc(avatarChar(info))}<span class="wind">${WIND_KANJI[p.wind]}</span>${seat === v.dealer ? '<span class="dealer">親</span>' : ''}</div>
+    <div><div class="name">${esc(info.name)}${badge}</div><div class="sub">${sub}</div></div>${timer}</div>`;
+}
+
+function pondHtml(p, v) {
+  return p.discards.map((d) => {
+    const isLast = v.lastDiscard && v.lastDiscard.id === d.id && (v.phase === 'reaction');
+    const cls = `${isLast ? 'last' : ''}${d.called ? ' taken' : ''}`.trim();
+    if (d.riichi) return sideHtml(code(d.id), 't-pond', cls);
+    return tileHtml(code(d.id), 't-pond', cls);
+  }).join('');
+}
+
+function handHtml(v, legal) {
+  const hints = S.st.hints;
+  const canAct = legal?.kind === 'turn';
+  const riichiIds = canAct ? legal.riichi : [];
+  const discardIds = canAct ? legal.discard : [];
+  const best = new Set(hints?.best || []);
+  const safe = new Set(hints?.safe || []);
+  let bestShown = false;
+  const mk = (id, extra = '') => {
+    const k = id >> 2;
+    let cls = `hand ${extra}`;
+    let inner = '';
+    if (S.selected === id) cls += ' lift';
+    if (S.riichiMode) { if (!riichiIds.includes(id)) cls += ' dim'; }
+    else if (canAct && !discardIds.includes(id)) cls += ' forbid';
+    if (S.showNames) inner += `<span class="cap">${kindName(k)}</span>`;
+    if (S.assist && canAct && !S.riichiMode) {
+      if (best.has(k) && !bestShown && discardIds.includes(id)) { inner += '<span class="tag best">추천</span>'; bestShown = true; }
+      else if (safe.has(k)) inner += '<span class="tag safe">안전</span>';
+    } else if (S.assist && safe.has(k)) inner += '<span class="tag safe">안전</span>';
+    return tileHtml(code(id), 't-hand', cls, inner, { id });
+  };
+  const tiles = v.myHand.map((id) => mk(id)).join('');
+  const drawn = v.myDrawn != null ? mk(v.myDrawn, 'drawn') : '';
+  const melds = v.players[v.me].melds.map((m) => meldHtml(m, v.me, 't-meld')).join('');
+  return `<div class="my-hand${canAct ? ' can' : ''}">${tiles}${drawn}${melds ? `<div class="melds">${melds}</div>` : ''}</div>`;
+}
+
+function opponentHands(v) {
+  let html = '';
+  for (const p of v.players) {
+    const rel = relOf(p.seat, v.me);
+    if (rel === 0) continue;
+    const backs = (cls, size) => Array.from({ length: p.handCount }, () => backHtml(size, cls)).join('')
+      + (p.hasDrawn ? `<span class="drawn-gap"></span>${backHtml(size, cls)}` : '');
+    const melds = p.melds.map((m) => meldHtml(m, p.seat, 't-meldo')).join('');
+    if (rel === 2) html += `<div class="top-hand">${backs('', 't-top')}${melds ? `<div class="melds">${melds}</div>` : ''}</div>`;
+    else html += `<div class="side-hand ${rel === 1 ? 'right' : 'left'}">${backs('side', 't-side')}${melds ? `<div class="melds">${melds}</div>` : ''}</div>`;
+  }
+  return html;
+}
+
+function boardHtml(v) {
+  const activeTurn = v.phase === 'turn' ? v.turn : (v.phase === 'reaction' && v.lastDiscard ? v.lastDiscard.seat : -1);
+  let html = '<div class="board"><div class="center-box"></div>';
+  for (const p of v.players) {
+    const rel = relOf(p.seat, v.me);
+    html += `<div class="layer s${rel}${p.riichi ? ' riichi' : ''}">`;
+    html += `<div class="seat-score"><span class="w">${WIND_KANJI[p.wind]}</span><span class="pt">${p.score.toLocaleString()}</span></div>`;
+    if (p.seat === activeTurn) html += '<div class="turn-edge"></div>';
+    html += '<div class="stick"></div>';
+    html += `<div class="pond">${pondHtml(p, v)}</div></div>`;
+  }
+  const dora = Array.from({ length: 5 }, (_, i) => (i < v.dora.length ? tileHtml(code(v.dora[i]), 't-mini') : backHtml('t-mini'))).join('');
+  html += `<div class="center-info"><div class="round">${WIND_KANJI[v.roundWind]} ${v.dealer + 1}局</div>
+    <div class="round-sub">${v.honba}본장 · 공탁 ${v.kyotaku}</div><div class="dora-row">${dora}</div>
+    <div class="wall-left">残 ${v.wallLeft}</div></div></div>`;
+  return html;
+}
+
+function hintStrip(v, legal) {
+  const h = S.st.hints;
+  const vis = visibleCounts(v);
+  const remain = (kinds) => kinds.reduce((a, k) => a + Math.max(0, 4 - vis[k]), 0);
+  if (S.riichiMode && legal?.kind === 'turn') {
+    if (S.selected == null) return '<span class="k">리치</span>리치할 패를 고르세요 (밝게 보이는 패)';
+    const k = S.selected >> 2;
+    const waits = legal.riichiWaits?.[k] || [];
+    return `<span class="k">리치</span><b>${kindName(k)}</b>을 버리면 대기 ${miniTiles(waits)} <span>남은 ${remain(waits)}장</span>`;
+  }
+  if (legal?.kind === 'reaction') {
+    const tile = legal.tile;
+    const who = seatInfo(legal.from).name;
+    const label = legal.ron ? '론 가능' : legal.pon ? '퐁 가능' : legal.chi ? '치 가능' : '깡 가능';
+    const note = S.assist && h?.note ? ` · <b>${esc(h.note)}</b>` : '';
+    return `<span class="k">${label}</span>${esc(who)}(${WIND_KANJI[v.players[legal.from].wind]})가 ${miniTiles([tile >> 2])} 를 버렸습니다${note}`;
+  }
+  if (!S.assist || !h) return '';
+  if (legal?.kind === 'turn') {
+    if (h.note) return `<span class="k">도우미</span><b>${esc(h.note)}</b>`;
+    const bestK = h.best?.[0];
+    const e = bestK != null ? h.discards[bestK] : null;
+    const state = h.shanten === 0 ? '텐파이!' : `텐파이까지 ${h.shanten}향청`;
+    if (e) {
+      const waits = e.waits?.length ? ` · 버리면 대기 ${miniTiles(e.waits.map((w) => w.kind))} 남은 ${e.waits.reduce((a, w) => a + w.remaining, 0)}장` : '';
+      return `<span class="k">도우미</span>${state} · 추천 버림 <b>${kindName(bestK)}</b>${waits}`;
+    }
+    return `<span class="k">도우미</span>${state}`;
+  }
+  if (h.waits?.length) {
+    return `<span class="k">도우미</span>텐파이! 대기 ${miniTiles(h.waits.map((w) => w.kind))} 남은 ${h.waits.reduce((a, w) => a + w.remaining, 0)}장`;
+  }
+  if (typeof h.shanten === 'number') return `<span class="k">도우미</span>텐파이까지 ${h.shanten}향청`;
+  return '';
+}
+
+function actionsHtml(v, legal) {
+  if (!legal) return '';
+  let btns = '';
+  if (legal.kind === 'turn') {
+    if (S.riichiMode) {
+      btns += `<button class="act pulse" data-do="riichi-ok" ${S.selected == null ? 'disabled' : ''}>리치 확정<small>1,000점 공탁</small></button><button class="act ghost" data-do="riichi-cancel">취소</button>`;
+    } else {
+      if (legal.tsumo) btns += '<button class="act pulse" data-do="tsumo">쯔모<small>화료!</small></button>';
+      if (legal.riichi.length) btns += '<button class="act" data-do="riichi">리치</button>';
+      for (const k of legal.ankan) btns += `<button class="act" data-do="ankan" data-kind="${k}">암깡<small>${kindName(k)}</small></button>`;
+      for (const id of legal.kakan) btns += `<button class="act" data-do="kakan" data-id="${id}">가깡<small>${kindName(id >> 2)}</small></button>`;
+      if (legal.kyuushu) btns += '<button class="act ghost" data-do="kyuushu">구종구패<small>유국 선언</small></button>';
+      if (S.selected != null) btns += '<button class="act ghost" data-do="discard">버리기</button>';
+    }
+  } else if (legal.kind === 'reaction') {
+    if (legal.ron) btns += '<button class="act pulse" data-do="ron">론<small>화료!</small></button>';
+    if (legal.pon) btns += `<button class="act${legal.ron ? '' : ' pulse'}" data-do="pon">퐁<small>${kindName(legal.tile >> 2)} ×3</small></button>`;
+    if (legal.daiminkan) btns += '<button class="act" data-do="kan">깡<small>4장</small></button>';
+    (legal.chi || []).forEach((c, i) => {
+      const ks = [...c.ids, legal.tile].map((id) => id >> 2).sort((a, b) => a - b);
+      btns += `<button class="act" data-do="chi" data-idx="${i}">치<small>${ks.map((k) => (k % 9) + 1).join('·')}</small></button>`;
+    });
+    btns += '<button class="act ghost" data-do="pass">패스</button>';
+  }
+  return `<div class="actions">${btns}</div>${legal.kind === 'reaction' ? '<div class="call-timer"><i id="call-bar"></i></div>' : ''}`;
+}
+
+function renderGame() {
+  const v = S.st.view;
+  const legal = v.phase === 'ack' || v.phase === 'over' ? null : v.legal;
+  let html = '';
+  html += opponentHands(v);
+  html += boardHtml(v);
+  const order = [[0, 'me'], [1, 'right'], [2, 'top'], [3, 'left']];
+  for (const [rel, cls] of order) html += plateHtml((v.me + rel) % 4, v, cls);
+  html += handHtml(v, legal);
+  const strip = hintStrip(v, legal);
+  if (strip) html += `<div class="strip">${strip}</div>`;
+  html += actionsHtml(v, legal);
+  if (S.assist && S.st.hints?.safe?.length) {
+    const rp = v.players.filter((p) => p.seat !== v.me && p.riichi).map((p) => seatInfo(p.seat).name);
+    if (rp.length) html += `<div class="legend"><b>${esc(rp.join(', '))}</b>님이 리치 중<br><span class="tag safe" style="position:static;display:inline-block;margin-right:4px;transform:none">안전</span> 리치한 사람이 이미 버린 패(현물) — 론당하지 않아요</div>`;
+  }
+  if (v.phase === 'ack' && v.result) html += resultHtml(v);
+  if (v.phase === 'over' && v.final) html += finalHtml(v);
+  stage.innerHTML = `<div id="content">${html}</div><div id="fx"></div>`;
+  updateTimers();
+}
+
+// ── 결과 / 종료 ────────────────────────────────────────────
+function yakuLine(y) {
+  return `<span>${esc(y.name)}</span><span>${y.yakuman ? `${y.yakuman >= 2 ? `${y.yakuman}배 ` : ''}역만` : `${y.han}판`}</span>`;
+}
+
+function resultHtml(v) {
+  const r = v.result;
+  const waiting = v.waitingOn.length;
+  const mineDone = !v.legal;
+  const deltaRows = [0, 1, 2, 3].map((s) => {
+    const info = seatInfo(s);
+    const d = r.deltas[s];
+    return `<div class="delta${s === v.me ? ' mine' : ''}"><div class="avatar ${avatarClass(info, s)}">${esc(avatarChar(info))}</div>${esc(info.name)}
+      <span class="v">${r.after[s].toLocaleString()} <span class="${d > 0 ? 'plus' : d < 0 ? 'minus' : ''}">(${d > 0 ? '+' : ''}${d.toLocaleString()})</span></span></div>`;
+  }).join('');
+  const nextBtn = mineDone
+    ? `<span>다른 플레이어를 기다리는 중… (${waiting}명)</span>`
+    : `<span>${waiting > 1 ? `${waiting}명 확인 대기` : ''}</span><button class="act" data-do="next">다음 국 →</button>`;
+  let body;
+  if (r.kind === 'agari') {
+    body = r.winners.map((w) => {
+      const info = seatInfo(w.seat);
+      const concealed = w.concealed.map((id) => tileHtml(code(id), 't-res')).join('');
+      const melds = w.melds.map((m) => meldHtml({ ...m, called: m.tiles[0] }, w.seat, 't-meld')).join('');
+      const yaku = w.yaku.map(yakuLine).join('');
+      const total = w.yakuman ? `${w.limit}` : `${w.han}판 ${w.fu}부${w.limit ? ` · ${w.limit}` : ''}`;
+      const from = w.tsumo ? '쯔모' : `론 (${esc(seatInfo(w.from).name)})`;
+      return `<div class="res-win">
+        <div class="res-head"><h2>${w.tsumo ? '쯔모' : '론'}</h2><span>${esc(info.name)} (${WIND_KO[v.players[w.seat].wind]}가${w.seat === v.dealer ? ' · 친' : ''}) 화료 · ${from}</span>${w.limit ? `<span class="limit">${w.limit}</span>` : ''}</div>
+        <div class="res-hand">${concealed}${tileHtml(code(w.winTile), 't-res', 'win')}${melds ? `<div class="melds">${melds}</div>` : ''}</div>
+        <div class="res-body"><div>
+          <div class="res-dora"><div>도라 ${r.dora.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>${w.riichi ? `<div>뒷도라 ${r.ura.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>` : ''}</div>
+          <div class="yaku">${yaku}</div>
+          <div class="total">${total}<small>${w.points.toLocaleString()}점${r.sticks && w === r.winners[0] ? ` + 공탁 ${(r.sticks * 1000).toLocaleString()}점` : ''}${r.honba && w === r.winners[0] ? ` (${r.honba}본장 포함)` : ''}</small></div>
+        </div>${w === r.winners[0] ? `<div class="deltas">${deltaRows}</div>` : '<div></div>'}</div></div>`;
+    }).join('');
+  } else {
+    const rows = r.tenpai.map((t, s) => {
+      const info = seatInfo(s);
+      const h = r.hands[s];
+      const tiles = h ? h.concealed.map((id) => tileHtml(code(id), 't-mini')).join('') : '';
+      const melds = h ? h.melds.map((m) => meldHtml({ ...m, called: m.tiles[0] }, s, 't-meldo')).join('') : '';
+      const label = r.reason === 'exhaustive' ? (r.nagashi[s] ? '유국만관' : t ? '텐파이' : '노텐') : '';
+      return `<div class="tenpai-row"><span class="st${t ? '' : ' no'}">${label}</span><b style="min-width:70px">${esc(info.name)}</b><span class="mini-tiles" style="display:flex;gap:2px">${tiles}</span>${melds}</div>`;
+    }).join('');
+    body = `<div class="res-head"><h2>${DRAW_REASON[r.reason] || '유국'}</h2><span>${r.label}</span></div>
+      <div class="res-body"><div><div class="tenpai-list">${rows}</div></div><div class="deltas">${deltaRows}</div></div>`;
+  }
+  return `<div class="overlay"><div class="result">${body}<div class="res-actions">${nextBtn}</div></div></div>`;
+}
+
+function finalHtml(v) {
+  const f = v.final;
+  const rows = f.ranking.map((r) => {
+    const info = seatInfo(r.seat);
+    return `<div class="rank-row${r.rank === 1 ? ' first' : ''}"><span class="no">${r.rank}</span>
+      <div class="avatar ${avatarClass(info, r.seat)}">${esc(avatarChar(info))}</div>${esc(info.name)}${r.seat === v.me ? ' <span class="badge me">YOU</span>' : ''}
+      <span class="pts">${r.score.toLocaleString()}</span><span class="d ${r.delta >= 0 ? 'plus' : 'minus'}" style="color:${r.delta >= 0 ? '#34d399' : '#f87171'}">${r.delta >= 0 ? '+' : ''}${r.delta.toLocaleString()}</span></div>`;
+  }).join('');
+  const isHost = S.room?.isHost;
+  return `<div class="overlay"><div class="result" style="width:640px">
+    <div class="res-head"><h2>대국 종료</h2><span>${OVER_REASON[f.reason] || ''}</span></div>
+    <div class="rank-list">${rows}</div>
+    <div class="res-actions"><button class="act ghost" data-do="leave">게임 선택</button>${isHost ? '<button class="act" data-do="rematch">다시 하기</button>' : '<span>방장이 다시 시작할 수 있어요</span>'}</div>
+  </div></div>`;
+}
+
+// ── 타이머 ─────────────────────────────────────────────────
+function updateTimers() {
+  if (!S.st) return;
+  const t = S.st.timers.find((x) => x.seat === S.seat);
+  const timerEl = $('my-timer');
+  const bar = $('call-bar');
+  if (!t) return;
+  const left = Math.max(0, t.deadline - (Date.now() + S.offset));
+  const pct = Math.min(100, (left / t.total) * 100);
+  if (timerEl) {
+    timerEl.querySelector('span').textContent = Math.ceil(left / 1000);
+    timerEl.style.background = `conic-gradient(var(--turn) ${pct}%, rgba(255,255,255,.12) 0)`;
+    timerEl.classList.toggle('low', left < 5000);
+  }
+  if (bar) bar.style.width = `${pct}%`;
+}
+setInterval(updateTimers, 250);
+
+// ── 렌더 진입 ──────────────────────────────────────────────
+function render() {
+  if (S.st && S.room && S.room.phase !== 'lobby') renderGame();
+  else renderLobby();
+  document.getElementById('btn-assist').classList.toggle('on', S.assist);
+  document.getElementById('btn-names').classList.toggle('on', S.showNames);
+}
+
+// ── 입력 ───────────────────────────────────────────────────
+function toggleAssist() {
+  S.assist = !S.assist;
+  store.set('mahjong:assist', S.assist ? '1' : '0');
+  send({ type: 'ASSIST', on: S.assist });
+  render();
+}
+function toggleNames() {
+  S.showNames = !S.showNames;
+  store.set('mahjong:names', S.showNames ? '1' : '0');
+  render();
+}
+
+stage.addEventListener('click', (e) => {
+  sounds.unlock();
+  const tile = e.target.closest('.tile.hand[data-id]');
+  if (tile) { onTileClick(+tile.dataset.id); return; }
+  const cfg = e.target.closest('[data-cfg]');
+  if (cfg && S.room?.isHost) {
+    const key = cfg.dataset.cfg;
+    const val = cfg.dataset.bool ? cfg.dataset.val === 'on' : cfg.dataset.val;
+    send({ type: 'CONFIG', settings: { [key]: val } });
+    return;
+  }
+  const local = e.target.closest('[data-local]');
+  if (local) { if (local.dataset.local === 'assist') toggleAssist(); else toggleNames(); return; }
+  const btn = e.target.closest('[data-do]');
+  if (btn && !btn.disabled) onAction(btn);
+});
+
+function onTileClick(id) {
+  const v = S.st?.view;
+  const legal = v?.legal;
+  if (!legal || legal.kind !== 'turn' || S.busy || v.phase !== 'turn') return;
+  if (S.riichiMode) {
+    if (!legal.riichi.includes(id)) return;
+    S.selected = S.selected === id ? null : id;
+    sounds.play('draw');
+    render();
+    return;
+  }
+  if (!legal.discard.includes(id)) { showToast('지금은 이 패를 버릴 수 없어요.'); return; }
+  if (S.selected === id) { act({ type: 'discard', id }); return; }
+  S.selected = id;
+  sounds.play('draw');
+  render();
+}
+
+function onAction(btn) {
+  const v = S.st?.view;
+  const legal = v?.legal;
+  switch (btn.dataset.do) {
+    case 'start': send({ type: 'START' }); break;
+    case 'tsumo': act({ type: 'tsumo' }); break;
+    case 'ron': act({ type: 'ron' }); break;
+    case 'pon': act({ type: 'pon' }); break;
+    case 'kan': act({ type: 'daiminkan' }); break;
+    case 'pass': act({ type: 'pass' }); break;
+    case 'chi': act({ type: 'chi', ids: legal.chi[+btn.dataset.idx].ids }); break;
+    case 'ankan': act({ type: 'ankan', kind: +btn.dataset.kind }); break;
+    case 'kakan': act({ type: 'kakan', id: +btn.dataset.id }); break;
+    case 'kyuushu': act({ type: 'kyuushu' }); break;
+    case 'discard': if (S.selected != null) act({ type: 'discard', id: S.selected }); break;
+    case 'riichi': S.riichiMode = true; S.selected = null; render(); break;
+    case 'riichi-cancel': S.riichiMode = false; S.selected = null; render(); break;
+    case 'riichi-ok': if (S.selected != null) act({ type: 'discard', id: S.selected, riichi: true }); break;
+    case 'next': act({ type: 'next' }); break;
+    case 'rematch': send({ type: 'REMATCH' }); break;
+    case 'leave': leave(); break;
+    default: break;
+  }
+}
+
+function leave() {
+  send({ type: 'LEAVE' });
+  location.href = '/';
+}
+
+$('btn-back').addEventListener('click', leave);
+$('btn-assist').addEventListener('click', toggleAssist);
+$('btn-names').addEventListener('click', toggleNames);
+const soundBtn = $('btn-sound');
+soundBtn.textContent = sounds.isMuted() ? '🔇' : '🔊';
+soundBtn.classList.toggle('on', !sounds.isMuted());
+soundBtn.addEventListener('click', () => {
+  sounds.setMuted(!sounds.isMuted());
+  soundBtn.textContent = sounds.isMuted() ? '🔇' : '🔊';
+  soundBtn.classList.toggle('on', !sounds.isMuted());
+  sounds.unlock();
+});
+
+// ── 화면 비율 맞춤 ────────────────────────────────────────
+function fit() {
+  const outer = $('fit');
+  const inner = $('fit-inner');
+  const availW = outer.clientWidth - 20;
+  const header = document.querySelector('.game-header').offsetHeight + 40;
+  const availH = window.innerHeight - header;
+  const scale = Math.max(0.2, Math.min(availW / 1200, availH / 760, 1.25));
+  stage.style.transform = `scale(${scale})`;
+  inner.style.width = `${1200 * scale}px`;
+  inner.style.height = `${760 * scale}px`;
+  inner.style.margin = '0 auto';
+}
+window.addEventListener('resize', fit);
+fit();
+
+connect();

@@ -73,6 +73,7 @@ minigame-paradise/
   starlight-mail-tower/ # 별빛 우편탑 2인 협동 등반
   moonlight-kitchen-express/ # 달빛 주방열차 2인 협동 요리
   venezia/           # 베네치아 타이핑 배틀 2인 대전 타이핑
+  mahjong/           # 4인 일본식 리치마작 (서버 관리형 AI)
   tests/             # Playwright QA 테스트
   docs/              # 프로젝트 문서
 ```
@@ -95,6 +96,7 @@ minigame-paradise/
 | 별빛 우편탑 기록 저장소 | `starlight-mail-tower/game/records.js` | 레벨별 최단 기록을 JSON으로 원자 저장하고 손상 기록을 복구 |
 | 달빛 주방열차 시뮬레이션 | `moonlight-kitchen-express/game/` | 30Hz 서버 권위 이동·아이템·조리·주문·열차 이벤트·점수 상태 관리 |
 | 달빛 주방열차 클라이언트 | `moonlight-kitchen-express/public/` | Canvas 플레이 화면, READY·HUD·결과·재접속 UI와 ko/en 제공 |
+| 마작 규칙 엔진·서버 | `mahjong/lib/`, `mahjong/server.js` | 서버 권위 리치마작(역·부수·점수·후리텐·유국), 사람 1~4명 + 서버 관리형 AI 3단계, 방 설정·재접속·자동 진행 |
 
 ## 기능 목록
 
@@ -125,11 +127,12 @@ minigame-paradise/
 | 별빛 우편탑 | 협동 부스트와 장치 연동 복귀 경로를 사용하는 17개 레벨 온라인 2인 등반. CSS Grid 3행(topbar/play-viewport/bottombar) 레이아웃으로 메타 UI와 플레이 캔버스를 완전 분리. 레디 화면은 4개 월드 탭(기지/자연/우주/경이)으로 레벨을 분산 표시하고 sticky footer로 준비 버튼을 항상 노출. AI 봇은 슬롯 단위 독립 에이전트로 인간과 협동 플레이하며 BFS 발판 그래프 기반 수직 내비게이션, 공중 앵커 고착 방어, 결과 화면 인간 선택 미러링을 수행. 플레이어별 안전 리스폰, AI·친구 2인 즉시 시작, 15초 재접속과 오래된 토큰 차단 지원 | 완료 |
 | 달빛 주방열차 | 이동식 야시장 열차에서 주문·조리·정차·커브·2인 냉각을 수행하는 LAN 2인 협동 요리 게임 | 완료 |
 | 베네치아 타이핑 배틀 | 한메/한컴 타자교사 스타일 2인 대전 타이핑. 정답마다 상대 HP 2 피해, 바닥에 닿은 단어마다 소유자 HP 2 피해, HP 0 승패를 적용한다. 서버 권위 슬롯 동기화, 급류(4초간 2배 낙하) 포함 아이템 5종, 숫자키 1/2/3 조작, AI 봇과 게임 중 포탈 복귀를 지원 | 완료 |
+| 마작 | 4인 일본식 리치마작. 클래식 자동탁·흰색 패 UI, 동풍전/반장전, 친구와 마주 앉고 빈자리는 AI(쉬움·보통·어려움), 초보 도우미와 한글 패 이름 옵션 | 완료 |
 | 끝말잇기 배틀 | 독립 체인과 공용 중복 금지, 게이지·가비지·HP를 사용하는 1:1 서버 권위 끝말잇기. 런처 AI 채우기에서 1.2~2.0초 반응의 서버 관리형 `AI (보통)` 대전을 지원 | 완료 |
 
 ## 알려진 제약사항
 
-- 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle, codenames, venezia, starlight-mail-tower, sichuan-battle, wordchain-battle에서 지원한다. hanabi, codenames-duet, davinci-code, moonlight-kitchen-express는 AI를 지원하지 않는다.
+- 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle, codenames, venezia, starlight-mail-tower, sichuan-battle, wordchain-battle, mahjong에서 지원한다. hanabi, codenames-duet, davinci-code, moonlight-kitchen-express는 AI를 지원하지 않는다.
 - 사천성 배틀은 LAN 1:1이며 AI 난이도는 보통 한 종류다. 3인 이상, 온라인 매치메이킹과 영구 전적은 지원하지 않는다.
 - 게임별 다인용 로직은 윷놀이만 2~4인 완료. 요트는 현재 2인 전용이며 루미큐브/하나비(Phase 1-D~E)의 다인용 확장은 미구현.
 - 윷놀이 3~4인 게임 중 1명 disconnect 시 게임 즉시 종료. 탈락 처리 후 계속 진행 미지원.

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>마작 - 미니게임 천국</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="game-header">
+    <button id="btn-back" class="btn-back" type="button">← 게임 선택</button>
+    <h1>🀄 마작</h1>
+    <span class="spacer"></span>
+    <span id="conn" class="conn hidden">연결이 끊겼어요. 다시 연결 중…</span>
+    <button id="btn-assist" class="hdr-toggle" type="button" title="대기패·안전패·추천 버림을 알려 줘요">도우미</button>
+    <button id="btn-names" class="hdr-toggle" type="button" title="패 아래에 한글 이름 표시">한글 패 이름</button>
+    <button id="btn-sound" class="hdr-toggle on" type="button" aria-label="효과음">🔊</button>
+  </header>
+  <div class="rotate-hint">📱 가로 화면으로 돌리면 더 크게 볼 수 있어요.</div>
+  <div class="fit" id="fit">
+    <div class="fit-inner" id="fit-inner">
+      <div class="stage" id="stage"><div class="connecting">접속 중…</div></div>
+    </div>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

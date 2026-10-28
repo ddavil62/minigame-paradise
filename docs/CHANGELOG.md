@@ -1,5 +1,9 @@
 # Changelog
 
+## [2026-10-28] - 마작 추가
+
+- 4인 일본식 리치마작(`mahjong/`)을 런처에 등록했다. 사람 1~4명이 게임 안 방 설정 화면에서 모이고 빈자리는 서버 관리형 AI가 채운다. `games.json`, `GAME_APPS`, `GAME_MANAGED_AI_IDS`를 함께 갱신했다. 규칙과 계약은 `mahjong/CLAUDE.md`를 따른다.
+
 ## [2026-08-13] - 접속 안내를 공인 IP HTTPS로 통일
 
 - 루트 개발 지침, 운영 가이드, 메인 README와 게임별 README/PROJECT/CLAUDE 문서의 친구 접속 안내를 `https://112.155.2.238`로 통일했다.

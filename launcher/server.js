@@ -43,6 +43,7 @@ import { createApp as createMoonlightKitchenExpressApp } from '../moonlight-kitc
 import { createApp as createVeneziaApp } from '../venezia/server.js';
 import { createApp as createSichuanBattleApp } from '../sichuan-battle/server.js';
 import { createApp as createWordchainBattleApp } from '../wordchain-battle/server.js';
+import { createApp as createMahjongApp } from '../mahjong/server.js';
 
 // ── P0-A 안전망: WS 핸들러에서 빠져나온 예외가 런처 프로세스를 종료시키지 않게 한다.
 // 각 게임 server.js의 null guard(1차 방어)로 정상 경로는 차단되며,
@@ -179,6 +180,8 @@ const GAME_APPS = {
   'wordchain-battle': createWordchainBattleApp({
     getBotUrl: () => getBotUrl('wordchain-battle'),
   }),
+  // 마작 — 4인 일본식 리치마작. 사람 1~4명이 방 설정 화면에서 모이고 빈자리는 게임 서버가 AI로 채운다.
+  'mahjong': createMahjongApp(),
 };
 
 // ── 게임 카탈로그 스냅샷 ───────────────────────────────────────
@@ -244,7 +247,7 @@ const presenceHub = createPresenceHub({
 // 로직(server.js L476~486)을 갖추고 있으므로, 이 목록에 포함시켜 런처의 중복/불일치
 // 봇 spawn을 막고 게임 서버의 검증된 자체 로직을 그대로 재사용한다.
 const GAME_MANAGED_AI_IDS = new Set([
-  'sichuan-battle', 'starlight-mail-tower', 'yutnori', 'tetris-battle', 'wordchain-battle',
+  'sichuan-battle', 'starlight-mail-tower', 'yutnori', 'tetris-battle', 'wordchain-battle', 'mahjong',
 ]);
 
 /**

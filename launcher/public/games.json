@@ -246,5 +246,27 @@
     "playersLabelEn": "Solo AI · 2 players",
     "botLabelKo": "보통 AI 지원",
     "botLabelEn": "Normal AI available"
+  },
+  {
+    "id": "mahjong",
+    "name": "마작",
+    "nameKo": "마작",
+    "nameEn": "Mahjong",
+    "description": "녹색 자동탁에서 즐기는 4인 일본식 리치마작. 친구와 마주 앉고 빈자리는 AI가 채워요",
+    "descriptionKo": "녹색 자동탁에서 즐기는 4인 일본식 리치마작. 친구와 마주 앉고 빈자리는 AI가 채워요",
+    "descriptionEn": "Four-player Japanese riichi mahjong on a classic green table. Sit across from a friend and let AI fill the empty seats",
+    "port": 3021,
+    "httpPath": "/mahjong/",
+    "wsPath": "/mahjong/ws",
+    "color": "#2E8B57",
+    "emoji": "🀄",
+    "botAvailable": true,
+    "minPlayers": 1,
+    "maxPlayers": 4,
+    "aiFillTargetPlayers": 4,
+    "playersLabelKo": "1~4인 · 빈자리 AI",
+    "playersLabelEn": "1-4 players · AI fills seats",
+    "botLabelKo": "쉬움·보통·어려움 AI",
+    "botLabelEn": "Easy / Normal / Hard AI"
   }
 ]
