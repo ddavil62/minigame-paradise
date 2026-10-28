@@ -47,6 +47,7 @@ export const STATE = Object.freeze({
  * @param {(lines: number, combo: number, clearEventId: number) => void} deps.onAttack - 가비지 전송 콜백
  * @param {() => void} deps.onGameOver
  * @param {(payload: object) => void} [deps.onBoardChange] - 미니맵 동기화용 (선택)
+ * @param {(name: string, detail?: number) => void} [deps.onSound] - 게임 이벤트 효과음 콜백
  * @returns {object} 게임 컨트롤러
  */
 export function createGame(deps) {
@@ -122,6 +123,7 @@ export function createGame(deps) {
     if (!isColliding(grid, piece.type, piece.rotation, piece.x + dx, piece.y)) {
       piece.x += dx;
       resetLockDelay();
+      deps.onSound?.('move');
       return true;
     }
     return false;
@@ -132,12 +134,15 @@ export function createGame(deps) {
    * @param {-1 | 1} dir
    */
   function tryRotate(dir) {
-    if (!piece || state !== STATE.PLAYING) return;
+    if (!piece || state !== STATE.PLAYING) return false;
     const newRot = getRotated(piece, dir);
     if (!isColliding(grid, piece.type, newRot, piece.x, piece.y)) {
       piece.rotation = newRot;
       resetLockDelay();
+      deps.onSound?.('rotate');
+      return true;
     }
+    return false;
   }
 
   /**
@@ -172,6 +177,7 @@ export function createGame(deps) {
     const dropDist = ghostY - piece.y;
     score += dropDist * 2; // 하드 드롭 보너스 (라인당 2점)
     piece.y = ghostY;
+    deps.onSound?.('drop', dropDist);
     lockAndAdvance();
   }
 
@@ -206,6 +212,7 @@ export function createGame(deps) {
       }
     }
     deps.renderHold(holdType);
+    deps.onSound?.('hold');
   }
 
   /**
@@ -214,6 +221,7 @@ export function createGame(deps) {
   function lockAndAdvance() {
     if (!piece) return;
     lockPiece(grid, piece);
+    deps.onSound?.('lock');
 
     // 라인 클리어
     const cleared = clearLines(grid);
@@ -229,6 +237,7 @@ export function createGame(deps) {
       const garbage = garbageFromLines(cleared) + comboBonus(combo);
       clearEventId += 1;
       deps.onAttack(garbage, combo, clearEventId);
+      deps.onSound?.('clear', cleared);
     } else {
       // 콤보 리셋
       combo = -1;
@@ -391,6 +400,7 @@ export function createGame(deps) {
     receiveGarbage(lines) {
       if (state !== STATE.PLAYING) return;
       pendingGarbage += lines;
+      if (lines > 0) deps.onSound?.('garbage', lines);
     },
 
     /**
@@ -403,6 +413,7 @@ export function createGame(deps) {
       if (state !== STATE.PLAYING) return;
       if (lines <= 0) return;
       addGarbage(grid, lines);
+      deps.onSound?.('garbage', lines);
       // 활성 피스 보정: 가비지로 위로 밀린 효과를 보전하기 위해 위로 이동
       if (piece) {
         for (let shift = 0; shift < lines; shift++) {

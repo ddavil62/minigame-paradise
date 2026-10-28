@@ -14,6 +14,7 @@ import { createInput } from './input.js';
 import { createNetwork } from './network.js';
 import { createUI } from './ui.js';
 import { createItems } from './items.js';
+import { createAudio } from './audio.js';
 
 // ── DOM 준비 후 초기화 ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,7 +58,27 @@ document.addEventListener('DOMContentLoaded', () => {
     playerLabel: document.getElementById('player-label'),
     opponentStatus: document.getElementById('opponent-status'),
     countdownEl: document.getElementById('countdown'),
+    audioToggle: document.getElementById('btn-audio-toggle'),
   };
+
+  const audio = createAudio();
+
+  function renderAudioToggle() {
+    if (!els.audioToggle) return;
+    const muted = audio.isMuted();
+    els.audioToggle.textContent = muted ? '🔇 음소거' : '🔊 소리';
+    els.audioToggle.setAttribute('aria-pressed', String(muted));
+    els.audioToggle.setAttribute('aria-label', muted ? '게임 소리 켜기' : '게임 소리 끄기');
+    els.audioToggle.title = muted ? 'BGM과 효과음 켜기' : 'BGM과 효과음 끄기';
+  }
+
+  renderAudioToggle();
+  els.audioToggle?.addEventListener('click', async () => {
+    await audio.unlock();
+    audio.toggleMuted();
+    renderAudioToggle();
+  });
+  audio.startMusic('lobby');
 
   // ── 화면 전환 ──
   /** @param {'waiting'|'game'} name */
@@ -150,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       items.useItem(chosenSlot, target.id);
+      audio.play('item');
       return;
     }
     const def = items.getItemDefinition(slotIndex);
@@ -157,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const aliveOpponents = currentPlayers.filter((player) => player.id !== net.getMyId() && !player.eliminated);
     if (def.type === 'defense' || aliveOpponents.length === 1) {
       items.useItem(slotIndex, aliveOpponents[0]?.id || null);
+      audio.play('item');
       return;
     }
     pendingItemSlot = slotIndex;
@@ -185,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onBoardChange: (payload) => {
       if (net) net.sendBoardState(payload);
     },
+    onSound: (name, detail) => audio.play(name, detail),
   });
 
   // Network
@@ -237,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (items) items.reset();
       // Phase 3 LOW-2: 슬롯 클릭 재활성화 (이전 게임 종료 시 비활성화되었을 수 있음)
       ui.setItemSlotsInteractive(true);
+      audio.startMusic('battle');
       runCountdown(countdown, () => {
         acceptingOpponentBoards = true;
         game.start();
@@ -273,6 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
         cssClass = won ? 'win' : 'lose';
       }
       ui.showResult(msg, cssClass);
+      audio.setTheme('lobby');
+      audio.play(winner === null ? 'clear' : (winner === myId ? 'win' : 'lose'), winner === null ? 2 : 0);
       game.stop();
       if (input) input.disable();
       // Room-is-full 근본원인 fix: 매치가 끝나는 시점에 sessionStorage의 'ai' 모드 잔존을
@@ -331,10 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
     onItemGrant: ({ itemId, slotIndex }) => {
       console.log(`[main] 아이템 지급: ${itemId} → 슬롯 ${slotIndex}`);
       if (items) items.grantItem(itemId, slotIndex);
+      audio.play('item');
     },
     onItemEffect: ({ itemId, duration }) => {
       console.log(`[main] 아이템 효과 수신: ${itemId} (${duration}ms)`);
       if (items) items.applyEffect(itemId, duration);
+      audio.play('itemHit');
     },
     onItemAttack: ({ attackId, itemId, attackerId, targetId, legacyResolved, blocked }) => {
       ui.animateItemAttack({
@@ -360,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`[main] 방어막으로 ${itemId} 차단됨 (방어자=${isDefender})`);
       if (items) items.onShieldBlocked(itemId, isDefender);
       if (!isDefender) ui.setOppShieldBadge(false, playerId);
+      audio.play('itemHit');
     },
     onShieldActive: ({ playerId }) => {
       // 상대방이 방어막 발동 — 상대 미니맵 위에 배지 표시
@@ -485,16 +515,19 @@ document.addEventListener('DOMContentLoaded', () => {
     els.countdownEl.classList.remove('hidden');
     els.countdownEl.classList.remove('go');
     els.countdownEl.textContent = remaining.toString();
+    audio.play('countdown', remaining);
     // 매 숫자 갱신 시 pulse 애니메이션 재시작
     triggerCountdownPulse();
     const interval = setInterval(() => {
       remaining -= 1;
       if (remaining > 0) {
         els.countdownEl.textContent = remaining.toString();
+        audio.play('countdown', remaining);
         triggerCountdownPulse();
       } else if (remaining === 0) {
         els.countdownEl.textContent = 'GO!';
         els.countdownEl.classList.add('go');
+        audio.play('countdown', 0);
         triggerCountdownPulse();
       } else {
         clearInterval(interval);
