@@ -19,12 +19,16 @@ async function inject(state) {
 /** 호출 기록형 오디오 엔진을 페이지 로드 전에 설치한다. */
 async function installFakeAudio(page) {
   await page.addInitScript(() => {
-    window.__matgoFakeAudio = { calls: [], visibility: [], destroyed: 0 };
+    window.__matgoFakeAudio = { calls: [], scenes: [], visibility: [], destroyed: 0 };
     window.__MATGO_AUDIO_ENGINE_FACTORY__ = () => ({
       unlock: () => Promise.resolve(true),
       playSfx(key, metadata) {
         window.__matgoFakeAudio.calls.push({ key, eventKey: metadata?.eventKey || '' });
         return true;
+      },
+      setBgmScene(scene) {
+        window.__matgoFakeAudio.scenes.push(scene);
+        return scene;
       },
       handleVisibility(hidden) {
         window.__matgoFakeAudio.visibility.push(hidden);
@@ -121,13 +125,24 @@ test('스톱·사통·무승부 결과음이 구분되고 라운드 serial이 ev
     await endRound(resultFor(null));
     await p1.waitForFunction(() => window.__matgoFakeAudio.calls.some((call) => call.key === 'round.draw'));
 
+    await p1.click('#btn-new-round-modal');
+    await p1.waitForFunction(() => document.getElementById('round-modal')?.classList.contains('hidden'));
+    await endRound(resultFor('p2'));
+    await p1.waitForFunction(() => window.__matgoFakeAudio.calls.some((call) => call.key === 'round.loss'));
+
     const calls = await p1.evaluate(() => window.__matgoFakeAudio.calls);
     const wins = calls.filter((call) => call.key === 'round.win');
     const stops = calls.filter((call) => call.key === 'decision.stop');
     expect(wins).toHaveLength(3);
     expect(new Set(wins.map((call) => call.eventKey)).size).toBe(3);
-    expect(stops).toHaveLength(2);
+    expect(stops).toHaveLength(3);
     expect(calls.filter((call) => call.key === 'round.draw')).toHaveLength(1);
+    expect(calls.filter((call) => call.key === 'round.loss')).toHaveLength(1);
+    const scenes = await p1.evaluate(() => window.__matgoFakeAudio.scenes);
+    expect(scenes).toContain('play');
+    expect(scenes).toContain('win');
+    expect(scenes).toContain('draw');
+    expect(scenes).toContain('loss');
   } finally {
     await browser.close();
   }

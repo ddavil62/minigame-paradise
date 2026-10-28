@@ -300,6 +300,32 @@
   window.__matgoAudioDiagnostics = audioDiagnostics;
   let audioRoundSerial = 0;
 
+  const bgmToggleEl = document.getElementById('btn-bgm-toggle');
+
+  /** BGM 설정 상태를 상시 토글 버튼에 반영한다. */
+  function renderBgmToggle() {
+    if (!bgmToggleEl) return;
+    let enabled = true;
+    try { enabled = audioEngine?.isBgmEnabled?.() !== false; } catch { enabled = true; }
+    bgmToggleEl.textContent = enabled ? '♫ BGM ON' : '♩ BGM OFF';
+    bgmToggleEl.setAttribute('aria-pressed', String(!enabled));
+    bgmToggleEl.setAttribute('aria-label', enabled ? '배경음악 끄기' : '배경음악 켜기');
+    bgmToggleEl.title = enabled ? '신나는 맞고 BGM 끄기' : '신나는 맞고 BGM 켜기';
+  }
+
+  renderBgmToggle();
+  bgmToggleEl?.addEventListener('click', () => {
+    let enabled = true;
+    try { enabled = audioEngine?.isBgmEnabled?.() !== false; } catch { enabled = true; }
+    try { audioEngine?.setBgmEnabled?.(!enabled); } catch { /* 게임 진행은 계속한다. */ }
+    renderBgmToggle();
+  });
+
+  /** 오디오 엔진이 지원하면 라운드 장면에 맞는 BGM으로 전환한다. */
+  function setMatgoBgmScene(scene) {
+    try { audioEngine?.setBgmScene?.(scene); } catch { /* 게임 진행은 계속한다. */ }
+  }
+
   /**
    * 효과음 실패가 게임 입력과 렌더링에 전파되지 않도록 격리한다.
    * @param {string} key semantic 효과음 키
@@ -813,6 +839,7 @@
         break;
       case 'GAME_START':
         audioRoundSerial += 1;
+        setMatgoBgmScene('play');
         hideRoundModal();
         // 5건 룰 보강: 바닥 슬롯 캐시 + 흔들기 모달 1회 제한 초기화
         floorSlotMap.clear();
@@ -837,6 +864,7 @@
         break;
       case 'ROUND_START':
         audioRoundSerial += 1;
+        setMatgoBgmScene('play');
         hideRoundModal();
         // 5건 룰 보강: 바닥 슬롯 캐시 + 흔들기 모달 1회 제한 초기화
         floorSlotMap.clear();
@@ -874,6 +902,10 @@
         break;
       case 'ROUND_END':
         bonusFlipRequestPending = false;
+        if (msg.result) {
+          const resultWinner = msg.result.gameOver ? msg.result.gameWinner : msg.result.winner;
+          setMatgoBgmScene(resultWinner === null ? 'draw' : (resultWinner === me ? 'win' : 'loss'));
+        }
         // 사통과 무승부는 스톱 결정이 아니므로 별도 결정음을 재생하지 않는다.
         if (msg.result?.winner != null && msg.result?.settlementType !== 'sangtong') {
           playMatgoSfx('decision.stop', `round:${audioRoundSerial}:stop:${msg.result.winner}`);

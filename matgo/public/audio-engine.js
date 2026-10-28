@@ -1,7 +1,7 @@
 /**
- * @fileoverview 맞고 전용 절차형 Web Audio 효과음 엔진.
+ * @fileoverview 맞고 전용 절차형 Web Audio BGM 및 효과음 엔진.
  *
- * 정적 음원 없이 카드 이동, 특수 족보, 선택 및 결과를 짧은 합성음으로 재생한다.
+ * 정적 음원 없이 신나는 판놀이 BGM과 카드 이동, 특수 족보, 선택 및 결과음을 합성한다.
  */
 ((root) => {
   'use strict';
@@ -17,6 +17,51 @@
   });
   const MAX_DEDUPE_KEYS = 256;
   const MAX_VOICES = 12;
+  const MAX_MUSIC_VOICES = 24;
+  const BGM_STORAGE_KEY = 'matgo:bgm-enabled';
+  const MASTER_GAIN = 0.44;
+  const BGM_GAIN = 0.82;
+  const BGM_LOOK_AHEAD_SECONDS = 0.28;
+  const BGM_INTERVAL_MS = 80;
+  const BGM_SCENES = Object.freeze({
+    play: Object.freeze({
+      bpm: 136,
+      melody: Object.freeze([
+        587.33, 698.46, 783.99, 880.00, 783.99, 698.46, 587.33, 523.25,
+        587.33, 698.46, 783.99, 1046.50, 880.00, 783.99, 698.46, null,
+        587.33, 783.99, 880.00, 1046.50, 880.00, 783.99, 698.46, 587.33,
+        523.25, 587.33, 698.46, 783.99, 698.46, 587.33, 523.25, null,
+      ]),
+      bass: Object.freeze([
+        73.42, null, null, null, 65.41, null, null, null,
+        87.31, null, null, null, 55.00, null, null, null,
+      ]),
+    }),
+    win: Object.freeze({
+      bpm: 112,
+      melody: Object.freeze([
+        523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50, 1318.51, null,
+        587.33, 698.46, 880.00, 1174.66, 880.00, 1046.50, 1318.51, null,
+      ]),
+      bass: Object.freeze([65.41, null, null, null, 73.42, null, null, null]),
+    }),
+    loss: Object.freeze({
+      bpm: 82,
+      melody: Object.freeze([
+        392.00, null, 349.23, null, 293.66, null, 261.63, null,
+        349.23, null, 293.66, null, 246.94, null, 220.00, null,
+      ]),
+      bass: Object.freeze([65.41, null, null, null, 55.00, null, null, null]),
+    }),
+    draw: Object.freeze({
+      bpm: 96,
+      melody: Object.freeze([
+        392.00, null, 440.00, null, 392.00, null, 329.63, null,
+        349.23, null, 392.00, null, 349.23, null, 293.66, null,
+      ]),
+      bass: Object.freeze([65.41, null, null, null, 73.42, null, null, null]),
+    }),
+  });
 
   /**
    * 맞고 효과음 엔진을 만든다.
@@ -24,7 +69,7 @@
    * @param {object} [options]
    * @param {Function} [options.audioContextFactory] 테스트용 AudioContext 팩토리
    * @param {Function} [options.now] 단조 증가 시계(ms)
-   * @returns {{unlock:Function,playSfx:Function,handleVisibility:Function,destroy:Function,getDiagnostics:Function}}
+   * @returns {{unlock:Function,playSfx:Function,setBgmEnabled:Function,isBgmEnabled:Function,handleVisibility:Function,destroy:Function,getDiagnostics:Function}}
    */
   function createAudioEngine(options = {}) {
     const contextFactory = options.audioContextFactory || (() => {
@@ -36,17 +81,35 @@
         ? root.performance.now()
         : Date.now()
     ));
+    let storage = options.storage || null;
+    if (!storage) {
+      try { storage = root.localStorage || null; } catch { storage = null; }
+    }
+    const setIntervalFn = options.setInterval || root.setInterval?.bind(root) || (() => 0);
+    const clearIntervalFn = options.clearInterval || root.clearInterval?.bind(root) || (() => {});
 
     let context = null;
     let master = null;
+    let musicMaster = null;
     let unlocked = false;
     let destroyed = false;
     let hidden = false;
     let playCount = 0;
     let droppedCount = 0;
+    let bgmEnabled = true;
+    let bgmPlaying = false;
+    let bgmScene = 'play';
+    let bgmStep = 0;
+    let nextBgmTime = 0;
+    let bgmTimer = 0;
     const activeVoices = new Set();
+    const activeMusicVoices = new Set();
     const recentEventKeys = new Map();
     const lastPlayedAt = new Map();
+
+    try {
+      bgmEnabled = storage?.getItem(BGM_STORAGE_KEY) !== 'false';
+    } catch { /* 저장소가 차단되면 기본 ON을 유지한다. */ }
 
     /**
      * Web Audio 그래프를 최초 사용자 제스처 시점에만 만든다.
@@ -54,17 +117,21 @@
      */
     function ensureGraph() {
       if (destroyed) return false;
-      if (context && master) return true;
+      if (context && master && musicMaster) return true;
       try {
         context = contextFactory();
         if (!context || typeof context.createGain !== 'function') return false;
         master = context.createGain();
-        master.gain.setValueAtTime(0.22, context.currentTime || 0);
+        musicMaster = context.createGain();
+        master.gain.setValueAtTime(MASTER_GAIN, context.currentTime || 0);
+        musicMaster.gain.setValueAtTime(bgmEnabled ? BGM_GAIN : 0.0001, context.currentTime || 0);
+        musicMaster.connect(master);
         master.connect(context.destination);
         return true;
       } catch {
         context = null;
         master = null;
+        musicMaster = null;
         return false;
       }
     }
@@ -81,6 +148,7 @@
           await context.resume();
         }
         unlocked = context.state !== 'closed';
+        if (unlocked && bgmEnabled && !hidden) startBgm();
         return unlocked;
       } catch {
         return false;
@@ -104,7 +172,7 @@
      * @param {Array} nodes
      * @returns {{nodes:Array,stop:Function}}
      */
-    function registerVoice(nodes) {
+  function registerVoice(nodes) {
       while (activeVoices.size >= MAX_VOICES) {
         const oldest = activeVoices.values().next().value;
         oldest.stop();
@@ -122,6 +190,134 @@
       };
       activeVoices.add(voice);
       return voice;
+    }
+
+    /** BGM voice를 효과음 동시 발음 제한과 분리해 추적한다. */
+    function registerMusicVoice(nodes) {
+      while (activeMusicVoices.size >= MAX_MUSIC_VOICES) {
+        activeMusicVoices.values().next().value.stop();
+      }
+      const voice = {
+        nodes,
+        stop() {
+          for (const node of nodes) {
+            if (typeof node.stop === 'function') {
+              try { node.stop(); } catch { /* 이미 종료된 노드는 무시한다. */ }
+            }
+          }
+          if (!activeMusicVoices.delete(voice)) return;
+          for (const node of nodes) {
+            try { node.disconnect(); } catch { /* 이미 끊긴 노드는 무시한다. */ }
+          }
+        },
+      };
+      activeMusicVoices.add(voice);
+      return voice;
+    }
+
+    /** 지정 시각에 BGM 음 하나를 예약한다. */
+    function musicTone(frequency, start, duration, options = {}) {
+      if (!context || !musicMaster || !frequency) return;
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = options.type || 'triangle';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      if (options.endFrequency) {
+        oscillator.frequency.exponentialRampToValueAtTime(
+          Math.max(20, options.endFrequency),
+          start + duration,
+        );
+      }
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(options.gain || 0.1, start + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.connect(gain);
+      gain.connect(musicMaster);
+      const voice = registerMusicVoice([oscillator, gain]);
+      oscillator.onended = () => voice.stop();
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.02);
+    }
+
+    /** 한 스텝의 멜로디·장단·베이스를 예약한다. */
+    function scheduleBgmStep(start) {
+      const scene = BGM_SCENES[bgmScene];
+      const stepSeconds = 60 / scene.bpm / 2;
+      const melody = scene.melody[bgmStep % scene.melody.length];
+      const bass = scene.bass[bgmStep % scene.bass.length];
+      if (melody) {
+        musicTone(melody, start, stepSeconds * (bgmScene === 'loss' ? 1.15 : 0.72), {
+          type: bgmScene === 'play' && bgmStep % 4 === 3 ? 'square' : 'triangle',
+          gain: bgmScene === 'loss' ? 0.07 : (bgmStep % 4 === 0 ? 0.12 : 0.085),
+        });
+      }
+      if (bass) {
+        musicTone(bass, start, stepSeconds * 1.7, {
+          type: 'triangle', gain: bgmScene === 'loss' ? 0.09 : 0.14,
+        });
+      }
+      // 북·장구를 연상시키는 저음 장단과 짧은 채 소리를 교차한다.
+      if (bgmScene === 'play' && bgmStep % 4 === 0) {
+        musicTone(105, start, 0.1, { type: 'sine', endFrequency: 48, gain: 0.16 });
+      } else if (bgmScene === 'play' && bgmStep % 4 === 2) {
+        musicTone(920, start, 0.045, { type: 'square', endFrequency: 620, gain: 0.045 });
+      } else if (bgmScene === 'win' && bgmStep % 4 === 0) {
+        musicTone(130, start, 0.12, { type: 'sine', endFrequency: 64, gain: 0.12 });
+      }
+      bgmStep += 1;
+    }
+
+    /** look-ahead 방식으로 BGM을 끊김 없이 예약한다. */
+    function scheduleBgm() {
+      if (!bgmPlaying || !bgmEnabled || hidden || !context || context.state === 'closed') return;
+      nextBgmTime = Math.max(nextBgmTime, (context.currentTime || 0) + 0.025);
+      while (nextBgmTime < (context.currentTime || 0) + BGM_LOOK_AHEAD_SECONDS) {
+        scheduleBgmStep(nextBgmTime);
+        nextBgmTime += 60 / BGM_SCENES[bgmScene].bpm / 2;
+      }
+    }
+
+    /** BGM 시퀀서를 시작한다. */
+    function startBgm() {
+      if (bgmPlaying || !unlocked || !bgmEnabled || hidden || !context || !musicMaster) return false;
+      bgmPlaying = true;
+      musicMaster.gain.setValueAtTime(BGM_GAIN, context.currentTime || 0);
+      nextBgmTime = (context.currentTime || 0) + 0.04;
+      scheduleBgm();
+      bgmTimer = setIntervalFn(scheduleBgm, BGM_INTERVAL_MS);
+      return true;
+    }
+
+    /** BGM 시퀀서와 예약된 BGM voice를 정리한다. */
+    function stopBgm() {
+      bgmPlaying = false;
+      if (bgmTimer) clearIntervalFn(bgmTimer);
+      bgmTimer = 0;
+      for (const voice of [...activeMusicVoices]) voice.stop();
+      nextBgmTime = 0;
+    }
+
+    /** BGM 사용 여부를 저장하고 즉시 반영한다. */
+    function setBgmEnabled(enabled) {
+      bgmEnabled = !!enabled;
+      try { storage?.setItem(BGM_STORAGE_KEY, String(bgmEnabled)); } catch { /* 저장 실패는 무시한다. */ }
+      if (!bgmEnabled) {
+        stopBgm();
+        if (musicMaster && context) musicMaster.gain.setValueAtTime(0.0001, context.currentTime || 0);
+      } else if (unlocked && !hidden) {
+        startBgm();
+      }
+      return bgmEnabled;
+    }
+
+    /** 라운드 진행·결과에 맞는 BGM 장면으로 즉시 전환한다. */
+    function setBgmScene(scene) {
+      if (!Object.hasOwn(BGM_SCENES, scene) || scene === bgmScene) return bgmScene;
+      stopBgm();
+      bgmScene = scene;
+      bgmStep = 0;
+      if (bgmEnabled && unlocked && !hidden) startBgm();
+      return bgmScene;
     }
 
     /**
@@ -287,9 +483,12 @@
       if (!context || destroyed) return;
       try {
         if (hidden && typeof context.suspend === 'function') {
+          stopBgm();
           void context.suspend().catch(() => {});
         } else if (unlocked && typeof context.resume === 'function') {
-          void context.resume().catch(() => {});
+          void context.resume().then(() => {
+            if (bgmEnabled && !hidden) startBgm();
+          }).catch(() => {});
         }
       } catch { /* 오디오 실패가 게임 진행을 막지 않게 한다. */ }
     }
@@ -301,6 +500,7 @@
     function destroy() {
       if (destroyed) return;
       destroyed = true;
+      stopBgm();
       for (const voice of [...activeVoices]) voice.stop();
       recentEventKeys.clear();
       lastPlayedAt.clear();
@@ -309,6 +509,7 @@
       } catch { /* 종료 실패도 무시한다. */ }
       context = null;
       master = null;
+      musicMaster = null;
       unlocked = false;
     }
 
@@ -325,13 +526,27 @@
         hidden,
         destroyed,
         activeVoices: activeVoices.size,
+        activeMusicVoices: activeMusicVoices.size,
+        bgmEnabled,
+        bgmPlaying,
+        bgmScene,
+        bgmStep,
         dedupeSize: recentEventKeys.size,
         playCount,
         droppedCount,
       };
     }
 
-    return { unlock, playSfx, handleVisibility, destroy, getDiagnostics };
+    return {
+      unlock,
+      playSfx,
+      setBgmEnabled,
+      isBgmEnabled: () => bgmEnabled,
+      setBgmScene,
+      handleVisibility,
+      destroy,
+      getDiagnostics,
+    };
   }
 
   root.MatgoAudio = Object.freeze({ createAudioEngine });

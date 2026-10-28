@@ -117,6 +117,51 @@ test('AudioContext는 최초 unlock 전에는 생성되지 않고 unlock은 재�
   assert.equal(context.resumeCalls, 1);
 });
 
+test('unlock 후 신나는 BGM을 시작하고 ON/OFF 설정을 저장한다', async () => {
+  const context = makeFakeContext();
+  const values = new Map();
+  const storage = {
+    getItem(key) { return values.get(key) ?? null; },
+    setItem(key, value) { values.set(key, value); },
+  };
+  let intervalCalls = 0;
+  let clearCalls = 0;
+  const engine = loadFactory()({
+    audioContextFactory: () => context,
+    storage,
+    setInterval: () => { intervalCalls += 1; return 7; },
+    clearInterval: () => { clearCalls += 1; },
+  });
+
+  assert.equal(engine.isBgmEnabled(), true);
+  await engine.unlock();
+  assert.equal(engine.getDiagnostics().bgmPlaying, true);
+  assert.ok(engine.getDiagnostics().activeMusicVoices > 0);
+  assert.equal(context.gains[0].gain.value, 0.44);
+  assert.equal(context.gains[1].gain.value, 0.82);
+  assert.equal(intervalCalls, 1);
+
+  assert.equal(engine.setBgmEnabled(false), false);
+  assert.equal(values.get('matgo:bgm-enabled'), 'false');
+  assert.equal(engine.getDiagnostics().bgmPlaying, false);
+  assert.equal(engine.getDiagnostics().activeMusicVoices, 0);
+  assert.equal(clearCalls, 1);
+
+  assert.equal(engine.setBgmEnabled(true), true);
+  assert.equal(values.get('matgo:bgm-enabled'), 'true');
+  assert.equal(engine.getDiagnostics().bgmPlaying, true);
+  assert.equal(intervalCalls, 2);
+  assert.equal(context.gains[1].gain.value, 0.82);
+
+  assert.equal(engine.setBgmScene('win'), 'win');
+  assert.equal(engine.getDiagnostics().bgmScene, 'win');
+  assert.equal(engine.getDiagnostics().bgmPlaying, true);
+  assert.equal(engine.setBgmScene('loss'), 'loss');
+  assert.equal(engine.setBgmScene('draw'), 'draw');
+  assert.equal(engine.setBgmScene('play'), 'play');
+  assert.equal(engine.setBgmScene('unknown'), 'play');
+});
+
 test('eventKey 중복과 key별 cooldown을 거른다', async () => {
   const context = makeFakeContext();
   let clock = 1000;

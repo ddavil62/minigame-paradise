@@ -49,6 +49,7 @@ import { calculateScore, applyFinalMultipliers } from './score.js';
  * @property {{p1:Card[], p2:Card[]}} hands
  * @property {{p1:Card[], p2:Card[]}} captured          - 점수판
  * @property {Object.<number, 'p1'|'p2'>} ppeokFlags    - 뻑 만든 사람
+ * @property {Object.<number, Card>} ppeokJoker         - 뻑 재형성에 낀 조커 (월별, #69)
  * @property {object|null} pendingFloorChoice           - 같은 월 2장 선택 대기 컨텍스트
  * @property {object|null} pendingCaptureBatch          - 턴 종료 전 임시 정산 카드
  * @property {'p1'|'p2'} turn
@@ -85,6 +86,9 @@ export function createGame(firstTurn = 'p1', opts = {}) {
     hands: { p1: [], p2: [] },
     captured: { p1: [], p2: [] },
     ppeokFlags: {},
+    // #69 (2026-08-18): 손패 뻑 재형성 사이에 낀 조커 — { [month]: jokerCard }.
+    // floor에 조커가 대기 중이며, 해당 월 뻑을 풀 때 absorbPpeokJoker가 정산한다.
+    ppeokJoker: {},
     ppeokCount: { p1: 0, p2: 0 },
     pendingFloorChoice: null,
     pendingCaptureBatch: null,
@@ -136,6 +140,8 @@ export function startRound(game, firstTurn) {
   game.hands = { p1: p1Hand, p2: p2Hand };
   game.captured = { p1: [], p2: [] };
   game.ppeokFlags = {};
+  // #69 (2026-08-18): 손패 뻑 재형성 사이에 낀 조커 — 라운드마다 초기화.
+  game.ppeokJoker = {};
   // 라운드 동안 누적된 뻑 개수 — 점수 multiplier(×2^N) 적용 + 3뻑 즉시 승리 판정에 사용
   game.ppeokCount = { p1: 0, p2: 0 };
   game.pendingFloorChoice = null;
@@ -594,10 +600,13 @@ function resolveCardOnFloor(g, playerId, card, fromHand) {
   stealPi(g, playerId, opp, sweepPiCount);
   // 뻑 플래그 해제 (만든 사람 무관, 그 월 뻑은 풀림)
   delete g.ppeokFlags[month];
+  // #69: 이 뻑에 낀 조커가 있으면 카드와 강탈 효과를 함께 정산.
+  const jokerBonus = absorbPpeokJoker(g, playerId, month);
   g.lastAction = {
     kind: fromHand ? 'sweep_from_hand' : 'sweep_from_flip',
     messageKey: 'action.ppeokSweep',
-    player: playerId, card, trio, stoleFromOpp: sweepPiCount,
+    player: playerId, card, trio, stoleFromOpp: sweepPiCount + jokerBonus,
+    ...(jokerBonus ? { joinedJoker: true } : {}),
   };
   return { matched: 3, matchedCards: trio };
 }
@@ -823,6 +832,11 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
   // 1) 상대 피 1장 → 본인 captured (상대 피 0장이면 스킵)
   // 2) 조커 → 본인 captured
   // 3) 더미에서 한 번 더 뒤집기 (재귀 — 그 카드는 평소대로 처리, 또 조커면 또 케이스 B)
+  //
+  // 예외 (#69, 2026-08-18): 손패 1매칭으로 captured에 간 handCard+짝이 이번 뒤집기
+  // 체인에서 뻑으로 재형성되는 도중 조커가 그 사이에 끼면, 조커를 즉시 정산하지 않고
+  // 뻑 파일(floor)에 합류시킨다. 강탈 효과(피 1장)는 이후 그 뻑을 실제로 푸는 사람에게
+  // 귀속된다 (absorbPpeokJoker, 트리오 정산 지점 3곳에서 처리).
   if (flipped.type === 'joker') {
     if (timeline) {
       appendTimelineStep(timeline, {
@@ -836,16 +850,35 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
         ],
       });
     }
-    stealPi(g, playerId, opp, 1);
-    g.captured[playerId].push(flipped);
+    const joinsHandPpeok = willJokerJoinHandPpeok(g, playerId, handCard);
+    let stolenThisFlip = 0;
+    if (!joinsHandPpeok) {
+      stealPi(g, playerId, opp, 1);
+      g.captured[playerId].push(flipped);
+      stolenThisFlip = 1;
+    }
     // 재귀: 한 번 더 뒤집기 (handCard는 그대로 유지 — 첫 뒤집기 의도와 같이 동일 컨텍스트)
     drawAndResolve(g, playerId, handCard, timeline);
+    if (joinsHandPpeok) {
+      if (g.lastAction?.kind === 'ppeok' && g.lastAction.month === handCard.month) {
+        g.floor.push(flipped);
+        // 구 스냅샷/테스트 픽스처 등 ppeokJoker 필드가 없는 상태 방어.
+        g.ppeokJoker = g.ppeokJoker || {};
+        g.ppeokJoker[handCard.month] = flipped;
+      } else {
+        // 안전망: 예상한 뻑 재형성 분기로 이어지지 않은 경우(이론상 도달 불가) 기존
+        // 즉시 정산 규칙으로 폴백한다.
+        stealPi(g, playerId, opp, 1);
+        g.captured[playerId].push(flipped);
+        stolenThisFlip = 1;
+      }
+    }
     // 재귀의 최종 매칭 액션을 유지하되, 조커 강탈 메타데이터를 합쳐 클라이언트가
     // 실제 상대 captured 영역에서 출발하는 fly를 만들 수 있게 한다.
     g.lastAction = {
       ...(g.lastAction || {}),
       player: playerId,
-      stoleFromOpp: (g.lastAction?.stoleFromOpp || 0) + 1,
+      stoleFromOpp: (g.lastAction?.stoleFromOpp || 0) + stolenThisFlip,
       jokerFlips: [...(g.lastAction?.jokerFlips || []), flipped],
     };
     return;
@@ -981,13 +1014,16 @@ function drawAndResolve(g, playerId, handCard, timeline = null) {
   const flipSweepCount = isPpeokOwner(g, playerId, flipped.month) ? 2 : 1;
   stealPi(g, playerId, opp, flipSweepCount);
   delete g.ppeokFlags[flipped.month];
+  // #69: 이 뻑에 낀 조커가 있으면 카드와 강탈 효과를 함께 정산.
+  const jokerBonus = absorbPpeokJoker(g, playerId, flipped.month);
   g.lastAction = {
     kind: 'sweep_from_flip',
     messageKey: 'action.ppeokSweep',
     player: playerId,
     card: flipped,
     trio,
-    stoleFromOpp: flipSweepCount,
+    stoleFromOpp: flipSweepCount + jokerBonus,
+    ...(jokerBonus ? { joinedJoker: true } : {}),
   };
   recordDrawMatch(timeline, playerId, flipped, trio);
 }
@@ -1065,6 +1101,53 @@ function stealPi(g, taker, victim, count) {
       remaining--;
     }
   }
+}
+
+/**
+ * #69 (2026-08-18): 더미 조커가 손패 뻑 재형성 사이에 낄지 미리 판정한다.
+ * drawAndResolve의 조커 분기(케이스 B)에서, 즉시 정산 대신 뻑 파일 합류로 보낼지
+ * 결정하기 위해 "조커 다음에 뒤집힐 카드"까지 미리 내다본다 (deck.pop 전 peek).
+ *
+ * 조건: ① 조커 바로 다음 더미 카드가 handCard와 같은 월, ② 바닥에 그 월 카드가 0장
+ * (= handCard가 이미 1매칭으로 captured에 가 있는 상태), ③ captured[playerId]에
+ * handCard와 그 짝이 실제로 있음(뻑 재형성 전제 조건, drawAndResolve 883줄 분기와 동일).
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId
+ * @param {Card} handCard
+ * @returns {boolean}
+ */
+function willJokerJoinHandPpeok(g, playerId, handCard) {
+  if (g.deck.length === 0) return false;
+  const nextCard = g.deck[g.deck.length - 1];
+  if (nextCard.month !== handCard.month) return false;
+  const sameMonthOnFloor = g.floor.filter((c) => c.month === handCard.month);
+  if (sameMonthOnFloor.length !== 0) return false;
+  const captured = g.captured[playerId];
+  const handIdx = captured.findIndex((c) => c.id === handCard.id);
+  const pairIdx = captured.findIndex((c) => c.month === handCard.month && c.id !== handCard.id);
+  return handIdx >= 0 && pairIdx >= 0;
+}
+
+/**
+ * #69 (2026-08-18): 뻑 재형성 중 낀 조커(g.ppeokJoker[month])가 있으면, 그 뻑을 실제로
+ * 푸는 사람에게 조커 카드와 강탈 효과(피 1장 추가)를 귀속시킨다. 트리오(4장) 정산이
+ * 일어나는 지점마다 호출한다 — 해당 월 뻑에 조커가 없으면 아무 일도 하지 않는다.
+ *
+ * @param {GameState} g
+ * @param {'p1'|'p2'} playerId - 뻑을 푸는 사람
+ * @param {number} month
+ * @returns {number} 추가로 강탈한 피 장수 (0 또는 1)
+ */
+function absorbPpeokJoker(g, playerId, month) {
+  const joker = g.ppeokJoker && g.ppeokJoker[month];
+  if (!joker) return 0;
+  g.floor = g.floor.filter((c) => c.id !== joker.id);
+  g.captured[playerId].push(joker);
+  delete g.ppeokJoker[month];
+  const opp = playerId === 'p1' ? 'p2' : 'p1';
+  stealPi(g, playerId, opp, 1);
+  return 1;
 }
 
 // ── 턴 마무리: 점수 평가 + 고/스톱 분기 ─────────────────────
@@ -1744,7 +1827,16 @@ function flipDeckBonus(g, playerId) {
   // 뻑이 풀렸으므로 ppeokFlags에서 제거
   if (g.ppeokFlags[flipped.month]) delete g.ppeokFlags[flipped.month];
   stealPi(g, playerId, opp, bonusSweepCount);
-  g.lastAction = { kind: 'bonus_ppeok_sweep', player: playerId, flipped, count: sameMonth.length, stoleFromOpp: bonusSweepCount };
+  // #69: 이 뻑에 낀 조커가 있으면 카드와 강탈 효과를 함께 정산.
+  const jokerBonus = absorbPpeokJoker(g, playerId, flipped.month);
+  g.lastAction = {
+    kind: 'bonus_ppeok_sweep',
+    player: playerId,
+    flipped,
+    count: sameMonth.length,
+    stoleFromOpp: bonusSweepCount + jokerBonus,
+    ...(jokerBonus ? { joinedJoker: true } : {}),
+  };
 }
 
 // ── 스냅샷 (시점별) ─────────────────────────────────────────

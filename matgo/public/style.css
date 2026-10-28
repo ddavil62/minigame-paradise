@@ -58,6 +58,51 @@ body {
   transform-origin: top left;
 }
 
+/* ── 상시 BGM 토글 ─────────────────────────────────────────── */
+.bgm-toggle {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: 12px;
+  z-index: 1200;
+  min-width: 96px;
+  padding: 8px 12px;
+  border: 1px solid rgba(245, 210, 118, 0.55);
+  border-radius: 999px;
+  background: rgba(29, 18, 16, 0.9);
+  color: var(--gold-hi);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  font: 800 12px/1 var(--font-ui, sans-serif);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  backdrop-filter: blur(7px);
+  transition: transform 150ms ease, filter 150ms ease, opacity 150ms ease;
+}
+
+.bgm-toggle:hover,
+.bgm-toggle:focus-visible {
+  filter: brightness(1.18);
+  transform: translateY(-1px);
+}
+
+.bgm-toggle[aria-pressed="true"] {
+  color: var(--grey-soft);
+  border-color: rgba(180, 180, 180, 0.3);
+  opacity: 0.78;
+}
+
+@media (max-width: 600px) {
+  .bgm-toggle {
+    top: max(6px, env(safe-area-inset-top));
+    right: 7px;
+    min-width: 44px;
+    padding: 7px 9px;
+    font-size: 0;
+  }
+
+  .bgm-toggle::before { content: '♫'; font-size: 15px; }
+  .bgm-toggle[aria-pressed="true"]::before { content: '♩'; }
+}
+
 /* ── 플레이 영역 (3 col × 3 row grid) ─────────────────────── */
 .play-area {
   flex: 1;

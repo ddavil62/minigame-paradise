@@ -51,6 +51,7 @@ function makeGame({ p1Hand = [], p2Hand = [], floor = [], deck = [], turn = 'p1'
     hands:   { p1: p1Hand.map(card), p2: p2Hand.map(card) },
     captured: { p1: [], p2: [] },
     ppeokFlags: {},
+    ppeokJoker: {},
     pendingFloorChoice: null,
     turn,
     phase: 'awaiting_play',
@@ -896,4 +897,52 @@ test('G-67(버그 리포트 #67): 9월 술잔을 쌍피로 선택한 카드도 �
   expect(g.lastAction.stoleFromOpp).toBe(1);
   expect(g.captured.p2.length).toBe(0);                          // 술잔 카드가 강탈되어 사라짐
   expect(g.captured.p1.some((c) => c.id === 'm09_kkeut')).toBe(true);
+});
+
+test('G-69a(버그 리포트 #69): 손패 뻑 재형성 사이에 낀 조커는 즉시 정산되지 않고 뻑 파일에 합류한다', () => {
+  // 시나리오: p1이 5월 카드로 바닥 5월 1장을 먹음(1매칭 → captured) → 더미 뒤집기에서
+  // 조커가 먼저 나오고, 그 다음 뒤집기에서 5월 카드가 또 나와 뻑이 재형성됨.
+  // 기대(#69 리포트 요구): 조커가 즉시 p1 captured로 가지 않고 바닥(뻑 파일)에 남으며,
+  // 이 시점에는 강탈도 일어나지 않는다(강탈은 이후 그 뻑을 실제로 푸는 사람 몫 — G-69b).
+  const g = makeGame({
+    p1Hand: ['m05_kkeut', 'm02_kkeut_godori'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m05_tti_cho'],
+    // deck.pop()은 배열 끝에서부터 꺼낸다 — 조커(m00_joker_a)가 먼저, m05_pi_a가 나중에 뒤집힘.
+    deck:   ['m05_pi_a', 'm00_joker_a'],
+  });
+  g.captured.p2 = [card('m01_pi_a')]; // 조커가 즉시 정산됐다면 강탈당했을 피
+
+  playCard(g, 'p1', 'm05_kkeut');
+
+  expect(g.lastAction.kind).toBe('ppeok');
+  expect(g.lastAction.month).toBe(5);
+  expect(g.captured.p1.length).toBe(0); // 조커가 즉시 captured로 가지 않음
+  expect(g.floor.some((c) => c.id === 'm00_joker_a')).toBe(true); // 조커가 뻑 파일에 합류
+  expect(g.floor.length).toBe(4); // m05_kkeut + m05_tti_cho + m05_pi_a + 조커
+  expect(g.ppeokJoker[5]?.id).toBe('m00_joker_a');
+  expect(g.captured.p2.length).toBe(1); // 강탈 미발생, 피 그대로
+});
+
+test('G-69b(버그 리포트 #69): 뻑에 낀 조커를 실제로 풀 때 카드와 강탈 효과가 함께 정산된다', () => {
+  // 조커가 이미 5월 뻑에 낀 상태를 직접 구성(형성 과정은 G-69a에서 검증) → p1이 그 뻑을 품.
+  const g = makeGame({
+    p1Hand: ['m05_pi_b', 'm02_kkeut_godori'],
+    p2Hand: ['m06_kkeut'],
+    floor:  ['m05_kkeut', 'm05_tti_cho', 'm05_pi_a', 'm00_joker_a'],
+    deck:   [],
+  });
+  g.ppeokFlags[5] = 'p2'; // 타인 뻑 풀이 → 기본 강탈 1장
+  g.ppeokJoker[5] = card('m00_joker_a');
+  g.captured.p2 = [card('m01_pi_a'), card('m03_pi_a')]; // 피 2장
+
+  playCard(g, 'p1', 'm05_pi_b');
+
+  expect(g.lastAction.kind).toBe('sweep_from_hand');
+  expect(g.lastAction.joinedJoker).toBe(true);
+  expect(g.lastAction.stoleFromOpp).toBe(2); // 타인 뻑 풀이 1 + 조커 보너스 1
+  expect(g.captured.p1.some((c) => c.id === 'm00_joker_a')).toBe(true);
+  expect(g.floor.some((c) => c.id === 'm00_joker_a')).toBe(false);
+  expect(g.ppeokJoker[5]).toBeUndefined();
+  expect(g.captured.p2.length).toBe(0); // 피 2장 모두 강탈됨
 });
