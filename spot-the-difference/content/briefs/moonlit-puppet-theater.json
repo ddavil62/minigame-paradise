@@ -1,0 +1,17 @@
+{
+  "id": "moonlit-puppet-theater-01",
+  "title": "달빛 인형극장",
+  "description": "달빛 막이 오른 마법 인형극장에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 인형극장",
+  "scene": "A cozy enchanted marionette theater at night with an ornate walnut proscenium, deep teal curtains, a round moon backdrop, a fox magician puppet in a blue pointed hat at center, a white rabbit puppet with a red bow tie on the right, a crescent lantern with a purple tassel on the left, hanging stars, warm footlights, and a small prop table holding a brass music box with a visible crank",
+  "style": "premium whimsical storybook illustration, deep indigo, teal, burgundy, walnut and warm gold palette, crisp object silhouettes, richly detailed but uncluttered, theatrical moonlight and amber footlights",
+  "changeGuidance": "Make exactly five localized changes: change the golden crescent emblem at the top center of the proscenium into a full moon disk, remove the purple tassel from the left crescent lantern, remove the blue feather from the fox magician puppet's hat, change the rabbit puppet's red bow tie to emerald green, and remove the crank from the brass music box on the front prop table. Preserve everything else exactly.",
+  "differenceCount": 5,
+  "difficulty": "어려움",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "moonlight-mystery",
+  "stageType": "classic"
+}

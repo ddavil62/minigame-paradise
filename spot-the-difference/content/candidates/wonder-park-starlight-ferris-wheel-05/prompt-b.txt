@@ -1,0 +1,6 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly 5 localized, clearly visible object-level changes distributed across the scene.
+Use changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Requested change guidance: Make only these five changes: 1) change the gold crescent-moon ornament at the Ferris wheel hub to a gold five-point star, 2) change the gold star lantern on the left souvenir cart to purple while preserving its shape, 3) remove the turquoise swan sculpture from the center fountain while preserving the fountain and water, 4) change the right telescope's yellow eyepiece to red, 5) remove exactly one point from the rabbit mascot's blue five-point star-shaped balloon so it has four points. Preserve the Ferris wheel, gondolas, cart, fountain, telescope, rabbit mascot, fireworks, visitors, flowers, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes.

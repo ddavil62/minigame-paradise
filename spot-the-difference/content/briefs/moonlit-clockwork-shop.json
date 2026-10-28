@@ -1,0 +1,17 @@
+{
+  "id": "moonlit-clockwork-shop-01",
+  "title": "달빛 시계공방",
+  "description": "달빛 아래 잠든 마법 시계공방에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 시계공방",
+  "scene": "A cozy enchanted clockmaker workshop at night with a large round moonlit window in the center, a wooden workbench, an ornate brass mantel clock, a small blue cuckoo clock on the left wall, a crescent-shaped desk lamp, organized gears and tools, a sleepy black cat on a teal cushion, hanging pocket watches, glass jars, and tiny star-shaped charms",
+  "style": "premium whimsical storybook illustration, deep indigo, teal, walnut and warm brass palette, crisp object silhouettes, richly detailed but uncluttered, cinematic moonlight and amber lamplight",
+  "changeGuidance": "Make exactly five localized changes: remove the star charm hanging inside the moonlit window, change the left blue cuckoo clock pendulum from a crescent to a round disk, remove the red-handled screwdriver from the right side of the workbench, add a small golden bell to the black cat's teal collar, and change the large brass mantel clock face from Roman numerals to simple dot hour markers. Preserve everything else exactly.",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "moonlight-mystery",
+  "stageType": "classic"
+}

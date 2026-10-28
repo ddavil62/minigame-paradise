@@ -1,0 +1,1 @@
+Edit image A with exactly five localized changes only: make the hair-dryer dial red, the barber bow tie red, the ceiling lamp yellow, the robot chest star cyan, and remove the two porthole stars. Preserve every other detail exactly.

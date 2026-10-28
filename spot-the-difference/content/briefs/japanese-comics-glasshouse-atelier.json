@@ -1,0 +1,17 @@
+{
+  "id": "japanese-comics-glasshouse-atelier-05",
+  "title": "봄빛 유리온실 화실",
+  "description": "봄꽃과 금빛 햇살이 가득한 유리온실 화실에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "봄날의 옥상 유리온실 화실",
+  "scene": "A beautiful rooftop glasshouse art studio at golden hour in spring, viewed from a comfortable straight-on medium-wide angle. One elegant young adult woman artist with long dark hair sits beside a wooden easel, wearing an original cream blouse and long sage skirt, with a calm warm expression and natural hands. A large closed coral parasol leans clearly on the far left. A fluffy white cat wearing a green collar with one clearly visible golden bell sits on a round cushion at lower right. A cobalt-blue ceramic teapot sits alone on a small round table. Exactly three large glass star ornaments hang in a separated row from the upper glass frame. The wooden easel has no charm or ornament attached to its top corner. Include large separated pots of pink camellias and white daisies, a wicker paint basket, broad glass panes, soft city rooftops, and drifting spring petals. Keep every important prop large, distinct, fully visible, and spatially separated. No other people.",
+  "style": "original contemporary Japanese comics-inspired illustration, exceptionally beautiful polished character art, graceful clean ink linework, cinematic manga panel composition, selective luminous full color with subtle screentone texture, delicate spring atmosphere, elegant game art, not imitating any specific artist or franchise",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make exactly these five localized changes only: 1) change the large closed coral parasol on the far left to teal, 2) remove only the golden bell from the white cat's green collar while keeping the collar, 3) change the cobalt-blue ceramic teapot on the small round table to warm red, 4) remove exactly one of the three hanging glass star ornaments so two remain, 5) add one small golden crescent-moon charm to the top corner of the wooden easel. Preserve the woman’s face, hair, hands, pose, clothing, the cat, all flowers, petals, glass panes, city, camera, crop, lighting, linework, screentone, and every other object exactly."
+}

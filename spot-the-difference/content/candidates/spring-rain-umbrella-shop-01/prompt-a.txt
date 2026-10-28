@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 봄비 우산 수리점. Scene: A cozy whimsical umbrella repair shop during a gentle spring rain, viewed from inside at eye level. The scene includes a large arched window with raindrops and a quiet cobblestone lane outside, a wooden workbench, six clearly separated colorful umbrellas in a wall rack, a pair of yellow rain boots, three large thread spools, a brass hand-crank sewing machine, a ceramic teapot, a sleeping gray cat on a round cushion, a hanging glass lamp, and small potted spring flowers. Keep every prop large, distinct, and spatially separated for a spot-the-difference puzzle.
+Art direction: premium whimsical storybook illustration, fresh mint green, rain blue, coral, and warm honey wood palette, crisp object silhouettes, richly detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

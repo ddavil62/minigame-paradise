@@ -1,0 +1,17 @@
+{
+  "id": "japanese-comics-seaside-platform-02",
+  "title": "노을빛 해변 승강장",
+  "description": "바닷바람이 스치는 작은 승강장의 영화 같은 순간에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "노을빛 해변 열차 승강장",
+  "scene": "A quiet seaside local train platform at golden hour. A young adult traveler in a light jacket waits beside a small suitcase while an orange station cat sits nearby. Include a parked bicycle with a front basket, a simple round station clock without numbers, a closed parasol, a flower planter, a signal lamp, a bench, a small drink vending machine with blank color panels and no writing, overhead power lines, distant ocean waves, and an approaching original blue-and-cream local train. Every important prop is clearly separated and readable.",
+  "style": "original contemporary Japanese comics-inspired illustration, expressive clean ink linework, cinematic panel-like composition, selective full color with subtle screentone texture, polished game art, not imitating any specific artist or franchise",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change the traveler's scarf from teal to red, 2) remove the bicycle's front basket, 3) reverse the orange cat's curled tail direction, 4) remove one yellow flower from the planter, 5) change the signal lamp from green to amber. Keep the traveler, face, hands, pose, suitcase, train, ocean, camera, crop, lighting, and every other object pixel-consistent."
+}

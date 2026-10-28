@@ -1,0 +1,1241 @@
+{
+  "stageCount": 65,
+  "differenceCount": 325,
+  "stages": [
+    {
+      "number": 1,
+      "id": "night-market-01",
+      "title": "달빛 야시장",
+      "description": "등불이 빛나는 야시장에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "moonlight-mystery",
+      "collectionName": "달빛 미스터리",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "우산 패널 색",
+        "시계 위 장식",
+        "오른쪽 등불 색",
+        "자전거 바구니",
+        "고양이 목도리"
+      ],
+      "image": "assets/spot-difference-answers/01-night-market-01.webp"
+    },
+    {
+      "number": 2,
+      "id": "moonlit-greenhouse-01",
+      "title": "달빛 온실",
+      "description": "달빛이 스며드는 신비한 온실에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "moonlight-mystery",
+      "collectionName": "달빛 미스터리",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "유리 돔 수정 색",
+        "책상 위 가위",
+        "보름달과 초승달",
+        "물뿌리개 색",
+        "오른쪽 칼라꽃 색"
+      ],
+      "image": "assets/spot-difference-answers/02-moonlit-greenhouse-01.webp"
+    },
+    {
+      "number": 3,
+      "id": "coral-observatory-01",
+      "title": "심해 산호 관측소",
+      "description": "푸른 바닷속 관측소에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "world-adventure",
+      "collectionName": "세계 모험",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "보라색 문어",
+        "천사고기 줄무늬",
+        "책상 위 붉은 조개",
+        "오른쪽 소라 껍데기",
+        "잠수 안경 렌즈"
+      ],
+      "image": "assets/spot-difference-answers/03-coral-observatory-01.webp"
+    },
+    {
+      "number": 4,
+      "id": "skyship-workshop-01",
+      "title": "구름섬 비행선 공방",
+      "description": "구름 위 비행선 공방에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "world-adventure",
+      "collectionName": "세계 모험",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "흰색 삼각 깃발",
+        "지붕의 붉은 프로펠러",
+        "초록색 비행 안경",
+        "파란 테두리 창문",
+        "갑판 위 작은 도구 상자"
+      ],
+      "image": "assets/spot-difference-answers/04-skyship-workshop-01.webp"
+    },
+    {
+      "number": 5,
+      "id": "snowy-toyshop-01",
+      "title": "눈꽃 장난감 가게",
+      "description": "눈 내리는 장난감 가게에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "seasonal-stories",
+      "collectionName": "계절 이야기",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "인형의 집 지붕 색",
+        "보라색 기차 객차",
+        "계산대 위 팽이",
+        "보라색 선물 상자",
+        "곰 인형의 목도리"
+      ],
+      "image": "assets/spot-difference-answers/05-snowy-toyshop-01.webp"
+    },
+    {
+      "number": 6,
+      "id": "enchanted-library-01",
+      "title": "별빛 마법 도서관",
+      "description": "별빛이 흐르는 마법 도서관에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "moonlight-mystery",
+      "collectionName": "달빛 미스터리",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "창가 수정 장식 색",
+        "원형 창의 초승달",
+        "펼친 책의 책갈피 색",
+        "카펫 중앙의 초승달",
+        "부엉이의 붉은 나비넥타이"
+      ],
+      "image": "assets/spot-difference-answers/06-enchanted-library-01.webp"
+    },
+    {
+      "number": 7,
+      "id": "seaside-bakery-01",
+      "title": "파도빛 해변 제과점",
+      "description": "햇살 가득한 해변 제과점에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "seasonal-stories",
+      "collectionName": "계절 이야기",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "차양의 청록색 줄무늬",
+        "바다 범선의 선체 줄무늬",
+        "진열대 머핀 포장지 색",
+        "찻주전자 뚜껑 손잡이 색",
+        "빵 바구니의 파란 리본"
+      ],
+      "image": "assets/spot-difference-answers/07-seaside-bakery-01.webp"
+    },
+    {
+      "number": 8,
+      "id": "clockwork-station-01",
+      "title": "황동빛 시계장치 역",
+      "description": "황동 기계가 움직이는 기차역에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "world-adventure",
+      "collectionName": "세계 모험",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "대형 시계의 청록색 톱니",
+        "보라색 천장 등불",
+        "기관차의 파란 전조등",
+        "여행 가방의 파란 수하물표",
+        "기계 새의 붉은 꼬리깃"
+      ],
+      "image": "assets/spot-difference-answers/08-clockwork-station-01.webp"
+    },
+    {
+      "number": 9,
+      "id": "jungle-treehouse-01",
+      "title": "초록빛 정글 나무집",
+      "description": "신비한 정글 나무집에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "world-adventure",
+      "collectionName": "세계 모험",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "꽃바구니의 노란 꽃",
+        "밧줄다리의 사라진 세로줄",
+        "망원경의 청록색 렌즈 테두리",
+        "배낭 위의 파란 침낭",
+        "왼쪽 아래의 보라색 잎"
+      ],
+      "image": "assets/spot-difference-answers/09-jungle-treehouse-01.webp"
+    },
+    {
+      "number": 10,
+      "id": "autumn-alchemy-kitchen-01",
+      "title": "단풍빛 연금술 부엌",
+      "description": "가을 향기 가득한 연금술 부엌에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "seasonal-stories",
+      "collectionName": "계절 이야기",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "선반의 청록색 둥근 약병",
+        "창가의 상아색 호박",
+        "가마솥의 청록색 문양",
+        "작업대의 초록색 호박",
+        "고양이 방석의 단풍잎 자수"
+      ],
+      "image": "assets/spot-difference-answers/10-autumn-alchemy-kitchen-01.webp"
+    },
+    {
+      "number": 11,
+      "id": "spring-rain-umbrella-shop-01",
+      "title": "봄비 우산 수리점",
+      "description": "봄비가 내리는 아늑한 우산 수리점에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "seasonal-stories",
+      "collectionName": "계절 이야기",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "보라색으로 바뀐 벽걸이 우산",
+        "사라진 장화 버클",
+        "주황색으로 바뀐 가운데 실패",
+        "고양이의 청록색 리본",
+        "사라진 찻주전자 뚜껑"
+      ],
+      "image": "assets/spot-difference-answers/11-spring-rain-umbrella-shop-01.webp"
+    },
+    {
+      "number": 12,
+      "id": "retro-comic-robot-garage-01",
+      "title": "팝! 로봇 정비소",
+      "description": "강렬한 망점과 잉크선으로 그린 복고풍 로봇 정비소에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "style-lab",
+      "collectionName": "스타일 랩",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "파란색으로 바뀐 벽걸이 렌치",
+        "사라진 스쿠터 왼쪽 거울",
+        "빨간색으로 바뀐 로봇 가슴등",
+        "모양이 달라진 별빛 벽시계",
+        "레버형으로 바뀐 파이프 밸브"
+      ],
+      "image": "assets/spot-difference-answers/12-retro-comic-robot-garage-01.webp"
+    },
+    {
+      "number": 13,
+      "id": "retro-comic-space-diner-02",
+      "title": "팝! 우주 배달 식당",
+      "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 식당에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "style-lab",
+      "collectionName": "스타일 랩",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "파란색으로 바뀐 로켓 앞부분",
+        "외계인 앞치마의 빨간 주머니",
+        "분홍색으로 바뀐 주크박스 가운데 불빛",
+        "사라진 케이크 체리",
+        "사라진 창밖의 별"
+      ],
+      "image": "assets/spot-difference-answers/13-retro-comic-space-diner-02.webp"
+    },
+    {
+      "number": 14,
+      "id": "retro-comic-monster-tv-studio-03",
+      "title": "팝! 괴물 TV 스튜디오",
+      "description": "강렬한 망점과 잉크선으로 그린 복고풍 괴물 방송국에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "style-lab",
+      "collectionName": "스타일 랩",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "빨간색으로 바뀐 카메라 렌즈",
+        "사라진 카메라 표시등",
+        "파란색으로 바뀐 마이크",
+        "네 갈래로 바뀐 별",
+        "꺼진 오른쪽 스튜디오 조명"
+      ],
+      "image": "assets/spot-difference-answers/14-retro-comic-monster-tv-studio-03.webp"
+    },
+    {
+      "number": 15,
+      "id": "retro-comic-alien-laundromat-04",
+      "title": "팝! 외계인 세탁소",
+      "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 세탁소에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "style-lab",
+      "collectionName": "스타일 랩",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "빨간색으로 바뀐 세탁기 문",
+        "파란색으로 바뀐 천장 조명",
+        "빨간색으로 바뀐 외계인 모자",
+        "사라진 노란 수건 더미",
+        "사라진 로봇 안테나 공"
+      ],
+      "image": "assets/spot-difference-answers/15-retro-comic-alien-laundromat-04.webp"
+    },
+    {
+      "number": 16,
+      "id": "retro-comic-moon-barbershop-05",
+      "title": "팝! 달 기지 이발소",
+      "description": "강렬한 망점과 잉크선으로 그린 복고풍 달 기지 이발소에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "style-lab",
+      "collectionName": "스타일 랩",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "빨간색으로 바뀐 헤어드라이어 다이얼",
+        "빨간색으로 바뀐 이발사의 나비넥타이",
+        "노란색으로 바뀐 천장 조명",
+        "파란색으로 바뀐 로봇 가슴 별",
+        "사라진 창밖의 별 두 개"
+      ],
+      "image": "assets/spot-difference-answers/16-retro-comic-moon-barbershop-05.webp"
+    },
+    {
+      "number": 17,
+      "id": "japanese-comics-manga-studio-01",
+      "title": "빗소리 만화 작업실",
+      "description": "마감 전야의 만화가 작업실에서 섬세한 차이를 찾아보세요.",
+      "collectionId": "japanese-comics",
+      "collectionName": "일본 만화",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "노란색으로 바뀐 책상 조명",
+        "청록색으로 바뀐 긴 그림 자",
+        "한 장 사라진 화분 잎",
+        "방향이 바뀐 우산 손잡이",
+        "사라진 로봇 가슴의 별"
+      ],
+      "image": "assets/spot-difference-answers/17-japanese-comics-manga-studio-01.webp"
+    },
+    {
+      "number": 18,
+      "id": "japanese-comics-seaside-platform-02",
+      "title": "노을빛 해변 승강장",
+      "description": "바닷바람이 스치는 작은 승강장의 영화 같은 순간에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "japanese-comics",
+      "collectionName": "일본 만화",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "붉은색으로 바뀐 여행자의 목도리",
+        "사라진 자전거 앞바구니",
+        "방향이 바뀐 고양이 꼬리",
+        "한 송이 사라진 노란 꽃",
+        "주황빛으로 바뀐 신호등"
+      ],
+      "image": "assets/spot-difference-answers/18-japanese-comics-seaside-platform-02.webp"
+    },
+    {
+      "number": 19,
+      "id": "japanese-comics-rooftop-observatory-03",
+      "title": "별빛 옥상 관측회",
+      "description": "도시의 불빛 위로 별이 떠오르는 옥상 관측회에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "japanese-comics",
+      "collectionName": "일본 만화",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "붉은색으로 바뀐 망원경 렌즈 테두리",
+        "사라진 쌍안경 목걸이 끈",
+        "청록색으로 바뀐 보온병",
+        "사라진 초승달 풍경 장식",
+        "방향이 뒤집힌 풍향계 화살"
+      ],
+      "image": "assets/spot-difference-answers/19-japanese-comics-rooftop-observatory-03.webp"
+    },
+    {
+      "number": 20,
+      "id": "japanese-comics-summer-festival-04",
+      "title": "초롱빛 여름 축제",
+      "description": "초롱불이 반짝이는 여름밤 신사 축제에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "japanese-comics",
+      "collectionName": "일본 만화",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "붉은색으로 바뀐 여우 가면 무늬",
+        "사라진 부채의 붉은 술 장식",
+        "금빛으로 바뀐 사과 사탕",
+        "하나가 사라진 바람개비 날개",
+        "보라색으로 바뀐 너구리상 턱받이"
+      ],
+      "image": "assets/spot-difference-answers/20-japanese-comics-summer-festival-04.webp"
+    },
+    {
+      "number": 21,
+      "id": "moonlit-clockwork-shop-01",
+      "title": "달빛 시계공방",
+      "description": "달빛 아래 잠든 마법 시계공방에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "moonlight-mystery",
+      "collectionName": "달빛 미스터리",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "창가의 별 장식",
+        "뻐꾸기시계의 추",
+        "작업대의 빨간 드라이버",
+        "고양이 목걸이의 방울",
+        "큰 시계의 시간 표시"
+      ],
+      "image": "assets/spot-difference-answers/21-moonlit-clockwork-shop-01.webp"
+    },
+    {
+      "number": 22,
+      "id": "moonlit-puppet-theater-01",
+      "title": "달빛 인형극장",
+      "description": "달빛 막이 오른 마법 인형극장에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "moonlight-mystery",
+      "collectionName": "달빛 미스터리",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "무대 위 달 문양",
+        "초승달 등불의 보라색 술",
+        "여우 모자의 파란 깃털",
+        "토끼의 나비넥타이 색",
+        "오르골의 손잡이"
+      ],
+      "image": "assets/spot-difference-answers/22-moonlit-puppet-theater-01.webp"
+    },
+    {
+      "number": 23,
+      "id": "starlit-desert-ruins-01",
+      "title": "별빛 사막 유적",
+      "description": "별이 쏟아지는 사막의 고대 관측 유적에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "world-adventure",
+      "collectionName": "세계 모험",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "초승달에서 보름달로 바뀐 달",
+        "청록색으로 바뀐 천문 기구 중심축",
+        "산호색으로 바뀐 왼쪽 항아리 뚜껑",
+        "사라진 보물 상자의 황금 자물쇠",
+        "사막여우의 청록색 방울 목걸이"
+      ],
+      "image": "assets/spot-difference-answers/23-starlit-desert-ruins-01.webp"
+    },
+    {
+      "number": 24,
+      "id": "firefly-summer-camp-01",
+      "title": "반딧불 여름 캠핑장",
+      "description": "반딧불이 춤추는 여름밤 숲속 캠핑장에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "seasonal-stories",
+      "collectionName": "계절 이야기",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "초승달에서 보름달로 바뀐 달",
+        "청록색으로 바뀐 중앙 랜턴 테두리",
+        "청록색으로 바뀐 텐트 안 베개",
+        "청록색으로 바뀐 주전자 뚜껑",
+        "너구리의 청록색 목수건"
+      ],
+      "image": "assets/spot-difference-answers/24-firefly-summer-camp-01.webp"
+    },
+    {
+      "number": 25,
+      "id": "japanese-comics-glasshouse-atelier-05",
+      "title": "봄빛 유리온실 화실",
+      "description": "봄꽃과 금빛 햇살이 가득한 유리온실 화실에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "japanese-comics",
+      "collectionName": "일본 만화",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "청록색으로 바뀐 우산",
+        "사라진 화구 바구니 손잡이",
+        "붉은색으로 바뀐 찻주전자",
+        "사라진 가운데 유리 별",
+        "이젤에 생긴 금빛 초승달"
+      ],
+      "image": "assets/spot-difference-answers/25-japanese-comics-glasshouse-atelier-05.webp"
+    },
+    {
+      "number": 26,
+      "id": "wonder-park-dream-gate-01",
+      "title": "꿈빛 입장 광장",
+      "description": "별빛 원더파크의 설레는 입장 광장에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "wonder-park",
+      "collectionName": "원더 파크",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "분홍색으로 바뀐 입구의 별",
+        "노란색으로 바뀐 차양 줄무늬",
+        "보라색으로 바뀐 분수의 보석",
+        "사라진 보라색 풍선",
+        "빨간색으로 바뀐 토끼의 나비넥타이"
+      ],
+      "image": "assets/spot-difference-answers/26-wonder-park-dream-gate-01.webp"
+    },
+    {
+      "number": 27,
+      "id": "wonder-park-carousel-garden-02",
+      "title": "햇살 회전목마 정원",
+      "description": "꽃향기와 음악이 흐르는 원더파크의 회전목마 정원에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "wonder-park",
+      "collectionName": "원더 파크",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "청록색으로 바뀐 회전목마 왕관",
+        "파란색으로 바뀐 흰 말의 안장",
+        "보라색으로 바뀐 팝콘 통 줄무늬",
+        "분홍색으로 바뀐 벤치 방석",
+        "하나가 사라진 바람개비 날개"
+      ],
+      "image": "assets/spot-difference-answers/27-wonder-park-carousel-garden-02.webp"
+    },
+    {
+      "number": 28,
+      "id": "wonder-park-starlight-ferris-wheel-05",
+      "title": "별빛 관람차 광장",
+      "description": "불꽃이 피어나는 원더파크의 밤 관람차 광장에서 다섯 가지 차이를 찾아보세요!",
+      "collectionId": "wonder-park",
+      "collectionName": "원더 파크",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "관람차 중심의 별 장식",
+        "보라색 기념품 카트 별 조명",
+        "사라진 분수의 백조 조각",
+        "빨간색 망원경 접안렌즈",
+        "네 꼭짓점 파란 별 풍선"
+      ],
+      "image": "assets/spot-difference-answers/28-wonder-park-starlight-ferris-wheel-05.webp"
+    },
+    {
+      "number": 29,
+      "id": "wonder-park-candy-parade-03",
+      "title": "캔디 퍼레이드 거리",
+      "description": "달콤한 장식과 음악으로 가득한 원더파크 퍼레이드 거리에서 다섯 가지 차이를 찾아보세요!",
+      "collectionId": "wonder-park",
+      "collectionName": "원더 파크",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "초승달로 바뀐 퍼레이드 장식",
+        "보라색 막대사탕 리본",
+        "줄어든 북의 금빛 별",
+        "빨간 솜사탕 카트 바퀴 축",
+        "제비꼬리 모양 파란 깃발"
+      ],
+      "image": "assets/spot-difference-answers/29-wonder-park-candy-parade-03.webp"
+    },
+    {
+      "number": 30,
+      "id": "wonder-park-moonboat-lagoon-04",
+      "title": "노을빛 문보트 라군",
+      "description": "별빛이 켜지기 시작한 원더파크의 문보트 라군에서 다섯 가지 차이를 찾아보세요!",
+      "collectionId": "wonder-park",
+      "collectionName": "원더 파크",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "하트로 바뀐 문보트 장식",
+        "청록색 조개 등불",
+        "하나 줄어든 다리 깃발",
+        "보라색 계류 기둥 등불",
+        "사라진 양산의 금빛 손잡이"
+      ],
+      "image": "assets/spot-difference-answers/30-wonder-park-moonboat-lagoon-04.webp"
+    },
+    {
+      "number": 31,
+      "id": "goblin-night-moon-rabbit-mill-01",
+      "title": "달토끼 떡방앗간",
+      "description": "보름달이 비치는 도깨비 마을의 한옥 방앗간에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "goblin-night-village",
+      "collectionName": "도깨비 밤마을",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "파란색으로 바뀐 절굿공이 술",
+        "사라진 대나무 시루 손잡이",
+        "보라색으로 바뀐 토끼의 앞치마 리본",
+        "하나 줄어든 떡 바구니",
+        "별 모양으로 바뀐 창가 장식"
+      ],
+      "image": "assets/spot-difference-answers/31-goblin-night-moon-rabbit-mill-01.webp"
+    },
+    {
+      "number": 32,
+      "id": "goblin-night-snack-stall-02",
+      "title": "도깨비 야식 포장마차",
+      "description": "달빛 개울가의 흥겨운 도깨비 포장마차에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "goblin-night-village",
+      "collectionName": "도깨비 밤마을",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "청록색으로 바뀐 도깨비 방망이 끝 장식",
+        "하나 줄어든 화로 꼬치",
+        "보라색으로 바뀐 주전자 뚜껑",
+        "꽃 모양으로 바뀐 접시 무늬",
+        "두 갈래로 바뀐 등불 술"
+      ],
+      "image": "assets/spot-difference-answers/32-goblin-night-snack-stall-02.webp"
+    },
+    {
+      "number": 33,
+      "id": "goblin-night-mask-workshop-03",
+      "title": "달빛 도깨비 탈 공방",
+      "description": "달빛이 스미는 도깨비 탈 공방에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "goblin-night-village",
+      "collectionName": "도깨비 밤마을",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "청록색으로 바뀐 도깨비 탈의 깃털",
+        "하나 줄어든 붓꽂이의 붓",
+        "보라색으로 바뀐 탈의 리본",
+        "꽃 모양으로 바뀐 북의 문양",
+        "하나 줄어든 풍경의 금빛 조각"
+      ],
+      "image": "assets/spot-difference-answers/33-goblin-night-mask-workshop-03.webp"
+    },
+    {
+      "number": 34,
+      "id": "goblin-night-moon-ferry-dock-04",
+      "title": "달빛 도깨비 나룻터",
+      "description": "달빛 물결이 반짝이는 도깨비 나룻터에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "goblin-night-village",
+      "collectionName": "도깨비 밤마을",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "청록색으로 바뀐 노의 술 장식",
+        "하나 줄어든 바구니의 연꽃등",
+        "보라색으로 바뀐 뱃머리 리본",
+        "꽃 모양으로 바뀐 부채 문양",
+        "하나 줄어든 풍경의 금빛 조각"
+      ],
+      "image": "assets/spot-difference-answers/34-goblin-night-moon-ferry-dock-04.webp"
+    },
+    {
+      "number": 35,
+      "id": "goblin-night-cloud-garden-05",
+      "title": "산신령의 구름 정원",
+      "description": "달맞이 잔치를 준비하는 구름 정원에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "goblin-night-village",
+      "collectionName": "도깨비 밤마을",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "사라진 호랑이 목 방울",
+        "보라색으로 바뀐 학의 머리 장식",
+        "하나 줄어든 구름 화분의 달맞이꽃",
+        "꽃 모양으로 바뀐 산신령의 부채 문양",
+        "별 모양으로 바뀐 달등 꼭대기"
+      ],
+      "image": "assets/spot-difference-answers/35-goblin-night-cloud-garden-05.webp"
+    },
+    {
+      "number": 36,
+      "id": "tiny-things-teacup-harbor-01",
+      "title": "찻잔 항구",
+      "description": "아침 식탁 위에 세워진 조그만 찻잔 항구에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "tiny-things-city",
+      "collectionName": "작은 것들의 도시",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "산호색으로 바뀐 찻잔의 닻",
+        "하나 줄어든 각설탕 상자",
+        "사라진 티스푼 신호 깃발",
+        "반원 모양으로 바뀐 종이배 돛",
+        "하나 줄어든 주전자 등대 창문"
+      ],
+      "image": "assets/spot-difference-answers/36-tiny-things-teacup-harbor-01.webp"
+    },
+    {
+      "number": 37,
+      "id": "tiny-things-thread-station-02",
+      "title": "실타래 기차역",
+      "description": "재봉 상자 위에 세워진 조그만 실타래 기차역에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "tiny-things-city",
+      "collectionName": "작은 것들의 도시",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "구멍이 하나 줄어든 단추 시계",
+        "하나 줄어든 실타래 짐",
+        "보라색으로 바뀐 기관차 굴뚝",
+        "사라진 안전핀 신호 깃발",
+        "하나 줄어든 골무 종 리본"
+      ],
+      "image": "assets/spot-difference-answers/37-tiny-things-thread-station-02.webp"
+    },
+    {
+      "number": 38,
+      "id": "tiny-things-button-garden-03",
+      "title": "단추꽃 정원",
+      "description": "열린 서랍 속에 자라난 조그만 단추꽃 정원에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "tiny-things-city",
+      "collectionName": "작은 것들의 도시",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "별 모양으로 바뀐 물뿌리개 문양",
+        "하나 줄어든 단추꽃",
+        "보라색으로 바뀐 가위 리본",
+        "초승달로 바뀐 실패 달팽이 문양",
+        "하나 줄어든 집게 풍차 날개"
+      ],
+      "image": "assets/spot-difference-answers/38-tiny-things-button-garden-03.webp"
+    },
+    {
+      "number": 39,
+      "id": "tiny-things-planter-jungle-04",
+      "title": "화분 정글 탐험대",
+      "description": "거대한 잎과 물방울 사이를 달리는 조그만 화분 정글 탐험대에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "tiny-things-city",
+      "collectionName": "작은 것들의 도시",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "노란색으로 바뀐 병뚜껑 지프 바퀴",
+        "하나 줄어든 잎 위 물방울",
+        "사라진 안전모 램프",
+        "사라진 성냥개비 다리 난간",
+        "반대 방향을 가리키는 나뭇잎 화살표"
+      ],
+      "image": "assets/spot-difference-answers/39-tiny-things-planter-jungle-04.webp"
+    },
+    {
+      "number": 40,
+      "id": "tiny-things-attic-clock-square-05",
+      "title": "다락방 시계탑 광장",
+      "description": "오래된 다락방 물건들 사이에 세워진 조그마한 시계탑 광장에서 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "tiny-things-city",
+      "collectionName": "작은 것들의 도시",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "산호색으로 바뀐 시계탑 진자",
+        "하나 줄어든 산호색 삼각 깃발",
+        "노란색으로 바뀐 단추 분수 꼭대기",
+        "가로 방향으로 돌아간 태엽 키 손잡이",
+        "동그랗게 바뀐 빨간 우편가방 버클"
+      ],
+      "image": "assets/spot-difference-answers/40-tiny-things-attic-clock-square-05.webp"
+    },
+    {
+      "number": 41,
+      "id": "cat-detective-rainy-office-01",
+      "title": "빗소리 고양이 탐정 사무소",
+      "description": "비 내리는 밤, 고양이 탐정단의 아늑한 사무소에 숨은 다섯 가지 차이를 찾아보세요.",
+      "collectionId": "cat-detective-agency",
+      "collectionName": "고양이 탐정 사무소",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "보라색으로 바뀐 탐정 고양이 나비넥타이",
+        "사라진 시계 위 산호색 새 장식",
+        "하나 줄어든 책상 위 파란 구슬",
+        "반대 방향으로 바뀐 노란 우산 손잡이",
+        "동그랗게 바뀐 조수의 가방 버클"
+      ],
+      "image": "assets/spot-difference-answers/41-cat-detective-rainy-office-01.webp"
+    },
+    {
+      "number": 42,
+      "id": "cat-detective-moonlit-museum-02",
+      "title": "달빛 박물관 잠입 수사",
+      "description": "문 닫은 달빛 박물관에 잠입한 고양이 탐정단과 함께 전시실의 다섯 가지 단서를 찾아보세요.",
+      "collectionId": "cat-detective-agency",
+      "collectionName": "고양이 탐정 사무소",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "산호색으로 바뀐 탐정 고양이 모자 깃털",
+        "별 모양으로 바뀐 파란 방패의 금빛 문양",
+        "하나 줄어든 진열장 속 붉은 보석",
+        "사라진 부엉이 조각상의 보라색 모자",
+        "동그랗게 바뀐 조수의 가방 잠금장치"
+      ],
+      "image": "assets/spot-difference-answers/42-cat-detective-moonlit-museum-02.webp"
+    },
+    {
+      "number": 43,
+      "id": "cat-detective-foggy-platform-03",
+      "title": "안개 기차역의 수하물 추적",
+      "description": "막차가 떠나기 전, 안개 낀 동물 도시 기차역에서 고양이 탐정단과 함께 다섯 가지 수하물 단서를 찾아보세요.",
+      "collectionId": "cat-detective-agency",
+      "collectionName": "고양이 탐정 사무소",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "산호색으로 바뀐 탐정 고양이 모자 리본",
+        "사라진 역 시계 위 금빛 날개 장식",
+        "하나 줄어든 수하물 카트의 청록색 여행 가방",
+        "반대 방향으로 바뀐 붉은 철도 신호기",
+        "동그랗게 바뀐 조수의 사건 가방 잠금장치"
+      ],
+      "image": "assets/spot-difference-answers/43-cat-detective-foggy-platform-03.webp"
+    },
+    {
+      "number": 44,
+      "id": "cat-detective-stormy-harbor-04",
+      "title": "폭풍우 항구의 밀수품 추적",
+      "description": "비바람이 몰아치는 동물 도시의 항구 창고에서 고양이 탐정단과 함께 다섯 가지 밀수품 단서를 찾아보세요.",
+      "collectionId": "cat-detective-agency",
+      "collectionName": "고양이 탐정 사무소",
+      "difficulty": "보통",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "보라색으로 바뀐 탐정의 돋보기 렌즈",
+        "하나 사라진 구명환의 크림색 띠",
+        "하나 줄어든 증거 상자의 초록색 병",
+        "금빛으로 바뀐 화물 크레인 갈고리",
+        "초승달 모양으로 바뀐 우산 손잡이 장식"
+      ],
+      "image": "assets/spot-difference-answers/44-cat-detective-stormy-harbor-04.webp"
+    },
+    {
+      "number": 45,
+      "id": "cat-detective-midnight-theater-05",
+      "title": "심야 극장의 사라진 왕관",
+      "description": "막이 내린 동물 도시의 오래된 극장에서 고양이 탐정단과 함께 사라진 왕관의 다섯 단서를 찾아보세요.",
+      "collectionId": "cat-detective-agency",
+      "collectionName": "고양이 탐정 사무소",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "별 모양으로 바뀐 보라색 가면의 금빛 문양",
+        "분홍색으로 바뀐 무대 커튼의 술 장식",
+        "하나 사라진 왕관의 초록색 보석",
+        "하나 줄어든 샹들리에의 파란 수정 장식",
+        "하나 줄어든 생쥐 조수의 산호색 부채 깃털"
+      ],
+      "image": "assets/spot-difference-answers/45-cat-detective-midnight-theater-05.webp"
+    },
+    {
+      "number": 46,
+      "id": "animal-detectives-museum-01",
+      "title": "사라진 보석의 박물관",
+      "description": "폐관 직후의 자연사 박물관에서 여우 탐정과 토끼 조수와 함께 사라진 보석의 다섯 단서를 찾아보세요.",
+      "collectionId": "animal-detectives",
+      "collectionName": "동물 탐정단",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "산호색으로 바뀐 여우 탐정의 돋보기 손잡이",
+        "둥근 모양으로 바뀐 진열장의 보석 받침",
+        "하나 줄어든 공룡 꼬리 끝의 큰 뼈마디",
+        "초승달 모양으로 바뀐 올빼미 경비원의 모자 배지",
+        "노란색으로 바뀐 오른쪽 커튼의 술 장식"
+      ],
+      "image": "assets/spot-difference-answers/46-animal-detectives-museum-01.webp"
+    },
+    {
+      "number": 47,
+      "id": "animal-detectives-clocktower-hotel-02",
+      "title": "사라진 열쇠의 시계탑 호텔",
+      "description": "폭풍이 지나간 밤, 여우 탐정과 토끼 조수가 시계탑 호텔 로비에서 사라진 황금 열쇠의 단서를 찾아보세요.",
+      "collectionId": "animal-detectives",
+      "collectionName": "동물 탐정단",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "노란색으로 바뀐 여우 탐정의 우산 손잡이",
+        "초승달 모양으로 바뀐 호텔 열쇠의 고리",
+        "파란 다이아몬드 모양으로 바뀐 시계추",
+        "사라진 곰 벨보이 모자의 금색 단추",
+        "짐수레에서 사라진 옥색 여행 가방"
+      ],
+      "image": "assets/spot-difference-answers/47-animal-detectives-clocktower-hotel-02.webp"
+    },
+    {
+      "number": 48,
+      "id": "animal-detectives-snow-train-03",
+      "title": "설원 특급열차의 식당칸",
+      "description": "눈보라 치는 밤, 여우 탐정과 토끼 조수가 설원 특급열차 식당칸에서 승객들의 수상한 다섯 단서를 찾아보세요.",
+      "collectionId": "animal-detectives",
+      "collectionName": "동물 탐정단",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "초록색 원형으로 바뀐 찻잔 받침",
+        "네모 모양으로 바뀐 커튼 고리",
+        "하나 줄어든 승객의 스카프 줄무늬",
+        "마름모 모양으로 바뀐 여행가방 잠금장치",
+        "초승달 모양으로 바뀐 토끼 조수의 베레모 배지"
+      ],
+      "image": "assets/spot-difference-answers/48-animal-detectives-snow-train-03.webp"
+    },
+    {
+      "number": 49,
+      "id": "animal-detectives-masquerade-04",
+      "title": "가면무도회 저택의 단서",
+      "description": "달빛 비치는 호화로운 저택 무도회에서 여우 탐정과 토끼 조수와 함께 가면과 소품에 숨은 다섯 단서를 찾아보세요.",
+      "collectionId": "animal-detectives",
+      "collectionName": "동물 탐정단",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "하나 줄어든 공작 손님의 가면 깃털",
+        "아래쪽으로 방향이 바뀐 바이올린 활",
+        "파란색으로 바뀐 꽃병의 가운데 장미",
+        "파란 마름모 모양으로 바뀐 계단 시계 추",
+        "하나 줄어든 여우 탐정의 코트 단추"
+      ],
+      "image": "assets/spot-difference-answers/49-animal-detectives-masquerade-04.webp"
+    },
+    {
+      "number": 50,
+      "id": "animal-detectives-moonlit-lighthouse-05",
+      "title": "달빛 등대의 마지막 신호",
+      "description": "폭풍이 지나간 달빛 등대의 지도실에서 여우 탐정과 토끼 조수가 사라진 항로 지도의 마지막 다섯 단서를 찾아냅니다.",
+      "collectionId": "animal-detectives",
+      "collectionName": "동물 탐정단",
+      "difficulty": "보통",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "초록색으로 바뀐 벽 나침반 바늘",
+        "사라진 청록색 사각 신호기",
+        "파란색으로 바뀐 모형 배의 가운데 돛",
+        "별 모양으로 바뀐 등대지기의 신호등 창",
+        "노란색으로 바뀐 망원경 렌즈"
+      ],
+      "image": "assets/spot-difference-answers/50-animal-detectives-moonlit-lighthouse-05.webp"
+    },
+    {
+      "number": 51,
+      "id": "magic-delivery-starlight-post-01",
+      "title": "별빛 중앙우체국의 아침",
+      "description": "별 모양 분류 장치와 날개 달린 봉투가 분주히 오가는 마법 중앙우체국에서 수달 배달부와 동료들이 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "magic-delivery-office",
+      "collectionName": "마법 배달국",
+      "difficulty": "쉬움",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "노란색으로 바뀐 분류 장치의 별",
+        "초록색으로 바뀐 소포 리본",
+        "하나 사라진 날아다니는 봉투의 날개",
+        "초승달 모양으로 바뀐 수달 배달부 모자 배지",
+        "별 모양으로 바뀐 우편 카트 바퀴 허브"
+      ],
+      "image": "assets/spot-difference-answers/51-magic-delivery-starlight-post-01.webp"
+    },
+    {
+      "number": 52,
+      "id": "magic-delivery-broom-workshop-02",
+      "title": "빗자루 택배 정비소",
+      "description": "비행 빗자루와 날개 달린 배송 가방을 손보는 활기찬 마법 공방에서 수달 배달부와 너구리 정비사가 다섯 가지 변화를 점검합니다.",
+      "collectionId": "magic-delivery-office",
+      "collectionName": "마법 배달국",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "산호색으로 바뀐 비행 빗자루 꼬리 띠",
+        "파란 사각형으로 바뀐 공구함 손잡이",
+        "두 장으로 줄어든 벽 프로펠러 날개",
+        "초록색으로 바뀐 너구리 정비사 고글 렌즈",
+        "박쥐 모양으로 바뀐 주황 배송 가방 날개"
+      ],
+      "image": "assets/spot-difference-answers/52-magic-delivery-broom-workshop-02.webp"
+    },
+    {
+      "number": 53,
+      "id": "magic-delivery-cloud-airship-dock-03",
+      "title": "구름섬 비행선 우편 선착장",
+      "description": "노을 구름 위 비행선 우편 선착장에서 수달 배달부와 부엉이 관제사가 출항 전 다섯 가지 변화를 확인합니다.",
+      "collectionId": "magic-delivery-office",
+      "collectionName": "마법 배달국",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "노란색으로 바뀐 선착장 깃발",
+        "초승달 모양으로 바뀐 우편 상자 잠금장치",
+        "한 장만 남은 비행선 프로펠러 날개",
+        "초록색으로 바뀐 수달 배달부 목도리",
+        "주황색 별 모양으로 바뀐 관제 레버 손잡이"
+      ],
+      "image": "assets/spot-difference-answers/53-magic-delivery-cloud-airship-dock-03.webp"
+    },
+    {
+      "number": 54,
+      "id": "magic-delivery-moonlit-canal-boat-04",
+      "title": "달빛 운하 우편선",
+      "description": "달빛 비가 내리는 마법 운하에서 수달 배달부와 비버 선장이 우편선을 타고 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "magic-delivery-office",
+      "collectionName": "마법 배달국",
+      "difficulty": "보통",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "노란빛으로 바뀐 운하 등불",
+        "파란 마름모 모양으로 바뀐 우편 가방 잠금장치",
+        "초승달 모양으로 바뀐 돛 문양",
+        "초록색으로 바뀐 수달 배달부 우산",
+        "보라색으로 바뀐 비버 선장의 노"
+      ],
+      "image": "assets/spot-difference-answers/54-magic-delivery-moonlit-canal-boat-04.webp"
+    },
+    {
+      "number": 55,
+      "id": "magic-delivery-dragon-peak-05",
+      "title": "용의 산 정상 특별 배송",
+      "description": "별빛 노을이 번지는 용의 산 정상에서 수달 배달부가 아기 용 가족에게 마지막 소포를 전하며 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "magic-delivery-office",
+      "collectionName": "마법 배달국",
+      "difficulty": "보통",
+      "stageType": "relaxed",
+      "differenceCount": 5,
+      "labels": [
+        "제비꼬리 모양으로 바뀐 정상 깃발 끝",
+        "은색 원형으로 바뀐 배달부 부츠 버클",
+        "고리 매듭으로 바뀐 파란 등산 로프",
+        "청록색 별 모양으로 바뀐 소포 봉인",
+        "노란 마름모 모양으로 바뀐 아기 용 목걸이 보석"
+      ],
+      "image": "assets/spot-difference-answers/55-magic-delivery-dragon-peak-05.webp"
+    },
+    {
+      "number": 56,
+      "id": "toy-kingdom-block-castle-01",
+      "title": "블록 왕국 성문",
+      "description": "알록달록한 나무 블록 성문 앞에서 파란 망토의 병정과 장난감 주민들이 환영 행렬을 열며 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "toy-kingdom",
+      "collectionName": "장난감 왕국",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "가운데 톱니가 사라진 성문 꼭대기 블록",
+        "방향이 반대로 바뀐 병정 방패의 청록 초승달",
+        "하나가 사라진 토끼 악사의 조끼 단추",
+        "하나가 사라진 양철 코끼리 안장 장식",
+        "짙은 청록색으로 바뀐 수레 구슬 하나"
+      ],
+      "image": "assets/spot-difference-answers/56-toy-kingdom-block-castle-01.webp"
+    },
+    {
+      "number": 57,
+      "id": "toy-kingdom-windup-train-station-02",
+      "title": "태엽 기차역",
+      "description": "장난감 왕국의 태엽 기차가 출발을 준비하는 나무 승강장에서 파란 망토의 병정과 승객들 사이 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "toy-kingdom",
+      "collectionName": "장난감 왕국",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "코발트색으로 바뀐 역무원 신호판 중앙",
+        "짧아진 역 시계의 오른쪽 바늘",
+        "끝에 작은 홈이 생긴 산호색 역 깃발",
+        "황토색으로 바뀐 가운데 여행가방",
+        "산호색으로 바뀐 굴뚝 위 양철 새의 부리"
+      ],
+      "image": "assets/spot-difference-answers/57-toy-kingdom-windup-train-station-02.webp"
+    },
+    {
+      "number": 58,
+      "id": "toy-kingdom-music-box-plaza-03",
+      "title": "오르골 광장",
+      "description": "장난감 왕국의 거대한 오르골이 연주를 시작한 축제 광장에서 춤추는 인형과 악단 사이 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "toy-kingdom",
+      "collectionName": "장난감 왕국",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "윗 꼭짓점이 짧아진 오르골 별 장식",
+        "하나가 사라진 발레리나 치마의 금빛 장식",
+        "한 땀이 사라진 양철 코끼리 귀의 바느질",
+        "추가 사라진 가운데 황동 종",
+        "정사각형으로 바뀐 북의 청록 문양"
+      ],
+      "image": "assets/spot-difference-answers/58-toy-kingdom-music-box-plaza-03.webp"
+    },
+    {
+      "number": 59,
+      "id": "toy-kingdom-patchwork-dragon-bridge-04",
+      "title": "봉제 용 다리",
+      "description": "장난감 왕국의 저녁, 거대한 봉제 용이 지키는 나무 다리를 건너는 파란 망토 병정과 장난감 행렬 사이 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "toy-kingdom",
+      "collectionName": "장난감 왕국",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "한 줄이 사라진 봉제 용 뿔의 이음매",
+        "거꾸로 뒤집힌 병정 방패의 청록 하트",
+        "아래 금빛 받침이 사라진 가운데 등불",
+        "짙은 청록색으로 바뀐 수레 바퀴",
+        "끝에 작은 홈이 생긴 다리 깃발"
+      ],
+      "image": "assets/spot-difference-answers/59-toy-kingdom-patchwork-dragon-bridge-04.webp"
+    },
+    {
+      "number": 60,
+      "id": "toy-kingdom-star-crown-palace-05",
+      "title": "별왕관 궁전",
+      "description": "장난감 왕국의 밤, 별왕관 궁전에서 열리는 축하 대관식에 도착한 파란 망토 병정과 장난감 친구들 사이 다섯 가지 변화를 찾아냅니다.",
+      "collectionId": "toy-kingdom",
+      "collectionName": "장난감 왕국",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "소용돌이 하나가 사라진 궁전 초승달 장식",
+        "가운데 톱니가 사라진 병정 방패의 성 문양",
+        "한 땀이 사라진 사자 나비넥타이",
+        "왼쪽 아래 꼭짓점이 짧아진 가운데 별 등불",
+        "정사각형으로 바뀐 깜짝상자의 청록 문양"
+      ],
+      "image": "assets/spot-difference-answers/60-toy-kingdom-star-crown-palace-05.webp"
+    },
+    {
+      "number": 61,
+      "id": "dragon-academy-hatchery-classroom-01",
+      "title": "아기 용 부화 교실",
+      "description": "구름 위 마법 학교의 따뜻한 부화 교실에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+      "collectionId": "dragon-academy",
+      "collectionName": "드래곤 아카데미",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "사라진 부엉이 선생님의 둥근 안경",
+        "둥근 모양으로 바뀐 황금 알의 가운데 보석",
+        "은빛으로 바뀐 가운데 물약병 마개",
+        "안쪽 주름선이 사라진 아기 용의 날개",
+        "끝의 작은 말림이 사라진 가마솥 손잡이"
+      ],
+      "image": "assets/spot-difference-answers/61-dragon-academy-hatchery-classroom-01.webp"
+    },
+    {
+      "number": 62,
+      "id": "dragon-academy-cloud-flight-class-02",
+      "title": "구름 운동장 비행 수업",
+      "description": "구름 위 마법학교의 야외 운동장에서 아기 용들의 신나는 비행 수업 속 다섯 가지 변화를 찾아보세요.",
+      "collectionId": "dragon-academy",
+      "collectionName": "드래곤 아카데미",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "청록색 마름모로 바뀐 부엉이 선생님의 망토 고리",
+        "꼭대기 장식이 사라진 왼쪽 비행 고리",
+        "상아색으로 바뀐 붉은 아기 용의 뿔 끝",
+        "은빛으로 바뀐 파란 아기 용의 두 뿔",
+        "청록색으로 바뀐 생쥐 기록원의 헬멧 단추"
+      ],
+      "image": "assets/spot-difference-answers/62-dragon-academy-cloud-flight-class-02.webp"
+    },
+    {
+      "number": 63,
+      "id": "dragon-academy-potion-lab-03",
+      "title": "별빛 물약 실험 수업",
+      "description": "구름 위 마법학교의 반짝이는 물약 실험실에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+      "collectionId": "dragon-academy",
+      "collectionName": "드래곤 아카데미",
+      "difficulty": "어려움",
+      "stageType": "speed",
+      "differenceCount": 5,
+      "labels": [
+        "보라색으로 바뀐 노란 물약병의 마개",
+        "은색으로 바뀐 아기 용 모자의 초승달 장식",
+        "네 갈래로 바뀐 가마솥의 청록색 별 문양",
+        "파란색으로 바뀐 저울의 오른쪽 수정",
+        "삼각형으로 바뀐 주문서 잠금장치의 청록색 장식"
+      ],
+      "image": "assets/spot-difference-answers/63-dragon-academy-potion-lab-03.webp"
+    },
+    {
+      "number": 64,
+      "id": "dragon-academy-moon-observatory-04",
+      "title": "달빛 천문탑 관측 수업",
+      "description": "구름 위 마법학교의 달빛 천문탑에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+      "collectionId": "dragon-academy",
+      "collectionName": "드래곤 아카데미",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "짧아진 아기 용 목도리의 오른쪽 꼬리",
+        "네 꼭짓점으로 바뀐 왼쪽 황금 별 등불",
+        "청록색 별로 바뀐 망원경 문양",
+        "원 모양으로 바뀐 부엉이 선생님의 포인터",
+        "청록색 별로 바뀐 천문 관측 가방 문양"
+      ],
+      "image": "assets/spot-difference-answers/64-dragon-academy-moon-observatory-04.webp"
+    },
+    {
+      "number": 65,
+      "id": "dragon-academy-starlight-graduation-05",
+      "title": "별구름 졸업 축제",
+      "description": "구름 위 마법학교의 별빛 졸업 축제에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+      "collectionId": "dragon-academy",
+      "collectionName": "드래곤 아카데미",
+      "difficulty": "어려움",
+      "stageType": "classic",
+      "differenceCount": 5,
+      "labels": [
+        "초승달 모양으로 바뀐 아기 용의 졸업 망토 장식",
+        "가운데 등불에서 사라진 작은 받침 장식",
+        "동그랗게 바뀐 부엉이 선생님의 종 추",
+        "제비꼬리 모양으로 바뀐 졸업 배너",
+        "청록색 하트로 바뀐 졸업 기념 상자 문양"
+      ],
+      "image": "assets/spot-difference-answers/65-dragon-academy-starlight-graduation-05.webp"
+    }
+  ]
+}

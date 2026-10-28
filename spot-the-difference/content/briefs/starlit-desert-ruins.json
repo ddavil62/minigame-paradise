@@ -1,0 +1,17 @@
+{
+  "id": "starlit-desert-ruins-01",
+  "title": "별빛 사막 유적",
+  "description": "별이 쏟아지는 사막의 고대 관측 유적에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "사막 천문 유적",
+  "scene": "A whimsical ancient desert astronomy ruin at blue hour, with a sandstone arch observatory, a large brass astrolabe, a small domed telescope, patterned rugs without letters, ceramic water jars, a turquoise treasure chest, date palms, glowing lanterns, a friendly fennec fox, distant pyramidal rock formations, and a star-filled violet sky",
+  "style": "premium whimsical storybook illustration, warm amber sandstone balanced with turquoise and deep violet accents, crisp object silhouettes, richly detailed but uncluttered, gentle cinematic lighting",
+  "changeGuidance": "Spread changes across the upper arch and sky, central astrolabe, left-side jars and rug, right-side telescope and chest, and the foreground fox; avoid global sky, lighting, or sand changes",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "world-adventure",
+  "stageType": "classic"
+}

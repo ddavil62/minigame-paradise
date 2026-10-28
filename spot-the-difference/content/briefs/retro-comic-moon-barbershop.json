@@ -1,0 +1,17 @@
+{
+  "id": "retro-comic-moon-barbershop-05",
+  "title": "팝! 달 기지 이발소",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 달 기지 이발소에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 달 기지 이발소",
+  "scene": "A playful 1960s retro-futurist moon-base barber shop seen straight-on at eye level. A friendly blue three-eyed alien barber stands at the center wearing a plain mustard-yellow bow tie while trimming the hair of a green astronaut customer seated in a large tomato-red barber chair. On the left is a cream dome hair dryer with one cyan-blue circular dial beside a low shelf holding exactly three large bottles in tomato red, mustard yellow, and cyan blue. On the right, a small purple service robot with one yellow five-point star emblem on its chest stands beside a cream sink. Above it, a round porthole shows one ringed planet and exactly two small cream stars. A large cyan-blue ceiling lamp hangs near the upper left. The floor is a bold cream-and-black checkerboard. Keep every prop large, distinct, fully visible, and spatially separated. Do not include readable signs, labels, letters, or numbers.",
+  "style": "original 1960s-inspired retro comic-book pop art matching a vintage offset-printed science-fiction comic, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, clean chunky shapes, limited mustard yellow, tomato red, cyan blue, green, purple, cream, and black palette; not a modern glossy storybook illustration",
+  "changeGuidance": "Make exactly these five localized changes only: change the hair dryer's circular dial from cyan blue to tomato red; change the blue alien barber's mustard-yellow bow tie to tomato red; change the large cyan-blue ceiling lamp shade to mustard yellow while keeping its cream inner light unchanged; change the purple robot's yellow five-point chest emblem to cyan blue; remove the two small cream stars inside the round porthole while preserving the ringed planet. Preserve every other object, halftone pattern, ink line, camera angle, color, and lighting exactly.",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "style-lab",
+  "stageType": "classic"
+}

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-delivery-dragon-peak-05",
+  "status": "published",
+  "title": "용의 산 정상 특별 배송",
+  "description": "별빛 노을이 번지는 용의 산 정상에서 수달 배달부가 아기 용 가족에게 마지막 소포를 전하며 다섯 가지 변화를 찾아냅니다.",
+  "theme": "마법 배달부의 하루 — 용의 산 정상 마지막 별빛 배송",
+  "collectionId": "magic-delivery-office",
+  "stageType": "relaxed",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 4000,
+  "hintPenaltyMs": 8000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "swallowtail-summit-flag",
+      "label": "끝에 작은 홈이 생긴 정상 깃발",
+      "zones": {
+        "a": {
+          "x": 0.29,
+          "y": 0.045,
+          "w": 0.12,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.29,
+          "y": 0.045,
+          "w": 0.12,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "round-silver-boot-buckle",
+      "label": "가운데만 둥글어진 배달부 부츠 버클",
+      "zones": {
+        "a": {
+          "x": 0.255,
+          "y": 0.705,
+          "w": 0.07,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.255,
+          "y": 0.705,
+          "w": 0.07,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "overhand-loop-rope-knot",
+      "label": "매듭 옆 끝부분이 짧아진 파란 등산 로프",
+      "zones": {
+        "a": {
+          "x": 0.49,
+          "y": 0.79,
+          "w": 0.19,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.49,
+          "y": 0.79,
+          "w": 0.19,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "turquoise-star-parcel-seal",
+      "label": "가운데만 청록색 별인 소포 봉인",
+      "zones": {
+        "a": {
+          "x": 0.585,
+          "y": 0.63,
+          "w": 0.105,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.585,
+          "y": 0.63,
+          "w": 0.105,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "yellow-diamond-dragon-pendant",
+      "label": "가운데만 노란 마름모인 아기 용 목걸이",
+      "zones": {
+        "a": {
+          "x": 0.58,
+          "y": 0.455,
+          "w": 0.08,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.58,
+          "y": 0.455,
+          "w": 0.08,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 배달부의 하루 — 용의 산 정상 마지막 별빛 배송. Scene: A warm whimsical finale at a dragon nest on a high mountain summit at sunset, viewed straight-on from a comfortable medium-wide angle. A friendly recurring young otter courier in a deep-teal delivery coat has just arrived beside a cozy circular nest of pale stone and woven branches, while a gentle round mother dragon and one small smiling baby dragon welcome the final glowing parcel. Violet mountains and peach-gold clouds recede behind them, with tiny stars beginning to appear. At upper left, one large burgundy summit flag flies clearly from a brass-tipped pole; its free end has one broad square-cut tail. At center-left, the otter courier stands in profile with one oversized antique-gold rectangular buckle clearly visible on the outer side of the near boot. At lower center, one thick cobalt-blue climbing rope lies across a clear patch of pale rock and forms one large simple figure-eight knot. At center-right, the final cream parcel rests alone on a flat stone; it is tied with teal ribbon and has one oversized bright coral-red circular wax seal on its front, with no writing. At upper center-right, the baby dragon faces the viewer and wears one large vivid-turquoise round gemstone pendant on a short antique-gold necklace. Add blank canvas mail sacks, a small lantern, alpine flowers, smooth dragon eggs, warm nest blankets, and distant flying envelopes only as supporting atmosphere. Keep the square-tailed flag, boot buckle, rope knot, parcel seal, and baby dragon pendant large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, addresses, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the magical postal collection, cinematic peach-and-violet sunset with warm starlight glow, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals and dragons, crisp object silhouettes, cohesive deep teal, cream, antique gold, burgundy, coral red, cobalt blue, vivid turquoise, peach, and violet palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the upper-left burgundy summit flag's broad square-cut free end into one clearly pointed swallowtail end while preserving its color, pole, size, and position, 2) change only the oversized antique-gold rectangular buckle on the outer side of the otter courier's near boot at center-left into a bright silver round buckle of similar size, 3) change only the large simple figure-eight knot in the cobalt-blue climbing rope at lower center into one large simple overhand loop knot while preserving the rope color, thickness, and route, 4) change only the oversized bright coral-red circular wax seal on the center-right cream parcel into a vivid turquoise five-point-star-shaped seal of similar size while preserving the parcel and teal ribbon, 5) change only the baby dragon's large vivid-turquoise round gemstone pendant at upper center-right into a bright sunflower-yellow diamond-shaped gemstone of similar size while preserving the antique-gold necklace. Preserve the otter courier, mother dragon, baby dragon, faces, bodies, poses, nest, parcel, rope, flag, mountain landscape, clouds, stars, lantern, flowers, eggs, mail sacks, camera, crop, lighting, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T12:54:17.623Z"
+  },
+  "publishedAt": "2026-08-21T12:59:04.570Z"
+}

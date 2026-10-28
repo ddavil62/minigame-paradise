@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "japanese-comics-rooftop-observatory-03",
+  "status": "published",
+  "title": "별빛 옥상 관측회",
+  "description": "도시의 불빛 위로 별이 떠오르는 옥상 관측회에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "푸른 저녁의 옥상 천문 관측회",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "red-telescope-rim",
+      "label": "붉은색으로 바뀐 망원경 렌즈 테두리",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.19,
+          "w": 0.11,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.19,
+          "w": 0.11,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "missing-binocular-strap",
+      "label": "사라진 쌍안경 목걸이 끈",
+      "zones": {
+        "a": {
+          "x": 0.64,
+          "y": 0.82,
+          "w": 0.13,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.64,
+          "y": 0.82,
+          "w": 0.13,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "teal-thermos",
+      "label": "청록색으로 바뀐 보온병",
+      "zones": {
+        "a": {
+          "x": 0.61,
+          "y": 0.36,
+          "w": 0.07,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.61,
+          "y": 0.36,
+          "w": 0.07,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "missing-crescent-ornament",
+      "label": "사라진 초승달 풍경 장식",
+      "zones": {
+        "a": {
+          "x": 0.895,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.895,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "reversed-weather-vane-arrow",
+      "label": "방향이 뒤집힌 풍향계 화살",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.135,
+          "w": 0.14,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.135,
+          "w": 0.14,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 푸른 저녁의 옥상 천문 관측회. Scene: A peaceful Japanese university astronomy club rooftop at blue hour, viewed from a comfortable medium-wide angle. Two young adult club members prepare for stargazing beside a large tripod telescope. Include a red thermos, a pair of binoculars with a neck strap, a folded star chart with abstract dots and lines but no writing, a yellow folding chair, a small potted sunflower, a crescent-shaped hanging wind chime, a compact radio with blank controls, a weather vane, rooftop railings, water tanks, distant city lights, and the first stars in a violet sky. Every important prop is clearly separated and readable..\nArt direction: original contemporary Japanese comics-inspired illustration, expressive clean ink linework, cinematic panel-like composition, selective full color with subtle screentone texture, polished game art, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the telescope lens rim from gold to bright red, 2) remove the binoculars' neck strap, 3) change the red thermos to teal, 4) remove the crescent-shaped ornament from the hanging wind chime, 5) reverse the weather vane arrow direction. Keep both club members, faces, hands, poses, telescope body and tripod, rooftop, skyline, camera, crop, lighting, and every other object pixel-consistent.",
+    "createdAt": "2026-08-20T03:09:17.959Z"
+  },
+  "publishedAt": "2026-08-20T03:15:59.430Z"
+}

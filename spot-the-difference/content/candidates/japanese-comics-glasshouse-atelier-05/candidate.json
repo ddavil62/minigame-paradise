@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "japanese-comics-glasshouse-atelier-05",
+  "status": "published",
+  "title": "봄빛 유리온실 화실",
+  "description": "봄꽃과 금빛 햇살이 가득한 유리온실 화실에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "봄날의 옥상 유리온실 화실",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "teal-parasol",
+      "label": "청록색으로 바뀐 우산",
+      "zones": {
+        "a": {
+          "x": 0.025,
+          "y": 0.19,
+          "w": 0.15,
+          "h": 0.68
+        },
+        "b": {
+          "x": 0.025,
+          "y": 0.19,
+          "w": 0.15,
+          "h": 0.68
+        }
+      }
+    },
+    {
+      "id": "missing-paint-basket-handle",
+      "label": "사라진 화구 바구니 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.195,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.195,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "red-teapot",
+      "label": "붉은색으로 바뀐 찻주전자",
+      "zones": {
+        "a": {
+          "x": 0.54,
+          "y": 0.735,
+          "w": 0.14,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.54,
+          "y": 0.735,
+          "w": 0.14,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "missing-glass-star",
+      "label": "사라진 가운데 유리 별",
+      "zones": {
+        "a": {
+          "x": 0.635,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.635,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "easel-crescent-charm",
+      "label": "이젤에 생긴 금빛 초승달",
+      "zones": {
+        "a": {
+          "x": 0.645,
+          "y": 0.345,
+          "w": 0.035,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.645,
+          "y": 0.345,
+          "w": 0.035,
+          "h": 0.1
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 2,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 봄날의 옥상 유리온실 화실. Scene: A beautiful rooftop glasshouse art studio at golden hour in spring, viewed from a comfortable straight-on medium-wide angle. One elegant young adult woman artist with long dark hair sits beside a wooden easel, wearing an original cream blouse and long sage skirt, with a calm warm expression and natural hands. A large closed coral parasol leans clearly on the far left. A fluffy white cat wearing a green collar with one clearly visible golden bell sits on a round cushion at lower right. A cobalt-blue ceramic teapot sits alone on a small round table. Exactly three large glass star ornaments hang in a separated row from the upper glass frame. The wooden easel has no charm or ornament attached to its top corner. Include large separated pots of pink camellias and white daisies, a wicker paint basket, broad glass panes, soft city rooftops, and drifting spring petals. Keep every important prop large, distinct, fully visible, and spatially separated. No other people..\nArt direction: original contemporary Japanese comics-inspired illustration, exceptionally beautiful polished character art, graceful clean ink linework, cinematic manga panel composition, selective luminous full color with subtle screentone texture, delicate spring atmosphere, elegant game art, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Edit the existing B image with exactly two localized corrections: restore the fluffy white cat's single small round golden bell at the center of its green collar so the cat matches image A; remove only the arched wicker handle from the artist's paint-supply basket in the lower-left foreground while keeping the woven basket body, all brushes, paint bottles, their positions, and the surrounding floor unchanged. Preserve the exact crop, camera, woman, cat pose and fur, parasol, teapot, hanging stars, easel crescent charm, flowers, petals, glass panes, city, lighting, palette, texture, the four existing puzzle changes, and every other object. Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.",
+    "createdAt": "2026-08-20T05:03:34.845Z"
+  },
+  "publishedAt": "2026-08-20T09:22:42.749Z"
+}

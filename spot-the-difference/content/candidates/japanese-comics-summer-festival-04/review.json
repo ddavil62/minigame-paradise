@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "red-fox-mask-accents",
+      "label": "붉은색으로 바뀐 여우 가면 무늬",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.085,
+          "w": 0.105,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.085,
+          "w": 0.105,
+          "h": 0.21
+        }
+      }
+    },
+    {
+      "id": "missing-fan-tassel",
+      "label": "사라진 부채의 붉은 술 장식",
+      "zones": {
+        "a": {
+          "x": 0.12,
+          "y": 0.86,
+          "w": 0.11,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.12,
+          "y": 0.86,
+          "w": 0.11,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "golden-candy-apple",
+      "label": "금빛으로 바뀐 사과 사탕",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.365,
+          "w": 0.07,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.365,
+          "w": 0.07,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "missing-pinwheel-blade",
+      "label": "하나가 사라진 바람개비 날개",
+      "zones": {
+        "a": {
+          "x": 0.87,
+          "y": 0.34,
+          "w": 0.115,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.87,
+          "y": 0.34,
+          "w": 0.115,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "purple-tanuki-bib",
+      "label": "보라색으로 바뀐 너구리상 턱받이",
+      "zones": {
+        "a": {
+          "x": 0.835,
+          "y": 0.69,
+          "w": 0.14,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.835,
+          "y": 0.69,
+          "w": 0.14,
+          "h": 0.19
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3136283,
+        "hash": "39a009272db3739aad5bb663cfdcc46f0a048e33cd29ff7b0da1f309c573c30f",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2942775,
+        "hash": "a53abfd2dc1b1f4737fefb0a6e43f33a616046c57e36574f076cf14860c7e449",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-20T03:25:57.339Z"
+}

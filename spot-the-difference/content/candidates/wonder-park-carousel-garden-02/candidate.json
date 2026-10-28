@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "wonder-park-carousel-garden-02",
+  "status": "published",
+  "title": "햇살 회전목마 정원",
+  "description": "꽃향기와 음악이 흐르는 원더파크의 회전목마 정원에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "햇살 가득한 마법 테마파크 회전목마 정원",
+  "collectionId": "wonder-park",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "turquoise-carousel-crown",
+      "label": "청록색으로 바뀐 회전목마 왕관",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.01,
+          "w": 0.14,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.01,
+          "w": 0.14,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "blue-horse-saddle",
+      "label": "파란색으로 바뀐 흰 말의 안장",
+      "zones": {
+        "a": {
+          "x": 0.285,
+          "y": 0.525,
+          "w": 0.08,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.285,
+          "y": 0.525,
+          "w": 0.08,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "purple-popcorn-stripes",
+      "label": "보라색으로 바뀐 팝콘 통 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.085,
+          "y": 0.535,
+          "w": 0.1,
+          "h": 0.155
+        },
+        "b": {
+          "x": 0.085,
+          "y": 0.535,
+          "w": 0.1,
+          "h": 0.155
+        }
+      }
+    },
+    {
+      "id": "pink-bench-cushion",
+      "label": "분홍색으로 바뀐 벤치 방석",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.65,
+          "w": 0.08,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.65,
+          "w": 0.08,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "missing-pinwheel-blade",
+      "label": "하나가 사라진 바람개비 날개",
+      "zones": {
+        "a": {
+          "x": 0.74,
+          "y": 0.52,
+          "w": 0.09,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.74,
+          "y": 0.52,
+          "w": 0.09,
+          "h": 0.17
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 햇살 가득한 마법 테마파크 회전목마 정원. Scene: A cheerful whimsical theme park carousel garden in clear golden daytime, viewed straight-on from a comfortable medium-wide angle. A large ornate cream-and-mint carousel fills the center, crowned by one clearly visible golden crown-shaped topper. At the front-left of the carousel is one large white horse with a clearly visible red saddle. On the far left is a compact coral popcorn cart with one large red-and-cream striped popcorn bucket sitting clearly on its counter. On the right is a decorative mint garden bench holding exactly one round yellow cushion. Near the lower right stands the same original cream-colored rabbit park mascot from the entrance plaza, with long pink-lined ears and a teal bow tie, now holding one clearly visible pink pinwheel with exactly four broad blades. Surround the scene with separated flower planters, ribbon garlands without writing, trimmed hedges, and a few small distant visitor silhouettes. Keep the crown topper, red saddle, popcorn bucket, yellow cushion, and four-bladed pinwheel large, unobstructed, spatially separated, and away from the image edges. No readable signs, labels, letters, or numbers..\nArt direction: original premium whimsical storybook game illustration matching the established Wonder Park entrance stage, clean expressive ink contours, soft cel shading, gently hand-painted textures, polished animated-feature background quality, cheerful rounded shapes, cohesive mint, coral, cream, turquoise, pink, and gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the golden crown-shaped topper at the top center of the carousel from gold to turquoise, 2) change the front-left white carousel horse's red saddle to blue, 3) change the red stripes on the popcorn bucket at the far-left cart to purple while preserving its cream stripes, 4) change the single round yellow cushion on the right garden bench to pink, 5) remove exactly one blade from the rabbit mascot's four-bladed pink pinwheel so three blades remain. Preserve the carousel, horses, popcorn cart, bench, rabbit mascot, visitor silhouettes, flowers, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T05:54:11.020Z"
+  },
+  "publishedAt": "2026-08-21T05:59:21.510Z"
+}

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "moonlit-clockwork-shop-01",
+  "status": "published",
+  "title": "달빛 시계공방",
+  "description": "달빛 아래 잠든 마법 시계공방에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 시계공방",
+  "collectionId": "moonlight-mystery",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "window-star-charm",
+      "label": "창가의 별 장식",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.14,
+          "w": 0.055,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.14,
+          "w": 0.055,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "cuckoo-pendulum",
+      "label": "뻐꾸기시계의 추",
+      "zones": {
+        "a": {
+          "x": 0.13,
+          "y": 0.39,
+          "w": 0.075,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.13,
+          "y": 0.39,
+          "w": 0.075,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "red-screwdriver",
+      "label": "작업대의 빨간 드라이버",
+      "zones": {
+        "a": {
+          "x": 0.58,
+          "y": 0.8,
+          "w": 0.16,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.58,
+          "y": 0.8,
+          "w": 0.16,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "cat-collar-bell",
+      "label": "고양이 목걸이의 방울",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.73,
+          "w": 0.055,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.73,
+          "w": 0.055,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "mantel-clock-markers",
+      "label": "큰 시계의 시간 표시",
+      "zones": {
+        "a": {
+          "x": 0.39,
+          "y": 0.38,
+          "w": 0.17,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.39,
+          "y": 0.38,
+          "w": 0.17,
+          "h": 0.29
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 시계공방. Scene: A cozy enchanted clockmaker workshop at night with a large round moonlit window in the center, a wooden workbench, an ornate brass mantel clock, a small blue cuckoo clock on the left wall, a crescent-shaped desk lamp, organized gears and tools, a sleepy black cat on a teal cushion, hanging pocket watches, glass jars, and tiny star-shaped charms.\nArt direction: premium whimsical storybook illustration, deep indigo, teal, walnut and warm brass palette, crisp object silhouettes, richly detailed but uncluttered, cinematic moonlight and amber lamplight.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make exactly five localized changes: remove the star charm hanging inside the moonlit window, change the left blue cuckoo clock pendulum from a crescent to a round disk, remove the red-handled screwdriver from the right side of the workbench, add a small golden bell to the black cat's teal collar, and change the large brass mantel clock face from Roman numerals to simple dot hour markers. Preserve everything else exactly.",
+    "createdAt": "2026-08-20T04:23:06.645Z"
+  },
+  "publishedAt": "2026-08-20T04:27:14.357Z"
+}

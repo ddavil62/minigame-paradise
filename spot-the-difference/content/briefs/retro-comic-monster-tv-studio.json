@@ -1,0 +1,17 @@
+{
+  "id": "retro-comic-monster-tv-studio-03",
+  "title": "팝! 괴물 TV 스튜디오",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 괴물 방송국에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 괴물 TV 스튜디오",
+  "scene": "A playful 1960s retro monster television studio seen straight-on at eye level. A friendly purple one-eyed monster host stands behind a small curved cream presentation desk, wearing a plain mustard bow tie with exactly two pointed ends. To the left is a large cyan television camera on a wheeled pedestal with one big round yellow lens, two small red indicator bulbs, and a top antenna ending in one round ball. To the right is a chunky cream floor microphone with a red grille. The background includes three large separated set decorations: a yellow five-point star, a red crescent moon, and a cyan lightning bolt. A small green three-eyed studio cat sits on a red director chair without any collar. Overhead are two large red studio lamps, and the floor has bold cream and black checkerboard tiles. Keep every prop large, distinct, fully visible, and spatially separated. Do not include readable signs, labels, letters, or numbers.",
+  "style": "original 1960s-inspired retro comic-book pop art matching a vintage offset-printed monster comic, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, purple, cream, and black palette; not a modern glossy storybook illustration",
+  "changeGuidance": "Make exactly these five localized changes only: change the television camera's large round lens from yellow to red; remove exactly one of the camera's two small red indicator bulbs so one remains; change the floor microphone grille from red to cyan blue; remove exactly one point from the yellow five-point star so it has four points; add a small yellow collar to the green three-eyed studio cat. Preserve every other object, halftone pattern, ink line, camera angle, color, and lighting exactly.",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "style-lab",
+  "stageType": "classic"
+}

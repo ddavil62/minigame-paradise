@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "yellow-umbrella-handle",
+      "label": "노란색으로 바뀐 여우 탐정의 우산 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.055,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.055,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "crescent-hotel-key",
+      "label": "초승달 모양으로 바뀐 호텔 열쇠의 고리",
+      "zones": {
+        "a": {
+          "x": 0.49,
+          "y": 0.55,
+          "w": 0.09,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.49,
+          "y": 0.55,
+          "w": 0.09,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "blue-diamond-pendulum",
+      "label": "파란 다이아몬드 모양으로 바뀐 시계추",
+      "zones": {
+        "a": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.075,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.075,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "missing-bellhop-cap-button",
+      "label": "사라진 곰 벨보이 모자의 금색 단추",
+      "zones": {
+        "a": {
+          "x": 0.83,
+          "y": 0.285,
+          "w": 0.06,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.83,
+          "y": 0.285,
+          "w": 0.06,
+          "h": 0.075
+        }
+      }
+    },
+    {
+      "id": "missing-jade-suitcase",
+      "label": "짐수레에서 사라진 옥색 여행 가방",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.67,
+          "w": 0.145,
+          "h": 0.265
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.67,
+          "w": 0.145,
+          "h": 0.265
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2987902,
+        "hash": "3e0f03d6e385d9f8db94759c9793daebc9667aa559b66c664838af0bbfdc5891",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2874479,
+        "hash": "6a055a535deaa384a454e974de9b9ddc95ea5bc128189e36381aa7ff65326ba6",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T11:37:46.597Z"
+}

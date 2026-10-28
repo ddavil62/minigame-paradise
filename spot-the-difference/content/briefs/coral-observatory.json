@@ -1,0 +1,17 @@
+{
+  "id": "coral-observatory-01",
+  "title": "심해 산호 관측소",
+  "description": "푸른 바닷속 관측소에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "심해 관측소",
+  "scene": "A cozy underwater observatory interior with a huge curved window looking onto coral reefs and fish, brass scientific instruments, specimen jars, diving gear, shells, maps without readable text, and a small octopus outside",
+  "style": "premium whimsical storybook illustration, luminous blue and coral palette, crisp object silhouettes, detailed but uncluttered",
+  "changeGuidance": "Spread changes across foreground, middle ground, and underwater background; preserve all sea creatures' poses",
+  "differenceCount": 5,
+  "difficulty": "쉬움",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "collectionId": "world-adventure",
+  "stageType": "relaxed"
+}

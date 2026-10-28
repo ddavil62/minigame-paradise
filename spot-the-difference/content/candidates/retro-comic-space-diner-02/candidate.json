@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "retro-comic-space-diner-02",
+  "status": "published",
+  "title": "팝! 우주 배달 식당",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 식당에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 우주 배달 식당",
+  "collectionId": "style-lab",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "cyan-rocket-nose",
+      "label": "파란색으로 바뀐 로켓 앞부분",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.08,
+          "w": 0.095,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.08,
+          "w": 0.095,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "red-apron-pocket",
+      "label": "외계인 앞치마의 빨간 주머니",
+      "zones": {
+        "a": {
+          "x": 0.435,
+          "y": 0.56,
+          "w": 0.09,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.435,
+          "y": 0.56,
+          "w": 0.09,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "pink-jukebox-light",
+      "label": "분홍색으로 바뀐 주크박스 가운데 불빛",
+      "zones": {
+        "a": {
+          "x": 0.845,
+          "y": 0.515,
+          "w": 0.06,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.845,
+          "y": 0.515,
+          "w": 0.06,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "missing-cake-cherry",
+      "label": "사라진 케이크 체리",
+      "zones": {
+        "a": {
+          "x": 0.205,
+          "y": 0.425,
+          "w": 0.06,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.205,
+          "y": 0.425,
+          "w": 0.06,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-window-star",
+      "label": "사라진 창밖의 별",
+      "zones": {
+        "a": {
+          "x": 0.67,
+          "y": 0.09,
+          "w": 0.045,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.67,
+          "y": 0.09,
+          "w": 0.045,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 레트로 만화 우주 배달 식당. Scene: A playful retro-futurist space diner seen straight-on at eye level. A friendly three-eyed alien server stands behind a curved cream counter wearing a plain mustard apron without a pocket. Around the diner are a red rocket-shaped hanging sign with three round portholes and a nose pointing right, a cyan jukebox with three yellow circular lights, a glass cake dome holding one pink frosted cake topped with exactly three red cherries, two large milkshake glasses, a checkerboard floor, red vinyl stools, a small tabletop napkin holder, wall pipes, and a wide round window showing one large ringed planet and three small stars. Keep every prop large, distinct, fully visible, and spatially separated. Do not include any readable menu, labels, lettering, or numbers..\nArt direction: original 1960s-inspired retro comic-book pop art matching a vintage offset-printed sci-fi comic, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, cream, pink, and black palette; not a modern glossy storybook illustration.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make exactly these five localized changes only: change the rocket sign's nose cone from red to cyan blue; add one small red pocket to the alien server's mustard apron; change the jukebox's center circular light from yellow to pink; remove exactly one cherry from the cake so two remain; remove exactly one of the three small stars beside the ringed planet. Preserve every other object, halftone pattern, ink line, camera angle, color, and lighting exactly.",
+    "createdAt": "2026-08-20T01:05:49.113Z"
+  },
+  "publishedAt": "2026-08-20T01:09:33.757Z"
+}

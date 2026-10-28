@@ -1,0 +1,17 @@
+{
+  "id": "moonlit-greenhouse-01",
+  "title": "달빛 온실",
+  "description": "달빛이 스며드는 신비한 온실에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 온실",
+  "scene": "A cozy glass greenhouse at night, filled with unusual plants, tiny gardening tools, warm hanging lamps, a sleeping cat, and moonlight beyond the windows",
+  "style": "premium whimsical storybook illustration, warm teal and amber palette, crisp object silhouettes, detailed but uncluttered",
+  "changeGuidance": "Spread changes across foreground, middle ground, and background; make each change recognizable without changing any character pose",
+  "differenceCount": 5,
+  "difficulty": "쉬움",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "collectionId": "moonlight-mystery",
+  "stageType": "relaxed"
+}

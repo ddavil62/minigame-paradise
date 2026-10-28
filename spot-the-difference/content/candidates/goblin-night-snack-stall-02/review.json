@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "turquoise-club-tip",
+      "label": "청록색으로 바뀐 도깨비 방망이 끝 장식",
+      "zones": {
+        "a": {
+          "x": 0.205,
+          "y": 0.105,
+          "w": 0.075,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.205,
+          "y": 0.105,
+          "w": 0.075,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "missing-brazier-skewer",
+      "label": "하나 줄어든 화로 꼬치",
+      "zones": {
+        "a": {
+          "x": 0.04,
+          "y": 0.64,
+          "w": 0.29,
+          "h": 0.27
+        },
+        "b": {
+          "x": 0.04,
+          "y": 0.64,
+          "w": 0.29,
+          "h": 0.27
+        }
+      }
+    },
+    {
+      "id": "purple-kettle-lid",
+      "label": "보라색으로 바뀐 주전자 뚜껑",
+      "zones": {
+        "a": {
+          "x": 0.405,
+          "y": 0.585,
+          "w": 0.125,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.405,
+          "y": 0.585,
+          "w": 0.125,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "flower-plate-motif",
+      "label": "꽃 모양으로 바뀐 접시 무늬",
+      "zones": {
+        "a": {
+          "x": 0.665,
+          "y": 0.76,
+          "w": 0.175,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.665,
+          "y": 0.76,
+          "w": 0.175,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "forked-lantern-tassel",
+      "label": "두 갈래로 바뀐 등불 술",
+      "zones": {
+        "a": {
+          "x": 0.895,
+          "y": 0.29,
+          "w": 0.065,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.895,
+          "y": 0.29,
+          "w": 0.065,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3108589,
+        "hash": "fbc450e0db487dfcef3f8917cdc034d894eb509c9c3a60f402c3dcf00ae8dc8e",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2765356,
+        "hash": "38af0914e567362a6227797232d661a5815b277202bfc4d4fa4774e5c6f18fee",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.241Z"
+}

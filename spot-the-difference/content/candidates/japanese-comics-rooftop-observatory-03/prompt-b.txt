@@ -1,0 +1,6 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly 5 localized, clearly visible object-level changes distributed across the scene.
+Use changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Requested change guidance: Make only these five changes: 1) change the telescope lens rim from gold to bright red, 2) remove the binoculars' neck strap, 3) change the red thermos to teal, 4) remove the crescent-shaped ornament from the hanging wind chime, 5) reverse the weather vane arrow direction. Keep both club members, faces, hands, poses, telescope body and tripod, rooftop, skyline, camera, crop, lighting, and every other object pixel-consistent.

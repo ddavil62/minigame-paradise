@@ -1,0 +1,7130 @@
+[
+  {
+    "id": "night-market-01",
+    "status": "published",
+    "title": "달빛 야시장",
+    "description": "등불이 빛나는 야시장에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "야시장",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/night-market-a.webp",
+    "imageB": "assets/puzzles/night-market-b.webp",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "umbrella",
+        "label": "우산 패널 색",
+        "zones": {
+          "a": {
+            "x": 0.005,
+            "y": 0.145,
+            "w": 0.145,
+            "h": 0.225
+          },
+          "b": {
+            "x": 0.005,
+            "y": 0.145,
+            "w": 0.145,
+            "h": 0.225
+          }
+        }
+      },
+      {
+        "id": "clock",
+        "label": "시계 위 장식",
+        "zones": {
+          "a": {
+            "x": 0.47,
+            "y": 0.052,
+            "w": 0.075,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.47,
+            "y": 0.052,
+            "w": 0.075,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "lantern",
+        "label": "오른쪽 등불 색",
+        "zones": {
+          "a": {
+            "x": 0.825,
+            "y": 0.055,
+            "w": 0.125,
+            "h": 0.205
+          },
+          "b": {
+            "x": 0.825,
+            "y": 0.055,
+            "w": 0.125,
+            "h": 0.205
+          }
+        }
+      },
+      {
+        "id": "basket",
+        "label": "자전거 바구니",
+        "zones": {
+          "a": {
+            "x": 0.675,
+            "y": 0.535,
+            "w": 0.105,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.675,
+            "y": 0.535,
+            "w": 0.105,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "cat",
+        "label": "고양이 목도리",
+        "zones": {
+          "a": {
+            "x": 0.105,
+            "y": 0.785,
+            "w": 0.105,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.105,
+            "y": 0.785,
+            "w": 0.105,
+            "h": 0.14
+          }
+        }
+      }
+    ],
+    "collectionId": "moonlight-mystery",
+    "stageType": "speed"
+  },
+  {
+    "id": "moonlit-greenhouse-01",
+    "status": "published",
+    "title": "달빛 온실",
+    "description": "달빛이 스며드는 신비한 온실에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "마법 온실",
+    "collectionId": "moonlight-mystery",
+    "stageType": "relaxed",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/moonlit-greenhouse-01-a.png",
+    "imageB": "assets/puzzles/moonlit-greenhouse-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "crystal-color",
+        "label": "유리 돔 수정 색",
+        "zones": {
+          "a": {
+            "x": 0.285,
+            "y": 0.475,
+            "w": 0.105,
+            "h": 0.145
+          },
+          "b": {
+            "x": 0.285,
+            "y": 0.475,
+            "w": 0.105,
+            "h": 0.145
+          }
+        }
+      },
+      {
+        "id": "missing-scissors",
+        "label": "책상 위 가위",
+        "zones": {
+          "a": {
+            "x": 0.375,
+            "y": 0.625,
+            "w": 0.105,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.375,
+            "y": 0.625,
+            "w": 0.105,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "crescent-moon",
+        "label": "보름달과 초승달",
+        "zones": {
+          "a": {
+            "x": 0.71,
+            "y": 0.105,
+            "w": 0.11,
+            "h": 0.155
+          },
+          "b": {
+            "x": 0.71,
+            "y": 0.105,
+            "w": 0.11,
+            "h": 0.155
+          }
+        }
+      },
+      {
+        "id": "watering-can-color",
+        "label": "물뿌리개 색",
+        "zones": {
+          "a": {
+            "x": 0.59,
+            "y": 0.72,
+            "w": 0.145,
+            "h": 0.205
+          },
+          "b": {
+            "x": 0.59,
+            "y": 0.72,
+            "w": 0.145,
+            "h": 0.205
+          }
+        }
+      },
+      {
+        "id": "golden-calla-lily",
+        "label": "오른쪽 칼라꽃 색",
+        "zones": {
+          "a": {
+            "x": 0.84,
+            "y": 0.43,
+            "w": 0.085,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.84,
+            "y": 0.43,
+            "w": 0.085,
+            "h": 0.15
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "coral-observatory-01",
+    "status": "published",
+    "title": "심해 산호 관측소",
+    "description": "푸른 바닷속 관측소에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "심해 관측소",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/coral-observatory-01-a.png",
+    "imageB": "assets/puzzles/coral-observatory-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "purple-octopus",
+        "label": "보라색 문어",
+        "zones": {
+          "a": {
+            "x": 0.465,
+            "y": 0.12,
+            "w": 0.075,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.465,
+            "y": 0.12,
+            "w": 0.075,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "angelfish-stripe",
+        "label": "천사고기 줄무늬",
+        "zones": {
+          "a": {
+            "x": 0.59,
+            "y": 0.13,
+            "w": 0.085,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.59,
+            "y": 0.13,
+            "w": 0.085,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "missing-desk-shell",
+        "label": "책상 위 붉은 조개",
+        "zones": {
+          "a": {
+            "x": 0.245,
+            "y": 0.605,
+            "w": 0.055,
+            "h": 0.065
+          },
+          "b": {
+            "x": 0.245,
+            "y": 0.605,
+            "w": 0.055,
+            "h": 0.065
+          }
+        }
+      },
+      {
+        "id": "missing-cabinet-shell",
+        "label": "오른쪽 소라 껍데기",
+        "zones": {
+          "a": {
+            "x": 0.85,
+            "y": 0.45,
+            "w": 0.12,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.85,
+            "y": 0.45,
+            "w": 0.12,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "amber-goggles",
+        "label": "잠수 안경 렌즈",
+        "zones": {
+          "a": {
+            "x": 0.72,
+            "y": 0.65,
+            "w": 0.12,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.72,
+            "y": 0.65,
+            "w": 0.12,
+            "h": 0.11
+          }
+        }
+      }
+    ],
+    "collectionId": "world-adventure",
+    "stageType": "relaxed"
+  },
+  {
+    "id": "skyship-workshop-01",
+    "status": "published",
+    "title": "구름섬 비행선 공방",
+    "description": "구름 위 비행선 공방에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "하늘 공방",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/skyship-workshop-01-a.png",
+    "imageB": "assets/puzzles/skyship-workshop-01-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "white-pennant",
+        "label": "흰색 삼각 깃발",
+        "zones": {
+          "a": {
+            "x": 0.3,
+            "y": 0.095,
+            "w": 0.055,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.3,
+            "y": 0.095,
+            "w": 0.055,
+            "h": 0.085
+          }
+        }
+      },
+      {
+        "id": "red-roof-propeller",
+        "label": "지붕의 붉은 프로펠러",
+        "zones": {
+          "a": {
+            "x": 0.205,
+            "y": 0.135,
+            "w": 0.085,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.205,
+            "y": 0.135,
+            "w": 0.085,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "green-goggles",
+        "label": "초록색 비행 안경",
+        "zones": {
+          "a": {
+            "x": 0.11,
+            "y": 0.66,
+            "w": 0.09,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.11,
+            "y": 0.66,
+            "w": 0.09,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "blue-porthole",
+        "label": "파란 테두리 창문",
+        "zones": {
+          "a": {
+            "x": 0.59,
+            "y": 0.61,
+            "w": 0.055,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.59,
+            "y": 0.61,
+            "w": 0.055,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "missing-toolbox",
+        "label": "갑판 위 작은 도구 상자",
+        "zones": {
+          "a": {
+            "x": 0.545,
+            "y": 0.685,
+            "w": 0.065,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.545,
+            "y": 0.685,
+            "w": 0.065,
+            "h": 0.075
+          }
+        }
+      }
+    ],
+    "collectionId": "world-adventure",
+    "stageType": "speed"
+  },
+  {
+    "id": "snowy-toyshop-01",
+    "status": "published",
+    "title": "눈꽃 장난감 가게",
+    "description": "눈 내리는 장난감 가게에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "겨울 장난감 가게",
+    "collectionId": "seasonal-stories",
+    "stageType": "relaxed",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/snowy-toyshop-01-a.png",
+    "imageB": "assets/puzzles/snowy-toyshop-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "blue-dollhouse-roof",
+        "label": "인형의 집 지붕 색",
+        "zones": {
+          "a": {
+            "x": 0.735,
+            "y": 0.065,
+            "w": 0.125,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.735,
+            "y": 0.065,
+            "w": 0.125,
+            "h": 0.105
+          }
+        }
+      },
+      {
+        "id": "purple-train-car",
+        "label": "보라색 기차 객차",
+        "zones": {
+          "a": {
+            "x": 0.72,
+            "y": 0.31,
+            "w": 0.075,
+            "h": 0.07
+          },
+          "b": {
+            "x": 0.72,
+            "y": 0.31,
+            "w": 0.075,
+            "h": 0.07
+          }
+        }
+      },
+      {
+        "id": "missing-counter-top",
+        "label": "계산대 위 팽이",
+        "zones": {
+          "a": {
+            "x": 0.69,
+            "y": 0.465,
+            "w": 0.075,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.69,
+            "y": 0.465,
+            "w": 0.075,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "purple-present",
+        "label": "보라색 선물 상자",
+        "zones": {
+          "a": {
+            "x": 0.59,
+            "y": 0.7,
+            "w": 0.13,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.59,
+            "y": 0.7,
+            "w": 0.13,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "teddy-scarf",
+        "label": "곰 인형의 목도리",
+        "zones": {
+          "a": {
+            "x": 0.65,
+            "y": 0.37,
+            "w": 0.095,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.65,
+            "y": 0.37,
+            "w": 0.095,
+            "h": 0.16
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "enchanted-library-01",
+    "status": "published",
+    "title": "별빛 마법 도서관",
+    "description": "별빛이 흐르는 마법 도서관에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "마법 도서관",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/enchanted-library-01-a.png",
+    "imageB": "assets/puzzles/enchanted-library-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "emerald-window-crystal",
+        "label": "창가 수정 장식 색",
+        "zones": {
+          "a": {
+            "x": 0.275,
+            "y": 0.105,
+            "w": 0.06,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.275,
+            "y": 0.105,
+            "w": 0.06,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "crescent-window",
+        "label": "원형 창의 초승달",
+        "zones": {
+          "a": {
+            "x": 0.415,
+            "y": 0.02,
+            "w": 0.07,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.415,
+            "y": 0.02,
+            "w": 0.07,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "red-bookmark",
+        "label": "펼친 책의 책갈피 색",
+        "zones": {
+          "a": {
+            "x": 0.425,
+            "y": 0.665,
+            "w": 0.055,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.425,
+            "y": 0.665,
+            "w": 0.055,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "rug-crescent",
+        "label": "카펫 중앙의 초승달",
+        "zones": {
+          "a": {
+            "x": 0.425,
+            "y": 0.84,
+            "w": 0.065,
+            "h": 0.07
+          },
+          "b": {
+            "x": 0.425,
+            "y": 0.84,
+            "w": 0.065,
+            "h": 0.07
+          }
+        }
+      },
+      {
+        "id": "owl-bow-tie",
+        "label": "부엉이의 붉은 나비넥타이",
+        "zones": {
+          "a": {
+            "x": 0.155,
+            "y": 0.255,
+            "w": 0.055,
+            "h": 0.06
+          },
+          "b": {
+            "x": 0.155,
+            "y": 0.255,
+            "w": 0.055,
+            "h": 0.06
+          }
+        }
+      }
+    ],
+    "collectionId": "moonlight-mystery",
+    "stageType": "classic"
+  },
+  {
+    "id": "seaside-bakery-01",
+    "status": "published",
+    "title": "파도빛 해변 제과점",
+    "description": "햇살 가득한 해변 제과점에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "해변 제과점",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/seaside-bakery-01-a.png",
+    "imageB": "assets/puzzles/seaside-bakery-01-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "turquoise-awning-stripe",
+        "label": "차양의 청록색 줄무늬",
+        "zones": {
+          "a": {
+            "x": 0.74,
+            "y": 0.025,
+            "w": 0.06,
+            "h": 0.2
+          },
+          "b": {
+            "x": 0.74,
+            "y": 0.025,
+            "w": 0.06,
+            "h": 0.2
+          }
+        }
+      },
+      {
+        "id": "blue-sailboat-stripe",
+        "label": "바다 범선의 선체 줄무늬",
+        "zones": {
+          "a": {
+            "x": 0.8,
+            "y": 0.435,
+            "w": 0.07,
+            "h": 0.055
+          },
+          "b": {
+            "x": 0.8,
+            "y": 0.435,
+            "w": 0.07,
+            "h": 0.055
+          }
+        }
+      },
+      {
+        "id": "blue-muffin-wrapper",
+        "label": "진열대 머핀 포장지 색",
+        "zones": {
+          "a": {
+            "x": 0.125,
+            "y": 0.44,
+            "w": 0.055,
+            "h": 0.07
+          },
+          "b": {
+            "x": 0.125,
+            "y": 0.44,
+            "w": 0.055,
+            "h": 0.07
+          }
+        }
+      },
+      {
+        "id": "coral-teapot-knob",
+        "label": "찻주전자 뚜껑 손잡이 색",
+        "zones": {
+          "a": {
+            "x": 0.835,
+            "y": 0.665,
+            "w": 0.045,
+            "h": 0.055
+          },
+          "b": {
+            "x": 0.835,
+            "y": 0.665,
+            "w": 0.045,
+            "h": 0.055
+          }
+        }
+      },
+      {
+        "id": "basket-blue-bow",
+        "label": "빵 바구니의 파란 리본",
+        "zones": {
+          "a": {
+            "x": 0.56,
+            "y": 0.7,
+            "w": 0.095,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.56,
+            "y": 0.7,
+            "w": 0.095,
+            "h": 0.075
+          }
+        }
+      }
+    ],
+    "collectionId": "seasonal-stories",
+    "stageType": "speed"
+  },
+  {
+    "id": "clockwork-station-01",
+    "status": "published",
+    "title": "황동빛 시계장치 역",
+    "description": "황동 기계가 움직이는 기차역에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "시계장치 기차역",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/clockwork-station-01-a.png",
+    "imageB": "assets/puzzles/clockwork-station-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "teal-clock-gear",
+        "label": "대형 시계의 청록색 톱니",
+        "zones": {
+          "a": {
+            "x": 0.13,
+            "y": 0.21,
+            "w": 0.06,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.13,
+            "y": 0.21,
+            "w": 0.06,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "purple-hanging-lantern",
+        "label": "보라색 천장 등불",
+        "zones": {
+          "a": {
+            "x": 0.4,
+            "y": 0.16,
+            "w": 0.06,
+            "h": 0.125
+          },
+          "b": {
+            "x": 0.4,
+            "y": 0.16,
+            "w": 0.06,
+            "h": 0.125
+          }
+        }
+      },
+      {
+        "id": "blue-locomotive-headlamp",
+        "label": "기관차의 파란 전조등",
+        "zones": {
+          "a": {
+            "x": 0.065,
+            "y": 0.39,
+            "w": 0.05,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.065,
+            "y": 0.39,
+            "w": 0.05,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "blue-luggage-tag",
+        "label": "여행 가방의 파란 수하물표",
+        "zones": {
+          "a": {
+            "x": 0.14,
+            "y": 0.88,
+            "w": 0.045,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.145,
+            "y": 0.88,
+            "w": 0.045,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "red-mechanical-bird-tail",
+        "label": "기계 새의 붉은 꼬리깃",
+        "zones": {
+          "a": {
+            "x": 0.755,
+            "y": 0.87,
+            "w": 0.08,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.755,
+            "y": 0.87,
+            "w": 0.08,
+            "h": 0.09
+          }
+        }
+      }
+    ],
+    "collectionId": "world-adventure",
+    "stageType": "classic"
+  },
+  {
+    "id": "jungle-treehouse-01",
+    "status": "published",
+    "title": "초록빛 정글 나무집",
+    "description": "신비한 정글 나무집에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "정글 나무집",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/jungle-treehouse-01-a.png",
+    "imageB": "assets/puzzles/jungle-treehouse-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "yellow-hanging-flowers",
+        "label": "꽃바구니의 노란 꽃",
+        "zones": {
+          "a": {
+            "x": 0.45,
+            "y": 0.27,
+            "w": 0.07,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.45,
+            "y": 0.27,
+            "w": 0.07,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "missing-bridge-rope",
+        "label": "밧줄다리의 사라진 세로줄",
+        "zones": {
+          "a": {
+            "x": 0.165,
+            "y": 0.59,
+            "w": 0.055,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.165,
+            "y": 0.59,
+            "w": 0.055,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "turquoise-telescope-rim",
+        "label": "망원경의 청록색 렌즈 테두리",
+        "zones": {
+          "a": {
+            "x": 0.325,
+            "y": 0.35,
+            "w": 0.045,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.325,
+            "y": 0.35,
+            "w": 0.045,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "blue-backpack-mat",
+        "label": "배낭 위의 파란 침낭",
+        "zones": {
+          "a": {
+            "x": 0.745,
+            "y": 0.62,
+            "w": 0.15,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.745,
+            "y": 0.62,
+            "w": 0.15,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "purple-foreground-plant",
+        "label": "왼쪽 아래의 보라색 잎",
+        "zones": {
+          "a": {
+            "x": 0,
+            "y": 0.79,
+            "w": 0.22,
+            "h": 0.21
+          },
+          "b": {
+            "x": 0,
+            "y": 0.79,
+            "w": 0.22,
+            "h": 0.21
+          }
+        }
+      }
+    ],
+    "collectionId": "world-adventure",
+    "stageType": "classic"
+  },
+  {
+    "id": "autumn-alchemy-kitchen-01",
+    "status": "published",
+    "title": "단풍빛 연금술 부엌",
+    "description": "가을 향기 가득한 연금술 부엌에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "가을 연금술 부엌",
+    "collectionId": "seasonal-stories",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/autumn-alchemy-kitchen-01-a.png",
+    "imageB": "assets/puzzles/autumn-alchemy-kitchen-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "cyan-round-bottle",
+        "label": "선반의 청록색 둥근 약병",
+        "zones": {
+          "a": {
+            "x": 0.15,
+            "y": 0.13,
+            "w": 0.065,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.15,
+            "y": 0.13,
+            "w": 0.065,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "ivory-window-pumpkin",
+        "label": "창가의 상아색 호박",
+        "zones": {
+          "a": {
+            "x": 0.675,
+            "y": 0.45,
+            "w": 0.06,
+            "h": 0.06
+          },
+          "b": {
+            "x": 0.675,
+            "y": 0.45,
+            "w": 0.05,
+            "h": 0.06
+          }
+        }
+      },
+      {
+        "id": "turquoise-cauldron-emblem",
+        "label": "가마솥의 청록색 문양",
+        "zones": {
+          "a": {
+            "x": 0.465,
+            "y": 0.55,
+            "w": 0.045,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.465,
+            "y": 0.55,
+            "w": 0.045,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "green-table-pumpkin",
+        "label": "작업대의 초록색 호박",
+        "zones": {
+          "a": {
+            "x": 0.42,
+            "y": 0.69,
+            "w": 0.06,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.42,
+            "y": 0.69,
+            "w": 0.06,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "cushion-maple-embroidery",
+        "label": "고양이 방석의 단풍잎 자수",
+        "zones": {
+          "a": {
+            "x": 0.765,
+            "y": 0.64,
+            "w": 0.065,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.765,
+            "y": 0.64,
+            "w": 0.065,
+            "h": 0.075
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "spring-rain-umbrella-shop-01",
+    "status": "published",
+    "title": "봄비 우산 수리점",
+    "description": "봄비가 내리는 아늑한 우산 수리점에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "봄비 우산 수리점",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/spring-rain-umbrella-shop-01-a.png",
+    "imageB": "assets/puzzles/spring-rain-umbrella-shop-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "violet-wall-umbrella",
+        "label": "보라색으로 바뀐 벽걸이 우산",
+        "zones": {
+          "a": {
+            "x": 0.5,
+            "y": 0.18,
+            "w": 0.065,
+            "h": 0.48
+          },
+          "b": {
+            "x": 0.5,
+            "y": 0.18,
+            "w": 0.065,
+            "h": 0.48
+          }
+        }
+      },
+      {
+        "id": "missing-rain-boot-buckle",
+        "label": "사라진 장화 버클",
+        "zones": {
+          "a": {
+            "x": 0.05,
+            "y": 0.625,
+            "w": 0.06,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.05,
+            "y": 0.625,
+            "w": 0.06,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "orange-thread-spool",
+        "label": "주황색으로 바뀐 가운데 실패",
+        "zones": {
+          "a": {
+            "x": 0.55,
+            "y": 0.71,
+            "w": 0.07,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.55,
+            "y": 0.71,
+            "w": 0.07,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "teal-cat-bow",
+        "label": "고양이의 청록색 리본",
+        "zones": {
+          "a": {
+            "x": 0.74,
+            "y": 0.78,
+            "w": 0.065,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.74,
+            "y": 0.78,
+            "w": 0.065,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "missing-teapot-lid",
+        "label": "사라진 찻주전자 뚜껑",
+        "zones": {
+          "a": {
+            "x": 0.87,
+            "y": 0.64,
+            "w": 0.06,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.87,
+            "y": 0.64,
+            "w": 0.06,
+            "h": 0.09
+          }
+        }
+      }
+    ],
+    "collectionId": "seasonal-stories",
+    "stageType": "relaxed"
+  },
+  {
+    "id": "retro-comic-robot-garage-01",
+    "status": "published",
+    "title": "팝! 로봇 정비소",
+    "description": "강렬한 망점과 잉크선으로 그린 복고풍 로봇 정비소에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "레트로 만화 로봇 정비소",
+    "collectionId": "style-lab",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/retro-comic-robot-garage-01-a.png",
+    "imageB": "assets/puzzles/retro-comic-robot-garage-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "cyan-wall-wrench",
+        "label": "파란색으로 바뀐 벽걸이 렌치",
+        "zones": {
+          "a": {
+            "x": 0.09,
+            "y": 0.08,
+            "w": 0.07,
+            "h": 0.29
+          },
+          "b": {
+            "x": 0.09,
+            "y": 0.08,
+            "w": 0.07,
+            "h": 0.29
+          }
+        }
+      },
+      {
+        "id": "missing-scooter-mirror",
+        "label": "사라진 스쿠터 왼쪽 거울",
+        "zones": {
+          "a": {
+            "x": 0.055,
+            "y": 0.42,
+            "w": 0.085,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.055,
+            "y": 0.42,
+            "w": 0.085,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "red-robot-chest-light",
+        "label": "빨간색으로 바뀐 로봇 가슴등",
+        "zones": {
+          "a": {
+            "x": 0.425,
+            "y": 0.385,
+            "w": 0.105,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.425,
+            "y": 0.385,
+            "w": 0.105,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "missing-clock-ray",
+        "label": "모양이 달라진 별빛 벽시계",
+        "zones": {
+          "a": {
+            "x": 0.56,
+            "y": 0.015,
+            "w": 0.18,
+            "h": 0.31
+          },
+          "b": {
+            "x": 0.56,
+            "y": 0.015,
+            "w": 0.18,
+            "h": 0.31
+          }
+        }
+      },
+      {
+        "id": "pipe-lever-valve",
+        "label": "레버형으로 바뀐 파이프 밸브",
+        "zones": {
+          "a": {
+            "x": 0.91,
+            "y": 0.43,
+            "w": 0.085,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.91,
+            "y": 0.43,
+            "w": 0.085,
+            "h": 0.12
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "retro-comic-space-diner-02",
+    "status": "published",
+    "title": "팝! 우주 배달 식당",
+    "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 식당에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "레트로 만화 우주 배달 식당",
+    "collectionId": "style-lab",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/retro-comic-space-diner-02-a.png",
+    "imageB": "assets/puzzles/retro-comic-space-diner-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "cyan-rocket-nose",
+        "label": "파란색으로 바뀐 로켓 앞부분",
+        "zones": {
+          "a": {
+            "x": 0.425,
+            "y": 0.08,
+            "w": 0.095,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.425,
+            "y": 0.08,
+            "w": 0.095,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "red-apron-pocket",
+        "label": "외계인 앞치마의 빨간 주머니",
+        "zones": {
+          "a": {
+            "x": 0.435,
+            "y": 0.56,
+            "w": 0.09,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.435,
+            "y": 0.56,
+            "w": 0.09,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "pink-jukebox-light",
+        "label": "분홍색으로 바뀐 주크박스 가운데 불빛",
+        "zones": {
+          "a": {
+            "x": 0.845,
+            "y": 0.515,
+            "w": 0.06,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.845,
+            "y": 0.515,
+            "w": 0.06,
+            "h": 0.085
+          }
+        }
+      },
+      {
+        "id": "missing-cake-cherry",
+        "label": "사라진 케이크 체리",
+        "zones": {
+          "a": {
+            "x": 0.205,
+            "y": 0.425,
+            "w": 0.06,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.205,
+            "y": 0.425,
+            "w": 0.06,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "missing-window-star",
+        "label": "사라진 창밖의 별",
+        "zones": {
+          "a": {
+            "x": 0.67,
+            "y": 0.09,
+            "w": 0.045,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.67,
+            "y": 0.09,
+            "w": 0.045,
+            "h": 0.075
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "retro-comic-monster-tv-studio-03",
+    "status": "published",
+    "title": "팝! 괴물 TV 스튜디오",
+    "description": "강렬한 망점과 잉크선으로 그린 복고풍 괴물 방송국에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "레트로 만화 괴물 TV 스튜디오",
+    "collectionId": "style-lab",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/retro-comic-monster-tv-studio-03-a.png",
+    "imageB": "assets/puzzles/retro-comic-monster-tv-studio-03-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "red-camera-lens",
+        "label": "빨간색으로 바뀐 카메라 렌즈",
+        "zones": {
+          "a": {
+            "x": 0.185,
+            "y": 0.37,
+            "w": 0.075,
+            "h": 0.125
+          },
+          "b": {
+            "x": 0.185,
+            "y": 0.37,
+            "w": 0.075,
+            "h": 0.125
+          }
+        }
+      },
+      {
+        "id": "missing-camera-bulb",
+        "label": "사라진 카메라 표시등",
+        "zones": {
+          "a": {
+            "x": 0.232,
+            "y": 0.505,
+            "w": 0.035,
+            "h": 0.05
+          },
+          "b": {
+            "x": 0.232,
+            "y": 0.505,
+            "w": 0.035,
+            "h": 0.05
+          }
+        }
+      },
+      {
+        "id": "cyan-microphone-grille",
+        "label": "파란색으로 바뀐 마이크",
+        "zones": {
+          "a": {
+            "x": 0.855,
+            "y": 0.305,
+            "w": 0.075,
+            "h": 0.23
+          },
+          "b": {
+            "x": 0.855,
+            "y": 0.305,
+            "w": 0.075,
+            "h": 0.23
+          }
+        }
+      },
+      {
+        "id": "four-point-star",
+        "label": "네 갈래로 바뀐 별",
+        "zones": {
+          "a": {
+            "x": 0.23,
+            "y": 0.05,
+            "w": 0.19,
+            "h": 0.285
+          },
+          "b": {
+            "x": 0.23,
+            "y": 0.05,
+            "w": 0.19,
+            "h": 0.285
+          }
+        }
+      },
+      {
+        "id": "right-studio-lamp-off",
+        "label": "꺼진 오른쪽 스튜디오 조명",
+        "zones": {
+          "a": {
+            "x": 0.82,
+            "y": 0.075,
+            "w": 0.09,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.82,
+            "y": 0.075,
+            "w": 0.09,
+            "h": 0.16
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "retro-comic-alien-laundromat-04",
+    "status": "published",
+    "title": "팝! 외계인 세탁소",
+    "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 세탁소에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "레트로 만화 외계인 세탁소",
+    "collectionId": "style-lab",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/retro-comic-alien-laundromat-04-a.png",
+    "imageB": "assets/puzzles/retro-comic-alien-laundromat-04-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "red-washer-door",
+        "label": "빨간색으로 바뀐 세탁기 문",
+        "zones": {
+          "a": {
+            "x": 0.01,
+            "y": 0.42,
+            "w": 0.15,
+            "h": 0.28
+          },
+          "b": {
+            "x": 0.01,
+            "y": 0.42,
+            "w": 0.15,
+            "h": 0.28
+          }
+        }
+      },
+      {
+        "id": "cyan-ceiling-lamp",
+        "label": "파란색으로 바뀐 천장 조명",
+        "zones": {
+          "a": {
+            "x": 0.185,
+            "y": 0.025,
+            "w": 0.135,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.185,
+            "y": 0.025,
+            "w": 0.135,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "red-alien-cap",
+        "label": "빨간색으로 바뀐 외계인 모자",
+        "zones": {
+          "a": {
+            "x": 0.415,
+            "y": 0.105,
+            "w": 0.13,
+            "h": 0.115
+          },
+          "b": {
+            "x": 0.415,
+            "y": 0.105,
+            "w": 0.13,
+            "h": 0.115
+          }
+        }
+      },
+      {
+        "id": "missing-yellow-towel-stack",
+        "label": "사라진 노란 수건 더미",
+        "zones": {
+          "a": {
+            "x": 0.095,
+            "y": 0.18,
+            "w": 0.18,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.095,
+            "y": 0.18,
+            "w": 0.18,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "missing-robot-antenna-ball",
+        "label": "사라진 로봇 안테나 공",
+        "zones": {
+          "a": {
+            "x": 0.855,
+            "y": 0.17,
+            "w": 0.04,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.855,
+            "y": 0.17,
+            "w": 0.04,
+            "h": 0.09
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "retro-comic-moon-barbershop-05",
+    "status": "published",
+    "title": "팝! 달 기지 이발소",
+    "description": "강렬한 망점과 잉크선으로 그린 복고풍 달 기지 이발소에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "레트로 만화 달 기지 이발소",
+    "collectionId": "style-lab",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/retro-comic-moon-barbershop-05-a.png",
+    "imageB": "assets/puzzles/retro-comic-moon-barbershop-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "red-hair-dryer-dial",
+        "label": "빨간색으로 바뀐 헤어드라이어 다이얼",
+        "zones": {
+          "a": {
+            "x": 0.14,
+            "y": 0.215,
+            "w": 0.07,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.14,
+            "y": 0.215,
+            "w": 0.07,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "red-barber-bow-tie",
+        "label": "빨간색으로 바뀐 이발사의 나비넥타이",
+        "zones": {
+          "a": {
+            "x": 0.385,
+            "y": 0.27,
+            "w": 0.085,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.385,
+            "y": 0.27,
+            "w": 0.085,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "yellow-ceiling-lamp",
+        "label": "노란색으로 바뀐 천장 조명",
+        "zones": {
+          "a": {
+            "x": 0.095,
+            "y": 0,
+            "w": 0.205,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.095,
+            "y": 0,
+            "w": 0.205,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "cyan-robot-star",
+        "label": "파란색으로 바뀐 로봇 가슴 별",
+        "zones": {
+          "a": {
+            "x": 0.83,
+            "y": 0.55,
+            "w": 0.075,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.83,
+            "y": 0.55,
+            "w": 0.075,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "missing-porthole-stars",
+        "label": "사라진 창밖의 별 두 개",
+        "zones": {
+          "a": {
+            "x": 0.7,
+            "y": 0.07,
+            "w": 0.08,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.7,
+            "y": 0.07,
+            "w": 0.08,
+            "h": 0.13
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "japanese-comics-manga-studio-01",
+    "status": "published",
+    "title": "빗소리 만화 작업실",
+    "description": "마감 전야의 만화가 작업실에서 섬세한 차이를 찾아보세요.",
+    "theme": "비 오는 밤의 만화 작업실",
+    "collectionId": "japanese-comics",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/japanese-comics-manga-studio-01-a.png",
+    "imageB": "assets/puzzles/japanese-comics-manga-studio-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "yellow-desk-lamp",
+        "label": "노란색으로 바뀐 책상 조명",
+        "zones": {
+          "a": {
+            "x": 0.19,
+            "y": 0.12,
+            "w": 0.16,
+            "h": 0.29
+          },
+          "b": {
+            "x": 0.19,
+            "y": 0.12,
+            "w": 0.16,
+            "h": 0.29
+          }
+        }
+      },
+      {
+        "id": "teal-drawing-ruler",
+        "label": "청록색으로 바뀐 긴 그림 자",
+        "zones": {
+          "a": {
+            "x": 0.245,
+            "y": 0.815,
+            "w": 0.11,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.245,
+            "y": 0.815,
+            "w": 0.11,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "missing-plant-leaf",
+        "label": "한 장 사라진 화분 잎",
+        "zones": {
+          "a": {
+            "x": 0.905,
+            "y": 0.38,
+            "w": 0.085,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.905,
+            "y": 0.38,
+            "w": 0.085,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "reversed-umbrella-handle",
+        "label": "방향이 바뀐 우산 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.9,
+            "y": 0.54,
+            "w": 0.09,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.9,
+            "y": 0.54,
+            "w": 0.09,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "missing-robot-star",
+        "label": "사라진 로봇 가슴의 별",
+        "zones": {
+          "a": {
+            "x": 0.715,
+            "y": 0.18,
+            "w": 0.065,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.715,
+            "y": 0.18,
+            "w": 0.065,
+            "h": 0.105
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "japanese-comics-seaside-platform-02",
+    "status": "published",
+    "title": "노을빛 해변 승강장",
+    "description": "바닷바람이 스치는 작은 승강장의 영화 같은 순간에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "노을빛 해변 열차 승강장",
+    "collectionId": "japanese-comics",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/japanese-comics-seaside-platform-02-a.png",
+    "imageB": "assets/puzzles/japanese-comics-seaside-platform-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "red-traveler-scarf",
+        "label": "붉은색으로 바뀐 여행자의 목도리",
+        "zones": {
+          "a": {
+            "x": 0.35,
+            "y": 0.18,
+            "w": 0.18,
+            "h": 0.32
+          },
+          "b": {
+            "x": 0.35,
+            "y": 0.18,
+            "w": 0.18,
+            "h": 0.32
+          }
+        }
+      },
+      {
+        "id": "missing-bicycle-basket",
+        "label": "사라진 자전거 앞바구니",
+        "zones": {
+          "a": {
+            "x": 0.035,
+            "y": 0.49,
+            "w": 0.125,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.035,
+            "y": 0.49,
+            "w": 0.125,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "reversed-cat-tail",
+        "label": "방향이 바뀐 고양이 꼬리",
+        "zones": {
+          "a": {
+            "x": 0.575,
+            "y": 0.82,
+            "w": 0.125,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.575,
+            "y": 0.82,
+            "w": 0.125,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "missing-yellow-flower",
+        "label": "한 송이 사라진 노란 꽃",
+        "zones": {
+          "a": {
+            "x": 0.255,
+            "y": 0.71,
+            "w": 0.15,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.255,
+            "y": 0.71,
+            "w": 0.15,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "amber-signal-lamp",
+        "label": "주황빛으로 바뀐 신호등",
+        "zones": {
+          "a": {
+            "x": 0.69,
+            "y": 0.18,
+            "w": 0.055,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.69,
+            "y": 0.18,
+            "w": 0.055,
+            "h": 0.12
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "japanese-comics-rooftop-observatory-03",
+    "status": "published",
+    "title": "별빛 옥상 관측회",
+    "description": "도시의 불빛 위로 별이 떠오르는 옥상 관측회에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "푸른 저녁의 옥상 천문 관측회",
+    "collectionId": "japanese-comics",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/japanese-comics-rooftop-observatory-03-a.png",
+    "imageB": "assets/puzzles/japanese-comics-rooftop-observatory-03-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "red-telescope-rim",
+        "label": "붉은색으로 바뀐 망원경 렌즈 테두리",
+        "zones": {
+          "a": {
+            "x": 0.43,
+            "y": 0.19,
+            "w": 0.11,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.43,
+            "y": 0.19,
+            "w": 0.11,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "missing-binocular-strap",
+        "label": "사라진 쌍안경 목걸이 끈",
+        "zones": {
+          "a": {
+            "x": 0.64,
+            "y": 0.82,
+            "w": 0.13,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.64,
+            "y": 0.82,
+            "w": 0.13,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "teal-thermos",
+        "label": "청록색으로 바뀐 보온병",
+        "zones": {
+          "a": {
+            "x": 0.61,
+            "y": 0.36,
+            "w": 0.07,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.61,
+            "y": 0.36,
+            "w": 0.07,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "missing-crescent-ornament",
+        "label": "사라진 초승달 풍경 장식",
+        "zones": {
+          "a": {
+            "x": 0.895,
+            "y": 0.27,
+            "w": 0.07,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.895,
+            "y": 0.27,
+            "w": 0.07,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "reversed-weather-vane-arrow",
+        "label": "방향이 뒤집힌 풍향계 화살",
+        "zones": {
+          "a": {
+            "x": 0.69,
+            "y": 0.135,
+            "w": 0.14,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.69,
+            "y": 0.135,
+            "w": 0.14,
+            "h": 0.075
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "japanese-comics-summer-festival-04",
+    "status": "published",
+    "title": "초롱빛 여름 축제",
+    "description": "초롱불이 반짝이는 여름밤 신사 축제에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "여름밤 신사 축제 산책길",
+    "collectionId": "japanese-comics",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/japanese-comics-summer-festival-04-a.png",
+    "imageB": "assets/puzzles/japanese-comics-summer-festival-04-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "red-fox-mask-accents",
+        "label": "붉은색으로 바뀐 여우 가면 무늬",
+        "zones": {
+          "a": {
+            "x": 0.69,
+            "y": 0.085,
+            "w": 0.105,
+            "h": 0.21
+          },
+          "b": {
+            "x": 0.69,
+            "y": 0.085,
+            "w": 0.105,
+            "h": 0.21
+          }
+        }
+      },
+      {
+        "id": "missing-fan-tassel",
+        "label": "사라진 부채의 붉은 술 장식",
+        "zones": {
+          "a": {
+            "x": 0.12,
+            "y": 0.86,
+            "w": 0.11,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.12,
+            "y": 0.86,
+            "w": 0.11,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "golden-candy-apple",
+        "label": "금빛으로 바뀐 사과 사탕",
+        "zones": {
+          "a": {
+            "x": 0.43,
+            "y": 0.365,
+            "w": 0.07,
+            "h": 0.115
+          },
+          "b": {
+            "x": 0.43,
+            "y": 0.365,
+            "w": 0.07,
+            "h": 0.115
+          }
+        }
+      },
+      {
+        "id": "missing-pinwheel-blade",
+        "label": "하나가 사라진 바람개비 날개",
+        "zones": {
+          "a": {
+            "x": 0.87,
+            "y": 0.34,
+            "w": 0.115,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.87,
+            "y": 0.34,
+            "w": 0.115,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "purple-tanuki-bib",
+        "label": "보라색으로 바뀐 너구리상 턱받이",
+        "zones": {
+          "a": {
+            "x": 0.835,
+            "y": 0.69,
+            "w": 0.14,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.835,
+            "y": 0.69,
+            "w": 0.14,
+            "h": 0.19
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "japanese-comics-snowy-onsen-05",
+    "status": "retired",
+    "title": "첫눈 온천 여관",
+    "description": "첫눈이 내리는 산속 온천 여관에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "첫눈 내리는 산속 노천 온천 여관",
+    "collectionId": "japanese-comics",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/japanese-comics-snowy-onsen-05-a.png",
+    "imageB": "assets/puzzles/japanese-comics-snowy-onsen-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "golden-paper-umbrella",
+        "label": "금빛으로 바뀐 종이 우산",
+        "zones": {
+          "a": {
+            "x": 0,
+            "y": 0.43,
+            "w": 0.18,
+            "h": 0.38
+          },
+          "b": {
+            "x": 0,
+            "y": 0.43,
+            "w": 0.18,
+            "h": 0.38
+          }
+        }
+      },
+      {
+        "id": "missing-snow-rabbit-ear",
+        "label": "하나가 사라진 눈토끼 귀",
+        "zones": {
+          "a": {
+            "x": 0.045,
+            "y": 0.76,
+            "w": 0.09,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.045,
+            "y": 0.76,
+            "w": 0.09,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "missing-waist-bell",
+        "label": "사라진 허리의 금빛 방울",
+        "zones": {
+          "a": {
+            "x": 0.675,
+            "y": 0.425,
+            "w": 0.055,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.675,
+            "y": 0.425,
+            "w": 0.055,
+            "h": 0.085
+          }
+        }
+      },
+      {
+        "id": "red-ceramic-teapot",
+        "label": "붉은색으로 바뀐 찻주전자",
+        "zones": {
+          "a": {
+            "x": 0.465,
+            "y": 0.625,
+            "w": 0.09,
+            "h": 0.125
+          },
+          "b": {
+            "x": 0.465,
+            "y": 0.625,
+            "w": 0.09,
+            "h": 0.125
+          }
+        }
+      },
+      {
+        "id": "missing-lantern-maple-leaf",
+        "label": "사라진 등불 아래 단풍잎 장식",
+        "zones": {
+          "a": {
+            "x": 0.85,
+            "y": 0.285,
+            "w": 0.075,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.85,
+            "y": 0.285,
+            "w": 0.075,
+            "h": 0.105
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "moonlit-clockwork-shop-01",
+    "status": "published",
+    "title": "달빛 시계공방",
+    "description": "달빛 아래 잠든 마법 시계공방에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "마법 시계공방",
+    "collectionId": "moonlight-mystery",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/moonlit-clockwork-shop-01-a.png",
+    "imageB": "assets/puzzles/moonlit-clockwork-shop-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "window-star-charm",
+        "label": "창가의 별 장식",
+        "zones": {
+          "a": {
+            "x": 0.59,
+            "y": 0.14,
+            "w": 0.055,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.59,
+            "y": 0.14,
+            "w": 0.055,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "cuckoo-pendulum",
+        "label": "뻐꾸기시계의 추",
+        "zones": {
+          "a": {
+            "x": 0.13,
+            "y": 0.39,
+            "w": 0.075,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.13,
+            "y": 0.39,
+            "w": 0.075,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "red-screwdriver",
+        "label": "작업대의 빨간 드라이버",
+        "zones": {
+          "a": {
+            "x": 0.58,
+            "y": 0.8,
+            "w": 0.16,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.58,
+            "y": 0.8,
+            "w": 0.16,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "cat-collar-bell",
+        "label": "고양이 목걸이의 방울",
+        "zones": {
+          "a": {
+            "x": 0.69,
+            "y": 0.73,
+            "w": 0.055,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.69,
+            "y": 0.73,
+            "w": 0.055,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "mantel-clock-markers",
+        "label": "큰 시계의 시간 표시",
+        "zones": {
+          "a": {
+            "x": 0.39,
+            "y": 0.38,
+            "w": 0.17,
+            "h": 0.29
+          },
+          "b": {
+            "x": 0.39,
+            "y": 0.38,
+            "w": 0.17,
+            "h": 0.29
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "moonlit-puppet-theater-01",
+    "status": "published",
+    "title": "달빛 인형극장",
+    "description": "달빛 막이 오른 마법 인형극장에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "마법 인형극장",
+    "collectionId": "moonlight-mystery",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/moonlit-puppet-theater-01-a.png",
+    "imageB": "assets/puzzles/moonlit-puppet-theater-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "proscenium-moon-emblem",
+        "label": "무대 위 달 문양",
+        "zones": {
+          "a": {
+            "x": 0.46,
+            "y": 0.035,
+            "w": 0.09,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.46,
+            "y": 0.035,
+            "w": 0.09,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "lantern-purple-tassel",
+        "label": "초승달 등불의 보라색 술",
+        "zones": {
+          "a": {
+            "x": 0.245,
+            "y": 0.59,
+            "w": 0.055,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.245,
+            "y": 0.59,
+            "w": 0.055,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "fox-hat-feather",
+        "label": "여우 모자의 파란 깃털",
+        "zones": {
+          "a": {
+            "x": 0.5,
+            "y": 0.31,
+            "w": 0.065,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.5,
+            "y": 0.31,
+            "w": 0.065,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "rabbit-bow-tie",
+        "label": "토끼의 나비넥타이 색",
+        "zones": {
+          "a": {
+            "x": 0.67,
+            "y": 0.59,
+            "w": 0.075,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.67,
+            "y": 0.59,
+            "w": 0.075,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "music-box-crank",
+        "label": "오르골의 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.2,
+            "y": 0.73,
+            "w": 0.095,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.2,
+            "y": 0.73,
+            "w": 0.095,
+            "h": 0.11
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "starlit-desert-ruins-01",
+    "status": "published",
+    "title": "별빛 사막 유적",
+    "description": "별이 쏟아지는 사막의 고대 관측 유적에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "사막 천문 유적",
+    "collectionId": "world-adventure",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/starlit-desert-ruins-01-a.png",
+    "imageB": "assets/puzzles/starlit-desert-ruins-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "full-moon",
+        "label": "초승달에서 보름달로 바뀐 달",
+        "zones": {
+          "a": {
+            "x": 0.095,
+            "y": 0.035,
+            "w": 0.055,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.095,
+            "y": 0.035,
+            "w": 0.055,
+            "h": 0.085
+          }
+        }
+      },
+      {
+        "id": "turquoise-astrolabe-hub",
+        "label": "청록색으로 바뀐 천문 기구 중심축",
+        "zones": {
+          "a": {
+            "x": 0.205,
+            "y": 0.44,
+            "w": 0.05,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.205,
+            "y": 0.44,
+            "w": 0.05,
+            "h": 0.085
+          }
+        }
+      },
+      {
+        "id": "coral-jar-lid",
+        "label": "산호색으로 바뀐 왼쪽 항아리 뚜껑",
+        "zones": {
+          "a": {
+            "x": 0.025,
+            "y": 0.705,
+            "w": 0.095,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.025,
+            "y": 0.705,
+            "w": 0.095,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "missing-chest-lock",
+        "label": "사라진 보물 상자의 황금 자물쇠",
+        "zones": {
+          "a": {
+            "x": 0.735,
+            "y": 0.725,
+            "w": 0.075,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.735,
+            "y": 0.725,
+            "w": 0.075,
+            "h": 0.105
+          }
+        }
+      },
+      {
+        "id": "fox-collar",
+        "label": "사막여우의 청록색 방울 목걸이",
+        "zones": {
+          "a": {
+            "x": 0.655,
+            "y": 0.805,
+            "w": 0.085,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.655,
+            "y": 0.805,
+            "w": 0.085,
+            "h": 0.105
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "firefly-summer-camp-01",
+    "status": "published",
+    "title": "반딧불 여름 캠핑장",
+    "description": "반딧불이 춤추는 여름밤 숲속 캠핑장에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "여름밤 숲속 캠핑",
+    "collectionId": "seasonal-stories",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/firefly-summer-camp-01-a.png",
+    "imageB": "assets/puzzles/firefly-summer-camp-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "full-moon",
+        "label": "초승달에서 보름달로 바뀐 달",
+        "zones": {
+          "a": {
+            "x": 0.655,
+            "y": 0.04,
+            "w": 0.075,
+            "h": 0.095
+          },
+          "b": {
+            "x": 0.655,
+            "y": 0.04,
+            "w": 0.075,
+            "h": 0.095
+          }
+        }
+      },
+      {
+        "id": "turquoise-center-lantern",
+        "label": "청록색으로 바뀐 중앙 랜턴 테두리",
+        "zones": {
+          "a": {
+            "x": 0.585,
+            "y": 0.185,
+            "w": 0.065,
+            "h": 0.095
+          },
+          "b": {
+            "x": 0.585,
+            "y": 0.185,
+            "w": 0.065,
+            "h": 0.095
+          }
+        }
+      },
+      {
+        "id": "turquoise-tent-pillow",
+        "label": "청록색으로 바뀐 텐트 안 베개",
+        "zones": {
+          "a": {
+            "x": 0.2,
+            "y": 0.455,
+            "w": 0.14,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.2,
+            "y": 0.455,
+            "w": 0.14,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "turquoise-kettle-lid",
+        "label": "청록색으로 바뀐 주전자 뚜껑",
+        "zones": {
+          "a": {
+            "x": 0.705,
+            "y": 0.69,
+            "w": 0.09,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.705,
+            "y": 0.69,
+            "w": 0.09,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "raccoon-neckerchief",
+        "label": "너구리의 청록색 목수건",
+        "zones": {
+          "a": {
+            "x": 0.17,
+            "y": 0.61,
+            "w": 0.11,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.17,
+            "y": 0.61,
+            "w": 0.11,
+            "h": 0.15
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "japanese-comics-glasshouse-atelier-05",
+    "status": "published",
+    "title": "봄빛 유리온실 화실",
+    "description": "봄꽃과 금빛 햇살이 가득한 유리온실 화실에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "봄날의 옥상 유리온실 화실",
+    "collectionId": "japanese-comics",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/japanese-comics-glasshouse-atelier-05-a.png",
+    "imageB": "assets/puzzles/japanese-comics-glasshouse-atelier-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "teal-parasol",
+        "label": "청록색으로 바뀐 우산",
+        "zones": {
+          "a": {
+            "x": 0.025,
+            "y": 0.19,
+            "w": 0.15,
+            "h": 0.68
+          },
+          "b": {
+            "x": 0.025,
+            "y": 0.19,
+            "w": 0.15,
+            "h": 0.68
+          }
+        }
+      },
+      {
+        "id": "missing-paint-basket-handle",
+        "label": "사라진 화구 바구니 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.195,
+            "y": 0.73,
+            "w": 0.14,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.195,
+            "y": 0.73,
+            "w": 0.14,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "red-teapot",
+        "label": "붉은색으로 바뀐 찻주전자",
+        "zones": {
+          "a": {
+            "x": 0.54,
+            "y": 0.735,
+            "w": 0.14,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.54,
+            "y": 0.735,
+            "w": 0.14,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "missing-glass-star",
+        "label": "사라진 가운데 유리 별",
+        "zones": {
+          "a": {
+            "x": 0.635,
+            "y": 0.07,
+            "w": 0.08,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.635,
+            "y": 0.07,
+            "w": 0.08,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "easel-crescent-charm",
+        "label": "이젤에 생긴 금빛 초승달",
+        "zones": {
+          "a": {
+            "x": 0.645,
+            "y": 0.345,
+            "w": 0.035,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.645,
+            "y": 0.345,
+            "w": 0.035,
+            "h": 0.1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "wonder-park-dream-gate-01",
+    "status": "published",
+    "title": "꿈빛 입장 광장",
+    "description": "별빛 원더파크의 설레는 입장 광장에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "마법 테마파크의 꿈빛 입장 광장",
+    "collectionId": "wonder-park",
+    "stageType": "relaxed",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/wonder-park-dream-gate-01-a.png",
+    "imageB": "assets/puzzles/wonder-park-dream-gate-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "pink-arch-star",
+        "label": "분홍색으로 바뀐 입구의 별",
+        "zones": {
+          "a": {
+            "x": 0.45,
+            "y": 0.095,
+            "w": 0.12,
+            "h": 0.185
+          },
+          "b": {
+            "x": 0.45,
+            "y": 0.095,
+            "w": 0.12,
+            "h": 0.185
+          }
+        }
+      },
+      {
+        "id": "yellow-awning-stripe",
+        "label": "노란색으로 바뀐 차양 줄무늬",
+        "zones": {
+          "a": {
+            "x": 0.185,
+            "y": 0.335,
+            "w": 0.045,
+            "h": 0.175
+          },
+          "b": {
+            "x": 0.185,
+            "y": 0.335,
+            "w": 0.045,
+            "h": 0.175
+          }
+        }
+      },
+      {
+        "id": "purple-fountain-jewel",
+        "label": "보라색으로 바뀐 분수의 보석",
+        "zones": {
+          "a": {
+            "x": 0.47,
+            "y": 0.785,
+            "w": 0.055,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.47,
+            "y": 0.785,
+            "w": 0.055,
+            "h": 0.105
+          }
+        }
+      },
+      {
+        "id": "missing-purple-balloon",
+        "label": "사라진 보라색 풍선",
+        "zones": {
+          "a": {
+            "x": 0.735,
+            "y": 0.39,
+            "w": 0.095,
+            "h": 0.25
+          },
+          "b": {
+            "x": 0.735,
+            "y": 0.39,
+            "w": 0.095,
+            "h": 0.25
+          }
+        }
+      },
+      {
+        "id": "red-rabbit-bow",
+        "label": "빨간색으로 바뀐 토끼의 나비넥타이",
+        "zones": {
+          "a": {
+            "x": 0.85,
+            "y": 0.66,
+            "w": 0.065,
+            "h": 0.095
+          },
+          "b": {
+            "x": 0.85,
+            "y": 0.66,
+            "w": 0.065,
+            "h": 0.095
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "wonder-park-carousel-garden-02",
+    "status": "published",
+    "title": "햇살 회전목마 정원",
+    "description": "꽃향기와 음악이 흐르는 원더파크의 회전목마 정원에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "햇살 가득한 마법 테마파크 회전목마 정원",
+    "collectionId": "wonder-park",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/wonder-park-carousel-garden-02-a.png",
+    "imageB": "assets/puzzles/wonder-park-carousel-garden-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "turquoise-carousel-crown",
+        "label": "청록색으로 바뀐 회전목마 왕관",
+        "zones": {
+          "a": {
+            "x": 0.425,
+            "y": 0.01,
+            "w": 0.14,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.425,
+            "y": 0.01,
+            "w": 0.14,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "blue-horse-saddle",
+        "label": "파란색으로 바뀐 흰 말의 안장",
+        "zones": {
+          "a": {
+            "x": 0.285,
+            "y": 0.525,
+            "w": 0.08,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.285,
+            "y": 0.525,
+            "w": 0.08,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "purple-popcorn-stripes",
+        "label": "보라색으로 바뀐 팝콘 통 줄무늬",
+        "zones": {
+          "a": {
+            "x": 0.085,
+            "y": 0.535,
+            "w": 0.1,
+            "h": 0.155
+          },
+          "b": {
+            "x": 0.085,
+            "y": 0.535,
+            "w": 0.1,
+            "h": 0.155
+          }
+        }
+      },
+      {
+        "id": "pink-bench-cushion",
+        "label": "분홍색으로 바뀐 벤치 방석",
+        "zones": {
+          "a": {
+            "x": 0.695,
+            "y": 0.65,
+            "w": 0.08,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.695,
+            "y": 0.65,
+            "w": 0.08,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "missing-pinwheel-blade",
+        "label": "하나가 사라진 바람개비 날개",
+        "zones": {
+          "a": {
+            "x": 0.74,
+            "y": 0.52,
+            "w": 0.09,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.74,
+            "y": 0.52,
+            "w": 0.09,
+            "h": 0.17
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "wonder-park-starlight-ferris-wheel-05",
+    "status": "published",
+    "title": "별빛 관람차 광장",
+    "description": "불꽃이 피어나는 원더파크의 밤 관람차 광장에서 다섯 가지 차이를 찾아보세요!",
+    "theme": "별빛과 불꽃이 빛나는 마법 테마파크 관람차 광장",
+    "collectionId": "wonder-park",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/wonder-park-starlight-ferris-wheel-05-a.png",
+    "imageB": "assets/puzzles/wonder-park-starlight-ferris-wheel-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "ferris-hub-star",
+        "label": "관람차 중심의 별 장식",
+        "zones": {
+          "a": {
+            "x": 0.465,
+            "y": 0.235,
+            "w": 0.12,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.465,
+            "y": 0.235,
+            "w": 0.12,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "purple-cart-star",
+        "label": "보라색 기념품 카트 별 조명",
+        "zones": {
+          "a": {
+            "x": 0.14,
+            "y": 0.49,
+            "w": 0.14,
+            "h": 0.21
+          },
+          "b": {
+            "x": 0.14,
+            "y": 0.49,
+            "w": 0.14,
+            "h": 0.21
+          }
+        }
+      },
+      {
+        "id": "missing-fountain-swan",
+        "label": "사라진 분수의 백조 조각",
+        "zones": {
+          "a": {
+            "x": 0.435,
+            "y": 0.545,
+            "w": 0.18,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.435,
+            "y": 0.545,
+            "w": 0.18,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "red-telescope-eyepiece",
+        "label": "빨간색 망원경 접안렌즈",
+        "zones": {
+          "a": {
+            "x": 0.655,
+            "y": 0.505,
+            "w": 0.08,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.655,
+            "y": 0.505,
+            "w": 0.08,
+            "h": 0.105
+          }
+        }
+      },
+      {
+        "id": "four-point-blue-balloon",
+        "label": "네 꼭짓점 파란 별 풍선",
+        "zones": {
+          "a": {
+            "x": 0.765,
+            "y": 0.325,
+            "w": 0.13,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.765,
+            "y": 0.325,
+            "w": 0.13,
+            "h": 0.19
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "wonder-park-candy-parade-03",
+    "status": "published",
+    "title": "캔디 퍼레이드 거리",
+    "description": "달콤한 장식과 음악으로 가득한 원더파크 퍼레이드 거리에서 다섯 가지 차이를 찾아보세요!",
+    "theme": "알록달록한 마법 테마파크 캔디 퍼레이드",
+    "collectionId": "wonder-park",
+    "stageType": "speed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/wonder-park-candy-parade-03-a.png",
+    "imageB": "assets/puzzles/wonder-park-candy-parade-03-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "crescent-float-topper",
+        "label": "초승달로 바뀐 퍼레이드 장식",
+        "zones": {
+          "a": {
+            "x": 0.42,
+            "y": 0.045,
+            "w": 0.18,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.42,
+            "y": 0.045,
+            "w": 0.18,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "purple-lollipop-bow",
+        "label": "보라색 막대사탕 리본",
+        "zones": {
+          "a": {
+            "x": 0.08,
+            "y": 0.515,
+            "w": 0.14,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.08,
+            "y": 0.515,
+            "w": 0.14,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "fewer-drum-stars",
+        "label": "줄어든 북의 금빛 별",
+        "zones": {
+          "a": {
+            "x": 0.355,
+            "y": 0.725,
+            "w": 0.19,
+            "h": 0.205
+          },
+          "b": {
+            "x": 0.355,
+            "y": 0.725,
+            "w": 0.19,
+            "h": 0.205
+          }
+        }
+      },
+      {
+        "id": "red-cart-wheel-hub",
+        "label": "빨간 솜사탕 카트 바퀴 축",
+        "zones": {
+          "a": {
+            "x": 0.715,
+            "y": 0.705,
+            "w": 0.055,
+            "h": 0.095
+          },
+          "b": {
+            "x": 0.715,
+            "y": 0.705,
+            "w": 0.055,
+            "h": 0.095
+          }
+        }
+      },
+      {
+        "id": "swallowtail-rabbit-flag",
+        "label": "제비꼬리 모양 파란 깃발",
+        "zones": {
+          "a": {
+            "x": 0.9,
+            "y": 0.65,
+            "w": 0.095,
+            "h": 0.125
+          },
+          "b": {
+            "x": 0.9,
+            "y": 0.65,
+            "w": 0.095,
+            "h": 0.125
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "wonder-park-moonboat-lagoon-04",
+    "status": "published",
+    "title": "노을빛 문보트 라군",
+    "description": "별빛이 켜지기 시작한 원더파크의 문보트 라군에서 다섯 가지 차이를 찾아보세요!",
+    "theme": "노을과 별빛이 어우러진 마법 테마파크 보트 라군",
+    "collectionId": "wonder-park",
+    "stageType": "relaxed",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/wonder-park-moonboat-lagoon-04-a.png",
+    "imageB": "assets/puzzles/wonder-park-moonboat-lagoon-04-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "heart-moonboat-ornament",
+        "label": "하트로 바뀐 문보트 장식",
+        "zones": {
+          "a": {
+            "x": 0.535,
+            "y": 0.56,
+            "w": 0.085,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.535,
+            "y": 0.56,
+            "w": 0.085,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "turquoise-shell-lantern",
+        "label": "청록색 조개 등불",
+        "zones": {
+          "a": {
+            "x": 0.03,
+            "y": 0.12,
+            "w": 0.17,
+            "h": 0.25
+          },
+          "b": {
+            "x": 0.03,
+            "y": 0.12,
+            "w": 0.17,
+            "h": 0.25
+          }
+        }
+      },
+      {
+        "id": "missing-bridge-pennant",
+        "label": "하나 줄어든 다리 깃발",
+        "zones": {
+          "a": {
+            "x": 0.445,
+            "y": 0.365,
+            "w": 0.16,
+            "h": 0.125
+          },
+          "b": {
+            "x": 0.445,
+            "y": 0.365,
+            "w": 0.16,
+            "h": 0.125
+          }
+        }
+      },
+      {
+        "id": "purple-mooring-lamp",
+        "label": "보라색 계류 기둥 등불",
+        "zones": {
+          "a": {
+            "x": 0.855,
+            "y": 0.105,
+            "w": 0.115,
+            "h": 0.21
+          },
+          "b": {
+            "x": 0.855,
+            "y": 0.105,
+            "w": 0.115,
+            "h": 0.21
+          }
+        }
+      },
+      {
+        "id": "missing-parasol-handle",
+        "label": "사라진 양산의 금빛 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.815,
+            "y": 0.665,
+            "w": 0.1,
+            "h": 0.135
+          },
+          "b": {
+            "x": 0.815,
+            "y": 0.665,
+            "w": 0.1,
+            "h": 0.135
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "goblin-night-moon-rabbit-mill-01",
+    "status": "published",
+    "title": "달토끼 떡방앗간",
+    "description": "보름달이 비치는 도깨비 마을의 한옥 방앗간에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "도깨비 마을의 달토끼 떡방앗간",
+    "collectionId": "goblin-night-village",
+    "stageType": "relaxed",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/goblin-night-moon-rabbit-mill-01-a.png",
+    "imageB": "assets/puzzles/goblin-night-moon-rabbit-mill-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "blue-pestle-tassel",
+        "label": "파란색으로 바뀐 절굿공이 술",
+        "zones": {
+          "a": {
+            "x": 0.255,
+            "y": 0.17,
+            "w": 0.085,
+            "h": 0.3
+          },
+          "b": {
+            "x": 0.255,
+            "y": 0.17,
+            "w": 0.085,
+            "h": 0.3
+          }
+        }
+      },
+      {
+        "id": "missing-steamer-handle",
+        "label": "사라진 대나무 시루 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.315,
+            "y": 0.68,
+            "w": 0.07,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.315,
+            "y": 0.68,
+            "w": 0.07,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "purple-apron-bow",
+        "label": "보라색으로 바뀐 토끼의 앞치마 리본",
+        "zones": {
+          "a": {
+            "x": 0.53,
+            "y": 0.495,
+            "w": 0.115,
+            "h": 0.235
+          },
+          "b": {
+            "x": 0.53,
+            "y": 0.495,
+            "w": 0.115,
+            "h": 0.235
+          }
+        }
+      },
+      {
+        "id": "missing-rice-cake",
+        "label": "하나 줄어든 떡 바구니",
+        "zones": {
+          "a": {
+            "x": 0.715,
+            "y": 0.735,
+            "w": 0.115,
+            "h": 0.135
+          },
+          "b": {
+            "x": 0.715,
+            "y": 0.735,
+            "w": 0.115,
+            "h": 0.135
+          }
+        }
+      },
+      {
+        "id": "star-window-ornament",
+        "label": "별 모양으로 바뀐 창가 장식",
+        "zones": {
+          "a": {
+            "x": 0.775,
+            "y": 0.095,
+            "w": 0.145,
+            "h": 0.235
+          },
+          "b": {
+            "x": 0.775,
+            "y": 0.095,
+            "w": 0.145,
+            "h": 0.235
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "goblin-night-snack-stall-02",
+    "status": "published",
+    "title": "도깨비 야식 포장마차",
+    "description": "달빛 개울가의 흥겨운 도깨비 포장마차에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "도깨비 마을의 야식 포장마차",
+    "collectionId": "goblin-night-village",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/goblin-night-snack-stall-02-a.png",
+    "imageB": "assets/puzzles/goblin-night-snack-stall-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "turquoise-club-tip",
+        "label": "청록색으로 바뀐 도깨비 방망이 끝 장식",
+        "zones": {
+          "a": {
+            "x": 0.205,
+            "y": 0.105,
+            "w": 0.075,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.205,
+            "y": 0.105,
+            "w": 0.075,
+            "h": 0.105
+          }
+        }
+      },
+      {
+        "id": "missing-brazier-skewer",
+        "label": "하나 줄어든 화로 꼬치",
+        "zones": {
+          "a": {
+            "x": 0.04,
+            "y": 0.64,
+            "w": 0.29,
+            "h": 0.27
+          },
+          "b": {
+            "x": 0.04,
+            "y": 0.64,
+            "w": 0.29,
+            "h": 0.27
+          }
+        }
+      },
+      {
+        "id": "purple-kettle-lid",
+        "label": "보라색으로 바뀐 주전자 뚜껑",
+        "zones": {
+          "a": {
+            "x": 0.405,
+            "y": 0.585,
+            "w": 0.125,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.405,
+            "y": 0.585,
+            "w": 0.125,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "flower-plate-motif",
+        "label": "꽃 모양으로 바뀐 접시 무늬",
+        "zones": {
+          "a": {
+            "x": 0.665,
+            "y": 0.76,
+            "w": 0.175,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.665,
+            "y": 0.76,
+            "w": 0.175,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "forked-lantern-tassel",
+        "label": "두 갈래로 바뀐 등불 술",
+        "zones": {
+          "a": {
+            "x": 0.895,
+            "y": 0.29,
+            "w": 0.065,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.895,
+            "y": 0.29,
+            "w": 0.065,
+            "h": 0.22
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "goblin-night-mask-workshop-03",
+    "status": "published",
+    "title": "달빛 도깨비 탈 공방",
+    "description": "달빛이 스미는 도깨비 탈 공방에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "도깨비 마을의 달빛 탈 공방",
+    "collectionId": "goblin-night-village",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/goblin-night-mask-workshop-03-a.png",
+    "imageB": "assets/puzzles/goblin-night-mask-workshop-03-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "turquoise-mask-feather",
+        "label": "청록색으로 바뀐 도깨비 탈의 깃털",
+        "zones": {
+          "a": {
+            "x": 0.04,
+            "y": 0.07,
+            "w": 0.06,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.04,
+            "y": 0.07,
+            "w": 0.06,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "missing-brush",
+        "label": "하나 줄어든 붓꽂이의 붓",
+        "zones": {
+          "a": {
+            "x": 0.215,
+            "y": 0.515,
+            "w": 0.05,
+            "h": 0.39
+          },
+          "b": {
+            "x": 0.215,
+            "y": 0.515,
+            "w": 0.05,
+            "h": 0.39
+          }
+        }
+      },
+      {
+        "id": "purple-mask-bow",
+        "label": "보라색으로 바뀐 탈의 리본",
+        "zones": {
+          "a": {
+            "x": 0.385,
+            "y": 0.59,
+            "w": 0.2,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.385,
+            "y": 0.59,
+            "w": 0.2,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "flower-drum-motif",
+        "label": "꽃 모양으로 바뀐 북의 문양",
+        "zones": {
+          "a": {
+            "x": 0.815,
+            "y": 0.645,
+            "w": 0.135,
+            "h": 0.23
+          },
+          "b": {
+            "x": 0.815,
+            "y": 0.645,
+            "w": 0.135,
+            "h": 0.23
+          }
+        }
+      },
+      {
+        "id": "missing-wind-bell-chime",
+        "label": "하나 줄어든 풍경의 금빛 조각",
+        "zones": {
+          "a": {
+            "x": 0.805,
+            "y": 0.235,
+            "w": 0.045,
+            "h": 0.21
+          },
+          "b": {
+            "x": 0.805,
+            "y": 0.235,
+            "w": 0.045,
+            "h": 0.21
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "goblin-night-moon-ferry-dock-04",
+    "status": "published",
+    "title": "달빛 도깨비 나룻터",
+    "description": "달빛 물결이 반짝이는 도깨비 나룻터에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "도깨비 마을의 달빛 나룻터",
+    "collectionId": "goblin-night-village",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/goblin-night-moon-ferry-dock-04-a.png",
+    "imageB": "assets/puzzles/goblin-night-moon-ferry-dock-04-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "turquoise-oar-tassel",
+        "label": "청록색으로 바뀐 노의 술 장식",
+        "zones": {
+          "a": {
+            "x": 0.075,
+            "y": 0.17,
+            "w": 0.055,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.075,
+            "y": 0.17,
+            "w": 0.055,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "missing-lotus-lantern",
+        "label": "하나 줄어든 바구니의 연꽃등",
+        "zones": {
+          "a": {
+            "x": 0.03,
+            "y": 0.64,
+            "w": 0.13,
+            "h": 0.2
+          },
+          "b": {
+            "x": 0.03,
+            "y": 0.64,
+            "w": 0.13,
+            "h": 0.2
+          }
+        }
+      },
+      {
+        "id": "purple-ferry-bow",
+        "label": "보라색으로 바뀐 뱃머리 리본",
+        "zones": {
+          "a": {
+            "x": 0.555,
+            "y": 0.31,
+            "w": 0.11,
+            "h": 0.25
+          },
+          "b": {
+            "x": 0.555,
+            "y": 0.31,
+            "w": 0.11,
+            "h": 0.25
+          }
+        }
+      },
+      {
+        "id": "flower-fan-motif",
+        "label": "꽃 모양으로 바뀐 부채 문양",
+        "zones": {
+          "a": {
+            "x": 0.815,
+            "y": 0.69,
+            "w": 0.12,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.815,
+            "y": 0.69,
+            "w": 0.12,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "missing-ferry-wind-bell-chime",
+        "label": "하나 줄어든 풍경의 금빛 조각",
+        "zones": {
+          "a": {
+            "x": 0.865,
+            "y": 0.245,
+            "w": 0.045,
+            "h": 0.155
+          },
+          "b": {
+            "x": 0.865,
+            "y": 0.245,
+            "w": 0.045,
+            "h": 0.155
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "goblin-night-cloud-garden-05",
+    "status": "published",
+    "title": "산신령의 구름 정원",
+    "description": "달맞이 잔치를 준비하는 구름 정원에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "도깨비 마을의 산신령 구름 정원",
+    "collectionId": "goblin-night-village",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/goblin-night-cloud-garden-05-a.png",
+    "imageB": "assets/puzzles/goblin-night-cloud-garden-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "missing-tiger-bell",
+        "label": "사라진 호랑이 목 방울",
+        "zones": {
+          "a": {
+            "x": 0.14,
+            "y": 0.62,
+            "w": 0.08,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.145,
+            "y": 0.62,
+            "w": 0.08,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "purple-crane-ornament",
+        "label": "보라색으로 바뀐 학의 머리 장식",
+        "zones": {
+          "a": {
+            "x": 0.25,
+            "y": 0.095,
+            "w": 0.045,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.25,
+            "y": 0.095,
+            "w": 0.045,
+            "h": 0.085
+          }
+        }
+      },
+      {
+        "id": "missing-cloud-planter-flower",
+        "label": "하나 줄어든 구름 화분의 달맞이꽃",
+        "zones": {
+          "a": {
+            "x": 0.38,
+            "y": 0.595,
+            "w": 0.12,
+            "h": 0.225
+          },
+          "b": {
+            "x": 0.38,
+            "y": 0.595,
+            "w": 0.12,
+            "h": 0.225
+          }
+        }
+      },
+      {
+        "id": "flower-mountain-spirit-fan",
+        "label": "꽃 모양으로 바뀐 산신령의 부채 문양",
+        "zones": {
+          "a": {
+            "x": 0.515,
+            "y": 0.4,
+            "w": 0.09,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.515,
+            "y": 0.4,
+            "w": 0.09,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "star-moon-lantern-finial",
+        "label": "별 모양으로 바뀐 달등 꼭대기",
+        "zones": {
+          "a": {
+            "x": 0.84,
+            "y": 0.02,
+            "w": 0.1,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.84,
+            "y": 0.02,
+            "w": 0.1,
+            "h": 0.15
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "tiny-things-teacup-harbor-01",
+    "status": "published",
+    "title": "찻잔 항구",
+    "description": "아침 식탁 위에 세워진 조그만 찻잔 항구에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "조그만 것들의 대도시 찻잔 항구",
+    "collectionId": "tiny-things-city",
+    "stageType": "relaxed",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/tiny-things-teacup-harbor-01-a.png",
+    "imageB": "assets/puzzles/tiny-things-teacup-harbor-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 7000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "coral-teacup-anchor",
+        "label": "산호색으로 바뀐 찻잔의 닻",
+        "zones": {
+          "a": {
+            "x": 0.255,
+            "y": 0.405,
+            "w": 0.125,
+            "h": 0.295
+          },
+          "b": {
+            "x": 0.255,
+            "y": 0.405,
+            "w": 0.125,
+            "h": 0.295
+          }
+        }
+      },
+      {
+        "id": "missing-sugar-crate",
+        "label": "하나 줄어든 각설탕 상자",
+        "zones": {
+          "a": {
+            "x": 0.035,
+            "y": 0.57,
+            "w": 0.17,
+            "h": 0.25
+          },
+          "b": {
+            "x": 0.035,
+            "y": 0.57,
+            "w": 0.17,
+            "h": 0.25
+          }
+        }
+      },
+      {
+        "id": "missing-spoon-flag",
+        "label": "사라진 티스푼 신호 깃발",
+        "zones": {
+          "a": {
+            "x": 0.495,
+            "y": 0.025,
+            "w": 0.13,
+            "h": 0.145
+          },
+          "b": {
+            "x": 0.495,
+            "y": 0.025,
+            "w": 0.13,
+            "h": 0.145
+          }
+        }
+      },
+      {
+        "id": "round-paper-boat-sail",
+        "label": "반원 모양으로 바뀐 종이배 돛",
+        "zones": {
+          "a": {
+            "x": 0.545,
+            "y": 0.595,
+            "w": 0.14,
+            "h": 0.24
+          },
+          "b": {
+            "x": 0.545,
+            "y": 0.595,
+            "w": 0.14,
+            "h": 0.24
+          }
+        }
+      },
+      {
+        "id": "missing-lighthouse-window",
+        "label": "하나 줄어든 주전자 등대 창문",
+        "zones": {
+          "a": {
+            "x": 0.715,
+            "y": 0.47,
+            "w": 0.075,
+            "h": 0.115
+          },
+          "b": {
+            "x": 0.715,
+            "y": 0.47,
+            "w": 0.075,
+            "h": 0.115
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "tiny-things-thread-station-02",
+    "status": "published",
+    "title": "실타래 기차역",
+    "description": "재봉 상자 위에 세워진 조그만 실타래 기차역에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "조그만 것들의 도시 실타래 기차역",
+    "collectionId": "tiny-things-city",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/tiny-things-thread-station-02-a.png",
+    "imageB": "assets/puzzles/tiny-things-thread-station-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "three-hole-button-clock",
+        "label": "구멍이 하나 줄어든 단추 시계",
+        "zones": {
+          "a": {
+            "x": 0.06,
+            "y": 0.07,
+            "w": 0.15,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.06,
+            "y": 0.07,
+            "w": 0.15,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "missing-thread-spool",
+        "label": "하나 줄어든 실타래 짐",
+        "zones": {
+          "a": {
+            "x": 0.18,
+            "y": 0.56,
+            "w": 0.12,
+            "h": 0.29
+          },
+          "b": {
+            "x": 0.18,
+            "y": 0.56,
+            "w": 0.12,
+            "h": 0.29
+          }
+        }
+      },
+      {
+        "id": "purple-locomotive-chimney",
+        "label": "보라색으로 바뀐 기관차 굴뚝",
+        "zones": {
+          "a": {
+            "x": 0.425,
+            "y": 0.37,
+            "w": 0.085,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.425,
+            "y": 0.37,
+            "w": 0.085,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "missing-safety-pin-flag",
+        "label": "사라진 안전핀 신호 깃발",
+        "zones": {
+          "a": {
+            "x": 0.845,
+            "y": 0.36,
+            "w": 0.15,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.845,
+            "y": 0.36,
+            "w": 0.15,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "missing-thimble-bell-ribbon",
+        "label": "하나 줄어든 골무 종 리본",
+        "zones": {
+          "a": {
+            "x": 0.72,
+            "y": 0.19,
+            "w": 0.13,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.72,
+            "y": 0.19,
+            "w": 0.13,
+            "h": 0.22
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "tiny-things-button-garden-03",
+    "status": "published",
+    "title": "단추꽃 정원",
+    "description": "열린 서랍 속에 자라난 조그만 단추꽃 정원에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "조그만 것들의 도시 단추꽃 정원",
+    "collectionId": "tiny-things-city",
+    "stageType": "speed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/tiny-things-button-garden-03-a.png",
+    "imageB": "assets/puzzles/tiny-things-button-garden-03-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "star-watering-can-emblem",
+        "label": "별 모양으로 바뀐 물뿌리개 문양",
+        "zones": {
+          "a": {
+            "x": 0.14,
+            "y": 0.19,
+            "w": 0.12,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.14,
+            "y": 0.19,
+            "w": 0.12,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "missing-button-flower",
+        "label": "하나 줄어든 단추꽃",
+        "zones": {
+          "a": {
+            "x": 0.015,
+            "y": 0.57,
+            "w": 0.1,
+            "h": 0.23
+          },
+          "b": {
+            "x": 0.015,
+            "y": 0.57,
+            "w": 0.1,
+            "h": 0.23
+          }
+        }
+      },
+      {
+        "id": "purple-scissor-bow",
+        "label": "보라색으로 바뀐 가위 리본",
+        "zones": {
+          "a": {
+            "x": 0.32,
+            "y": 0.41,
+            "w": 0.14,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.32,
+            "y": 0.41,
+            "w": 0.14,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "crescent-spool-snail-shell",
+        "label": "초승달로 바뀐 실패 달팽이 문양",
+        "zones": {
+          "a": {
+            "x": 0.74,
+            "y": 0.61,
+            "w": 0.11,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.74,
+            "y": 0.61,
+            "w": 0.11,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "missing-clothespin-windmill-blade",
+        "label": "하나 줄어든 집게 풍차 날개",
+        "zones": {
+          "a": {
+            "x": 0.83,
+            "y": 0.04,
+            "w": 0.13,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.83,
+            "y": 0.04,
+            "w": 0.13,
+            "h": 0.17
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "tiny-things-planter-jungle-04",
+    "status": "published",
+    "title": "화분 정글 탐험대",
+    "description": "거대한 잎과 물방울 사이를 달리는 조그만 화분 정글 탐험대에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "조그만 것들의 대도시 화분 정글 탐험대",
+    "collectionId": "tiny-things-city",
+    "stageType": "speed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/tiny-things-planter-jungle-04-a.png",
+    "imageB": "assets/puzzles/tiny-things-planter-jungle-04-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "yellow-jeep-wheels",
+        "label": "노란색으로 바뀐 병뚜껑 지프 바퀴",
+        "zones": {
+          "a": {
+            "x": 0.04,
+            "y": 0.57,
+            "w": 0.31,
+            "h": 0.28
+          },
+          "b": {
+            "x": 0.04,
+            "y": 0.57,
+            "w": 0.31,
+            "h": 0.28
+          }
+        }
+      },
+      {
+        "id": "missing-leaf-droplet",
+        "label": "하나 줄어든 잎 위 물방울",
+        "zones": {
+          "a": {
+            "x": 0.14,
+            "y": 0.23,
+            "w": 0.09,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.14,
+            "y": 0.23,
+            "w": 0.09,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "missing-helmet-headlamp",
+        "label": "사라진 안전모 램프",
+        "zones": {
+          "a": {
+            "x": 0.43,
+            "y": 0.27,
+            "w": 0.07,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.43,
+            "y": 0.27,
+            "w": 0.07,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "missing-matchstick-bridge-railing",
+        "label": "사라진 성냥개비 다리 난간",
+        "zones": {
+          "a": {
+            "x": 0.39,
+            "y": 0.59,
+            "w": 0.29,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.39,
+            "y": 0.59,
+            "w": 0.29,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "reversed-leaf-sign-arrow",
+        "label": "반대 방향을 가리키는 나뭇잎 화살표",
+        "zones": {
+          "a": {
+            "x": 0.72,
+            "y": 0.13,
+            "w": 0.19,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.72,
+            "y": 0.13,
+            "w": 0.19,
+            "h": 0.18
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "tiny-things-attic-clock-square-05",
+    "status": "published",
+    "title": "다락방 시계탑 광장",
+    "description": "오래된 다락방 물건들 사이에 세워진 조그마한 시계탑 광장에서 다섯 가지 차이를 찾아보세요.",
+    "theme": "조그만 것들의 대도시 다락방 시계탑 광장",
+    "collectionId": "tiny-things-city",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/tiny-things-attic-clock-square-05-a.png",
+    "imageB": "assets/puzzles/tiny-things-attic-clock-square-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "coral-clock-pendulum",
+        "label": "산호색으로 바뀐 시계탑 진자",
+        "zones": {
+          "a": {
+            "x": 0.49,
+            "y": 0.46,
+            "w": 0.12,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.49,
+            "y": 0.46,
+            "w": 0.12,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "missing-coral-pennant",
+        "label": "하나 줄어든 산호색 삼각 깃발",
+        "zones": {
+          "a": {
+            "x": 0.015,
+            "y": 0.055,
+            "w": 0.12,
+            "h": 0.24
+          },
+          "b": {
+            "x": 0.015,
+            "y": 0.055,
+            "w": 0.12,
+            "h": 0.24
+          }
+        }
+      },
+      {
+        "id": "yellow-fountain-button",
+        "label": "노란색으로 바뀐 단추 분수 꼭대기",
+        "zones": {
+          "a": {
+            "x": 0.105,
+            "y": 0.565,
+            "w": 0.16,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.105,
+            "y": 0.565,
+            "w": 0.16,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "rotated-winding-key-bow",
+        "label": "가로 방향으로 돌아간 태엽 키 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.7,
+            "y": 0.14,
+            "w": 0.18,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.7,
+            "y": 0.14,
+            "w": 0.18,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "round-satchel-buckle",
+        "label": "동그랗게 바뀐 빨간 우편가방 버클",
+        "zones": {
+          "a": {
+            "x": 0.835,
+            "y": 0.785,
+            "w": 0.105,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.835,
+            "y": 0.785,
+            "w": 0.105,
+            "h": 0.14
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cat-detective-rainy-office-01",
+    "status": "published",
+    "title": "빗소리 고양이 탐정 사무소",
+    "description": "비 내리는 밤, 고양이 탐정단의 아늑한 사무소에 숨은 다섯 가지 차이를 찾아보세요.",
+    "theme": "고양이 탐정단의 비 오는 밤 사무소",
+    "collectionId": "cat-detective-agency",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/cat-detective-rainy-office-01-a.png",
+    "imageB": "assets/puzzles/cat-detective-rainy-office-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "purple-detective-bow-tie",
+        "label": "보라색으로 바뀐 탐정 고양이 나비넥타이",
+        "zones": {
+          "a": {
+            "x": 0.19,
+            "y": 0.53,
+            "w": 0.11,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.19,
+            "y": 0.53,
+            "w": 0.11,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "missing-clock-bird",
+        "label": "부리가 사라진 시계 위 산호색 새",
+        "zones": {
+          "a": {
+            "x": 0.08,
+            "y": 0.01,
+            "w": 0.11,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.08,
+            "y": 0.01,
+            "w": 0.11,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "missing-blue-marble",
+        "label": "빛 반사가 사라진 오른쪽 파란 구슬",
+        "zones": {
+          "a": {
+            "x": 0.535,
+            "y": 0.64,
+            "w": 0.055,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.535,
+            "y": 0.64,
+            "w": 0.055,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "flipped-umbrella-handle",
+        "label": "중간 연결대가 사라진 노란 우산 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.79,
+            "y": 0.13,
+            "w": 0.16,
+            "h": 0.23
+          },
+          "b": {
+            "x": 0.79,
+            "y": 0.13,
+            "w": 0.16,
+            "h": 0.23
+          }
+        }
+      },
+      {
+        "id": "round-messenger-bag-buckle",
+        "label": "윗 꼭짓점이 짧아진 조수 가방의 별 버클",
+        "zones": {
+          "a": {
+            "x": 0.845,
+            "y": 0.85,
+            "w": 0.08,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.845,
+            "y": 0.85,
+            "w": 0.08,
+            "h": 0.13
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cat-detective-moonlit-museum-02",
+    "status": "published",
+    "title": "달빛 박물관 잠입 수사",
+    "description": "문 닫은 달빛 박물관에 잠입한 고양이 탐정단과 함께 전시실의 다섯 가지 단서를 찾아보세요.",
+    "theme": "고양이 탐정단의 달빛 박물관 잠입 수사",
+    "collectionId": "cat-detective-agency",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/cat-detective-moonlit-museum-02-a.png",
+    "imageB": "assets/puzzles/cat-detective-moonlit-museum-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "coral-detective-feather",
+        "label": "끝만 산호색으로 바뀐 탐정 고양이 모자 깃털",
+        "zones": {
+          "a": {
+            "x": 0.09,
+            "y": 0.29,
+            "w": 0.12,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.09,
+            "y": 0.29,
+            "w": 0.12,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "star-shield-emblem",
+        "label": "윗부분이 짧아진 파란 방패의 금빛 초승달",
+        "zones": {
+          "a": {
+            "x": 0.06,
+            "y": 0.11,
+            "w": 0.11,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.06,
+            "y": 0.11,
+            "w": 0.11,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "missing-ruby-gemstone",
+        "label": "아래쪽에 금빛 반점이 생긴 오른쪽 붉은 보석",
+        "zones": {
+          "a": {
+            "x": 0.57,
+            "y": 0.46,
+            "w": 0.075,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.57,
+            "y": 0.46,
+            "w": 0.075,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "missing-owl-top-hat",
+        "label": "금빛 버클이 사라진 부엉이의 보라색 모자",
+        "zones": {
+          "a": {
+            "x": 0.77,
+            "y": 0.045,
+            "w": 0.075,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.77,
+            "y": 0.045,
+            "w": 0.075,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "round-suitcase-clasp",
+        "label": "가운데만 둥글어진 조수 가방의 마름모 잠금장치",
+        "zones": {
+          "a": {
+            "x": 0.695,
+            "y": 0.87,
+            "w": 0.055,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.695,
+            "y": 0.87,
+            "w": 0.055,
+            "h": 0.09
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cat-detective-foggy-platform-03",
+    "status": "published",
+    "title": "안개 기차역의 수하물 추적",
+    "description": "막차가 떠나기 전, 안개 낀 동물 도시 기차역에서 고양이 탐정단과 함께 다섯 가지 수하물 단서를 찾아보세요.",
+    "theme": "고양이 탐정단의 안개 낀 야간 기차역 수하물 추적",
+    "collectionId": "cat-detective-agency",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/cat-detective-foggy-platform-03-a.png",
+    "imageB": "assets/puzzles/cat-detective-foggy-platform-03-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "coral-detective-hat-ribbon",
+        "label": "가운데 한 구간만 산호색인 탐정 고양이 모자 리본",
+        "zones": {
+          "a": {
+            "x": 0.19,
+            "y": 0.43,
+            "w": 0.15,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.19,
+            "y": 0.43,
+            "w": 0.15,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "missing-clock-wing",
+        "label": "깃털 끝이 사라진 역 시계의 오른쪽 금빛 날개",
+        "zones": {
+          "a": {
+            "x": 0.045,
+            "y": 0.03,
+            "w": 0.15,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.045,
+            "y": 0.03,
+            "w": 0.15,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "missing-turquoise-suitcase",
+        "label": "손잡이가 사라진 오른쪽 청록색 여행 가방",
+        "zones": {
+          "a": {
+            "x": 0.6,
+            "y": 0.45,
+            "w": 0.09,
+            "h": 0.24
+          },
+          "b": {
+            "x": 0.6,
+            "y": 0.45,
+            "w": 0.09,
+            "h": 0.24
+          }
+        }
+      },
+      {
+        "id": "flipped-semaphore-arm",
+        "label": "화살표 끝이 짧아진 붉은 철도 신호기",
+        "zones": {
+          "a": {
+            "x": 0.73,
+            "y": 0.05,
+            "w": 0.19,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.73,
+            "y": 0.05,
+            "w": 0.19,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "round-ticket-case-clasp",
+        "label": "윗 꼭짓점이 짧아진 조수 사건 가방의 별 잠금장치",
+        "zones": {
+          "a": {
+            "x": 0.695,
+            "y": 0.81,
+            "w": 0.045,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.695,
+            "y": 0.81,
+            "w": 0.045,
+            "h": 0.08
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cat-detective-stormy-harbor-04",
+    "status": "published",
+    "title": "폭풍우 항구의 밀수품 추적",
+    "description": "비바람이 몰아치는 동물 도시의 항구 창고에서 고양이 탐정단과 함께 다섯 가지 밀수품 단서를 찾아보세요.",
+    "theme": "고양이 탐정단의 폭풍우 치는 밤 항구 창고 밀수품 추적",
+    "collectionId": "cat-detective-agency",
+    "stageType": "speed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/cat-detective-stormy-harbor-04-a.png",
+    "imageB": "assets/puzzles/cat-detective-stormy-harbor-04-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "violet-magnifying-lens",
+        "label": "보라색 빛 반사가 생긴 탐정의 청록 돋보기",
+        "zones": {
+          "a": {
+            "x": 0.24,
+            "y": 0.565,
+            "w": 0.13,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.24,
+            "y": 0.565,
+            "w": 0.13,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "missing-life-preserver-band",
+        "label": "왼쪽 아래 크림색 띠가 사라진 구명환",
+        "zones": {
+          "a": {
+            "x": 0.025,
+            "y": 0.285,
+            "w": 0.105,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.025,
+            "y": 0.285,
+            "w": 0.105,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "missing-evidence-bottle",
+        "label": "마개가 사라진 오른쪽 증거 병",
+        "zones": {
+          "a": {
+            "x": 0.535,
+            "y": 0.525,
+            "w": 0.07,
+            "h": 0.2
+          },
+          "b": {
+            "x": 0.535,
+            "y": 0.525,
+            "w": 0.07,
+            "h": 0.2
+          }
+        }
+      },
+      {
+        "id": "golden-cargo-hook",
+        "label": "끝부분만 금빛으로 바뀐 붉은 화물 갈고리",
+        "zones": {
+          "a": {
+            "x": 0.735,
+            "y": 0.055,
+            "w": 0.13,
+            "h": 0.31
+          },
+          "b": {
+            "x": 0.735,
+            "y": 0.055,
+            "w": 0.13,
+            "h": 0.31
+          }
+        }
+      },
+      {
+        "id": "crescent-umbrella-charm",
+        "label": "한 꼭짓점이 짧아진 우산 손잡이의 파란 별 장식",
+        "zones": {
+          "a": {
+            "x": 0.705,
+            "y": 0.875,
+            "w": 0.075,
+            "h": 0.105
+          },
+          "b": {
+            "x": 0.705,
+            "y": 0.875,
+            "w": 0.075,
+            "h": 0.105
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cat-detective-midnight-theater-05",
+    "status": "published",
+    "title": "심야 극장의 사라진 왕관",
+    "description": "막이 내린 동물 도시의 오래된 극장에서 고양이 탐정단과 함께 사라진 왕관의 다섯 단서를 찾아보세요.",
+    "theme": "고양이 탐정단의 심야 극장 왕관 도난 사건",
+    "collectionId": "cat-detective-agency",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/cat-detective-midnight-theater-05-a.png",
+    "imageB": "assets/puzzles/cat-detective-midnight-theater-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "star-theater-mask",
+        "label": "윗부분이 짧아진 보라색 가면의 금빛 초승달",
+        "zones": {
+          "a": {
+            "x": 0.245,
+            "y": 0.605,
+            "w": 0.13,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.245,
+            "y": 0.605,
+            "w": 0.13,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "pink-curtain-tassel",
+        "label": "윗 매듭만 분홍색인 무대 커튼의 청록 술 장식",
+        "zones": {
+          "a": {
+            "x": 0.015,
+            "y": 0.425,
+            "w": 0.105,
+            "h": 0.31
+          },
+          "b": {
+            "x": 0.015,
+            "y": 0.425,
+            "w": 0.105,
+            "h": 0.31
+          }
+        }
+      },
+      {
+        "id": "missing-crown-gemstone",
+        "label": "빛 반사가 사라진 왕관의 초록색 보석",
+        "zones": {
+          "a": {
+            "x": 0.49,
+            "y": 0.535,
+            "w": 0.065,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.49,
+            "y": 0.535,
+            "w": 0.065,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "missing-chandelier-crystal",
+        "label": "아래 끝이 짧아진 샹들리에의 파란 수정",
+        "zones": {
+          "a": {
+            "x": 0.885,
+            "y": 0.205,
+            "w": 0.07,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.885,
+            "y": 0.205,
+            "w": 0.07,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "missing-fan-feather",
+        "label": "끝이 짧아진 생쥐 조수의 바깥쪽 부채 깃털",
+        "zones": {
+          "a": {
+            "x": 0.755,
+            "y": 0.595,
+            "w": 0.085,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.755,
+            "y": 0.595,
+            "w": 0.085,
+            "h": 0.22
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "animal-detectives-museum-01",
+    "status": "published",
+    "title": "사라진 보석의 박물관",
+    "description": "폐관 직후의 자연사 박물관에서 여우 탐정과 토끼 조수와 함께 사라진 보석의 다섯 단서를 찾아보세요.",
+    "theme": "동물 탐정단의 사라진 보석 박물관 사건",
+    "collectionId": "animal-detectives",
+    "stageType": "relaxed",
+    "difficulty": "쉬움",
+    "imageA": "assets/puzzles/animal-detectives-museum-01-a.png",
+    "imageB": "assets/puzzles/animal-detectives-museum-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "red-magnifying-handle",
+        "label": "산호색으로 바뀐 여우 탐정의 돋보기 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.13,
+            "y": 0.66,
+            "w": 0.095,
+            "h": 0.25
+          },
+          "b": {
+            "x": 0.13,
+            "y": 0.66,
+            "w": 0.095,
+            "h": 0.25
+          }
+        }
+      },
+      {
+        "id": "round-jewel-cushion",
+        "label": "둥근 모양으로 바뀐 진열장의 보석 받침",
+        "zones": {
+          "a": {
+            "x": 0.47,
+            "y": 0.47,
+            "w": 0.17,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.47,
+            "y": 0.47,
+            "w": 0.17,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "missing-tail-bone",
+        "label": "하나 줄어든 공룡 꼬리 끝의 큰 뼈마디",
+        "zones": {
+          "a": {
+            "x": 0.58,
+            "y": 0.17,
+            "w": 0.15,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.58,
+            "y": 0.17,
+            "w": 0.15,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "crescent-guard-badge",
+        "label": "초승달 모양으로 바뀐 올빼미 경비원의 모자 배지",
+        "zones": {
+          "a": {
+            "x": 0.765,
+            "y": 0.04,
+            "w": 0.075,
+            "h": 0.095
+          },
+          "b": {
+            "x": 0.765,
+            "y": 0.04,
+            "w": 0.075,
+            "h": 0.095
+          }
+        }
+      },
+      {
+        "id": "yellow-curtain-tassel",
+        "label": "노란색으로 바뀐 오른쪽 커튼의 술 장식",
+        "zones": {
+          "a": {
+            "x": 0.91,
+            "y": 0.54,
+            "w": 0.08,
+            "h": 0.3
+          },
+          "b": {
+            "x": 0.91,
+            "y": 0.54,
+            "w": 0.08,
+            "h": 0.3
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "animal-detectives-clocktower-hotel-02",
+    "status": "published",
+    "title": "사라진 열쇠의 시계탑 호텔",
+    "description": "폭풍이 지나간 밤, 여우 탐정과 토끼 조수가 시계탑 호텔 로비에서 사라진 황금 열쇠의 단서를 찾아보세요.",
+    "theme": "동물 탐정단의 사라진 황금 열쇠 시계탑 호텔 사건",
+    "collectionId": "animal-detectives",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/animal-detectives-clocktower-hotel-02-a.png",
+    "imageB": "assets/puzzles/animal-detectives-clocktower-hotel-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "yellow-umbrella-handle",
+        "label": "노란색으로 바뀐 여우 탐정의 우산 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.055,
+            "y": 0.46,
+            "w": 0.075,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.055,
+            "y": 0.46,
+            "w": 0.075,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "crescent-hotel-key",
+        "label": "초승달 모양으로 바뀐 호텔 열쇠의 고리",
+        "zones": {
+          "a": {
+            "x": 0.49,
+            "y": 0.55,
+            "w": 0.09,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.49,
+            "y": 0.55,
+            "w": 0.09,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "blue-diamond-pendulum",
+        "label": "파란 다이아몬드 모양으로 바뀐 시계추",
+        "zones": {
+          "a": {
+            "x": 0.515,
+            "y": 0.4,
+            "w": 0.075,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.515,
+            "y": 0.4,
+            "w": 0.075,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "missing-bellhop-cap-button",
+        "label": "사라진 곰 벨보이 모자의 금색 단추",
+        "zones": {
+          "a": {
+            "x": 0.83,
+            "y": 0.285,
+            "w": 0.06,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.83,
+            "y": 0.285,
+            "w": 0.06,
+            "h": 0.075
+          }
+        }
+      },
+      {
+        "id": "missing-jade-suitcase",
+        "label": "짐수레에서 사라진 옥색 여행 가방",
+        "zones": {
+          "a": {
+            "x": 0.815,
+            "y": 0.67,
+            "w": 0.145,
+            "h": 0.265
+          },
+          "b": {
+            "x": 0.815,
+            "y": 0.67,
+            "w": 0.145,
+            "h": 0.265
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "animal-detectives-snow-train-03",
+    "status": "published",
+    "title": "설원 특급열차의 식당칸",
+    "description": "눈보라 치는 밤, 여우 탐정과 토끼 조수가 설원 특급열차 식당칸에서 승객들의 수상한 다섯 단서를 찾아보세요.",
+    "theme": "동물 탐정단의 설원 특급열차 식당칸 사건",
+    "collectionId": "animal-detectives",
+    "stageType": "classic",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/animal-detectives-snow-train-03-a.png",
+    "imageB": "assets/puzzles/animal-detectives-snow-train-03-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "emerald-round-saucer",
+        "label": "초록색 원형으로 바뀐 찻잔 받침",
+        "zones": {
+          "a": {
+            "x": 0.29,
+            "y": 0.82,
+            "w": 0.2,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.29,
+            "y": 0.82,
+            "w": 0.2,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "square-curtain-ring",
+        "label": "네모 모양으로 바뀐 커튼 고리",
+        "zones": {
+          "a": {
+            "x": 0.025,
+            "y": 0.3,
+            "w": 0.07,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.025,
+            "y": 0.3,
+            "w": 0.07,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "missing-scarf-stripe",
+        "label": "하나 줄어든 승객의 스카프 줄무늬",
+        "zones": {
+          "a": {
+            "x": 0.43,
+            "y": 0.51,
+            "w": 0.1,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.43,
+            "y": 0.51,
+            "w": 0.1,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "diamond-suitcase-clasp",
+        "label": "마름모 모양으로 바뀐 여행가방 잠금장치",
+        "zones": {
+          "a": {
+            "x": 0.8,
+            "y": 0.04,
+            "w": 0.105,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.8,
+            "y": 0.04,
+            "w": 0.105,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "crescent-beret-badge",
+        "label": "초승달 모양으로 바뀐 토끼 조수의 베레모 배지",
+        "zones": {
+          "a": {
+            "x": 0.76,
+            "y": 0.46,
+            "w": 0.11,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.76,
+            "y": 0.46,
+            "w": 0.11,
+            "h": 0.13
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "animal-detectives-masquerade-04",
+    "status": "published",
+    "title": "가면무도회 저택의 단서",
+    "description": "달빛 비치는 호화로운 저택 무도회에서 여우 탐정과 토끼 조수와 함께 가면과 소품에 숨은 다섯 단서를 찾아보세요.",
+    "theme": "동물 탐정단의 가면무도회 저택 잠입 사건",
+    "collectionId": "animal-detectives",
+    "stageType": "speed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/animal-detectives-masquerade-04-a.png",
+    "imageB": "assets/puzzles/animal-detectives-masquerade-04-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "missing-peacock-feather",
+        "label": "하나 줄어든 공작 손님의 가면 깃털",
+        "zones": {
+          "a": {
+            "x": 0.105,
+            "y": 0.01,
+            "w": 0.1,
+            "h": 0.115
+          },
+          "b": {
+            "x": 0.105,
+            "y": 0.01,
+            "w": 0.1,
+            "h": 0.115
+          }
+        }
+      },
+      {
+        "id": "flipped-violin-bow",
+        "label": "아래쪽으로 방향이 바뀐 바이올린 활",
+        "zones": {
+          "a": {
+            "x": 0.3,
+            "y": 0.33,
+            "w": 0.18,
+            "h": 0.32
+          },
+          "b": {
+            "x": 0.3,
+            "y": 0.33,
+            "w": 0.18,
+            "h": 0.32
+          }
+        }
+      },
+      {
+        "id": "blue-center-rose",
+        "label": "파란색으로 바뀐 꽃병의 가운데 장미",
+        "zones": {
+          "a": {
+            "x": 0.58,
+            "y": 0.5,
+            "w": 0.11,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.58,
+            "y": 0.5,
+            "w": 0.11,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "diamond-clock-pendulum",
+        "label": "파란 마름모 모양으로 바뀐 계단 시계 추",
+        "zones": {
+          "a": {
+            "x": 0.885,
+            "y": 0.3,
+            "w": 0.06,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.885,
+            "y": 0.3,
+            "w": 0.06,
+            "h": 0.13
+          }
+        }
+      },
+      {
+        "id": "missing-fox-coat-button",
+        "label": "하나 줄어든 여우 탐정의 코트 단추",
+        "zones": {
+          "a": {
+            "x": 0.135,
+            "y": 0.72,
+            "w": 0.06,
+            "h": 0.2
+          },
+          "b": {
+            "x": 0.135,
+            "y": 0.72,
+            "w": 0.05,
+            "h": 0.2
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "animal-detectives-moonlit-lighthouse-05",
+    "status": "published",
+    "title": "달빛 등대의 마지막 신호",
+    "description": "폭풍이 지나간 달빛 등대의 지도실에서 여우 탐정과 토끼 조수가 사라진 항로 지도의 마지막 다섯 단서를 찾아냅니다.",
+    "theme": "동물 탐정단의 달빛 등대 지도실 최종 수사",
+    "collectionId": "animal-detectives",
+    "stageType": "relaxed",
+    "difficulty": "보통",
+    "imageA": "assets/puzzles/animal-detectives-moonlit-lighthouse-05-a.png",
+    "imageB": "assets/puzzles/animal-detectives-moonlit-lighthouse-05-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "green-compass-needle",
+        "label": "초록색으로 바뀐 벽 나침반 바늘",
+        "zones": {
+          "a": {
+            "x": 0.09,
+            "y": 0.075,
+            "w": 0.07,
+            "h": 0.205
+          },
+          "b": {
+            "x": 0.09,
+            "y": 0.075,
+            "w": 0.07,
+            "h": 0.205
+          }
+        }
+      },
+      {
+        "id": "missing-teal-pennant",
+        "label": "사라진 청록색 사각 신호기",
+        "zones": {
+          "a": {
+            "x": 0.525,
+            "y": 0.105,
+            "w": 0.12,
+            "h": 0.205
+          },
+          "b": {
+            "x": 0.525,
+            "y": 0.105,
+            "w": 0.12,
+            "h": 0.205
+          }
+        }
+      },
+      {
+        "id": "blue-center-sail",
+        "label": "파란색으로 바뀐 모형 배의 가운데 돛",
+        "zones": {
+          "a": {
+            "x": 0.405,
+            "y": 0.34,
+            "w": 0.105,
+            "h": 0.34
+          },
+          "b": {
+            "x": 0.405,
+            "y": 0.34,
+            "w": 0.105,
+            "h": 0.34
+          }
+        }
+      },
+      {
+        "id": "star-lantern-window",
+        "label": "별 모양으로 바뀐 등대지기의 신호등 창",
+        "zones": {
+          "a": {
+            "x": 0.745,
+            "y": 0.36,
+            "w": 0.105,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.745,
+            "y": 0.36,
+            "w": 0.105,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "yellow-telescope-eyepiece",
+        "label": "노란색으로 바뀐 망원경 렌즈",
+        "zones": {
+          "a": {
+            "x": 0.635,
+            "y": 0.585,
+            "w": 0.075,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.635,
+            "y": 0.585,
+            "w": 0.075,
+            "h": 0.16
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "magic-delivery-starlight-post-01",
+    "status": "published",
+    "title": "별빛 중앙우체국의 아침",
+    "description": "별 모양 분류 장치와 날개 달린 봉투가 분주히 오가는 마법 중앙우체국에서 수달 배달부와 동료들이 다섯 가지 변화를 찾아냅니다.",
+    "theme": "마법 배달부의 하루 — 별빛 중앙우체국 아침 근무",
+    "collectionId": "magic-delivery-office",
+    "stageType": "relaxed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/magic-delivery-starlight-post-01-a.png",
+    "imageB": "assets/puzzles/magic-delivery-starlight-post-01-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 3000,
+    "hintPenaltyMs": 5000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "yellow-sorting-star",
+        "label": "가운데 리벳만 노란색인 청록 분류 장치 별",
+        "zones": {
+          "a": {
+            "x": 0.38,
+            "y": 0.055,
+            "w": 0.27,
+            "h": 0.36
+          },
+          "b": {
+            "x": 0.38,
+            "y": 0.055,
+            "w": 0.27,
+            "h": 0.36
+          }
+        }
+      },
+      {
+        "id": "green-parcel-ribbon",
+        "label": "가운데 매듭만 초록색인 소포 리본",
+        "zones": {
+          "a": {
+            "x": 0.385,
+            "y": 0.505,
+            "w": 0.22,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.385,
+            "y": 0.505,
+            "w": 0.22,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "missing-envelope-wing",
+        "label": "끝 깃털이 짧아진 날아다니는 봉투의 오른쪽 날개",
+        "zones": {
+          "a": {
+            "x": 0.755,
+            "y": 0.105,
+            "w": 0.195,
+            "h": 0.23
+          },
+          "b": {
+            "x": 0.755,
+            "y": 0.105,
+            "w": 0.195,
+            "h": 0.23
+          }
+        }
+      },
+      {
+        "id": "crescent-courier-badge",
+        "label": "안쪽 문양이 초승달로 바뀐 수달 배달부 모자 배지",
+        "zones": {
+          "a": {
+            "x": 0.165,
+            "y": 0.405,
+            "w": 0.075,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.165,
+            "y": 0.405,
+            "w": 0.075,
+            "h": 0.085
+          }
+        }
+      },
+      {
+        "id": "star-cart-wheel-hub",
+        "label": "가운데 작은 별이 생긴 우편 카트 바퀴 허브",
+        "zones": {
+          "a": {
+            "x": 0.795,
+            "y": 0.68,
+            "w": 0.145,
+            "h": 0.24
+          },
+          "b": {
+            "x": 0.795,
+            "y": 0.68,
+            "w": 0.145,
+            "h": 0.24
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "magic-delivery-broom-workshop-02",
+    "status": "published",
+    "title": "빗자루 택배 정비소",
+    "description": "비행 빗자루와 날개 달린 배송 가방을 손보는 활기찬 마법 공방에서 수달 배달부와 너구리 정비사가 다섯 가지 변화를 점검합니다.",
+    "theme": "마법 배달부의 하루 — 비행 빗자루 택배 정비소",
+    "collectionId": "magic-delivery-office",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/magic-delivery-broom-workshop-02-a.png",
+    "imageB": "assets/puzzles/magic-delivery-broom-workshop-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "coral-broom-tail-band",
+        "label": "가운데 띠만 산호색인 비행 빗자루 꼬리",
+        "zones": {
+          "a": {
+            "x": 0.115,
+            "y": 0.105,
+            "w": 0.095,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.115,
+            "y": 0.105,
+            "w": 0.095,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "square-toolbox-handle",
+        "label": "오른쪽 받침이 사라진 공구함의 금빛 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.095,
+            "y": 0.345,
+            "w": 0.145,
+            "h": 0.115
+          },
+          "b": {
+            "x": 0.095,
+            "y": 0.345,
+            "w": 0.145,
+            "h": 0.115
+          }
+        }
+      },
+      {
+        "id": "two-blade-propeller",
+        "label": "아래쪽 날개 끝이 짧아진 파란 벽 프로펠러",
+        "zones": {
+          "a": {
+            "x": 0.69,
+            "y": 0.105,
+            "w": 0.2,
+            "h": 0.285
+          },
+          "b": {
+            "x": 0.69,
+            "y": 0.105,
+            "w": 0.2,
+            "h": 0.285
+          }
+        }
+      },
+      {
+        "id": "green-mechanic-goggles",
+        "label": "초록색 빛 반사가 생긴 너구리 정비사 고글",
+        "zones": {
+          "a": {
+            "x": 0.395,
+            "y": 0.325,
+            "w": 0.13,
+            "h": 0.135
+          },
+          "b": {
+            "x": 0.395,
+            "y": 0.325,
+            "w": 0.13,
+            "h": 0.135
+          }
+        }
+      },
+      {
+        "id": "bat-wing-delivery-bag",
+        "label": "끝 깃털이 사라진 주황 배송 가방의 흰 날개",
+        "zones": {
+          "a": {
+            "x": 0.6,
+            "y": 0.625,
+            "w": 0.295,
+            "h": 0.29
+          },
+          "b": {
+            "x": 0.6,
+            "y": 0.625,
+            "w": 0.295,
+            "h": 0.29
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "magic-delivery-cloud-airship-dock-03",
+    "status": "published",
+    "title": "구름섬 비행선 우편 선착장",
+    "description": "노을 구름 위 비행선 우편 선착장에서 수달 배달부와 부엉이 관제사가 출항 전 다섯 가지 변화를 확인합니다.",
+    "theme": "마법 배달부의 하루 — 구름섬 비행선 우편 선착장",
+    "collectionId": "magic-delivery-office",
+    "stageType": "speed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/magic-delivery-cloud-airship-dock-03-a.png",
+    "imageB": "assets/puzzles/magic-delivery-cloud-airship-dock-03-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "yellow-dock-pennant",
+        "label": "끝부분만 노란색인 선착장의 청록 깃발",
+        "zones": {
+          "a": {
+            "x": 0.085,
+            "y": 0.045,
+            "w": 0.235,
+            "h": 0.165
+          },
+          "b": {
+            "x": 0.085,
+            "y": 0.045,
+            "w": 0.235,
+            "h": 0.165
+          }
+        }
+      },
+      {
+        "id": "crescent-mail-crate-clasp",
+        "label": "안쪽 문양이 초승달로 바뀐 우편 상자 잠금장치",
+        "zones": {
+          "a": {
+            "x": 0.105,
+            "y": 0.575,
+            "w": 0.13,
+            "h": 0.215
+          },
+          "b": {
+            "x": 0.105,
+            "y": 0.575,
+            "w": 0.13,
+            "h": 0.215
+          }
+        }
+      },
+      {
+        "id": "single-blade-airship-propeller",
+        "label": "끝이 짧아진 비행선 프로펠러 날개 하나",
+        "zones": {
+          "a": {
+            "x": 0.505,
+            "y": 0.19,
+            "w": 0.17,
+            "h": 0.3
+          },
+          "b": {
+            "x": 0.505,
+            "y": 0.19,
+            "w": 0.17,
+            "h": 0.3
+          }
+        }
+      },
+      {
+        "id": "green-otter-scarf",
+        "label": "끝 술만 초록색인 수달 배달부의 산호색 목도리",
+        "zones": {
+          "a": {
+            "x": 0.335,
+            "y": 0.39,
+            "w": 0.255,
+            "h": 0.235
+          },
+          "b": {
+            "x": 0.335,
+            "y": 0.39,
+            "w": 0.255,
+            "h": 0.235
+          }
+        }
+      },
+      {
+        "id": "star-control-lever-knob",
+        "label": "안쪽 문양이 별로 바뀐 관제 레버 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.65,
+            "y": 0.495,
+            "w": 0.085,
+            "h": 0.145
+          },
+          "b": {
+            "x": 0.65,
+            "y": 0.495,
+            "w": 0.085,
+            "h": 0.145
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "magic-delivery-moonlit-canal-boat-04",
+    "status": "published",
+    "title": "달빛 운하 우편선",
+    "description": "달빛 비가 내리는 마법 운하에서 수달 배달부와 비버 선장이 우편선을 타고 다섯 가지 변화를 찾아냅니다.",
+    "theme": "마법 배달부의 하루 — 달빛 운하 우편선 야간 배송",
+    "collectionId": "magic-delivery-office",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/magic-delivery-moonlit-canal-boat-04-a.png",
+    "imageB": "assets/puzzles/magic-delivery-moonlit-canal-boat-04-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "yellow-canal-lantern",
+        "label": "아래 유리 한 칸만 노란빛인 청록 운하 등불",
+        "zones": {
+          "a": {
+            "x": 0.09,
+            "y": 0.105,
+            "w": 0.145,
+            "h": 0.365
+          },
+          "b": {
+            "x": 0.09,
+            "y": 0.105,
+            "w": 0.145,
+            "h": 0.365
+          }
+        }
+      },
+      {
+        "id": "diamond-mail-satchel-clasp",
+        "label": "가운데만 파란 마름모인 우편 가방 잠금장치",
+        "zones": {
+          "a": {
+            "x": 0.115,
+            "y": 0.755,
+            "w": 0.095,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.115,
+            "y": 0.755,
+            "w": 0.095,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "crescent-sail-emblem",
+        "label": "윗 꼭짓점이 평평해진 돛의 붉은 별 문양",
+        "zones": {
+          "a": {
+            "x": 0.505,
+            "y": 0.185,
+            "w": 0.145,
+            "h": 0.235
+          },
+          "b": {
+            "x": 0.505,
+            "y": 0.185,
+            "w": 0.145,
+            "h": 0.235
+          }
+        }
+      },
+      {
+        "id": "green-courier-umbrella",
+        "label": "한 줄만 초록색인 수달 배달부의 노란 우산",
+        "zones": {
+          "a": {
+            "x": 0.305,
+            "y": 0.33,
+            "w": 0.25,
+            "h": 0.165
+          },
+          "b": {
+            "x": 0.305,
+            "y": 0.33,
+            "w": 0.25,
+            "h": 0.165
+          }
+        }
+      },
+      {
+        "id": "purple-beaver-paddle",
+        "label": "손잡이 끝만 보라색인 비버 선장의 주황 노",
+        "zones": {
+          "a": {
+            "x": 0.62,
+            "y": 0.45,
+            "w": 0.285,
+            "h": 0.485
+          },
+          "b": {
+            "x": 0.62,
+            "y": 0.45,
+            "w": 0.285,
+            "h": 0.485
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "magic-delivery-dragon-peak-05",
+    "status": "published",
+    "title": "용의 산 정상 특별 배송",
+    "description": "별빛 노을이 번지는 용의 산 정상에서 수달 배달부가 아기 용 가족에게 마지막 소포를 전하며 다섯 가지 변화를 찾아냅니다.",
+    "theme": "마법 배달부의 하루 — 용의 산 정상 마지막 별빛 배송",
+    "collectionId": "magic-delivery-office",
+    "stageType": "relaxed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/magic-delivery-dragon-peak-05-a.png",
+    "imageB": "assets/puzzles/magic-delivery-dragon-peak-05-b.png",
+    "durationMs": 120000,
+    "missPenaltyMs": 4000,
+    "hintPenaltyMs": 8000,
+    "maxHints": 3,
+    "differences": [
+      {
+        "id": "swallowtail-summit-flag",
+        "label": "끝에 작은 홈이 생긴 정상 깃발",
+        "zones": {
+          "a": {
+            "x": 0.29,
+            "y": 0.045,
+            "w": 0.12,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.29,
+            "y": 0.045,
+            "w": 0.12,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "round-silver-boot-buckle",
+        "label": "가운데만 둥글어진 배달부 부츠 버클",
+        "zones": {
+          "a": {
+            "x": 0.255,
+            "y": 0.705,
+            "w": 0.07,
+            "h": 0.115
+          },
+          "b": {
+            "x": 0.255,
+            "y": 0.705,
+            "w": 0.07,
+            "h": 0.115
+          }
+        }
+      },
+      {
+        "id": "overhand-loop-rope-knot",
+        "label": "매듭 옆 끝부분이 짧아진 파란 등산 로프",
+        "zones": {
+          "a": {
+            "x": 0.49,
+            "y": 0.79,
+            "w": 0.19,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.49,
+            "y": 0.79,
+            "w": 0.19,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "turquoise-star-parcel-seal",
+        "label": "가운데만 청록색 별인 소포 봉인",
+        "zones": {
+          "a": {
+            "x": 0.585,
+            "y": 0.63,
+            "w": 0.105,
+            "h": 0.16
+          },
+          "b": {
+            "x": 0.585,
+            "y": 0.63,
+            "w": 0.105,
+            "h": 0.16
+          }
+        }
+      },
+      {
+        "id": "yellow-diamond-dragon-pendant",
+        "label": "가운데만 노란 마름모인 아기 용 목걸이",
+        "zones": {
+          "a": {
+            "x": 0.58,
+            "y": 0.455,
+            "w": 0.08,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.58,
+            "y": 0.455,
+            "w": 0.08,
+            "h": 0.13
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "toy-kingdom-block-castle-01",
+    "status": "published",
+    "title": "블록 왕국 성문",
+    "description": "알록달록한 나무 블록 성문 앞에서 파란 망토의 병정과 장난감 주민들이 환영 행렬을 열며 다섯 가지 변화를 찾아냅니다.",
+    "theme": "장난감 왕국 대모험 — 블록 왕국 성문의 환영 행렬",
+    "collectionId": "toy-kingdom",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/toy-kingdom-block-castle-01-a-v2.png",
+    "imageB": "assets/puzzles/toy-kingdom-block-castle-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "missing-middle-castle-crenellation",
+        "label": "가운데 톱니가 사라진 성문 꼭대기 블록",
+        "zones": {
+          "a": {
+            "x": 0.37,
+            "y": 0.07,
+            "w": 0.245,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.37,
+            "y": 0.07,
+            "w": 0.245,
+            "h": 0.18
+          }
+        }
+      },
+      {
+        "id": "flipped-crescent-soldier-shield",
+        "label": "방향이 반대로 바뀐 병정 방패의 청록 초승달",
+        "zones": {
+          "a": {
+            "x": 0.22,
+            "y": 0.59,
+            "w": 0.12,
+            "h": 0.24
+          },
+          "b": {
+            "x": 0.22,
+            "y": 0.59,
+            "w": 0.12,
+            "h": 0.24
+          }
+        }
+      },
+      {
+        "id": "missing-rabbit-vest-button",
+        "label": "하나가 사라진 토끼 악사의 조끼 단추",
+        "zones": {
+          "a": {
+            "x": 0.56,
+            "y": 0.53,
+            "w": 0.13,
+            "h": 0.15
+          },
+          "b": {
+            "x": 0.56,
+            "y": 0.53,
+            "w": 0.13,
+            "h": 0.15
+          }
+        }
+      },
+      {
+        "id": "missing-elephant-saddle-stud",
+        "label": "노란 테두리가 사라진 양철 코끼리 안장",
+        "zones": {
+          "a": {
+            "x": 0.31,
+            "y": 0.55,
+            "w": 0.08,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.31,
+            "y": 0.55,
+            "w": 0.08,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "dark-teal-cart-garland-bead",
+        "label": "짙은 청록색으로 바뀐 수레 구슬 하나",
+        "zones": {
+          "a": {
+            "x": 0.68,
+            "y": 0.71,
+            "w": 0.21,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.68,
+            "y": 0.71,
+            "w": 0.21,
+            "h": 0.11
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "toy-kingdom-windup-train-station-02",
+    "status": "published",
+    "title": "태엽 기차역",
+    "description": "장난감 왕국의 태엽 기차가 출발을 준비하는 나무 승강장에서 파란 망토의 병정과 승객들 사이 다섯 가지 변화를 찾아냅니다.",
+    "theme": "장난감 왕국 대모험 — 태엽 기차역의 아침 출발",
+    "collectionId": "toy-kingdom",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/toy-kingdom-windup-train-station-02-a.png",
+    "imageB": "assets/puzzles/toy-kingdom-windup-train-station-02-b-v2.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "cobalt-signal-paddle-center",
+        "label": "코발트색으로 바뀐 역무원 신호판 중앙",
+        "zones": {
+          "a": {
+            "x": 0.055,
+            "y": 0.35,
+            "w": 0.135,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.055,
+            "y": 0.35,
+            "w": 0.135,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "shorter-station-clock-hand",
+        "label": "짧아진 역 시계의 오른쪽 바늘",
+        "zones": {
+          "a": {
+            "x": 0.535,
+            "y": 0.075,
+            "w": 0.155,
+            "h": 0.245
+          },
+          "b": {
+            "x": 0.535,
+            "y": 0.075,
+            "w": 0.155,
+            "h": 0.245
+          }
+        }
+      },
+      {
+        "id": "notched-coral-station-flag",
+        "label": "끝에 작은 홈이 생긴 산호색 역 깃발",
+        "zones": {
+          "a": {
+            "x": 0.79,
+            "y": 0.075,
+            "w": 0.18,
+            "h": 0.225
+          },
+          "b": {
+            "x": 0.79,
+            "y": 0.075,
+            "w": 0.18,
+            "h": 0.225
+          }
+        }
+      },
+      {
+        "id": "ochre-middle-suitcase",
+        "label": "황토색으로 바뀐 가운데 여행가방",
+        "zones": {
+          "a": {
+            "x": 0.665,
+            "y": 0.72,
+            "w": 0.175,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.665,
+            "y": 0.72,
+            "w": 0.175,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "coral-chimney-bird-beak",
+        "label": "산호색으로 바뀐 굴뚝 위 양철 새의 부리",
+        "zones": {
+          "a": {
+            "x": 0.345,
+            "y": 0.14,
+            "w": 0.045,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.345,
+            "y": 0.14,
+            "w": 0.045,
+            "h": 0.075
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "toy-kingdom-music-box-plaza-03",
+    "status": "published",
+    "title": "오르골 광장",
+    "description": "장난감 왕국의 거대한 오르골이 연주를 시작한 축제 광장에서 춤추는 인형과 악단 사이 다섯 가지 변화를 찾아냅니다.",
+    "theme": "장난감 왕국 대모험 — 오르골 광장의 정오 연주회",
+    "collectionId": "toy-kingdom",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/toy-kingdom-music-box-plaza-03-a.png",
+    "imageB": "assets/puzzles/toy-kingdom-music-box-plaza-03-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "shorter-music-box-star-point",
+        "label": "윗 꼭짓점이 짧아진 오르골 별 장식",
+        "zones": {
+          "a": {
+            "x": 0.355,
+            "y": 0.07,
+            "w": 0.16,
+            "h": 0.225
+          },
+          "b": {
+            "x": 0.355,
+            "y": 0.07,
+            "w": 0.16,
+            "h": 0.225
+          }
+        }
+      },
+      {
+        "id": "missing-ballerina-skirt-bead",
+        "label": "금빛 장식이 사라진 발레리나 치마",
+        "zones": {
+          "a": {
+            "x": 0.38,
+            "y": 0.5,
+            "w": 0.215,
+            "h": 0.065
+          },
+          "b": {
+            "x": 0.38,
+            "y": 0.5,
+            "w": 0.215,
+            "h": 0.065
+          }
+        }
+      },
+      {
+        "id": "missing-elephant-ear-stitch",
+        "label": "노란 바느질이 사라진 양철 코끼리 귀",
+        "zones": {
+          "a": {
+            "x": 0.13,
+            "y": 0.405,
+            "w": 0.115,
+            "h": 0.075
+          },
+          "b": {
+            "x": 0.13,
+            "y": 0.405,
+            "w": 0.115,
+            "h": 0.075
+          }
+        }
+      },
+      {
+        "id": "missing-middle-brass-bell-clapper",
+        "label": "추가 사라진 가운데 황동 종",
+        "zones": {
+          "a": {
+            "x": 0.735,
+            "y": 0.075,
+            "w": 0.13,
+            "h": 0.255
+          },
+          "b": {
+            "x": 0.735,
+            "y": 0.075,
+            "w": 0.13,
+            "h": 0.255
+          }
+        }
+      },
+      {
+        "id": "upright-square-drum-emblem",
+        "label": "정사각형으로 바뀐 북의 청록 문양",
+        "zones": {
+          "a": {
+            "x": 0.695,
+            "y": 0.605,
+            "w": 0.125,
+            "h": 0.175
+          },
+          "b": {
+            "x": 0.695,
+            "y": 0.605,
+            "w": 0.125,
+            "h": 0.175
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "toy-kingdom-patchwork-dragon-bridge-04",
+    "status": "published",
+    "title": "봉제 용 다리",
+    "description": "장난감 왕국의 저녁, 거대한 봉제 용이 지키는 나무 다리를 건너는 파란 망토 병정과 장난감 행렬 사이 다섯 가지 변화를 찾아냅니다.",
+    "theme": "장난감 왕국 대모험 — 봉제 용 다리의 저녁 행렬",
+    "collectionId": "toy-kingdom",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/toy-kingdom-patchwork-dragon-bridge-04-a.png",
+    "imageB": "assets/puzzles/toy-kingdom-patchwork-dragon-bridge-04-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "missing-dragon-horn-seam",
+        "label": "한 줄이 사라진 봉제 용 뿔의 이음매",
+        "zones": {
+          "a": {
+            "x": 0.44,
+            "y": 0.025,
+            "w": 0.14,
+            "h": 0.225
+          },
+          "b": {
+            "x": 0.44,
+            "y": 0.025,
+            "w": 0.14,
+            "h": 0.225
+          }
+        }
+      },
+      {
+        "id": "upside-down-heart-shield-emblem",
+        "label": "거꾸로 뒤집힌 병정 방패의 청록 하트",
+        "zones": {
+          "a": {
+            "x": 0.105,
+            "y": 0.635,
+            "w": 0.125,
+            "h": 0.175
+          },
+          "b": {
+            "x": 0.105,
+            "y": 0.635,
+            "w": 0.125,
+            "h": 0.175
+          }
+        }
+      },
+      {
+        "id": "missing-middle-lantern-cap",
+        "label": "아래 금빛 받침이 사라진 가운데 등불",
+        "zones": {
+          "a": {
+            "x": 0.79,
+            "y": 0.075,
+            "w": 0.105,
+            "h": 0.225
+          },
+          "b": {
+            "x": 0.79,
+            "y": 0.075,
+            "w": 0.105,
+            "h": 0.225
+          }
+        }
+      },
+      {
+        "id": "dark-teal-wagon-wheel",
+        "label": "짙은 청록색으로 바뀐 수레 바퀴",
+        "zones": {
+          "a": {
+            "x": 0.765,
+            "y": 0.795,
+            "w": 0.16,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.765,
+            "y": 0.795,
+            "w": 0.16,
+            "h": 0.19
+          }
+        }
+      },
+      {
+        "id": "notched-bridge-flag",
+        "label": "끝에 작은 홈이 생긴 다리 깃발",
+        "zones": {
+          "a": {
+            "x": 0.615,
+            "y": 0.13,
+            "w": 0.115,
+            "h": 0.19
+          },
+          "b": {
+            "x": 0.615,
+            "y": 0.13,
+            "w": 0.115,
+            "h": 0.19
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "toy-kingdom-star-crown-palace-05",
+    "status": "published",
+    "title": "별왕관 궁전",
+    "description": "장난감 왕국의 밤, 별왕관 궁전에서 열리는 축하 대관식에 도착한 파란 망토 병정과 장난감 친구들 사이 다섯 가지 변화를 찾아냅니다.",
+    "theme": "장난감 왕국 대모험 — 별왕관 궁전의 밤 대관식",
+    "collectionId": "toy-kingdom",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/toy-kingdom-star-crown-palace-05-a.png",
+    "imageB": "assets/puzzles/toy-kingdom-star-crown-palace-05-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "missing-palace-crescent-engraving",
+        "label": "소용돌이 하나가 사라진 궁전 초승달 장식",
+        "zones": {
+          "a": {
+            "x": 0.41,
+            "y": 0.02,
+            "w": 0.155,
+            "h": 0.245
+          },
+          "b": {
+            "x": 0.41,
+            "y": 0.02,
+            "w": 0.155,
+            "h": 0.245
+          }
+        }
+      },
+      {
+        "id": "missing-castle-shield-battlement",
+        "label": "가운데 톱니가 사라진 병정 방패의 성 문양",
+        "zones": {
+          "a": {
+            "x": 0.16,
+            "y": 0.615,
+            "w": 0.12,
+            "h": 0.2
+          },
+          "b": {
+            "x": 0.16,
+            "y": 0.615,
+            "w": 0.12,
+            "h": 0.2
+          }
+        }
+      },
+      {
+        "id": "missing-lion-bow-stitch",
+        "label": "흰 바느질이 사라진 사자 나비넥타이",
+        "zones": {
+          "a": {
+            "x": 0.275,
+            "y": 0.56,
+            "w": 0.05,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.275,
+            "y": 0.56,
+            "w": 0.05,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "shorter-middle-star-lantern-point",
+        "label": "왼쪽 아래 꼭짓점이 짧아진 가운데 별 등불",
+        "zones": {
+          "a": {
+            "x": 0.77,
+            "y": 0.105,
+            "w": 0.1,
+            "h": 0.225
+          },
+          "b": {
+            "x": 0.77,
+            "y": 0.105,
+            "w": 0.1,
+            "h": 0.225
+          }
+        }
+      },
+      {
+        "id": "upright-square-box-emblem",
+        "label": "정사각형으로 바뀐 깜짝상자의 청록 문양",
+        "zones": {
+          "a": {
+            "x": 0.78,
+            "y": 0.755,
+            "w": 0.13,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.78,
+            "y": 0.755,
+            "w": 0.13,
+            "h": 0.18
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "dragon-academy-hatchery-classroom-01",
+    "status": "published",
+    "title": "아기 용 부화 교실",
+    "description": "구름 위 마법 학교의 따뜻한 부화 교실에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+    "theme": "꼬마 용 마법학교 대모험 — 아기 용 부화 교실",
+    "collectionId": "dragon-academy",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/dragon-academy-hatchery-classroom-01-a.png",
+    "imageB": "assets/puzzles/dragon-academy-hatchery-classroom-01-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "missing-owl-glasses",
+        "label": "사라진 부엉이 선생님의 둥근 안경",
+        "zones": {
+          "a": {
+            "x": 0.305,
+            "y": 0.245,
+            "w": 0.065,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.305,
+            "y": 0.245,
+            "w": 0.065,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "round-middle-egg-gem",
+        "label": "둥근 모양으로 바뀐 황금 알의 가운데 보석",
+        "zones": {
+          "a": {
+            "x": 0.49,
+            "y": 0.235,
+            "w": 0.05,
+            "h": 0.09
+          },
+          "b": {
+            "x": 0.49,
+            "y": 0.235,
+            "w": 0.05,
+            "h": 0.09
+          }
+        }
+      },
+      {
+        "id": "silver-middle-stoppers",
+        "label": "은빛으로 바뀐 가운데 물약병 마개",
+        "zones": {
+          "a": {
+            "x": 0.815,
+            "y": 0.15,
+            "w": 0.105,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.815,
+            "y": 0.15,
+            "w": 0.105,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "missing-dragon-wing-crease",
+        "label": "안쪽 주름선이 사라진 아기 용의 날개",
+        "zones": {
+          "a": {
+            "x": 0.54,
+            "y": 0.61,
+            "w": 0.08,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.54,
+            "y": 0.61,
+            "w": 0.08,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "blunt-cauldron-handle-tip",
+        "label": "끝의 작은 말림이 사라진 가마솥 손잡이",
+        "zones": {
+          "a": {
+            "x": 0.92,
+            "y": 0.59,
+            "w": 0.07,
+            "h": 0.13
+          },
+          "b": {
+            "x": 0.92,
+            "y": 0.59,
+            "w": 0.07,
+            "h": 0.13
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "dragon-academy-cloud-flight-class-02",
+    "status": "published",
+    "title": "구름 운동장 비행 수업",
+    "description": "구름 위 마법학교의 야외 운동장에서 아기 용들의 신나는 비행 수업 속 다섯 가지 변화를 찾아보세요.",
+    "theme": "꼬마 용 마법학교 대모험 — 구름 운동장 비행 수업",
+    "collectionId": "dragon-academy",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/dragon-academy-cloud-flight-class-02-a.png",
+    "imageB": "assets/puzzles/dragon-academy-cloud-flight-class-02-b.png",
+    "durationMs": 90000,
+    "missPenaltyMs": 5000,
+    "hintPenaltyMs": 10000,
+    "maxHints": 2,
+    "differences": [
+      {
+        "id": "turquoise-owl-clasp",
+        "label": "청록색 마름모로 바뀐 부엉이 선생님의 망토 고리",
+        "zones": {
+          "a": {
+            "x": 0.145,
+            "y": 0.285,
+            "w": 0.065,
+            "h": 0.08
+          },
+          "b": {
+            "x": 0.145,
+            "y": 0.285,
+            "w": 0.065,
+            "h": 0.08
+          }
+        }
+      },
+      {
+        "id": "missing-left-hoop-finial",
+        "label": "꼭대기 장식이 사라진 왼쪽 비행 고리",
+        "zones": {
+          "a": {
+            "x": 0.335,
+            "y": 0.045,
+            "w": 0.055,
+            "h": 0.07
+          },
+          "b": {
+            "x": 0.335,
+            "y": 0.045,
+            "w": 0.055,
+            "h": 0.07
+          }
+        }
+      },
+      {
+        "id": "ivory-red-dragon-horn-tip",
+        "label": "상아색으로 바뀐 붉은 아기 용의 뿔 끝",
+        "zones": {
+          "a": {
+            "x": 0.445,
+            "y": 0.285,
+            "w": 0.085,
+            "h": 0.11
+          },
+          "b": {
+            "x": 0.445,
+            "y": 0.285,
+            "w": 0.085,
+            "h": 0.11
+          }
+        }
+      },
+      {
+        "id": "silver-blue-dragon-horns",
+        "label": "은빛으로 바뀐 파란 아기 용의 두 뿔",
+        "zones": {
+          "a": {
+            "x": 0.68,
+            "y": 0.54,
+            "w": 0.07,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.68,
+            "y": 0.54,
+            "w": 0.07,
+            "h": 0.1
+          }
+        }
+      },
+      {
+        "id": "teal-mouse-helmet-button",
+        "label": "청록색으로 바뀐 생쥐 기록원의 헬멧 단추",
+        "zones": {
+          "a": {
+            "x": 0.21,
+            "y": 0.69,
+            "w": 0.06,
+            "h": 0.1
+          },
+          "b": {
+            "x": 0.21,
+            "y": 0.69,
+            "w": 0.06,
+            "h": 0.1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "dragon-academy-potion-lab-03",
+    "status": "published",
+    "title": "별빛 물약 실험 수업",
+    "description": "구름 위 마법학교의 반짝이는 물약 실험실에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+    "theme": "꼬마 용 마법학교 대모험 — 별빛 물약 실험 수업",
+    "collectionId": "dragon-academy",
+    "stageType": "speed",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/dragon-academy-potion-lab-03-a.png",
+    "imageB": "assets/puzzles/dragon-academy-potion-lab-03-b-balanced.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "purple-potion-cork",
+        "label": "보라색으로 바뀐 노란 물약병의 마개",
+        "zones": {
+          "a": {
+            "x": 0.12,
+            "y": 0.075,
+            "w": 0.1,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.12,
+            "y": 0.075,
+            "w": 0.1,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "silver-crescent-badge",
+        "label": "은색으로 바뀐 아기 용 모자의 초승달 장식",
+        "zones": {
+          "a": {
+            "x": 0.44,
+            "y": 0.235,
+            "w": 0.085,
+            "h": 0.12
+          },
+          "b": {
+            "x": 0.44,
+            "y": 0.235,
+            "w": 0.085,
+            "h": 0.12
+          }
+        }
+      },
+      {
+        "id": "four-point-cauldron-star",
+        "label": "네 갈래로 바뀐 가마솥의 청록색 별 문양",
+        "zones": {
+          "a": {
+            "x": 0.15,
+            "y": 0.705,
+            "w": 0.09,
+            "h": 0.135
+          },
+          "b": {
+            "x": 0.15,
+            "y": 0.705,
+            "w": 0.09,
+            "h": 0.135
+          }
+        }
+      },
+      {
+        "id": "blue-right-scale-crystal",
+        "label": "파란색으로 바뀐 저울의 오른쪽 수정",
+        "zones": {
+          "a": {
+            "x": 0.745,
+            "y": 0.275,
+            "w": 0.05,
+            "h": 0.095
+          },
+          "b": {
+            "x": 0.745,
+            "y": 0.275,
+            "w": 0.05,
+            "h": 0.095
+          }
+        }
+      },
+      {
+        "id": "triangular-spellbook-clasp",
+        "label": "삼각형으로 바뀐 주문서 잠금장치의 청록색 장식",
+        "zones": {
+          "a": {
+            "x": 0.865,
+            "y": 0.775,
+            "w": 0.06,
+            "h": 0.085
+          },
+          "b": {
+            "x": 0.865,
+            "y": 0.775,
+            "w": 0.06,
+            "h": 0.085
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "dragon-academy-moon-observatory-04",
+    "status": "published",
+    "title": "달빛 천문탑 관측 수업",
+    "description": "구름 위 마법학교의 달빛 천문탑에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+    "theme": "꼬마 용 마법학교 대모험 — 달빛 천문탑 관측 수업",
+    "collectionId": "dragon-academy",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/dragon-academy-moon-observatory-04-a.png",
+    "imageB": "assets/puzzles/dragon-academy-moon-observatory-04-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "shorter-dragon-neckerchief-tail",
+        "label": "짧아진 아기 용 목도리의 오른쪽 꼬리",
+        "zones": {
+          "a": {
+            "x": 0.37,
+            "y": 0.41,
+            "w": 0.15,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.37,
+            "y": 0.41,
+            "w": 0.15,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "four-point-left-star-lantern",
+        "label": "네 꼭짓점으로 바뀐 왼쪽 황금 별 등불",
+        "zones": {
+          "a": {
+            "x": 0.17,
+            "y": 0.08,
+            "w": 0.12,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.17,
+            "y": 0.08,
+            "w": 0.12,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "star-telescope-emblem",
+        "label": "청록색 별로 바뀐 망원경 문양",
+        "zones": {
+          "a": {
+            "x": 0.7,
+            "y": 0.12,
+            "w": 0.12,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.7,
+            "y": 0.12,
+            "w": 0.12,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "round-teaching-pointer",
+        "label": "원 모양으로 바뀐 부엉이 선생님의 포인터",
+        "zones": {
+          "a": {
+            "x": 0.19,
+            "y": 0.35,
+            "w": 0.1,
+            "h": 0.17
+          },
+          "b": {
+            "x": 0.19,
+            "y": 0.35,
+            "w": 0.1,
+            "h": 0.17
+          }
+        }
+      },
+      {
+        "id": "star-astronomy-case-emblem",
+        "label": "청록색 별로 바뀐 천문 관측 가방 문양",
+        "zones": {
+          "a": {
+            "x": 0.77,
+            "y": 0.6,
+            "w": 0.15,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.77,
+            "y": 0.6,
+            "w": 0.15,
+            "h": 0.22
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "dragon-academy-starlight-graduation-05",
+    "status": "published",
+    "title": "별구름 졸업 축제",
+    "description": "구름 위 마법학교의 별빛 졸업 축제에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+    "theme": "꼬마 용 마법학교 대모험 — 별구름 졸업 축제",
+    "collectionId": "dragon-academy",
+    "stageType": "classic",
+    "difficulty": "어려움",
+    "imageA": "assets/puzzles/dragon-academy-starlight-graduation-05-a.png",
+    "imageB": "assets/puzzles/dragon-academy-starlight-graduation-05-b.png",
+    "durationMs": 75000,
+    "missPenaltyMs": 7000,
+    "hintPenaltyMs": 12000,
+    "maxHints": 1,
+    "differences": [
+      {
+        "id": "crescent-graduation-clasp",
+        "label": "초승달 모양으로 바뀐 아기 용의 졸업 망토 장식",
+        "zones": {
+          "a": {
+            "x": 0.43,
+            "y": 0.45,
+            "w": 0.09,
+            "h": 0.14
+          },
+          "b": {
+            "x": 0.43,
+            "y": 0.45,
+            "w": 0.09,
+            "h": 0.14
+          }
+        }
+      },
+      {
+        "id": "missing-middle-lantern-cap",
+        "label": "가운데 등불에서 사라진 작은 받침 장식",
+        "zones": {
+          "a": {
+            "x": 0.15,
+            "y": 0.07,
+            "w": 0.13,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.15,
+            "y": 0.07,
+            "w": 0.13,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "round-teacher-bell-clapper",
+        "label": "동그랗게 바뀐 부엉이 선생님의 종 추",
+        "zones": {
+          "a": {
+            "x": 0.22,
+            "y": 0.35,
+            "w": 0.13,
+            "h": 0.27
+          },
+          "b": {
+            "x": 0.22,
+            "y": 0.35,
+            "w": 0.13,
+            "h": 0.27
+          }
+        }
+      },
+      {
+        "id": "swallowtail-graduation-banner",
+        "label": "제비꼬리 모양으로 바뀐 졸업 배너",
+        "zones": {
+          "a": {
+            "x": 0.74,
+            "y": 0.35,
+            "w": 0.16,
+            "h": 0.22
+          },
+          "b": {
+            "x": 0.74,
+            "y": 0.35,
+            "w": 0.16,
+            "h": 0.22
+          }
+        }
+      },
+      {
+        "id": "heart-keepsake-chest",
+        "label": "청록색 하트로 바뀐 졸업 기념 상자 문양",
+        "zones": {
+          "a": {
+            "x": 0.7,
+            "y": 0.73,
+            "w": 0.14,
+            "h": 0.18
+          },
+          "b": {
+            "x": 0.7,
+            "y": 0.73,
+            "w": 0.14,
+            "h": 0.18
+          }
+        }
+      }
+    ]
+  }
+]

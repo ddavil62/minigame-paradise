@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "skyship-workshop-01",
+  "status": "published",
+  "title": "구름섬 비행선 공방",
+  "description": "구름 위 비행선 공방에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "하늘 공방",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "white-pennant",
+      "label": "흰색 삼각 깃발",
+      "zones": {
+        "a": {
+          "x": 0.3,
+          "y": 0.095,
+          "w": 0.055,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.3,
+          "y": 0.095,
+          "w": 0.055,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "red-roof-propeller",
+      "label": "지붕의 붉은 프로펠러",
+      "zones": {
+        "a": {
+          "x": 0.205,
+          "y": 0.135,
+          "w": 0.085,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.205,
+          "y": 0.135,
+          "w": 0.085,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "green-goggles",
+      "label": "초록색 비행 안경",
+      "zones": {
+        "a": {
+          "x": 0.11,
+          "y": 0.66,
+          "w": 0.09,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.11,
+          "y": 0.66,
+          "w": 0.09,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "blue-porthole",
+      "label": "파란 테두리 창문",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.61,
+          "w": 0.055,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.61,
+          "w": 0.055,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "missing-toolbox",
+      "label": "갑판 위 작은 도구 상자",
+      "zones": {
+        "a": {
+          "x": 0.545,
+          "y": 0.685,
+          "w": 0.065,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.545,
+          "y": 0.685,
+          "w": 0.065,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 하늘 공방. Scene: An open-air fantasy airship workshop on a floating island above the clouds, with a small wooden airship, brass propellers, tool benches, ropes, gears, colorful pennants without symbols, crates, goggles, and distant floating islands.\nArt direction: premium whimsical storybook illustration, bright sky blue and warm brass palette, crisp object silhouettes, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across the airship, workbench, and distant sky while preserving the exact camera and cloud pattern",
+    "createdAt": "2026-08-19T09:15:14.148Z"
+  },
+  "publishedAt": "2026-08-19T09:27:23.415Z",
+  "collectionId": "world-adventure",
+  "stageType": "speed"
+}

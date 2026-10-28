@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "clockwork-station-01",
+  "status": "published",
+  "title": "황동빛 시계장치 역",
+  "description": "황동 기계가 움직이는 기차역에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "시계장치 기차역",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "teal-clock-gear",
+      "label": "대형 시계의 청록색 톱니",
+      "zones": {
+        "a": {
+          "x": 0.13,
+          "y": 0.21,
+          "w": 0.06,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.13,
+          "y": 0.21,
+          "w": 0.06,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "purple-hanging-lantern",
+      "label": "보라색 천장 등불",
+      "zones": {
+        "a": {
+          "x": 0.4,
+          "y": 0.16,
+          "w": 0.06,
+          "h": 0.125
+        },
+        "b": {
+          "x": 0.4,
+          "y": 0.16,
+          "w": 0.06,
+          "h": 0.125
+        }
+      }
+    },
+    {
+      "id": "blue-locomotive-headlamp",
+      "label": "기관차의 파란 전조등",
+      "zones": {
+        "a": {
+          "x": 0.065,
+          "y": 0.39,
+          "w": 0.05,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.065,
+          "y": 0.39,
+          "w": 0.05,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "blue-luggage-tag",
+      "label": "여행 가방의 파란 수하물표",
+      "zones": {
+        "a": {
+          "x": 0.145,
+          "y": 0.88,
+          "w": 0.045,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.145,
+          "y": 0.88,
+          "w": 0.045,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "red-mechanical-bird-tail",
+      "label": "기계 새의 붉은 꼬리깃",
+      "zones": {
+        "a": {
+          "x": 0.755,
+          "y": 0.87,
+          "w": 0.08,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.755,
+          "y": 0.87,
+          "w": 0.08,
+          "h": 0.09
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 시계장치 기차역. Scene: A fantastical clockwork train station with a large round clock without numerals, brass gears, teal steam locomotive, luggage trolley, red suitcase, hanging lanterns, potted palm, ticket booth with no signs or lettering, and a small mechanical bird.\nArt direction: premium whimsical storybook illustration, polished brass, teal, and burgundy palette, crisp silhouettes, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across the clock, hanging fixtures, locomotive, luggage, and platform; keep all architecture and perspective unchanged",
+    "createdAt": "2026-08-19T12:02:07.966Z"
+  },
+  "publishedAt": "2026-08-19T15:00:45.124Z",
+  "collectionId": "world-adventure",
+  "stageType": "classic"
+}

@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 마법 인형극장. Scene: A cozy enchanted marionette theater at night with an ornate walnut proscenium, deep teal curtains, a round moon backdrop, a fox magician puppet in a blue pointed hat at center, a white rabbit puppet with a red bow tie on the right, a crescent lantern with a purple tassel on the left, hanging stars, warm footlights, and a small prop table holding a brass music box with a visible crank.
+Art direction: premium whimsical storybook illustration, deep indigo, teal, burgundy, walnut and warm gold palette, crisp object silhouettes, richly detailed but uncluttered, theatrical moonlight and amber footlights.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "wonder-park-dream-gate-01",
+  "status": "published",
+  "title": "꿈빛 입장 광장",
+  "description": "별빛 원더파크의 설레는 입장 광장에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 테마파크의 꿈빛 입장 광장",
+  "collectionId": "wonder-park",
+  "stageType": "relaxed",
+  "difficulty": "쉬움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "pink-arch-star",
+      "label": "분홍색으로 바뀐 입구의 별",
+      "zones": {
+        "a": {
+          "x": 0.45,
+          "y": 0.095,
+          "w": 0.12,
+          "h": 0.185
+        },
+        "b": {
+          "x": 0.45,
+          "y": 0.095,
+          "w": 0.12,
+          "h": 0.185
+        }
+      }
+    },
+    {
+      "id": "yellow-awning-stripe",
+      "label": "노란색으로 바뀐 차양 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.185,
+          "y": 0.335,
+          "w": 0.045,
+          "h": 0.175
+        },
+        "b": {
+          "x": 0.185,
+          "y": 0.335,
+          "w": 0.045,
+          "h": 0.175
+        }
+      }
+    },
+    {
+      "id": "purple-fountain-jewel",
+      "label": "보라색으로 바뀐 분수의 보석",
+      "zones": {
+        "a": {
+          "x": 0.47,
+          "y": 0.785,
+          "w": 0.055,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.47,
+          "y": 0.785,
+          "w": 0.055,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "missing-purple-balloon",
+      "label": "사라진 보라색 풍선",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.39,
+          "w": 0.095,
+          "h": 0.25
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.39,
+          "w": 0.095,
+          "h": 0.25
+        }
+      }
+    },
+    {
+      "id": "red-rabbit-bow",
+      "label": "빨간색으로 바뀐 토끼의 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.85,
+          "y": 0.66,
+          "w": 0.065,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.85,
+          "y": 0.66,
+          "w": 0.065,
+          "h": 0.095
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 테마파크의 꿈빛 입장 광장. Scene: A welcoming whimsical theme park entrance plaza in warm late-afternoon light, viewed straight-on from a comfortable medium-wide angle. A grand cream entrance arch with one large golden five-point star emblem stands in the background, with no writing anywhere. On the left is a mint ticket booth with a clearly visible coral-and-cream striped awning. In the center is a round turquoise fountain with a single blue diamond-shaped jewel on its front. On the right is a small wheeled balloon cart holding exactly five large balloons in clearly separated colors and silhouettes. Near the lower right stands an original cream-colored rabbit park mascot statue wearing a teal bow tie. Add two decorative lampposts, flower planters, a glimpse of a carousel beyond the gate, and a few tiny distant visitor silhouettes for atmosphere. Keep the five puzzle props large, unobstructed, spatially separated, and away from the image edges. No readable signs, tickets, labels, letters, or numbers..\nArt direction: original premium whimsical storybook game illustration, clean expressive ink contours, soft cel shading, gently hand-painted textures, polished animated-feature background quality, cheerful rounded shapes, cohesive mint, coral, cream, turquoise, and gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the large golden five-point star emblem at the top center of the entrance arch from gold to pink, 2) change one clearly visible coral stripe on the left ticket booth awning from coral to yellow, 3) change the blue diamond-shaped jewel on the front of the central fountain from blue to purple, 4) remove exactly one balloon from the right balloon cart so four large balloons remain, 5) change the rabbit mascot statue's teal bow tie to red. Preserve the arch, booth, fountain, balloon cart, rabbit statue, visitor silhouettes, carousel, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T05:45:02.732Z"
+  },
+  "publishedAt": "2026-08-21T05:50:00.627Z"
+}

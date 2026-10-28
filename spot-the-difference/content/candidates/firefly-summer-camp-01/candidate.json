@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "firefly-summer-camp-01",
+  "status": "published",
+  "title": "반딧불 여름 캠핑장",
+  "description": "반딧불이 춤추는 여름밤 숲속 캠핑장에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "여름밤 숲속 캠핑",
+  "collectionId": "seasonal-stories",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "full-moon",
+      "label": "초승달에서 보름달로 바뀐 달",
+      "zones": {
+        "a": {
+          "x": 0.655,
+          "y": 0.04,
+          "w": 0.075,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.655,
+          "y": 0.04,
+          "w": 0.075,
+          "h": 0.095
+        }
+      }
+    },
+    {
+      "id": "turquoise-center-lantern",
+      "label": "청록색으로 바뀐 중앙 랜턴 테두리",
+      "zones": {
+        "a": {
+          "x": 0.585,
+          "y": 0.185,
+          "w": 0.065,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.585,
+          "y": 0.185,
+          "w": 0.065,
+          "h": 0.095
+        }
+      }
+    },
+    {
+      "id": "turquoise-tent-pillow",
+      "label": "청록색으로 바뀐 텐트 안 베개",
+      "zones": {
+        "a": {
+          "x": 0.2,
+          "y": 0.455,
+          "w": 0.14,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.2,
+          "y": 0.455,
+          "w": 0.14,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "turquoise-kettle-lid",
+      "label": "청록색으로 바뀐 주전자 뚜껑",
+      "zones": {
+        "a": {
+          "x": 0.705,
+          "y": 0.69,
+          "w": 0.09,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.705,
+          "y": 0.69,
+          "w": 0.09,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "raccoon-neckerchief",
+      "label": "너구리의 청록색 목수건",
+      "zones": {
+        "a": {
+          "x": 0.17,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.17,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.15
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 여름밤 숲속 캠핑. Scene: A cozy whimsical summer campsite in a forest clearing at night, with a large canvas tent, a glowing campfire ring, a red enamel kettle, a picnic basket, a striped blanket, a wooden acoustic guitar without lettering, a lantern string between two trees, three marshmallows on roasting sticks, a small friendly raccoon, wildflowers, fireflies, and a crescent moon above distant pine-covered hills.\nArt direction: premium whimsical storybook illustration, deep summer greens and indigo blue balanced with warm amber firelight, coral red and golden accents, crisp readable props, richly detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across the moon and lantern string, tent area, campfire and kettle, picnic blanket, and foreground raccoon; keep all edits localized and avoid global lighting, firefly, or foliage changes",
+    "createdAt": "2026-08-20T04:45:28.583Z"
+  },
+  "publishedAt": "2026-08-20T04:47:59.228Z"
+}

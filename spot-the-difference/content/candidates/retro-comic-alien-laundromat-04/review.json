@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "red-washer-door",
+      "label": "빨간색으로 바뀐 세탁기 문",
+      "zones": {
+        "a": {
+          "x": 0.01,
+          "y": 0.42,
+          "w": 0.15,
+          "h": 0.28
+        },
+        "b": {
+          "x": 0.01,
+          "y": 0.42,
+          "w": 0.15,
+          "h": 0.28
+        }
+      }
+    },
+    {
+      "id": "cyan-ceiling-lamp",
+      "label": "파란색으로 바뀐 천장 조명",
+      "zones": {
+        "a": {
+          "x": 0.185,
+          "y": 0.025,
+          "w": 0.135,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.185,
+          "y": 0.025,
+          "w": 0.135,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "red-alien-cap",
+      "label": "빨간색으로 바뀐 외계인 모자",
+      "zones": {
+        "a": {
+          "x": 0.415,
+          "y": 0.105,
+          "w": 0.13,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.415,
+          "y": 0.105,
+          "w": 0.13,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "missing-yellow-towel-stack",
+      "label": "사라진 노란 수건 더미",
+      "zones": {
+        "a": {
+          "x": 0.095,
+          "y": 0.18,
+          "w": 0.18,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.095,
+          "y": 0.18,
+          "w": 0.18,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "missing-robot-antenna-ball",
+      "label": "사라진 로봇 안테나 공",
+      "zones": {
+        "a": {
+          "x": 0.855,
+          "y": 0.17,
+          "w": 0.04,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.855,
+          "y": 0.17,
+          "w": 0.04,
+          "h": 0.09
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 4471356,
+        "hash": "8e5cb15e19ea27b4ff4b64d9a85be6a7ab0585017e32bdb0596a04ff9479e1c4",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 3662260,
+        "hash": "f08c8c150385f8d41d409659d9ea52ac3ba970a6fbd25e38de49800d415b7e93",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-20T09:09:33.479Z"
+}

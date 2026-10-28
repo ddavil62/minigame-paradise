@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "toy-kingdom-block-castle-01",
+  "status": "published",
+  "title": "블록 왕국 성문",
+  "description": "알록달록한 나무 블록 성문 앞에서 파란 망토의 병정과 장난감 주민들이 환영 행렬을 열며 다섯 가지 변화를 찾아냅니다.",
+  "theme": "장난감 왕국 대모험 — 블록 왕국 성문의 환영 행렬",
+  "collectionId": "toy-kingdom",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a-v2.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "missing-middle-castle-crenellation",
+      "label": "가운데 톱니가 사라진 성문 꼭대기 블록",
+      "zones": {
+        "a": {
+          "x": 0.37,
+          "y": 0.07,
+          "w": 0.245,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.37,
+          "y": 0.07,
+          "w": 0.245,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "flipped-crescent-soldier-shield",
+      "label": "방향이 반대로 바뀐 병정 방패의 청록 초승달",
+      "zones": {
+        "a": {
+          "x": 0.22,
+          "y": 0.59,
+          "w": 0.12,
+          "h": 0.24
+        },
+        "b": {
+          "x": 0.22,
+          "y": 0.59,
+          "w": 0.12,
+          "h": 0.24
+        }
+      }
+    },
+    {
+      "id": "missing-rabbit-vest-button",
+      "label": "하나가 사라진 토끼 악사의 조끼 단추",
+      "zones": {
+        "a": {
+          "x": 0.56,
+          "y": 0.53,
+          "w": 0.13,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.56,
+          "y": 0.53,
+          "w": 0.13,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-elephant-saddle-stud",
+      "label": "노란 테두리가 사라진 양철 코끼리 안장",
+      "zones": {
+        "a": {
+          "x": 0.31,
+          "y": 0.55,
+          "w": 0.08,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.31,
+          "y": 0.55,
+          "w": 0.08,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "dark-teal-cart-garland-bead",
+      "label": "짙은 청록색으로 바뀐 수레 구슬 하나",
+      "zones": {
+        "a": {
+          "x": 0.68,
+          "y": 0.71,
+          "w": 0.21,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.68,
+          "y": 0.71,
+          "w": 0.21,
+          "h": 0.11
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 장난감 왕국 대모험 — 블록 왕국 성문의 환영 행렬. Scene: A joyful toy-sized kingdom welcome parade in front of a grand castle gate built entirely from colorful wooden blocks, viewed straight-on from a comfortable medium-wide angle like a premium handcrafted tabletop diorama. The castle fills the back half of the scene with chunky red, blue, yellow, and natural-wood blocks, round towers, a raised archway, cloth bunting, and warm nursery light. At upper center, isolated against the pale wall above the arch, one oversized bright sunflower-yellow rectangular crown block caps the gate. At lower left, the recurring small wooden soldier wears a rich cobalt-blue cloth cape and has a large golden wind-up key on his back; he faces inward and holds one oversized round cream shield bearing one simple vivid-turquoise crescent-moon emblem. At upper right, one large coral-red cloth flag flies alone from a smooth wooden pole; its free end has one broad square-cut tail. At lower right, a small bead-cart rolls toward the gate carrying blank wooden gift blocks; its nearest oversized wheel is a solid vivid-turquoise wooden disk, fully visible. At center-right, a cheerful plush rabbit drummer stands in a clear area and holds exactly two large bright coral-red drumsticks, one raised in each paw above a cream toy drum. Add wooden peg-doll citizens, a tin elephant, felt flowers, scattered round beads, ribbon streamers, and confetti shapes only as supporting atmosphere. Keep the yellow crown block, shield emblem, flag tail, turquoise cart wheel, and two drumsticks large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration with a handcrafted wooden-and-fabric toy diorama look, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, warm natural wood grain, stitched felt and slightly worn painted tin textures, friendly rounded toy characters, crisp object silhouettes, cohesive primary-color accents with cream, cobalt blue, sunflower yellow, coral red, vivid turquoise, and antique gold, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the oversized bright sunflower-yellow rectangular crown block at upper center above the castle arch to rich plum purple while preserving its exact shape, size, position, wood grain, and lighting, 2) change only the simple vivid-turquoise crescent-moon emblem on the wooden soldier's lower-left round cream shield into one bright coral-red five-point-star emblem of similar size while preserving the shield and soldier, 3) change only the upper-right coral-red flag's broad square-cut free end into one clearly pointed swallowtail end while preserving its color, folds, pole, size, and position, 4) change only the nearest oversized solid vivid-turquoise wooden disk wheel on the lower-right bead-cart to bright orange while preserving the wheel shape, axle, cart, cargo, and position, 5) remove exactly one of the plush rabbit drummer's two large bright coral-red drumsticks at center-right so exactly one drumstick remains raised in one paw while preserving both paws, the rabbit, drum, pose, and all anatomy. Preserve the wooden soldier's cobalt-blue cape and golden wind-up key, all characters, faces, bodies, castle blocks, archway, towers, bead-cart, drum, citizens, props, camera, crop, lighting, palette, textures, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T13:53:13.146Z",
+    "feedbackRevisionPrompt": "Create a harder B from A with exactly five subtle changes: remove the middle castle crenellation, flip the shield crescent, remove one rabbit vest button, remove one elephant saddle stud, and change one cart bead to dark teal; preserve everything else."
+  },
+  "publishedAt": "2026-08-21T13:56:55.545Z"
+}

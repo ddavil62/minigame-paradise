@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 해변 제과점. Scene: A cheerful seaside bakery in the morning with an open window facing turquoise waves, striped awning, pastry display, round loaves, croissants, a ceramic teapot, seashell decorations, a small sailboat model, a woven basket, and a friendly seagull perched outside.
+Art direction: premium whimsical storybook illustration, sunlit aqua and coral palette, crisp readable objects, detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

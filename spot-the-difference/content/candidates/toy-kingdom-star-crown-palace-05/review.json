@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "missing-palace-crescent-engraving",
+      "label": "소용돌이 하나가 사라진 궁전 초승달 장식",
+      "zones": {
+        "a": {
+          "x": 0.41,
+          "y": 0.02,
+          "w": 0.155,
+          "h": 0.245
+        },
+        "b": {
+          "x": 0.41,
+          "y": 0.02,
+          "w": 0.155,
+          "h": 0.245
+        }
+      }
+    },
+    {
+      "id": "missing-castle-shield-battlement",
+      "label": "가운데 톱니가 사라진 병정 방패의 성 문양",
+      "zones": {
+        "a": {
+          "x": 0.16,
+          "y": 0.615,
+          "w": 0.12,
+          "h": 0.2
+        },
+        "b": {
+          "x": 0.16,
+          "y": 0.615,
+          "w": 0.12,
+          "h": 0.2
+        }
+      }
+    },
+    {
+      "id": "missing-lion-bow-stitch",
+      "label": "흰 바느질이 사라진 사자 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.275,
+          "y": 0.56,
+          "w": 0.05,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.275,
+          "y": 0.56,
+          "w": 0.05,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "shorter-middle-star-lantern-point",
+      "label": "왼쪽 아래 꼭짓점이 짧아진 가운데 별 등불",
+      "zones": {
+        "a": {
+          "x": 0.77,
+          "y": 0.105,
+          "w": 0.1,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.77,
+          "y": 0.105,
+          "w": 0.1,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "upright-square-box-emblem",
+      "label": "정사각형으로 바뀐 깜짝상자의 청록 문양",
+      "zones": {
+        "a": {
+          "x": 0.78,
+          "y": 0.755,
+          "w": 0.13,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.78,
+          "y": 0.755,
+          "w": 0.13,
+          "h": 0.18
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3249544,
+        "hash": "333be5ee3296141844325245117a189464f5fcc710cccce9c59fb2a5015168bb",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 3034061,
+        "hash": "8b30c93c529fdbcc3dd762639a6a12d9bc98de051729feb6bf8a0bc7cca7b0d4",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T15:38:19.069Z"
+}

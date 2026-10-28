@@ -1,0 +1,17 @@
+{
+  "id": "animal-detectives-museum-01",
+  "title": "사라진 보석의 박물관",
+  "description": "폐관 직후의 자연사 박물관에서 여우 탐정과 토끼 조수와 함께 사라진 보석의 다섯 단서를 찾아보세요.",
+  "theme": "동물 탐정단의 사라진 보석 박물관 사건",
+  "scene": "A grand whimsical natural-history museum central hall just after closing time, viewed straight-on from a comfortable medium-wide angle. Warm amber gallery lamps mix with cool blue evening light from tall arched windows. At the lower-left, the recurring friendly fox detective wears a burgundy trench coat and holds one oversized brass magnifying glass with a clearly visible emerald-teal handle. At center, a broad cream stone jewelry display pedestal supports an open glass case with one large empty burgundy velvet jewel cushion shaped like a hexagon. A towering friendly dinosaur skeleton fills the background without appearing frightening; its long tail extends across the upper-middle and ends with exactly four large, clearly separated tail-bone segments. At the upper-right, one round owl security guard in a navy uniform and cap stands on a small balcony; exactly one large gold five-point star badge is centered on the cap. At the far right, one tall burgundy velvet curtain is gathered with a braided gold rope ending in exactly one large turquoise tassel. Near the fox stands the recurring friendly rabbit assistant wearing a teal beret and carrying a blank evidence notebook. Add plain landscape paintings without writing, rope barriers, fossil shells, a potted fern, rolled blank maps, and soft marble-floor reflections only as supporting atmosphere. Keep the magnifying-glass handle, hexagonal jewel cushion, four dinosaur tail segments, owl cap badge, and curtain tassel large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers.",
+  "style": "original premium 1930s-inspired animal detective storybook game illustration, cinematic cozy mystery lighting, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive sepia cream, burgundy, deep teal, warm amber, antique gold, midnight blue, and turquoise palette, not imitating any specific artist or franchise",
+  "collectionId": "animal-detectives",
+  "stageType": "relaxed",
+  "difficulty": "쉬움",
+  "differenceCount": 5,
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "changeGuidance": "Make only these five changes: 1) change only the emerald-teal handle of the fox detective's oversized brass magnifying glass at lower-left to coral red, 2) change only the hexagonal burgundy velvet jewel cushion inside the center glass display case into a round cushion of similar size, 3) remove exactly one of the four large separated tail-bone segments at the end of the background dinosaur skeleton so three remain, 4) change only the large gold five-point star badge on the upper-right owl guard's navy cap into a gold crescent-moon badge of similar size, 5) change only the large turquoise tassel at the end of the far-right curtain tieback to bright yellow while preserving its shape. Preserve the fox detective, rabbit assistant, owl guard, dinosaur skeleton, display case, pedestal, curtain, paintings, barriers, fossils, fern, maps, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

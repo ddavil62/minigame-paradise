@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "wonder-park-starlight-ferris-wheel-05",
+  "status": "published",
+  "title": "별빛 관람차 광장",
+  "description": "불꽃이 피어나는 원더파크의 밤 관람차 광장에서 다섯 가지 차이를 찾아보세요!",
+  "theme": "별빛과 불꽃이 빛나는 마법 테마파크 관람차 광장",
+  "collectionId": "wonder-park",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "ferris-hub-star",
+      "label": "관람차 중심의 별 장식",
+      "zones": {
+        "a": {
+          "x": 0.465,
+          "y": 0.235,
+          "w": 0.12,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.465,
+          "y": 0.235,
+          "w": 0.12,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "purple-cart-star",
+      "label": "보라색 기념품 카트 별 조명",
+      "zones": {
+        "a": {
+          "x": 0.14,
+          "y": 0.49,
+          "w": 0.14,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0.14,
+          "y": 0.49,
+          "w": 0.14,
+          "h": 0.21
+        }
+      }
+    },
+    {
+      "id": "missing-fountain-swan",
+      "label": "사라진 분수의 백조 조각",
+      "zones": {
+        "a": {
+          "x": 0.435,
+          "y": 0.545,
+          "w": 0.18,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.435,
+          "y": 0.545,
+          "w": 0.18,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "red-telescope-eyepiece",
+      "label": "빨간색 망원경 접안렌즈",
+      "zones": {
+        "a": {
+          "x": 0.655,
+          "y": 0.505,
+          "w": 0.08,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.655,
+          "y": 0.505,
+          "w": 0.08,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "four-point-blue-balloon",
+      "label": "네 꼭짓점 파란 별 풍선",
+      "zones": {
+        "a": {
+          "x": 0.765,
+          "y": 0.325,
+          "w": 0.13,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.765,
+          "y": 0.325,
+          "w": 0.13,
+          "h": 0.19
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 별빛과 불꽃이 빛나는 마법 테마파크 관람차 광장. Scene: A festive whimsical theme park Ferris wheel plaza at blue hour, viewed straight-on from a comfortable medium-wide angle. A large ornate cream-and-mint Ferris wheel fills the center background, with exactly one prominent gold crescent-moon ornament at its hub and clearly separated coral, turquoise, yellow, and lavender gondolas. In the left foreground is a compact mint souvenir cart with one large five-point gold star lantern displayed on top. In the center foreground is a round cream fountain with exactly one turquoise swan sculpture. On the right is one brass coin-operated telescope with a clearly visible yellow eyepiece. Near the lower right stands the same original cream-colored rabbit park mascot from the earlier Wonder Park scenes, with long pink-lined ears and a teal bow tie, holding exactly one blue star-shaped balloon. Soft fireworks bloom high in the sky behind the wheel without obscuring its silhouette. Add tidy flower planters, warm park lamps, ribbon garlands without writing, and a few small distant visitor silhouettes. Keep the crescent hub, star lantern, swan sculpture, telescope eyepiece, and star balloon large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium whimsical storybook game illustration matching the established Wonder Park entrance and carousel stages, clean expressive ink contours, soft cel shading, gently hand-painted textures, polished animated-feature background quality, cheerful rounded shapes, cohesive mint, coral, cream, turquoise, lavender, midnight blue, and gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the gold crescent-moon ornament at the Ferris wheel hub to a gold five-point star, 2) change the gold star lantern on the left souvenir cart to purple while preserving its shape, 3) remove the turquoise swan sculpture from the center fountain while preserving the fountain and water, 4) change the right telescope's yellow eyepiece to red, 5) remove exactly one point from the rabbit mascot's blue five-point star-shaped balloon so it has four points. Preserve the Ferris wheel, gondolas, cart, fountain, telescope, rabbit mascot, fireworks, visitors, flowers, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T06:08:17.579Z"
+  },
+  "publishedAt": "2026-08-21T06:16:21.866Z"
+}

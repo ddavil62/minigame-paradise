@@ -1,0 +1,17 @@
+{
+  "id": "wonder-park-candy-parade-03",
+  "title": "캔디 퍼레이드 거리",
+  "description": "달콤한 장식과 음악으로 가득한 원더파크 퍼레이드 거리에서 다섯 가지 차이를 찾아보세요!",
+  "theme": "알록달록한 마법 테마파크 캔디 퍼레이드",
+  "scene": "A cheerful whimsical theme park candy parade avenue in warm late-afternoon light, viewed straight-on from a comfortable medium-wide angle. A large ornate mint-and-coral parade float fills the center, shaped like a rounded cake wagon and topped with exactly one large gold crown ornament. On the far left stands one tall spiral lollipop decoration with clearly alternating pink and cream stripes and a turquoise bow at its base. In the center foreground is one small cream marching drum with exactly three gold stars around its shell and two drumsticks resting across the top. On the right is a compact lavender cotton-candy cart with one clearly visible round yellow wheel hub. Near the lower right stands the same original cream-colored rabbit park mascot from the earlier Wonder Park scenes, with long pink-lined ears and a teal bow tie, holding exactly one small triangular blue parade flag. Add separated candy-shaped topiaries, ribbon garlands without writing, warm park lamps, confetti, and a few small distant visitor silhouettes. Keep the crown, spiral lollipop, drum stars, cart wheel hub, and rabbit flag large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers.",
+  "style": "original premium whimsical storybook game illustration matching the established Wonder Park entrance and carousel stages, clean expressive ink contours, soft cel shading, gently hand-painted textures, polished animated-feature background quality, cheerful rounded shapes, cohesive mint, coral, cream, turquoise, lavender, pink, and gold palette, not imitating any specific artist or franchise",
+  "collectionId": "wonder-park",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "differenceCount": 5,
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "changeGuidance": "Make only these five changes: 1) change the large gold crown ornament on top of the center parade float to a gold crescent moon, 2) change the left spiral lollipop's turquoise bow to purple, 3) reduce the four visible gold stars on the cream marching drum to two, 4) change the lavender cotton-candy cart's yellow wheel hub to red, 5) change the rabbit mascot's small triangular blue parade flag to a small blue swallowtail flag while preserving its pole and size. Preserve the parade float, lollipop, drum, cart, rabbit mascot, visitors, topiaries, confetti, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes."
+}

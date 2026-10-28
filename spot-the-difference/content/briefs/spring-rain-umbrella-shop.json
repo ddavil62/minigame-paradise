@@ -1,0 +1,17 @@
+{
+  "id": "spring-rain-umbrella-shop-01",
+  "title": "봄비 우산 수리점",
+  "description": "봄비가 내리는 아늑한 우산 수리점에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "봄비 우산 수리점",
+  "scene": "A cozy whimsical umbrella repair shop during a gentle spring rain, viewed from inside at eye level. The scene includes a large arched window with raindrops and a quiet cobblestone lane outside, a wooden workbench, six clearly separated colorful umbrellas in a wall rack, a pair of yellow rain boots, three large thread spools, a brass hand-crank sewing machine, a ceramic teapot, a sleeping gray cat on a round cushion, a hanging glass lamp, and small potted spring flowers. Keep every prop large, distinct, and spatially separated for a spot-the-difference puzzle",
+  "style": "premium whimsical storybook illustration, fresh mint green, rain blue, coral, and warm honey wood palette, crisp object silhouettes, richly detailed but uncluttered",
+  "changeGuidance": "Make exactly these five localized changes only: change one coral umbrella canopy to violet; remove the buckle from the left yellow rain boot; change the center thread spool from blue to orange; add a small teal bow collar to the gray cat; remove the teapot lid. Preserve every other object, raindrop, flower, reflection, camera angle, and lighting exactly",
+  "differenceCount": 5,
+  "difficulty": "쉬움",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "collectionId": "seasonal-stories",
+  "stageType": "relaxed"
+}

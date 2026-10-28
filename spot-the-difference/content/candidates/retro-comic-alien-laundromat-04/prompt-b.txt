@@ -1,0 +1,6 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly 5 localized, clearly visible object-level changes distributed across the scene.
+Use changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Requested change guidance: Make exactly these five localized changes only: change the circular door of the leftmost washing machine from cyan blue to tomato red; change the large hanging ceiling lamp shade from tomato red to cyan blue; change the green alien attendant's mustard-yellow cap to tomato red; remove the mustard-yellow folded towel stack from the left wall shelf while leaving the red and cyan towel stacks intact; remove the yellow ball from the floating ironing robot's antenna while keeping the short black antenna stem. Keep the purple space dog without a collar. Preserve every other object, halftone pattern, ink line, camera angle, color, and lighting exactly.

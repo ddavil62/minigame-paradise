@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "toy-kingdom-windup-train-station-02",
+  "status": "published",
+  "title": "태엽 기차역",
+  "description": "장난감 왕국의 태엽 기차가 출발을 준비하는 나무 승강장에서 파란 망토의 병정과 승객들 사이 다섯 가지 변화를 찾아냅니다.",
+  "theme": "장난감 왕국 대모험 — 태엽 기차역의 아침 출발",
+  "collectionId": "toy-kingdom",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b-v2.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "cobalt-signal-paddle-center",
+      "label": "코발트색으로 바뀐 역무원 신호판 중앙",
+      "zones": {
+        "a": {
+          "x": 0.055,
+          "y": 0.35,
+          "w": 0.135,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.055,
+          "y": 0.35,
+          "w": 0.135,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "shorter-station-clock-hand",
+      "label": "짧아진 역 시계의 오른쪽 바늘",
+      "zones": {
+        "a": {
+          "x": 0.535,
+          "y": 0.075,
+          "w": 0.155,
+          "h": 0.245
+        },
+        "b": {
+          "x": 0.535,
+          "y": 0.075,
+          "w": 0.155,
+          "h": 0.245
+        }
+      }
+    },
+    {
+      "id": "notched-coral-station-flag",
+      "label": "끝에 작은 홈이 생긴 산호색 역 깃발",
+      "zones": {
+        "a": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.18,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.18,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "ochre-middle-suitcase",
+      "label": "황토색으로 바뀐 가운데 여행가방",
+      "zones": {
+        "a": {
+          "x": 0.665,
+          "y": 0.72,
+          "w": 0.175,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.665,
+          "y": 0.72,
+          "w": 0.175,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "coral-chimney-bird-beak",
+      "label": "산호색으로 바뀐 굴뚝 위 양철 새의 부리",
+      "zones": {
+        "a": {
+          "x": 0.345,
+          "y": 0.14,
+          "w": 0.045,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.345,
+          "y": 0.14,
+          "w": 0.045,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 장난감 왕국 대모험 — 태엽 기차역의 아침 출발. Scene: A lively toy-sized railway station inside the same handcrafted toy kingdom, viewed straight-on from a comfortable medium-wide angle like a premium tabletop diorama. A polished red-and-cream wooden wind-up locomotive occupies the middle ground beside a low natural-wood platform, with one large antique-gold winding key clearly visible on its side and rounded toy carriages trailing behind. The recurring small wooden soldier in a cobalt-blue cloth cape stands at lower left as stationmaster, holding one oversized circular sunflower-yellow signal paddle with a simple vivid-turquoise center. Above center hangs one large cream station clock with exactly two cobalt-blue hands and no numerals or writing. At upper right, one coral-red triangular pennant flies from a short brass pole on the station canopy. At lower right, a plush bear traveler sits beside exactly three stacked suitcases: a large turquoise case, medium mustard-yellow case, and small coral-red case, all blank with no labels. Near center-left, one tin bird perches alone on the locomotive chimney, painted vivid turquoise. Add peg-doll passengers, blank wooden tickets, felt clouds, miniature trees, brass rails, round luggage, and ribbon bunting only as supporting atmosphere. Keep the signal paddle, clock hands, pennant, three suitcases, and tin bird large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established block-castle stage, with a handcrafted wooden-and-fabric toy diorama look, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, warm natural wood grain, stitched felt and slightly worn painted tin textures, friendly rounded toy characters, crisp object silhouettes, cohesive cream, cobalt blue, sunflower yellow, coral red, vivid turquoise, and antique gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the vivid-turquoise center of the stationmaster soldier's oversized sunflower-yellow signal paddle at lower left to rich plum purple while preserving the paddle shape, rim, size, and position, 2) remove exactly one of the two cobalt-blue hands from the large cream station clock above center so exactly one hand remains while preserving the clock face and casing, 3) change only the upper-right coral-red triangular pennant into a square-ended flag while preserving its color, pole, folds, size, and position, 4) change only the medium mustard-yellow suitcase in the lower-right stack of exactly three suitcases to bright leaf green while preserving all three suitcases, their order, handles, and shapes, 5) change only the vivid-turquoise tin bird perched on the locomotive chimney near center-left to bright orange while preserving its exact shape, pose, size, and position. Preserve the wooden soldier's cobalt-blue cape, locomotive, winding key, carriages, bear traveler, passengers, platform, rails, canopy, camera, crop, lighting, palette, textures, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T14:10:26.111Z",
+    "feedbackRevisionPrompt": "Create a harder B from A with exactly five subtle changes: cobalt signal center, shorter clock hand, shallow flag notch, ochre middle suitcase, and coral bird beak; preserve everything else."
+  },
+  "publishedAt": "2026-08-21T14:15:24.450Z"
+}

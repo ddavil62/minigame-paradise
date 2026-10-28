@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "window-star-charm",
+      "label": "창가의 별 장식",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.14,
+          "w": 0.055,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.14,
+          "w": 0.055,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "cuckoo-pendulum",
+      "label": "뻐꾸기시계의 추",
+      "zones": {
+        "a": {
+          "x": 0.13,
+          "y": 0.39,
+          "w": 0.075,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.13,
+          "y": 0.39,
+          "w": 0.075,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "red-screwdriver",
+      "label": "작업대의 빨간 드라이버",
+      "zones": {
+        "a": {
+          "x": 0.58,
+          "y": 0.8,
+          "w": 0.16,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.58,
+          "y": 0.8,
+          "w": 0.16,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "cat-collar-bell",
+      "label": "고양이 목걸이의 방울",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.73,
+          "w": 0.055,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.73,
+          "w": 0.055,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "mantel-clock-markers",
+      "label": "큰 시계의 시간 표시",
+      "zones": {
+        "a": {
+          "x": 0.39,
+          "y": 0.38,
+          "w": 0.17,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.39,
+          "y": 0.38,
+          "w": 0.17,
+          "h": 0.29
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2736634,
+        "hash": "2e891cfe78bb2c64702f8016fe6dc815c38021245cd46f2c6d1847e8e1c2cff1",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2666031,
+        "hash": "1c25b4b9e1c87138803400e3f3c5432b36de87f3d547fd3a5f247906de856bf0",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-20T04:27:14.332Z"
+}

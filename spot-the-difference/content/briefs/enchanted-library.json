@@ -1,0 +1,17 @@
+{
+  "id": "enchanted-library-01",
+  "title": "별빛 마법 도서관",
+  "description": "별빛이 흐르는 마법 도서관에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 도서관",
+  "scene": "A cozy enchanted library at night with tall curved bookshelves, a brass rolling ladder, a large arched window showing stars, a central reading desk with an open blank book, a blue globe, a sleepy owl on a perch, a tiny potted fern, candles, and floating crystal ornaments",
+  "style": "premium whimsical storybook illustration, deep indigo and warm amber palette, crisp object silhouettes, richly detailed but uncluttered",
+  "changeGuidance": "Spread changes across the upper shelves, window, reading desk, floor, and owl perch; avoid changing global lighting or moving the camera",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "moonlight-mystery",
+  "stageType": "classic"
+}

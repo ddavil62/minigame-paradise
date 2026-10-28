@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": 91,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "purple-octopus",
+      "label": "보라색 문어",
+      "zones": {
+        "a": {
+          "x": 0.465,
+          "y": 0.12,
+          "w": 0.075,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.465,
+          "y": 0.12,
+          "w": 0.075,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "angelfish-stripe",
+      "label": "천사고기 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.13,
+          "w": 0.085,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.13,
+          "w": 0.085,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "missing-desk-shell",
+      "label": "책상 위 붉은 조개",
+      "zones": {
+        "a": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.055,
+          "h": 0.065
+        },
+        "b": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.055,
+          "h": 0.065
+        }
+      }
+    },
+    {
+      "id": "missing-cabinet-shell",
+      "label": "오른쪽 소라 껍데기",
+      "zones": {
+        "a": {
+          "x": 0.85,
+          "y": 0.45,
+          "w": 0.12,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.85,
+          "y": 0.45,
+          "w": 0.12,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "amber-goggles",
+      "label": "잠수 안경 렌즈",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.65,
+          "w": 0.12,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.65,
+          "w": 0.12,
+          "h": 0.11
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3992598,
+        "hash": "1adb4548fe12cf27911d82f388d41a568ead6e3729b4743294a7be2a9d477496",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 3238796,
+        "hash": "ebb9d9f2820c49c0a960d0cf086c53be587e805c092dc586c0469129e37ade04",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-19T09:27:22.970Z"
+}

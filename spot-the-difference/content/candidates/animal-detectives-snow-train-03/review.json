@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "emerald-round-saucer",
+      "label": "초록색 원형으로 바뀐 찻잔 받침",
+      "zones": {
+        "a": {
+          "x": 0.29,
+          "y": 0.82,
+          "w": 0.2,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.29,
+          "y": 0.82,
+          "w": 0.2,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "square-curtain-ring",
+      "label": "네모 모양으로 바뀐 커튼 고리",
+      "zones": {
+        "a": {
+          "x": 0.025,
+          "y": 0.3,
+          "w": 0.07,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.025,
+          "y": 0.3,
+          "w": 0.07,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "missing-scarf-stripe",
+      "label": "하나 줄어든 승객의 스카프 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.51,
+          "w": 0.1,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.51,
+          "w": 0.1,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "diamond-suitcase-clasp",
+      "label": "마름모 모양으로 바뀐 여행가방 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.8,
+          "y": 0.04,
+          "w": 0.105,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.8,
+          "y": 0.04,
+          "w": 0.105,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "crescent-beret-badge",
+      "label": "초승달 모양으로 바뀐 토끼 조수의 베레모 배지",
+      "zones": {
+        "a": {
+          "x": 0.76,
+          "y": 0.46,
+          "w": 0.11,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.76,
+          "y": 0.46,
+          "w": 0.11,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3132112,
+        "hash": "496bcbd5effd9b74615b569996852e8483781b05f6c2ea66923126878a710083",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2962782,
+        "hash": "e30aed7a2bdbaccea60dc94fdae18b7fc83d584dc9d35461c9154cb19766ce7d",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T11:52:15.191Z"
+}

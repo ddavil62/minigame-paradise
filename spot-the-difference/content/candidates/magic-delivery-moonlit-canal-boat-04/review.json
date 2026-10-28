@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "yellow-canal-lantern",
+      "label": "아래 유리 한 칸만 노란빛인 청록 운하 등불",
+      "zones": {
+        "a": {
+          "x": 0.09,
+          "y": 0.105,
+          "w": 0.145,
+          "h": 0.365
+        },
+        "b": {
+          "x": 0.09,
+          "y": 0.105,
+          "w": 0.145,
+          "h": 0.365
+        }
+      }
+    },
+    {
+      "id": "diamond-mail-satchel-clasp",
+      "label": "가운데만 파란 마름모인 우편 가방 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.115,
+          "y": 0.755,
+          "w": 0.095,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.115,
+          "y": 0.755,
+          "w": 0.095,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "crescent-sail-emblem",
+      "label": "윗 꼭짓점이 짧아진 돛의 붉은 별 문양",
+      "zones": {
+        "a": {
+          "x": 0.505,
+          "y": 0.185,
+          "w": 0.145,
+          "h": 0.235
+        },
+        "b": {
+          "x": 0.505,
+          "y": 0.185,
+          "w": 0.145,
+          "h": 0.235
+        }
+      }
+    },
+    {
+      "id": "green-courier-umbrella",
+      "label": "한 줄만 초록색인 수달 배달부의 노란 우산",
+      "zones": {
+        "a": {
+          "x": 0.305,
+          "y": 0.33,
+          "w": 0.25,
+          "h": 0.165
+        },
+        "b": {
+          "x": 0.305,
+          "y": 0.33,
+          "w": 0.25,
+          "h": 0.165
+        }
+      }
+    },
+    {
+      "id": "purple-beaver-paddle",
+      "label": "손잡이 끝만 보라색인 비버 선장의 주황 노",
+      "zones": {
+        "a": {
+          "x": 0.62,
+          "y": 0.45,
+          "w": 0.285,
+          "h": 0.485
+        },
+        "b": {
+          "x": 0.62,
+          "y": 0.45,
+          "w": 0.285,
+          "h": 0.485
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3194302,
+        "hash": "75c95c139a42ed93eeb447902afb10119348aed4f81e4c7cb2a1dbc007cce5c8",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 3030629,
+        "hash": "640bdd4c4bee46e0aae5265d3374a3eeb1509cd5b172f27e6a8b5f0c92bd281e",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T12:47:29.729Z"
+}

@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "crescent-graduation-clasp",
+      "label": "초승달 모양으로 바뀐 아기 용의 졸업 망토 장식",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "missing-middle-lantern-cap",
+      "label": "가운데 등불에서 사라진 작은 받침 장식",
+      "zones": {
+        "a": {
+          "x": 0.15,
+          "y": 0.07,
+          "w": 0.13,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.15,
+          "y": 0.07,
+          "w": 0.13,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "round-teacher-bell-clapper",
+      "label": "동그랗게 바뀐 부엉이 선생님의 종 추",
+      "zones": {
+        "a": {
+          "x": 0.22,
+          "y": 0.35,
+          "w": 0.13,
+          "h": 0.27
+        },
+        "b": {
+          "x": 0.22,
+          "y": 0.35,
+          "w": 0.13,
+          "h": 0.27
+        }
+      }
+    },
+    {
+      "id": "swallowtail-graduation-banner",
+      "label": "제비꼬리 모양으로 바뀐 졸업 배너",
+      "zones": {
+        "a": {
+          "x": 0.74,
+          "y": 0.35,
+          "w": 0.16,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.74,
+          "y": 0.35,
+          "w": 0.16,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "heart-keepsake-chest",
+      "label": "청록색 하트로 바뀐 졸업 기념 상자 문양",
+      "zones": {
+        "a": {
+          "x": 0.7,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.7,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.18
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2947440,
+        "hash": "435a882b6bdac74d3f68e69465bc7f1deafccb75932eaa8d329563ee99884e1c",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2657811,
+        "hash": "ac44abd3f3ed4cd1e8f16167083e4698fbdb1f3cef08f4952753d90196d30aa6",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-22T02:56:51.316Z"
+}

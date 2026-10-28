@@ -248,6 +248,28 @@
     "botLabelEn": "Normal AI available"
   },
   {
+    "id": "spot-the-difference",
+    "name": "틀린그림찾기",
+    "nameKo": "틀린그림찾기",
+    "nameEn": "Spot the Difference",
+    "description": "다양한 테마의 그림에서 다른 부분 5개를 혼자 또는 친구와 함께 찾아보세요",
+    "descriptionKo": "다양한 테마의 그림에서 다른 부분 5개를 혼자 또는 친구와 함께 찾아보세요",
+    "descriptionEn": "Find five differences across a variety of scenes, solo or together with a friend",
+    "port": 3020,
+    "httpPath": "/spot-the-difference/",
+    "wsPath": "/spot-the-difference/ws",
+    "color": "#49C9BE",
+    "emoji": "",
+    "keyArt": "/spot-the-difference/assets/puzzles/night-market-a.webp",
+    "botAvailable": false,
+    "minPlayers": 1,
+    "maxPlayers": 2,
+    "playersLabelKo": "1인 · 2인 협동",
+    "playersLabelEn": "Solo · 2-player co-op",
+    "botLabelKo": "AI 불필요",
+    "botLabelEn": "No AI needed"
+  },
+  {
     "id": "mahjong",
     "name": "마작",
     "nameKo": "마작",

@@ -1,0 +1,17 @@
+{
+  "id": "firefly-summer-camp-01",
+  "title": "반딧불 여름 캠핑장",
+  "description": "반딧불이 춤추는 여름밤 숲속 캠핑장에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "여름밤 숲속 캠핑",
+  "scene": "A cozy whimsical summer campsite in a forest clearing at night, with a large canvas tent, a glowing campfire ring, a red enamel kettle, a picnic basket, a striped blanket, a wooden acoustic guitar without lettering, a lantern string between two trees, three marshmallows on roasting sticks, a small friendly raccoon, wildflowers, fireflies, and a crescent moon above distant pine-covered hills",
+  "style": "premium whimsical storybook illustration, deep summer greens and indigo blue balanced with warm amber firelight, coral red and golden accents, crisp readable props, richly detailed but uncluttered",
+  "changeGuidance": "Spread changes across the moon and lantern string, tent area, campfire and kettle, picnic blanket, and foreground raccoon; keep all edits localized and avoid global lighting, firefly, or foliage changes",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "seasonal-stories",
+  "stageType": "classic"
+}

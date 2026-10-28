@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "moonlit-greenhouse-01",
+  "status": "published",
+  "title": "달빛 온실",
+  "description": "달빛이 스며드는 신비한 온실에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 온실",
+  "difficulty": "쉬움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "crystal-color",
+      "label": "유리 돔 수정 색",
+      "zones": {
+        "a": {
+          "x": 0.285,
+          "y": 0.475,
+          "w": 0.105,
+          "h": 0.145
+        },
+        "b": {
+          "x": 0.285,
+          "y": 0.475,
+          "w": 0.105,
+          "h": 0.145
+        }
+      }
+    },
+    {
+      "id": "missing-scissors",
+      "label": "책상 위 가위",
+      "zones": {
+        "a": {
+          "x": 0.375,
+          "y": 0.625,
+          "w": 0.105,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.375,
+          "y": 0.625,
+          "w": 0.105,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "crescent-moon",
+      "label": "보름달과 초승달",
+      "zones": {
+        "a": {
+          "x": 0.71,
+          "y": 0.105,
+          "w": 0.11,
+          "h": 0.155
+        },
+        "b": {
+          "x": 0.71,
+          "y": 0.105,
+          "w": 0.11,
+          "h": 0.155
+        }
+      }
+    },
+    {
+      "id": "watering-can-color",
+      "label": "물뿌리개 색",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.72,
+          "w": 0.145,
+          "h": 0.205
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.72,
+          "w": 0.145,
+          "h": 0.205
+        }
+      }
+    },
+    {
+      "id": "golden-calla-lily",
+      "label": "오른쪽 칼라꽃 색",
+      "zones": {
+        "a": {
+          "x": 0.84,
+          "y": 0.43,
+          "w": 0.085,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.84,
+          "y": 0.43,
+          "w": 0.085,
+          "h": 0.15
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 2,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 온실. Scene: A cozy glass greenhouse at night, filled with unusual plants, tiny gardening tools, warm hanging lamps, a sleeping cat, and moonlight beyond the windows.\nArt direction: premium whimsical storybook illustration, warm teal and amber palette, crisp object silhouettes, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Edit the existing B image with exactly two localized corrections: remove the turquoise collar from the sleeping cat and restore natural neck fur; change only the large white calla lily bloom on the right side of the doorway to warm golden yellow. Preserve the exact crop, camera, geometry, lighting, palette, texture, cat pose, and every other object. Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.",
+    "createdAt": "2026-08-19T09:05:09.482Z"
+  },
+  "publishedAt": "2026-08-20T05:23:34.359Z",
+  "collectionId": "moonlight-mystery",
+  "stageType": "relaxed"
+}

@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "teal-parasol",
+      "label": "청록색으로 바뀐 우산",
+      "zones": {
+        "a": {
+          "x": 0.025,
+          "y": 0.19,
+          "w": 0.15,
+          "h": 0.68
+        },
+        "b": {
+          "x": 0.025,
+          "y": 0.19,
+          "w": 0.15,
+          "h": 0.68
+        }
+      }
+    },
+    {
+      "id": "missing-paint-basket-handle",
+      "label": "사라진 화구 바구니 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.195,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.195,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "red-teapot",
+      "label": "붉은색으로 바뀐 찻주전자",
+      "zones": {
+        "a": {
+          "x": 0.54,
+          "y": 0.735,
+          "w": 0.14,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.54,
+          "y": 0.735,
+          "w": 0.14,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "missing-glass-star",
+      "label": "사라진 가운데 유리 별",
+      "zones": {
+        "a": {
+          "x": 0.635,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.635,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "easel-crescent-charm",
+      "label": "이젤에 생긴 금빛 초승달",
+      "zones": {
+        "a": {
+          "x": 0.645,
+          "y": 0.345,
+          "w": 0.035,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.645,
+          "y": 0.345,
+          "w": 0.035,
+          "h": 0.1
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3196673,
+        "hash": "a1ef18915e9e3dc3f608d0db481c29b2bc5d4efc0ba311f38904dddc66e87f34",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2871637,
+        "hash": "078ff7981ad17667450737f6ca5551536f856f13bbd55496e43235f3d181e7df",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-20T09:22:42.661Z"
+}

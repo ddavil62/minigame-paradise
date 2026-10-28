@@ -1,0 +1,17 @@
+{
+  "id": "skyship-workshop-01",
+  "title": "구름섬 비행선 공방",
+  "description": "구름 위 비행선 공방에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "하늘 공방",
+  "scene": "An open-air fantasy airship workshop on a floating island above the clouds, with a small wooden airship, brass propellers, tool benches, ropes, gears, colorful pennants without symbols, crates, goggles, and distant floating islands",
+  "style": "premium whimsical storybook illustration, bright sky blue and warm brass palette, crisp object silhouettes, detailed but uncluttered",
+  "changeGuidance": "Spread changes across the airship, workbench, and distant sky while preserving the exact camera and cloud pattern",
+  "differenceCount": 5,
+  "difficulty": "어려움",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "collectionId": "world-adventure",
+  "stageType": "speed"
+}

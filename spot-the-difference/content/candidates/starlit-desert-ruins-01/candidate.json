@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "starlit-desert-ruins-01",
+  "status": "published",
+  "title": "별빛 사막 유적",
+  "description": "별이 쏟아지는 사막의 고대 관측 유적에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "사막 천문 유적",
+  "collectionId": "world-adventure",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "full-moon",
+      "label": "초승달에서 보름달로 바뀐 달",
+      "zones": {
+        "a": {
+          "x": 0.095,
+          "y": 0.035,
+          "w": 0.055,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.095,
+          "y": 0.035,
+          "w": 0.055,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "turquoise-astrolabe-hub",
+      "label": "청록색으로 바뀐 천문 기구 중심축",
+      "zones": {
+        "a": {
+          "x": 0.205,
+          "y": 0.44,
+          "w": 0.05,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.205,
+          "y": 0.44,
+          "w": 0.05,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "coral-jar-lid",
+      "label": "산호색으로 바뀐 왼쪽 항아리 뚜껑",
+      "zones": {
+        "a": {
+          "x": 0.025,
+          "y": 0.705,
+          "w": 0.095,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.025,
+          "y": 0.705,
+          "w": 0.095,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-chest-lock",
+      "label": "사라진 보물 상자의 황금 자물쇠",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.725,
+          "w": 0.075,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.725,
+          "w": 0.075,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "fox-collar",
+      "label": "사막여우의 청록색 방울 목걸이",
+      "zones": {
+        "a": {
+          "x": 0.655,
+          "y": 0.805,
+          "w": 0.085,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.655,
+          "y": 0.805,
+          "w": 0.085,
+          "h": 0.105
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 사막 천문 유적. Scene: A whimsical ancient desert astronomy ruin at blue hour, with a sandstone arch observatory, a large brass astrolabe, a small domed telescope, patterned rugs without letters, ceramic water jars, a turquoise treasure chest, date palms, glowing lanterns, a friendly fennec fox, distant pyramidal rock formations, and a star-filled violet sky.\nArt direction: premium whimsical storybook illustration, warm amber sandstone balanced with turquoise and deep violet accents, crisp object silhouettes, richly detailed but uncluttered, gentle cinematic lighting.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across the upper arch and sky, central astrolabe, left-side jars and rug, right-side telescope and chest, and the foreground fox; avoid global sky, lighting, or sand changes",
+    "createdAt": "2026-08-20T04:39:31.069Z"
+  },
+  "publishedAt": "2026-08-20T04:42:45.782Z"
+}

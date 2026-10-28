@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 겨울 장난감 가게. Scene: A cozy old-fashioned toy shop at winter twilight, with wooden shelves of handmade toys, a rocking horse, toy train, teddy bear, spinning top, blocks without letters, wrapped gifts without text, a frosted window, and snow falling outside.
+Art direction: premium whimsical storybook illustration, warm amber interior against cool snowy blue, crisp object silhouettes, detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

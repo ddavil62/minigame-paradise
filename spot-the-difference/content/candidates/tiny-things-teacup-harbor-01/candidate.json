@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "tiny-things-teacup-harbor-01",
+  "status": "published",
+  "title": "찻잔 항구",
+  "description": "아침 식탁 위에 세워진 조그만 찻잔 항구에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "조그만 것들의 대도시 찻잔 항구",
+  "collectionId": "tiny-things-city",
+  "stageType": "relaxed",
+  "difficulty": "쉬움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 7000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "coral-teacup-anchor",
+      "label": "산호색으로 바뀐 찻잔의 닻",
+      "zones": {
+        "a": {
+          "x": 0.255,
+          "y": 0.405,
+          "w": 0.125,
+          "h": 0.295
+        },
+        "b": {
+          "x": 0.255,
+          "y": 0.405,
+          "w": 0.125,
+          "h": 0.295
+        }
+      }
+    },
+    {
+      "id": "missing-sugar-crate",
+      "label": "하나 줄어든 각설탕 상자",
+      "zones": {
+        "a": {
+          "x": 0.035,
+          "y": 0.57,
+          "w": 0.17,
+          "h": 0.25
+        },
+        "b": {
+          "x": 0.035,
+          "y": 0.57,
+          "w": 0.17,
+          "h": 0.25
+        }
+      }
+    },
+    {
+      "id": "missing-spoon-flag",
+      "label": "사라진 티스푼 신호 깃발",
+      "zones": {
+        "a": {
+          "x": 0.495,
+          "y": 0.025,
+          "w": 0.13,
+          "h": 0.145
+        },
+        "b": {
+          "x": 0.495,
+          "y": 0.025,
+          "w": 0.13,
+          "h": 0.145
+        }
+      }
+    },
+    {
+      "id": "round-paper-boat-sail",
+      "label": "반원 모양으로 바뀐 종이배 돛",
+      "zones": {
+        "a": {
+          "x": 0.545,
+          "y": 0.595,
+          "w": 0.14,
+          "h": 0.24
+        },
+        "b": {
+          "x": 0.545,
+          "y": 0.595,
+          "w": 0.14,
+          "h": 0.24
+        }
+      }
+    },
+    {
+      "id": "missing-lighthouse-window",
+      "label": "하나 줄어든 주전자 등대 창문",
+      "zones": {
+        "a": {
+          "x": 0.715,
+          "y": 0.47,
+          "w": 0.075,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.715,
+          "y": 0.47,
+          "w": 0.075,
+          "h": 0.115
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 조그만 것들의 대도시 찻잔 항구. Scene: A charming macro miniature harbor city built across a sunlit breakfast table, viewed straight-on from a comfortable medium-wide angle. A giant cream ceramic teacup filled with amber tea dominates the center-left as the main harbor basin, with one large clearly visible cobalt-blue anchor hanging from its outer wall. At the lower-left, exactly three small cube-shaped sugar-crate boxes are stacked beside a tiny wooden dock. In the upper center, one oversized silver teaspoon rises like a harbor signal mast and carries exactly one coral-red triangular flag near its tip. At lower center-right, one prominent white folded-paper sailboat floats in a shallow glossy tea spill, with one clearly visible teal triangular sail. On the right, a giant rounded mint ceramic teapot serves as a lighthouse building; its tall cream lighthouse turret has exactly three large vertically separated round golden windows. Include tiny piers made from biscuit sticks, rope coils, matchbox warehouses without writing, thimble bollards, a few miniature residents, and the recurring small friendly mouse engineer wearing a bright yellow work helmet and carrying one red postal satchel. Keep the blue anchor, three sugar crates, spoon flag, paper-boat sail, and three lighthouse windows large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium macro miniature diorama storybook game illustration, warm natural morning light, shallow but readable depth, tactile woven tablecloth, paper, glazed ceramic, brushed silver, sugar crystal, and biscuit textures, polished animated-feature background quality, crisp object silhouettes, cohesive cream, honey amber, mint, cobalt blue, coral red, teal, warm wood, and sunny yellow palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the large cobalt-blue anchor hanging from the giant teacup wall to coral red, 2) remove exactly one of the three cube-shaped sugar-crate boxes at the lower-left so two remain, 3) remove only the coral-red triangular flag from the oversized silver teaspoon signal mast while preserving the spoon, 4) change only the teal triangular sail on the white folded-paper boat into a teal semicircular sail of similar size, 5) remove exactly one of the three round golden windows from the mint teapot lighthouse turret so two remain. Preserve the teacup, tea, docks, teapot, lighthouse, mouse engineer, red postal satchel, residents, tablecloth, biscuit piers, matchbox warehouses, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T09:09:54.944Z"
+  },
+  "publishedAt": "2026-08-21T09:14:15.204Z"
+}

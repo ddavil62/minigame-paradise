@@ -1,0 +1,17 @@
+{
+  "id": "seaside-bakery-01",
+  "title": "파도빛 해변 제과점",
+  "description": "햇살 가득한 해변 제과점에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "해변 제과점",
+  "scene": "A cheerful seaside bakery in the morning with an open window facing turquoise waves, striped awning, pastry display, round loaves, croissants, a ceramic teapot, seashell decorations, a small sailboat model, a woven basket, and a friendly seagull perched outside",
+  "style": "premium whimsical storybook illustration, sunlit aqua and coral palette, crisp readable objects, detailed but uncluttered",
+  "changeGuidance": "Spread changes across the awning, window view, pastry display, counter, and floor basket; preserve the sea, camera, and lighting",
+  "differenceCount": 5,
+  "difficulty": "어려움",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "collectionId": "seasonal-stories",
+  "stageType": "speed"
+}

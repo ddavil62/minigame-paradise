@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "goblin-night-moon-rabbit-mill-01",
+  "status": "published",
+  "title": "달토끼 떡방앗간",
+  "description": "보름달이 비치는 도깨비 마을의 한옥 방앗간에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "도깨비 마을의 달토끼 떡방앗간",
+  "collectionId": "goblin-night-village",
+  "stageType": "relaxed",
+  "difficulty": "쉬움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "blue-pestle-tassel",
+      "label": "파란색으로 바뀐 절굿공이 술",
+      "zones": {
+        "a": {
+          "x": 0.255,
+          "y": 0.17,
+          "w": 0.085,
+          "h": 0.3
+        },
+        "b": {
+          "x": 0.255,
+          "y": 0.17,
+          "w": 0.085,
+          "h": 0.3
+        }
+      }
+    },
+    {
+      "id": "missing-steamer-handle",
+      "label": "사라진 대나무 시루 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.315,
+          "y": 0.68,
+          "w": 0.07,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.315,
+          "y": 0.68,
+          "w": 0.07,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "purple-apron-bow",
+      "label": "보라색으로 바뀐 토끼의 앞치마 리본",
+      "zones": {
+        "a": {
+          "x": 0.53,
+          "y": 0.495,
+          "w": 0.115,
+          "h": 0.235
+        },
+        "b": {
+          "x": 0.53,
+          "y": 0.495,
+          "w": 0.115,
+          "h": 0.235
+        }
+      }
+    },
+    {
+      "id": "missing-rice-cake",
+      "label": "하나 줄어든 떡 바구니",
+      "zones": {
+        "a": {
+          "x": 0.715,
+          "y": 0.735,
+          "w": 0.115,
+          "h": 0.135
+        },
+        "b": {
+          "x": 0.715,
+          "y": 0.735,
+          "w": 0.115,
+          "h": 0.135
+        }
+      }
+    },
+    {
+      "id": "star-window-ornament",
+      "label": "별 모양으로 바뀐 창가 장식",
+      "zones": {
+        "a": {
+          "x": 0.775,
+          "y": 0.095,
+          "w": 0.145,
+          "h": 0.235
+        },
+        "b": {
+          "x": 0.775,
+          "y": 0.095,
+          "w": 0.145,
+          "h": 0.235
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 도깨비 마을의 달토끼 떡방앗간. Scene: A charming Korean folklore fantasy rice-cake mill at night, viewed straight-on from a comfortable medium-wide angle inside an open-sided traditional hanok workshop. A large round full moon and deep indigo sky are visible beyond the wooden lattice windows. At center-left, one cream moon rabbit raises a tall wooden rice-cake pestle decorated with one clearly visible red tassel. At center, a second cream moon rabbit wears a teal apron with one large clearly visible teal bow tied at its side while tending a stone mortar. In the lower-left foreground sits one round bamboo steamer with exactly two large loop handles, one on each side. In the lower-right foreground is one shallow woven basket holding exactly five large, clearly separated round white rice cakes. In the upper-right window hangs exactly one large golden crescent-moon ornament. Include a small friendly blue-robed goblin guide holding a softly glowing crescent lantern, shelves with plain ceramic jars, folded cloths, bundles of straw, and warm paper lanterns as supporting atmosphere. Keep the red pestle tassel, teal apron bow, two steamer handles, five rice cakes, and golden crescent ornament large, unobstructed, spatially separated, and away from the outer 3% safe margin. Do not include any readable writing, letters, numbers, seals, or calligraphy..\nArt direction: original premium Korean folklore storybook game illustration inspired by the warmth, flat decorative rhythm, and tactile paper quality of traditional Korean folk painting without copying any specific artwork or artist; clean expressive ink contours, soft cel shading, subtle hanji paper texture, polished animated-feature background quality, friendly rounded characters, crisp object silhouettes, cohesive deep indigo, moonlit cream, warm amber, dancheong teal, coral red, muted jade, and gold palette.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the clearly visible red tassel on the raised wooden pestle at center-left to blue, 2) remove exactly one rice cake from the lower-right woven basket so four remain, 3) remove only the right-side loop handle from the lower-left bamboo steamer while preserving the steamer body and left handle, 4) change the large teal side bow on the center rabbit's apron to purple while preserving the apron, 5) change the large golden crescent-moon ornament hanging in the upper-right window into a golden five-point star of similar size. Preserve both rabbits, the blue-robed goblin guide, mortar, shelves, jars, lanterns, hanok, full moon, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T08:13:11.619Z"
+  },
+  "publishedAt": "2026-08-21T08:21:25.194Z"
+}

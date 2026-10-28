@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "tiny-things-button-garden-03",
+  "status": "published",
+  "title": "단추꽃 정원",
+  "description": "열린 서랍 속에 자라난 조그만 단추꽃 정원에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "조그만 것들의 도시 단추꽃 정원",
+  "collectionId": "tiny-things-city",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "star-watering-can-emblem",
+      "label": "별 모양으로 바뀐 물뿌리개 문양",
+      "zones": {
+        "a": {
+          "x": 0.14,
+          "y": 0.19,
+          "w": 0.12,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.14,
+          "y": 0.19,
+          "w": 0.12,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "missing-button-flower",
+      "label": "하나 줄어든 단추꽃",
+      "zones": {
+        "a": {
+          "x": 0.015,
+          "y": 0.57,
+          "w": 0.1,
+          "h": 0.23
+        },
+        "b": {
+          "x": 0.015,
+          "y": 0.57,
+          "w": 0.1,
+          "h": 0.23
+        }
+      }
+    },
+    {
+      "id": "purple-scissor-bow",
+      "label": "보라색으로 바뀐 가위 리본",
+      "zones": {
+        "a": {
+          "x": 0.32,
+          "y": 0.41,
+          "w": 0.14,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.32,
+          "y": 0.41,
+          "w": 0.14,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "crescent-spool-snail-shell",
+      "label": "초승달로 바뀐 실패 달팽이 문양",
+      "zones": {
+        "a": {
+          "x": 0.74,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.74,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "missing-clothespin-windmill-blade",
+      "label": "하나 줄어든 집게 풍차 날개",
+      "zones": {
+        "a": {
+          "x": 0.83,
+          "y": 0.04,
+          "w": 0.13,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.83,
+          "y": 0.04,
+          "w": 0.13,
+          "h": 0.17
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 조그만 것들의 도시 단추꽃 정원. Scene: A charming macro miniature garden city built inside an open vintage desk drawer, viewed straight-on from a comfortable medium-wide angle. At the upper-left, one oversized mint-green toy watering can stands on a cork terrace with exactly one large coral-red heart emblem clearly visible on its side. At the lower-left, exactly five large button flowers grow in one neat, clearly separated row, each flower made from one bright round button on a short green wire stem. At the center, one large open pair of polished silver embroidery scissors forms an arched footbridge over a narrow blue ribbon stream; exactly one sunny-yellow fabric bow is tied prominently around the left scissor handle. At the lower-right, one friendly miniature snail built from a small wooden thread spool has exactly one large cobalt-blue spiral motif painted on the circular side of its spool shell. At the upper-right, one tall wooden clothespin windmill has exactly four broad lavender fabric blades, all clearly separated and fully visible. Include seed packets without writing, thimble flowerpots, cork paths, pin-fence posts, moss lawns, tiny garden benches, and a few miniature residents. Include the recurring small friendly mouse engineer wearing a bright yellow work helmet and carrying one red postal satchel. Keep the watering-can heart, five button flowers, yellow scissor bow, blue spool-shell spiral, and four windmill blades large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium macro miniature diorama storybook game illustration matching the established Tiny Things teacup harbor and thread station stages, bright natural afternoon light, shallow but readable depth, tactile painted metal, polished steel, thread, wood, cork, felt, paper, and moss textures, polished animated-feature background quality, crisp object silhouettes, cohesive mint, coral red, cream, cobalt blue, lavender, sunny yellow, fresh green, warm wood, and silver palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the large coral-red heart emblem on the upper-left mint watering can into a coral-red five-point star of similar size, 2) remove exactly one of the five button flowers from the lower-left row so four remain, 3) change only the sunny-yellow fabric bow tied around the center scissors handle to purple, 4) change only the cobalt-blue spiral motif on the lower-right wooden spool-snail shell into a cobalt-blue crescent motif of similar size, 5) remove exactly one of the four lavender fabric blades from the upper-right clothespin windmill so three remain. Preserve the drawer, watering can, scissors bridge, ribbon stream, snail, windmill, mouse engineer, red postal satchel, residents, paths, fences, flowerpots, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T09:29:34.909Z"
+  },
+  "publishedAt": "2026-08-21T09:33:13.484Z"
+}

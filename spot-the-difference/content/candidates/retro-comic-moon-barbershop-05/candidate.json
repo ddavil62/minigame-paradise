@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "retro-comic-moon-barbershop-05",
+  "status": "published",
+  "title": "팝! 달 기지 이발소",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 달 기지 이발소에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 달 기지 이발소",
+  "collectionId": "style-lab",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "red-hair-dryer-dial",
+      "label": "빨간색으로 바뀐 헤어드라이어 다이얼",
+      "zones": {
+        "a": {
+          "x": 0.14,
+          "y": 0.215,
+          "w": 0.07,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.14,
+          "y": 0.215,
+          "w": 0.07,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "red-barber-bow-tie",
+      "label": "빨간색으로 바뀐 이발사의 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.385,
+          "y": 0.27,
+          "w": 0.085,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.385,
+          "y": 0.27,
+          "w": 0.085,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "yellow-ceiling-lamp",
+      "label": "노란색으로 바뀐 천장 조명",
+      "zones": {
+        "a": {
+          "x": 0.095,
+          "y": 0,
+          "w": 0.205,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.095,
+          "y": 0,
+          "w": 0.205,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "cyan-robot-star",
+      "label": "파란색으로 바뀐 로봇 가슴 별",
+      "zones": {
+        "a": {
+          "x": 0.83,
+          "y": 0.55,
+          "w": 0.075,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.83,
+          "y": 0.55,
+          "w": 0.075,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-porthole-stars",
+      "label": "사라진 창밖의 별 두 개",
+      "zones": {
+        "a": {
+          "x": 0.7,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.7,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a landscape spot-the-difference game: a straight-on 1960s retro-futurist moon-base barber shop with a blue three-eyed alien barber, green astronaut customer, cream dome hair dryer, three colored bottles, purple service robot, sink, ringed-planet porthole, two stars, cyan ceiling lamp, and checkerboard floor. Match the established vintage offset-printed comic style with bold black ink, flat cel colors, and halftone dots. No text, borders, logos, or watermark.",
+    "promptB": "Edit image A with exactly five localized changes only: make the hair-dryer dial red, the barber bow tie red, the ceiling lamp yellow, the robot chest star cyan, and remove the two porthole stars. Preserve every other detail exactly.",
+    "createdAt": "2026-08-20T02:15:00.000Z"
+  },
+  "publishedAt": "2026-08-20T02:00:19.081Z"
+}

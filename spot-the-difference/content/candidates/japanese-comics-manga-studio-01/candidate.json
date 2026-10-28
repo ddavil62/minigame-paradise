@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "japanese-comics-manga-studio-01",
+  "status": "published",
+  "title": "빗소리 만화 작업실",
+  "description": "마감 전야의 만화가 작업실에서 섬세한 차이를 찾아보세요.",
+  "theme": "비 오는 밤의 만화 작업실",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "yellow-desk-lamp",
+      "label": "노란색으로 바뀐 책상 조명",
+      "zones": {
+        "a": {
+          "x": 0.19,
+          "y": 0.12,
+          "w": 0.16,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.19,
+          "y": 0.12,
+          "w": 0.16,
+          "h": 0.29
+        }
+      }
+    },
+    {
+      "id": "teal-drawing-ruler",
+      "label": "청록색으로 바뀐 긴 그림 자",
+      "zones": {
+        "a": {
+          "x": 0.245,
+          "y": 0.815,
+          "w": 0.11,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.245,
+          "y": 0.815,
+          "w": 0.11,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "missing-plant-leaf",
+      "label": "한 장 사라진 화분 잎",
+      "zones": {
+        "a": {
+          "x": 0.905,
+          "y": 0.38,
+          "w": 0.085,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.905,
+          "y": 0.38,
+          "w": 0.085,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "reversed-umbrella-handle",
+      "label": "방향이 바뀐 우산 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.9,
+          "y": 0.54,
+          "w": 0.09,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.9,
+          "y": 0.54,
+          "w": 0.09,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-robot-star",
+      "label": "사라진 로봇 가슴의 별",
+      "zones": {
+        "a": {
+          "x": 0.715,
+          "y": 0.18,
+          "w": 0.065,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.715,
+          "y": 0.18,
+          "w": 0.065,
+          "h": 0.105
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 2,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 비 오는 밤의 만화 작업실. Scene: A cozy late-night Japanese manga artist studio during gentle rain. A young adult artist sits at a wide drafting desk, viewed from a comfortable medium-wide angle, surrounded by a desk lamp, drawing tools, blank comic pages without writing, a sleepy cat, small original character figurines, a wall clock, a potted plant, a closed umbrella, shelves, and a rain-streaked window. All important props are clearly separated and readable..\nArt direction: original contemporary Japanese comics-inspired illustration, expressive clean ink linework, cinematic panel-like composition, selective full color with subtle screentone texture, polished game art, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Edit the existing B image with exactly two localized corrections: restore the cat's small round golden bell directly under its chin so the red collar and bell match image A; recolor only the single long wooden straight ruler lying diagonally near the bottom-center foreground of the desk from warm tan wood to a clearly visible muted teal blue while preserving its exact shape, position, perspective, edge lines, and ruler markings. Preserve the exact crop, camera, artist, cat pose and fur, desk lamp, plant, umbrella, robot figurine, papers, tools, shelves, rain, lighting, palette, texture, the four existing puzzle changes, and every other object. Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.",
+    "createdAt": "2026-08-20T02:22:58.316Z"
+  },
+  "publishedAt": "2026-08-21T04:44:24.738Z"
+}

@@ -1,0 +1,6 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly 5 localized, clearly visible object-level changes distributed across the scene.
+Use changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Requested change guidance: Make exactly these five localized changes only: change the television camera's large round lens from yellow to red; remove exactly one of the camera's two small red indicator bulbs so one remains; change the floor microphone grille from red to cyan blue; remove exactly one point from the yellow five-point star so it has four points; turn off only the far-right overhead studio lamp by changing its circular lens to very dark navy. Keep the green three-eyed studio cat without a collar. Preserve every other object, halftone pattern, ink line, camera angle, overall lighting, color, and lighting exactly.

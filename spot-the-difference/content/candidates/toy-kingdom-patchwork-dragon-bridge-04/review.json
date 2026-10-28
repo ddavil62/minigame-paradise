@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "missing-dragon-horn-seam",
+      "label": "한 줄이 사라진 봉제 용 뿔의 이음매",
+      "zones": {
+        "a": {
+          "x": 0.44,
+          "y": 0.025,
+          "w": 0.14,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.44,
+          "y": 0.025,
+          "w": 0.14,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "upside-down-heart-shield-emblem",
+      "label": "거꾸로 뒤집힌 병정 방패의 청록 하트",
+      "zones": {
+        "a": {
+          "x": 0.105,
+          "y": 0.635,
+          "w": 0.125,
+          "h": 0.175
+        },
+        "b": {
+          "x": 0.105,
+          "y": 0.635,
+          "w": 0.125,
+          "h": 0.175
+        }
+      }
+    },
+    {
+      "id": "missing-middle-lantern-cap",
+      "label": "아래 금빛 받침이 사라진 가운데 등불",
+      "zones": {
+        "a": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.105,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.105,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "dark-teal-wagon-wheel",
+      "label": "짙은 청록색으로 바뀐 수레 바퀴",
+      "zones": {
+        "a": {
+          "x": 0.765,
+          "y": 0.795,
+          "w": 0.16,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.765,
+          "y": 0.795,
+          "w": 0.16,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "notched-bridge-flag",
+      "label": "끝에 작은 홈이 생긴 다리 깃발",
+      "zones": {
+        "a": {
+          "x": 0.615,
+          "y": 0.13,
+          "w": 0.115,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.615,
+          "y": 0.13,
+          "w": 0.115,
+          "h": 0.19
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3247085,
+        "hash": "db87047f15b546db0667c13a72c00690c892fc2b552b7bb23eef6749ec7ef76a",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 3050271,
+        "hash": "fe93114b928d0d7c33692650102ac9df356ca50b79344f6f091865b5c18bc157",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T15:19:34.217Z"
+}

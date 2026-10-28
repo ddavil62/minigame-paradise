@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "dragon-academy-hatchery-classroom-01",
+  "status": "published",
+  "title": "아기 용 부화 교실",
+  "description": "구름 위 마법 학교의 따뜻한 부화 교실에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+  "theme": "꼬마 용 마법학교 대모험 — 아기 용 부화 교실",
+  "collectionId": "dragon-academy",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b-hard-v2.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "missing-owl-glasses",
+      "label": "사라진 부엉이 선생님의 둥근 안경",
+      "zones": {
+        "a": {
+          "x": 0.305,
+          "y": 0.245,
+          "w": 0.065,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.305,
+          "y": 0.245,
+          "w": 0.065,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "round-middle-egg-gem",
+      "label": "둥근 모양으로 바뀐 황금 알의 가운데 보석",
+      "zones": {
+        "a": {
+          "x": 0.49,
+          "y": 0.235,
+          "w": 0.05,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.49,
+          "y": 0.235,
+          "w": 0.05,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "silver-middle-stoppers",
+      "label": "은빛으로 바뀐 가운데 물약병 마개",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.15,
+          "w": 0.105,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.15,
+          "w": 0.105,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "missing-dragon-wing-crease",
+      "label": "안쪽 주름선이 사라진 아기 용의 날개",
+      "zones": {
+        "a": {
+          "x": 0.54,
+          "y": 0.61,
+          "w": 0.08,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.54,
+          "y": 0.61,
+          "w": 0.08,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "blunt-cauldron-handle-tip",
+      "label": "끝의 작은 말림이 사라진 가마솥 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.92,
+          "y": 0.59,
+          "w": 0.07,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.92,
+          "y": 0.59,
+          "w": 0.07,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 꼬마 용 마법학교 대모험 — 아기 용 부화 교실. Scene: A cozy whimsical dragon academy hatchery classroom high above the clouds at sunrise, viewed straight-on from a comfortable medium-wide angle. Warm golden light enters through tall arched windows into an orderly circular stone classroom with dark teal roof beams, antique-brass fixtures, cream plaster, and plum-purple banners with no writing. At upper center, one large antique-gold dragon egg rests alone in a brass warming cradle; the egg has exactly three large vivid-turquoise diamond spots arranged vertically and clearly visible. At lower center, the recurring friendly young red baby dragon sits fully visible on a round cream cushion and wears one oversized cobalt-blue bow tie. At lower left, a cheerful mouse apprentice in a deep teal robe holds one large coral-red magic wand whose tip is a simple five-point star. At upper right, exactly four large sunflower-yellow potion bottles stand in one straight row on an isolated pale shelf, clearly separated with empty space between them. At lower right, one large round plum-purple cauldron is fully visible; its cream front medallion bears one oversized vivid-turquoise crescent-moon emblem. Include one gentle owl teacher, two additional small dragon eggs without spots, blank books, folded blankets, plain jars, clouds beyond the windows, and tiny golden sparkles only as supporting atmosphere. Keep the three egg spots, blue bow tie, coral star wand tip, four yellow bottles, and turquoise cauldron emblem large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, runes, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration with a cozy magical-school atmosphere, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded fantasy creatures, crisp object silhouettes, cohesive dawn blue, deep teal, cream, antique gold, plum purple, sunflower yellow, coral red, vivid turquoise, and cobalt blue palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) remove exactly the middle vivid-turquoise diamond spot from the upper-center golden dragon egg so exactly two spots remain in their original top and bottom positions, 2) change only the oversized cobalt-blue bow tie on the lower-center red baby dragon to bright sunflower yellow while preserving its exact shape, size, folds, and position, 3) change only the simple five-point-star tip of the lower-left mouse apprentice's coral-red wand into a clearly visible crescent-moon tip of similar size while preserving the wand shaft and color, 4) remove exactly the second bottle from the left in the upper-right straight row of exactly four sunflower-yellow potion bottles so exactly three bottles remain in their original positions, 5) change only the oversized vivid-turquoise crescent-moon emblem on the lower-right cauldron's cream medallion into one bright coral-red heart emblem of similar size while preserving the cauldron and medallion. Preserve every character, face, body, wing, egg, cradle, cushion, robe, classroom, window, shelf, cloud, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T15:41:18.750Z",
+    "hardRevisionPromptB": "Make exactly five subtle but still discoverable localized changes for a hard puzzle: remove the viewer-right eyeglass rim from the owl teacher; flip the internal highlight direction of the middle turquoise egg diamond; remove the middle ring from the second potion bottle stopper; remove the inner crease from the baby dragon's viewer-right wing; and smooth the tiny inward curl at the tip of the cauldron's viewer-right handle. Preserve every other detail exactly."
+  },
+  "publishedAt": "2026-08-22T01:14:48.789Z"
+}

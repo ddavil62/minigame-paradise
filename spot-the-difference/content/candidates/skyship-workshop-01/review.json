@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": 94,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "white-pennant",
+      "label": "흰색 삼각 깃발",
+      "zones": {
+        "a": {
+          "x": 0.3,
+          "y": 0.095,
+          "w": 0.055,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.3,
+          "y": 0.095,
+          "w": 0.055,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "red-roof-propeller",
+      "label": "지붕의 붉은 프로펠러",
+      "zones": {
+        "a": {
+          "x": 0.205,
+          "y": 0.135,
+          "w": 0.085,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.205,
+          "y": 0.135,
+          "w": 0.085,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "green-goggles",
+      "label": "초록색 비행 안경",
+      "zones": {
+        "a": {
+          "x": 0.11,
+          "y": 0.66,
+          "w": 0.09,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.11,
+          "y": 0.66,
+          "w": 0.09,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "blue-porthole",
+      "label": "파란 테두리 창문",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.61,
+          "w": 0.055,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.61,
+          "w": 0.055,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "missing-toolbox",
+      "label": "갑판 위 작은 도구 상자",
+      "zones": {
+        "a": {
+          "x": 0.545,
+          "y": 0.685,
+          "w": 0.065,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.545,
+          "y": 0.685,
+          "w": 0.065,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2791365,
+        "hash": "eddd3d853902cf64f649172022ec71b379507029e698d8c7f770eae9b69d0d28",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2690440,
+        "hash": "3238320af17a4e95f862973a21ac95846ba8a473491639403806429aa7c0dcf1",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-19T09:27:23.397Z"
+}

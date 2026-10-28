@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "쉬움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "blue-pestle-tassel",
+      "label": "파란색으로 바뀐 절굿공이 술",
+      "zones": {
+        "a": {
+          "x": 0.255,
+          "y": 0.17,
+          "w": 0.085,
+          "h": 0.3
+        },
+        "b": {
+          "x": 0.255,
+          "y": 0.17,
+          "w": 0.085,
+          "h": 0.3
+        }
+      }
+    },
+    {
+      "id": "missing-steamer-handle",
+      "label": "사라진 대나무 시루 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.315,
+          "y": 0.68,
+          "w": 0.07,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.315,
+          "y": 0.68,
+          "w": 0.07,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "purple-apron-bow",
+      "label": "보라색으로 바뀐 토끼의 앞치마 리본",
+      "zones": {
+        "a": {
+          "x": 0.53,
+          "y": 0.495,
+          "w": 0.115,
+          "h": 0.235
+        },
+        "b": {
+          "x": 0.53,
+          "y": 0.495,
+          "w": 0.115,
+          "h": 0.235
+        }
+      }
+    },
+    {
+      "id": "missing-rice-cake",
+      "label": "하나 줄어든 떡 바구니",
+      "zones": {
+        "a": {
+          "x": 0.715,
+          "y": 0.735,
+          "w": 0.115,
+          "h": 0.135
+        },
+        "b": {
+          "x": 0.715,
+          "y": 0.735,
+          "w": 0.115,
+          "h": 0.135
+        }
+      }
+    },
+    {
+      "id": "star-window-ornament",
+      "label": "별 모양으로 바뀐 창가 장식",
+      "zones": {
+        "a": {
+          "x": 0.775,
+          "y": 0.095,
+          "w": 0.145,
+          "h": 0.235
+        },
+        "b": {
+          "x": 0.775,
+          "y": 0.095,
+          "w": 0.145,
+          "h": 0.235
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3217104,
+        "hash": "8f6780f8c4e1852b353759fe0512c2a9ee261ee31b752cded525effc923dd541",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2740685,
+        "hash": "34dba8e8460b17b6815e0c70868f5063eab668474da152f61bc00dae2c14346d",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.177Z"
+}

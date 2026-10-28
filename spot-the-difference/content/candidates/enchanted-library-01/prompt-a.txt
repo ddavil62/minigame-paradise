@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 마법 도서관. Scene: A cozy enchanted library at night with tall curved bookshelves, a brass rolling ladder, a large arched window showing stars, a central reading desk with an open blank book, a blue globe, a sleepy owl on a perch, a tiny potted fern, candles, and floating crystal ornaments.
+Art direction: premium whimsical storybook illustration, deep indigo and warm amber palette, crisp object silhouettes, richly detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

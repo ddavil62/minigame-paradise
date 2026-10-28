@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "animal-detectives-clocktower-hotel-02",
+  "status": "published",
+  "title": "사라진 열쇠의 시계탑 호텔",
+  "description": "폭풍이 지나간 밤, 여우 탐정과 토끼 조수가 시계탑 호텔 로비에서 사라진 황금 열쇠의 단서를 찾아보세요.",
+  "theme": "동물 탐정단의 사라진 황금 열쇠 시계탑 호텔 사건",
+  "collectionId": "animal-detectives",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "yellow-umbrella-handle",
+      "label": "노란색으로 바뀐 여우 탐정의 우산 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.055,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.055,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "crescent-hotel-key",
+      "label": "초승달 모양으로 바뀐 호텔 열쇠의 고리",
+      "zones": {
+        "a": {
+          "x": 0.49,
+          "y": 0.55,
+          "w": 0.09,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.49,
+          "y": 0.55,
+          "w": 0.09,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "blue-diamond-pendulum",
+      "label": "파란 다이아몬드 모양으로 바뀐 시계추",
+      "zones": {
+        "a": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.075,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.075,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "missing-bellhop-cap-button",
+      "label": "사라진 곰 벨보이 모자의 금색 단추",
+      "zones": {
+        "a": {
+          "x": 0.83,
+          "y": 0.285,
+          "w": 0.06,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.83,
+          "y": 0.285,
+          "w": 0.06,
+          "h": 0.075
+        }
+      }
+    },
+    {
+      "id": "missing-jade-suitcase",
+      "label": "짐수레에서 사라진 옥색 여행 가방",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.67,
+          "w": 0.145,
+          "h": 0.265
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.67,
+          "w": 0.145,
+          "h": 0.265
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 동물 탐정단의 사라진 황금 열쇠 시계탑 호텔 사건. Scene: A grand whimsical 1930s clocktower hotel lobby on a calm night just after a rainstorm, viewed straight-on from a comfortable medium-wide angle. Warm amber wall lamps mix with cool moonlight through tall rain-speckled windows. At the lower-left, the recurring friendly fox detective wears the same burgundy trench coat and holds one large closed midnight-blue umbrella with one clearly visible coral-red curved handle. Near the fox, the recurring friendly rabbit assistant wears the same teal beret and carries a blank evidence notebook. At center, a polished dark-wood reception desk displays one oversized antique-gold hotel key with a clearly visible five-point star-shaped bow, resting alone on a cream cloth. Behind the desk, one tall ornate grandfather clock has one large clearly visible round antique-gold pendulum disk. At the upper-right, a friendly brown bear bellhop in a deep-teal uniform and pillbox cap stands beside a brass luggage cart; exactly one large gold round button is centered on the front of the cap. At the lower-right, exactly three large vintage suitcases are stacked separately on the luggage cart: burgundy, cream, and muted jade. At the upper-left, one large chandelier hangs with exactly four clearly separated warm amber glass shades. Add a patterned rug without symbols, potted palm, brass handbell, plain envelopes without writing, wall molding, and soft marble-floor reflections only as supporting atmosphere. Keep the umbrella handle, star-shaped key bow, pendulum disk, bellhop cap button, three suitcases, and four chandelier shades large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, or clock numerals..\nArt direction: original premium 1930s-inspired animal detective storybook game illustration, cinematic cozy mystery lighting, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive sepia cream, burgundy, deep teal, warm amber, antique gold, midnight blue, muted jade, and coral red palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the coral-red curved handle of the fox detective's closed midnight-blue umbrella at lower-left to bright yellow, 2) change only the five-point star-shaped bow of the oversized antique-gold hotel key on the center reception desk into a crescent-moon-shaped bow of similar size while keeping the key gold, 3) change only the large round antique-gold pendulum disk of the grandfather clock behind the desk into a cobalt-blue diamond-shaped pendulum of similar size, 4) remove only the single large gold round button from the upper-right bear bellhop's deep-teal pillbox cap while preserving the cap, 5) remove exactly one suitcase from the lower-right luggage cart so only the burgundy and cream suitcases remain. Preserve the fox detective, rabbit assistant, bear bellhop, reception desk, clock case, luggage cart, chandelier, windows, rug, palm, handbell, envelopes, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T11:33:15.695Z"
+  },
+  "publishedAt": "2026-08-21T11:37:46.615Z"
+}

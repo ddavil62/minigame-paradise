@@ -1,0 +1,17 @@
+{
+  "id": "magic-delivery-cloud-airship-dock-03",
+  "title": "구름섬 비행선 우편 선착장",
+  "description": "노을 구름 위 비행선 우편 선착장에서 수달 배달부와 부엉이 관제사가 출항 전 다섯 가지 변화를 확인합니다.",
+  "theme": "마법 배달부의 하루 — 구름섬 비행선 우편 선착장",
+  "scene": "A spectacular whimsical magical airship mail dock floating above sunset clouds, viewed straight-on from a comfortable medium-wide angle. The organized sky harbor is built from cream stone, teal-painted timber, antique brass rails, and burgundy canvas, with warm coral sunset light and a clear blue-violet sky. At upper left, one large teal pennant flies alone from a short brass pole against an uncluttered pale cloud. At lower left, one large plum-purple mail crate sits on the dock; its front has one oversized circular antique-gold clasp, fully visible. At upper center-right, one compact cobalt-blue courier airship is moored side-on against open sky; it has exactly three large cream propeller blades, clearly separated around one brass hub. At center, the recurring friendly young otter courier wears a deep-teal delivery coat and one oversized bright coral-red scarf with both ends clearly visible. At lower right, a friendly round owl dispatcher stands beside a waist-high brass control pedestal; the pedestal has one oversized vivid-turquoise diamond-shaped lever knob. Add blank parcels, coiled mooring rope, canvas mail sacks, small brass pipes, distant cloud islands, and a few tiny flying envelopes only as supporting atmosphere. Keep the teal pennant, gold crate clasp, three airship propeller blades, coral scarf, and turquoise lever knob large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, addresses, logos, or clock numerals.",
+  "style": "original premium whimsical European storybook game illustration matching the magical postal collection, cinematic golden-hour sky lighting, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive teal, cream, antique gold, burgundy, coral, plum purple, cobalt blue, and vivid turquoise palette, not imitating any specific artist or franchise",
+  "collectionId": "magic-delivery-office",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "differenceCount": 5,
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "changeGuidance": "Make only these five changes: 1) change only the large teal pennant at upper left to bright sunflower yellow while preserving its shape and pole, 2) change only the oversized circular antique-gold clasp on the lower-left plum-purple mail crate into a clearly visible cobalt-blue crescent-moon-shaped clasp of similar size, 3) remove exactly one of the three large cream blades from the upper center-right airship propeller so exactly two blades remain while preserving the brass hub and airship, 4) change only the otter courier's oversized bright coral-red scarf at center to emerald green while preserving its shape and both ends, 5) change only the oversized vivid-turquoise diamond-shaped lever knob on the lower-right brass control pedestal into a bright orange five-point-star-shaped knob of similar size. Preserve the otter courier, owl dispatcher, faces, poses, dock architecture, airship, crate, control pedestal, parcels, ropes, mail sacks, clouds, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

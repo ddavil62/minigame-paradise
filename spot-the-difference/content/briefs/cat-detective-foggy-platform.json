@@ -1,0 +1,17 @@
+{
+  "id": "cat-detective-foggy-platform-03",
+  "title": "안개 기차역의 수하물 추적",
+  "description": "막차가 떠나기 전, 안개 낀 동물 도시 기차역에서 고양이 탐정단과 함께 다섯 가지 수하물 단서를 찾아보세요.",
+  "theme": "고양이 탐정단의 안개 낀 야간 기차역 수하물 추적",
+  "scene": "A whimsical grand animal-city railway platform at night, viewed straight-on from a comfortable medium-wide angle. A friendly vintage steam locomotive waits in the misty background under a glass-and-iron canopy, with warm amber platform lamps and no readable signs. At the lower-left, one friendly orange tabby detective cat in a cream trench coat and navy deerstalker hat examines the platform with a magnifying glass; the hat has exactly one large emerald-green ribbon band. On the upper-left wall, one prominent round brass station clock has plain hands and exactly one large golden wing ornament centered on top. At center, one broad wooden luggage trolley holds exactly four large turquoise suitcases arranged in one clearly separated row. At the upper-right, one large red semaphore signal arm clearly points diagonally up-left. In the lower-right foreground, a friendly gray mouse assistant carries one burgundy ticket-punch case with exactly one large gold five-point star clasp centered on its front. Add a kind owl conductor with a blank cap badge, a sleeping cream puppy on a bench, stacked plain parcels without labels, a brass luggage scale, a potted fern, rails, drifting steam, puddle reflections, and distant train windows only as supporting atmosphere. Keep the emerald hat ribbon, golden clock wing, four turquoise suitcases, red semaphore arm, and gold star case clasp large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers.",
+  "style": "original premium cozy mystery storybook game illustration, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, charming rounded animal characters, crisp object silhouettes, cinematic foggy railway atmosphere, cohesive midnight navy, mist teal, warm amber, cream, burgundy, turquoise, emerald green, signal red, and antique gold palette, not imitating any specific artist or franchise",
+  "collectionId": "cat-detective-agency",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change only the orange tabby detective cat's large emerald-green hat ribbon band at lower-left to coral red while preserving its shape and position, 2) remove only the large golden wing ornament from the top of the upper-left brass station clock while preserving the clock and its hands, 3) remove exactly one turquoise suitcase from the row on the center luggage trolley so three remain, 4) flip only the upper-right red semaphore signal arm so it points diagonally up-right instead of up-left while preserving the signal post, 5) change only the gold five-point star clasp on the gray mouse assistant's lower-right burgundy ticket-punch case into a gold round clasp of similar size. Preserve every character, locomotive, canopy, lamps, clock hands, trolley, parcels, luggage scale, bench, puppy, owl conductor, rails, steam, puddles, train windows, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "turquoise-mask-feather",
+      "label": "청록색으로 바뀐 도깨비 탈의 깃털",
+      "zones": {
+        "a": {
+          "x": 0.04,
+          "y": 0.07,
+          "w": 0.06,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.04,
+          "y": 0.07,
+          "w": 0.06,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "missing-brush",
+      "label": "하나 줄어든 붓꽂이의 붓",
+      "zones": {
+        "a": {
+          "x": 0.215,
+          "y": 0.515,
+          "w": 0.05,
+          "h": 0.39
+        },
+        "b": {
+          "x": 0.215,
+          "y": 0.515,
+          "w": 0.05,
+          "h": 0.39
+        }
+      }
+    },
+    {
+      "id": "purple-mask-bow",
+      "label": "보라색으로 바뀐 탈의 리본",
+      "zones": {
+        "a": {
+          "x": 0.385,
+          "y": 0.59,
+          "w": 0.2,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.385,
+          "y": 0.59,
+          "w": 0.2,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "flower-drum-motif",
+      "label": "꽃 모양으로 바뀐 북의 문양",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.645,
+          "w": 0.135,
+          "h": 0.23
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.645,
+          "w": 0.135,
+          "h": 0.23
+        }
+      }
+    },
+    {
+      "id": "missing-wind-bell-chime",
+      "label": "하나 줄어든 풍경의 금빛 조각",
+      "zones": {
+        "a": {
+          "x": 0.805,
+          "y": 0.235,
+          "w": 0.045,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0.805,
+          "y": 0.235,
+          "w": 0.045,
+          "h": 0.21
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3132765,
+        "hash": "252bd65a357e980b85a140c9fd118ead203f987669e2420747c46638184433c3",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2944296,
+        "hash": "947aba8cbe3b3775ceb9d6f3aa9d0365fdd10410f0befaf0b785e6da083cd8e8",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.306Z"
+}

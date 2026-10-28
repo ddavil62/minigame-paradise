@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "animal-detectives-masquerade-04",
+  "status": "published",
+  "title": "가면무도회 저택의 단서",
+  "description": "달빛 비치는 호화로운 저택 무도회에서 여우 탐정과 토끼 조수와 함께 가면과 소품에 숨은 다섯 단서를 찾아보세요.",
+  "theme": "동물 탐정단의 가면무도회 저택 잠입 사건",
+  "collectionId": "animal-detectives",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "missing-peacock-feather",
+      "label": "하나 줄어든 공작 손님의 가면 깃털",
+      "zones": {
+        "a": {
+          "x": 0.105,
+          "y": 0.01,
+          "w": 0.1,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.105,
+          "y": 0.01,
+          "w": 0.1,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "flipped-violin-bow",
+      "label": "아래쪽으로 방향이 바뀐 바이올린 활",
+      "zones": {
+        "a": {
+          "x": 0.3,
+          "y": 0.33,
+          "w": 0.18,
+          "h": 0.32
+        },
+        "b": {
+          "x": 0.3,
+          "y": 0.33,
+          "w": 0.18,
+          "h": 0.32
+        }
+      }
+    },
+    {
+      "id": "blue-center-rose",
+      "label": "파란색으로 바뀐 꽃병의 가운데 장미",
+      "zones": {
+        "a": {
+          "x": 0.58,
+          "y": 0.5,
+          "w": 0.11,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.58,
+          "y": 0.5,
+          "w": 0.11,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "diamond-clock-pendulum",
+      "label": "파란 마름모 모양으로 바뀐 계단 시계 추",
+      "zones": {
+        "a": {
+          "x": 0.885,
+          "y": 0.3,
+          "w": 0.06,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.885,
+          "y": 0.3,
+          "w": 0.06,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "missing-fox-coat-button",
+      "label": "하나 줄어든 여우 탐정의 코트 단추",
+      "zones": {
+        "a": {
+          "x": 0.135,
+          "y": 0.72,
+          "w": 0.05,
+          "h": 0.2
+        },
+        "b": {
+          "x": 0.135,
+          "y": 0.72,
+          "w": 0.05,
+          "h": 0.2
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 동물 탐정단의 가면무도회 저택 잠입 사건. Scene: A grand whimsical 1930s mansion ballroom during an elegant nighttime masquerade, viewed straight-on from a comfortable medium-wide angle. Warm chandelier light mixes with cool moonlight from tall arched windows, with a broad curved staircase in the background. At the lower-left, the recurring friendly fox detective wears the same burgundy trench coat, its front showing exactly three large, clearly separated round antique-gold buttons in one vertical row. At the lower-right, the recurring friendly rabbit assistant wears the same teal beret and holds a blank evidence notebook. At the upper-left balcony, a graceful peacock guest wears one large midnight-blue eye mask topped by exactly three large, clearly separated turquoise feathers. Near center-left, a friendly otter violinist holds a violin and one long ivory bow that clearly points diagonally up-right. At center-right, a small round pedestal table holds one large cream vase with exactly three large roses; the center rose is bright coral-red and the two side roses are ivory. On the upper-right staircase landing, one tall ornate wall clock has one large, clearly visible round antique-gold pendulum disk behind its lower glass panel. Add a friendly bear couple in simple burgundy and teal masks, polished parquet floor, cream columns, gold railings, plain drapery, and soft reflections only as supporting atmosphere. Keep the three peacock feathers, violin bow, center coral rose, clock pendulum, and three fox-coat buttons large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, or clock numerals..\nArt direction: original premium 1930s-inspired animal detective storybook game illustration, cinematic cozy mystery lighting, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive midnight blue, moonlit cream, burgundy, deep teal, warm amber, antique gold, turquoise, coral red, and ivory palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) remove exactly one of the three large turquoise feathers above the upper-left peacock guest's midnight-blue mask so two feathers remain, 2) flip only the center-left otter violinist's long ivory bow so it points diagonally down-right instead of up-right while preserving the violin and musician, 3) change only the center bright coral-red rose in the cream vase on the center-right pedestal table to cobalt blue while preserving its shape and the two ivory roses, 4) change only the large round antique-gold pendulum disk inside the upper-right staircase clock into a cobalt-blue diamond-shaped pendulum of similar size, 5) remove exactly one of the three large round antique-gold buttons from the lower-left fox detective's burgundy trench coat so two buttons remain. Preserve the fox detective, rabbit assistant, peacock guest, otter violinist, bear couple, ballroom, staircase, windows, chandelier, vase, table, clock case, masks, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T12:00:36.194Z"
+  },
+  "publishedAt": "2026-08-21T12:07:31.407Z"
+}

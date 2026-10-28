@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "goblin-night-cloud-garden-05",
+  "status": "published",
+  "title": "산신령의 구름 정원",
+  "description": "달맞이 잔치를 준비하는 구름 정원에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "도깨비 마을의 산신령 구름 정원",
+  "collectionId": "goblin-night-village",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "missing-tiger-bell",
+      "label": "사라진 호랑이 목 방울",
+      "zones": {
+        "a": {
+          "x": 0.145,
+          "y": 0.62,
+          "w": 0.08,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.145,
+          "y": 0.62,
+          "w": 0.08,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "purple-crane-ornament",
+      "label": "보라색으로 바뀐 학의 머리 장식",
+      "zones": {
+        "a": {
+          "x": 0.25,
+          "y": 0.095,
+          "w": 0.045,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.25,
+          "y": 0.095,
+          "w": 0.045,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "missing-cloud-planter-flower",
+      "label": "하나 줄어든 구름 화분의 달맞이꽃",
+      "zones": {
+        "a": {
+          "x": 0.38,
+          "y": 0.595,
+          "w": 0.12,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.38,
+          "y": 0.595,
+          "w": 0.12,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "flower-mountain-spirit-fan",
+      "label": "꽃 모양으로 바뀐 산신령의 부채 문양",
+      "zones": {
+        "a": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.09,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.09,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "star-moon-lantern-finial",
+      "label": "별 모양으로 바뀐 달등 꼭대기",
+      "zones": {
+        "a": {
+          "x": 0.84,
+          "y": 0.02,
+          "w": 0.1,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.84,
+          "y": 0.02,
+          "w": 0.1,
+          "h": 0.15
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 도깨비 마을의 산신령 구름 정원. Scene: A majestic yet welcoming Korean folklore fantasy cloud garden at night, viewed straight-on from a comfortable medium-wide angle on a high mountain summit above layered moonlit clouds. A large round full moon, low indigo peaks, sculpted cloud terraces, pine branches, and a small traditional tiled pavilion frame a festive moon-viewing garden. In the lower-left foreground, one friendly plump orange tiger wears a wide teal collar with exactly one large clearly visible coral-red round bell at its throat. At the upper-left, one elegant white crane stands on a flat cloud terrace wearing exactly one small jade-green feather ornament on top of its head. At the lower center-left, one large pale-blue cloud-shaped planter holds exactly five large, clearly separated white moonflowers in one neat fan-shaped cluster. At center-right, a kind elderly mountain spirit in flowing cream and muted-jade robes holds one large open cream-colored round hand fan with one simple cobalt-blue crescent motif painted in its center. At the upper-right, one tall warm moon lantern stands beside the pavilion and is topped by exactly one large gold crescent finial. Include the recurring small friendly blue-robed goblin guide holding a softly glowing crescent lantern, plus plain fruit trays, folded cloth, smooth rocks, cloud-shaped stepping stones, fireflies, and small warm lanterns only as supporting atmosphere. Keep the tiger bell, crane head ornament, five moonflowers, fan motif, and moon-lantern finial large, unobstructed, spatially separated, and away from the outer 3% safe margin. Do not include any readable writing, letters, numbers, seals, or calligraphy..\nArt direction: original premium Korean folklore storybook game illustration inspired by the warmth, flat decorative rhythm, and tactile paper quality of traditional Korean folk painting without copying any specific artwork or artist; clean expressive ink contours, soft cel shading, subtle hanji paper texture, polished animated-feature background quality, friendly rounded characters, crisp object silhouettes, cohesive deep indigo, moonlit cream, warm amber, dancheong teal, coral red, muted jade, cobalt blue, pale cloud blue, and gold palette.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) remove only the large coral-red round bell from the friendly tiger's teal collar in the lower-left while preserving the collar, 2) change only the jade-green feather ornament on top of the upper-left white crane's head to purple, 3) remove exactly one white moonflower from the pale-blue cloud-shaped planter at lower center-left so four remain, 4) change the cobalt-blue crescent motif in the center of the mountain spirit's cream round hand fan into a cobalt-blue five-petal flower of similar size, 5) change the large gold crescent finial on top of the upper-right moon lantern into a gold five-point star of similar size. Preserve the mountain spirit, tiger, crane, goblin guide, pavilion, clouds, peaks, pine, full moon, fruit, cloth, stones, fireflies, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T08:59:01.361Z"
+  },
+  "publishedAt": "2026-08-21T09:03:22.318Z"
+}

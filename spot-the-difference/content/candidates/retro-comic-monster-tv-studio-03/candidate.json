@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "retro-comic-monster-tv-studio-03",
+  "status": "published",
+  "title": "팝! 괴물 TV 스튜디오",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 괴물 방송국에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 괴물 TV 스튜디오",
+  "collectionId": "style-lab",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "red-camera-lens",
+      "label": "빨간색으로 바뀐 카메라 렌즈",
+      "zones": {
+        "a": {
+          "x": 0.185,
+          "y": 0.37,
+          "w": 0.075,
+          "h": 0.125
+        },
+        "b": {
+          "x": 0.185,
+          "y": 0.37,
+          "w": 0.075,
+          "h": 0.125
+        }
+      }
+    },
+    {
+      "id": "missing-camera-bulb",
+      "label": "사라진 카메라 표시등",
+      "zones": {
+        "a": {
+          "x": 0.232,
+          "y": 0.505,
+          "w": 0.035,
+          "h": 0.05
+        },
+        "b": {
+          "x": 0.232,
+          "y": 0.505,
+          "w": 0.035,
+          "h": 0.05
+        }
+      }
+    },
+    {
+      "id": "cyan-microphone-grille",
+      "label": "파란색으로 바뀐 마이크",
+      "zones": {
+        "a": {
+          "x": 0.855,
+          "y": 0.305,
+          "w": 0.075,
+          "h": 0.23
+        },
+        "b": {
+          "x": 0.855,
+          "y": 0.305,
+          "w": 0.075,
+          "h": 0.23
+        }
+      }
+    },
+    {
+      "id": "four-point-star",
+      "label": "네 갈래로 바뀐 별",
+      "zones": {
+        "a": {
+          "x": 0.23,
+          "y": 0.05,
+          "w": 0.19,
+          "h": 0.285
+        },
+        "b": {
+          "x": 0.23,
+          "y": 0.05,
+          "w": 0.19,
+          "h": 0.285
+        }
+      }
+    },
+    {
+      "id": "right-studio-lamp-off",
+      "label": "꺼진 오른쪽 스튜디오 조명",
+      "zones": {
+        "a": {
+          "x": 0.82,
+          "y": 0.075,
+          "w": 0.09,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.82,
+          "y": 0.075,
+          "w": 0.09,
+          "h": 0.16
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 레트로 만화 괴물 TV 스튜디오. Scene: A playful 1960s retro monster television studio seen straight-on at eye level. A friendly purple one-eyed monster host stands behind a small curved cream presentation desk, wearing a plain mustard bow tie with exactly two pointed ends. To the left is a large cyan television camera on a wheeled pedestal with one big round yellow lens, two small red indicator bulbs, and a top antenna ending in one round ball. To the right is a chunky cream floor microphone with a red grille. The background includes three large separated set decorations: a yellow five-point star, a red crescent moon, and a cyan lightning bolt. A small green three-eyed studio cat sits on a red director chair without any collar. Overhead are two large red studio lamps, and the floor has bold cream and black checkerboard tiles. Keep every prop large, distinct, fully visible, and spatially separated. Do not include readable signs, labels, letters, or numbers..\nArt direction: original 1960s-inspired retro comic-book pop art matching a vintage offset-printed monster comic, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, purple, cream, and black palette; not a modern glossy storybook illustration.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Edit the existing B image with exactly two localized corrections: remove the thin yellow collar from the green three-eyed studio cat and restore natural green neck fur; turn off only the far-right overhead studio lamp by changing its circular cream-yellow lens to a flat very dark navy lens with halftone texture. Preserve the exact crop, camera, geometry, overall lighting, palette, texture, existing four puzzle changes, cat pose, lamp housing and every other object. Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.",
+    "createdAt": "2026-08-20T01:25:40.767Z"
+  },
+  "publishedAt": "2026-08-20T08:36:25.879Z"
+}

@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "crescent-float-topper",
+      "label": "초승달로 바뀐 퍼레이드 장식",
+      "zones": {
+        "a": {
+          "x": 0.42,
+          "y": 0.045,
+          "w": 0.18,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.42,
+          "y": 0.045,
+          "w": 0.18,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "purple-lollipop-bow",
+      "label": "보라색 막대사탕 리본",
+      "zones": {
+        "a": {
+          "x": 0.08,
+          "y": 0.515,
+          "w": 0.14,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.08,
+          "y": 0.515,
+          "w": 0.14,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "fewer-drum-stars",
+      "label": "줄어든 북의 금빛 별",
+      "zones": {
+        "a": {
+          "x": 0.355,
+          "y": 0.725,
+          "w": 0.19,
+          "h": 0.205
+        },
+        "b": {
+          "x": 0.355,
+          "y": 0.725,
+          "w": 0.19,
+          "h": 0.205
+        }
+      }
+    },
+    {
+      "id": "red-cart-wheel-hub",
+      "label": "빨간 솜사탕 카트 바퀴 축",
+      "zones": {
+        "a": {
+          "x": 0.715,
+          "y": 0.705,
+          "w": 0.055,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.715,
+          "y": 0.705,
+          "w": 0.055,
+          "h": 0.095
+        }
+      }
+    },
+    {
+      "id": "swallowtail-rabbit-flag",
+      "label": "제비꼬리 모양 파란 깃발",
+      "zones": {
+        "a": {
+          "x": 0.9,
+          "y": 0.65,
+          "w": 0.095,
+          "h": 0.125
+        },
+        "b": {
+          "x": 0.9,
+          "y": 0.65,
+          "w": 0.095,
+          "h": 0.125
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2720041,
+        "hash": "1935f7e73877e4832dde44ed2595358737391bc966a810a8f2db3ed21b711c3e",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2595134,
+        "hash": "24da63cd7a5f8fe4ac2b510157c5356776be2fca803ce1d59042384608e28850",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T06:29:59.609Z"
+}

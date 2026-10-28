@@ -1,0 +1,17 @@
+{
+  "id": "retro-comic-alien-laundromat-04",
+  "title": "팝! 외계인 세탁소",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 세탁소에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 외계인 세탁소",
+  "scene": "A playful 1960s retro-futurist alien laundromat seen straight-on at eye level. A friendly green four-armed alien attendant stands at the center wearing a plain mustard-yellow cap. On the left are two large cream washing machines with clearly separated circular cyan-blue doors. On the right, a small rounded red ironing robot floats above a cream laundry cart; the robot has one short black antenna ending in a single yellow ball. A purple space dog without a collar sits beside the cart. Two large soap bubbles float in a clearly separated vertical group above a red wash basin. The background includes exposed pipes, a wide round window showing one ringed planet, a wall shelf with three neatly folded towels in mustard yellow, tomato red, and cyan blue, and a bold cream-and-black checkerboard floor. Keep every prop large, distinct, fully visible, and spatially separated. Do not include readable signs, labels, letters, or numbers.",
+  "style": "original 1960s-inspired retro comic-book pop art matching a vintage offset-printed science-fiction comic, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, green, purple, cream, and black palette; not a modern glossy storybook illustration",
+  "changeGuidance": "Make exactly these five localized changes only: change the circular door of the leftmost washing machine from cyan blue to tomato red; change the large hanging ceiling lamp shade from tomato red to cyan blue; change the green alien attendant's mustard-yellow cap to tomato red; remove the mustard-yellow folded towel stack from the left wall shelf while leaving the red and cyan towel stacks intact; remove the yellow ball from the floating ironing robot's antenna while keeping the short black antenna stem. Keep the purple space dog without a collar. Preserve every other object, halftone pattern, ink line, camera angle, color, and lighting exactly.",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "style-lab",
+  "stageType": "classic"
+}

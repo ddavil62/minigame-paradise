@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 정글 나무집. Scene: A playful jungle explorer treehouse built around a giant tree, with rope bridge, canvas hammock, wooden telescope, colorful tropical bird, hanging lantern, explorer backpack, clay pots, large leaves, vines, and a distant waterfall.
+Art direction: premium whimsical storybook illustration, lush emerald green with warm wood and bright accent colors, crisp object silhouettes, detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 레트로 만화 로봇 정비소. Scene: A playful retro-futurist robot repair garage seen straight-on at eye level. A friendly rounded tin robot stands at the center with a circular chest light. Around it are a red rocket scooter with two mirrors, a wall-mounted tool board with large separated tools including one red wrench, a cream starburst wall clock without numbers, a chunky tabletop radio with no lettering, an oil can, stacked tires, a black cat without a collar sitting on a yellow stool, checkerboard floor tiles, pipes, and a round window showing a simple city skyline. Keep every prop large, distinct, fully visible, and spatially separated..
+Art direction: original 1960s-inspired retro comic-book pop art, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, cream, and black palette; not a modern glossy storybook illustration.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "japanese-comics-summer-festival-04",
+  "status": "published",
+  "title": "초롱빛 여름 축제",
+  "description": "초롱불이 반짝이는 여름밤 신사 축제에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "여름밤 신사 축제 산책길",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "red-fox-mask-accents",
+      "label": "붉은색으로 바뀐 여우 가면 무늬",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.085,
+          "w": 0.105,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.085,
+          "w": 0.105,
+          "h": 0.21
+        }
+      }
+    },
+    {
+      "id": "missing-fan-tassel",
+      "label": "사라진 부채의 붉은 술 장식",
+      "zones": {
+        "a": {
+          "x": 0.12,
+          "y": 0.86,
+          "w": 0.11,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.12,
+          "y": 0.86,
+          "w": 0.11,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "golden-candy-apple",
+      "label": "금빛으로 바뀐 사과 사탕",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.365,
+          "w": 0.07,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.365,
+          "w": 0.07,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "missing-pinwheel-blade",
+      "label": "하나가 사라진 바람개비 날개",
+      "zones": {
+        "a": {
+          "x": 0.87,
+          "y": 0.34,
+          "w": 0.115,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.87,
+          "y": 0.34,
+          "w": 0.115,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "purple-tanuki-bib",
+      "label": "보라색으로 바뀐 너구리상 턱받이",
+      "zones": {
+        "a": {
+          "x": 0.835,
+          "y": 0.69,
+          "w": 0.14,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.835,
+          "y": 0.69,
+          "w": 0.14,
+          "h": 0.19
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 여름밤 신사 축제 산책길. Scene: A lively but intimate Japanese shrine festival walkway on a warm summer night, viewed from a comfortable medium-wide angle. Two young adult friends in original yukata designs pause beneath glowing blank paper lanterns: one holds a glossy red candy apple, while the other wears a white fox mask tilted on the side of the head with clearly visible blue cheek accents. Include a blue folding fan with a red tassel resting on a wooden bench, a clearly visible four-bladed pinwheel, a small tanuki statue wearing a green bib, a stone lantern, a taiko drum with no markings, a goldfish bowl, stone steps, a red torii gate, bamboo, and distant festival silhouettes. Every important prop is clearly separated and readable..\nArt direction: original contemporary Japanese comics-inspired illustration, expressive clean ink linework, cinematic panel-like composition, selective full color with subtle screentone texture, polished game art, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the fox mask cheek accents from blue to red, 2) remove the red tassel from the blue folding fan, 3) change the glossy candy apple from red to golden yellow, 4) remove exactly one blade from the four-bladed pinwheel so it has three blades, 5) change the tanuki statue's bib from green to purple. Keep both young adults, faces, hands, poses, yukata, shrine walkway, lanterns, torii, camera, crop, lighting, and every other object pixel-consistent.",
+    "createdAt": "2026-08-20T03:20:24.525Z"
+  },
+  "publishedAt": "2026-08-20T03:24:35.789Z"
+}

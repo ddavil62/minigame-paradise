@@ -1,0 +1,17 @@
+{
+  "id": "japanese-comics-summer-festival-04",
+  "title": "초롱빛 여름 축제",
+  "description": "초롱불이 반짝이는 여름밤 신사 축제에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "여름밤 신사 축제 산책길",
+  "scene": "A lively but intimate Japanese shrine festival walkway on a warm summer night, viewed from a comfortable medium-wide angle. Two young adult friends in original yukata designs pause beneath glowing blank paper lanterns: one holds a glossy red candy apple, while the other wears a white fox mask tilted on the side of the head with clearly visible blue cheek accents. Include a blue folding fan with a red tassel resting on a wooden bench, a clearly visible four-bladed pinwheel, a small tanuki statue wearing a green bib, a stone lantern, a taiko drum with no markings, a goldfish bowl, stone steps, a red torii gate, bamboo, and distant festival silhouettes. Every important prop is clearly separated and readable.",
+  "style": "original contemporary Japanese comics-inspired illustration, expressive clean ink linework, cinematic panel-like composition, selective full color with subtle screentone texture, polished game art, not imitating any specific artist or franchise",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change the fox mask cheek accents from blue to red, 2) remove the red tassel from the blue folding fan, 3) change the glossy candy apple from red to golden yellow, 4) remove exactly one blade from the four-bladed pinwheel so it has three blades, 5) change the tanuki statue's bib from green to purple. Keep both young adults, faces, hands, poses, yukata, shrine walkway, lanterns, torii, camera, crop, lighting, and every other object pixel-consistent."
+}

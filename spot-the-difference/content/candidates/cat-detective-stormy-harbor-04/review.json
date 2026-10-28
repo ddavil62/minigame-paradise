@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "violet-magnifying-lens",
+      "label": "보라색 빛 반사가 생긴 탐정의 청록 돋보기",
+      "zones": {
+        "a": {
+          "x": 0.24,
+          "y": 0.565,
+          "w": 0.13,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.24,
+          "y": 0.565,
+          "w": 0.13,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "missing-life-preserver-band",
+      "label": "박음질 한 땀이 사라진 구명환의 크림색 띠",
+      "zones": {
+        "a": {
+          "x": 0.025,
+          "y": 0.285,
+          "w": 0.105,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.025,
+          "y": 0.285,
+          "w": 0.105,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-evidence-bottle",
+      "label": "마개가 사라진 오른쪽 증거 병",
+      "zones": {
+        "a": {
+          "x": 0.535,
+          "y": 0.525,
+          "w": 0.07,
+          "h": 0.2
+        },
+        "b": {
+          "x": 0.535,
+          "y": 0.525,
+          "w": 0.07,
+          "h": 0.2
+        }
+      }
+    },
+    {
+      "id": "golden-cargo-hook",
+      "label": "끝부분만 금빛으로 바뀐 붉은 화물 갈고리",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.055,
+          "w": 0.13,
+          "h": 0.31
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.055,
+          "w": 0.13,
+          "h": 0.31
+        }
+      }
+    },
+    {
+      "id": "crescent-umbrella-charm",
+      "label": "한 꼭짓점이 짧아진 우산 손잡이의 파란 별 장식",
+      "zones": {
+        "a": {
+          "x": 0.705,
+          "y": 0.875,
+          "w": 0.075,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.705,
+          "y": 0.875,
+          "w": 0.075,
+          "h": 0.105
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3018795,
+        "hash": "d9ecaeed54b0db92af8c77666702af090edd0f78a44aee7a310abf8f854b1aa0",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2944991,
+        "hash": "e21cd4521d53bba790e4a9bf045f4c1788c3bda5630790536bc712cef44aa7db",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T10:49:39.993Z"
+}

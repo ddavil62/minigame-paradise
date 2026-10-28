@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "missing-tiger-bell",
+      "label": "사라진 호랑이 목 방울",
+      "zones": {
+        "a": {
+          "x": 0.145,
+          "y": 0.62,
+          "w": 0.08,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.145,
+          "y": 0.62,
+          "w": 0.08,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "purple-crane-ornament",
+      "label": "보라색으로 바뀐 학의 머리 장식",
+      "zones": {
+        "a": {
+          "x": 0.25,
+          "y": 0.095,
+          "w": 0.045,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.25,
+          "y": 0.095,
+          "w": 0.045,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "missing-cloud-planter-flower",
+      "label": "하나 줄어든 구름 화분의 달맞이꽃",
+      "zones": {
+        "a": {
+          "x": 0.38,
+          "y": 0.595,
+          "w": 0.12,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.38,
+          "y": 0.595,
+          "w": 0.12,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "flower-mountain-spirit-fan",
+      "label": "꽃 모양으로 바뀐 산신령의 부채 문양",
+      "zones": {
+        "a": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.09,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.515,
+          "y": 0.4,
+          "w": 0.09,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "star-moon-lantern-finial",
+      "label": "별 모양으로 바뀐 달등 꼭대기",
+      "zones": {
+        "a": {
+          "x": 0.84,
+          "y": 0.02,
+          "w": 0.1,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.84,
+          "y": 0.02,
+          "w": 0.1,
+          "h": 0.15
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3192209,
+        "hash": "db9109d61cb4430853d681d6a9a0cb73a226c3bfdc88f82b45646f83d4996982",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2986192,
+        "hash": "6d157a6ff5a109f9bd6063c40e52330b7c1f8b71916e42ace1d12143a34853d9",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.438Z"
+}

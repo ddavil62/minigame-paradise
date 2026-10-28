@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "coral-detective-hat-ribbon",
+      "label": "가운데 매듭만 산호색인 탐정 고양이 모자 리본",
+      "zones": {
+        "a": {
+          "x": 0.19,
+          "y": 0.43,
+          "w": 0.15,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.19,
+          "y": 0.43,
+          "w": 0.15,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "missing-clock-wing",
+      "label": "깃털 끝이 사라진 역 시계의 오른쪽 금빛 날개",
+      "zones": {
+        "a": {
+          "x": 0.045,
+          "y": 0.03,
+          "w": 0.15,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.045,
+          "y": 0.03,
+          "w": 0.15,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "missing-turquoise-suitcase",
+      "label": "손잡이가 사라진 오른쪽 청록색 여행 가방",
+      "zones": {
+        "a": {
+          "x": 0.6,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.24
+        },
+        "b": {
+          "x": 0.6,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.24
+        }
+      }
+    },
+    {
+      "id": "flipped-semaphore-arm",
+      "label": "화살표 끝이 짧아진 붉은 철도 신호기",
+      "zones": {
+        "a": {
+          "x": 0.73,
+          "y": 0.05,
+          "w": 0.19,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.73,
+          "y": 0.05,
+          "w": 0.19,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "round-ticket-case-clasp",
+      "label": "윗 꼭짓점이 짧아진 조수 사건 가방의 별 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.81,
+          "w": 0.045,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.81,
+          "w": 0.045,
+          "h": 0.08
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3105204,
+        "hash": "19e97cfd96bd802031bd6f752091b06eba22f13b12214287eaea4c1fc8256113",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2976095,
+        "hash": "cf16641ff88183cad016827da081b334f0119eb7d0ff5dd6b32da5ed6b23d216",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T10:40:09.279Z"
+}

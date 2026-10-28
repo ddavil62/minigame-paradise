@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "cat-detective-moonlit-museum-02",
+  "status": "published",
+  "title": "달빛 박물관 잠입 수사",
+  "description": "문 닫은 달빛 박물관에 잠입한 고양이 탐정단과 함께 전시실의 다섯 가지 단서를 찾아보세요.",
+  "theme": "고양이 탐정단의 달빛 박물관 잠입 수사",
+  "collectionId": "cat-detective-agency",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "coral-detective-feather",
+      "label": "끝만 산호색으로 바뀐 탐정 고양이 모자 깃털",
+      "zones": {
+        "a": {
+          "x": 0.09,
+          "y": 0.29,
+          "w": 0.12,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.09,
+          "y": 0.29,
+          "w": 0.12,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "star-shield-emblem",
+      "label": "윗부분이 짧아진 파란 방패의 금빛 초승달",
+      "zones": {
+        "a": {
+          "x": 0.06,
+          "y": 0.11,
+          "w": 0.11,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.06,
+          "y": 0.11,
+          "w": 0.11,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "missing-ruby-gemstone",
+      "label": "아래쪽에 금빛 반점이 생긴 오른쪽 붉은 보석",
+      "zones": {
+        "a": {
+          "x": 0.57,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.57,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-owl-top-hat",
+      "label": "금빛 버클이 사라진 부엉이의 보라색 모자",
+      "zones": {
+        "a": {
+          "x": 0.77,
+          "y": 0.045,
+          "w": 0.075,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.77,
+          "y": 0.045,
+          "w": 0.075,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "round-suitcase-clasp",
+      "label": "가운데만 둥글어진 조수 가방의 마름모 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.87,
+          "w": 0.055,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.87,
+          "w": 0.055,
+          "h": 0.09
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 고양이 탐정단의 달빛 박물관 잠입 수사. Scene: A whimsical grand museum gallery after closing time, viewed straight-on from a comfortable medium-wide angle. Tall moonlit arched windows and warm brass wall lamps create a cozy midnight mystery atmosphere. At the lower-left, one friendly orange tabby detective cat in a navy cape and cream deerstalker hat crouches beside a velvet rope; the hat has exactly one large upright teal feather. On the upper-left wall, one prominent sapphire-blue heraldic shield displays exactly one large gold crescent emblem at its center. At center, a broad cream stone pedestal supports a glass display case containing exactly four large ruby-red gemstones arranged in one clearly separated row. At the upper-right, one charming bronze owl statue on a wall shelf wears exactly one small purple top hat. In the lower-right foreground, a friendly gray mouse assistant carries one burgundy evidence suitcase with exactly one large gold diamond-shaped clasp centered on its front. Add a marble floor with soft reflections, plain framed landscape paintings without text, dinosaur bones in the far background, a potted fern, rolled blank maps, a brass telescope, velvet curtains, and a sleeping museum guard dog only as supporting atmosphere. Keep the teal feather, gold crescent shield emblem, four red gemstones, purple owl top hat, and gold diamond suitcase clasp large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium cozy mystery storybook game illustration, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, charming rounded animal characters, crisp object silhouettes, cinematic moonlit museum atmosphere, cohesive midnight navy, moon silver, warm amber, cream, sapphire blue, ruby red, teal, purple, and antique gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the orange tabby detective cat's large upright teal hat feather at lower-left to coral red while preserving its shape and position, 2) change only the large gold crescent emblem at the center of the upper-left sapphire shield into a large gold five-point star of similar size, 3) remove exactly one ruby-red gemstone from the row inside the center glass display case so three remain, 4) remove only the small purple top hat from the upper-right bronze owl statue while preserving the owl and shelf, 5) change only the large gold diamond-shaped clasp on the gray mouse assistant's lower-right burgundy evidence suitcase into a gold round clasp of similar size. Preserve every character, window, lamp, painting, pedestal, display case, statue, suitcase, marble floor, dinosaur bones, fern, maps, telescope, curtains, guard dog, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T10:18:03.812Z"
+  },
+  "publishedAt": "2026-08-21T10:31:27.626Z"
+}

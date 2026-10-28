@@ -1,0 +1,17 @@
+{
+  "id": "autumn-alchemy-kitchen-01",
+  "title": "단풍빛 연금술 부엌",
+  "description": "가을 향기 가득한 연금술 부엌에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "가을 연금술 부엌",
+  "scene": "A cozy autumn alchemist kitchen with copper pots, a bubbling purple cauldron, shelves of unlabeled glass bottles, pumpkins, dried herbs, a mortar and pestle, an orange cat, leaf garlands, a round window showing autumn trees, and a wooden table",
+  "style": "premium whimsical storybook illustration, burnt orange, plum, moss green, and copper palette, crisp object silhouettes, detailed but uncluttered",
+  "changeGuidance": "Spread changes across the bottle shelf, window, cauldron, table, and cat corner; preserve global lighting, smoke, and camera",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "seasonal-stories",
+  "stageType": "classic"
+}

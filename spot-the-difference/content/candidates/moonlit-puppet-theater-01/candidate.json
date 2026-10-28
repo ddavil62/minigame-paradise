@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "moonlit-puppet-theater-01",
+  "status": "published",
+  "title": "달빛 인형극장",
+  "description": "달빛 막이 오른 마법 인형극장에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 인형극장",
+  "collectionId": "moonlight-mystery",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "proscenium-moon-emblem",
+      "label": "무대 위 달 문양",
+      "zones": {
+        "a": {
+          "x": 0.46,
+          "y": 0.035,
+          "w": 0.09,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.46,
+          "y": 0.035,
+          "w": 0.09,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "lantern-purple-tassel",
+      "label": "초승달 등불의 보라색 술",
+      "zones": {
+        "a": {
+          "x": 0.245,
+          "y": 0.59,
+          "w": 0.055,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.245,
+          "y": 0.59,
+          "w": 0.055,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "fox-hat-feather",
+      "label": "여우 모자의 파란 깃털",
+      "zones": {
+        "a": {
+          "x": 0.5,
+          "y": 0.31,
+          "w": 0.065,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.5,
+          "y": 0.31,
+          "w": 0.065,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "rabbit-bow-tie",
+      "label": "토끼의 나비넥타이 색",
+      "zones": {
+        "a": {
+          "x": 0.67,
+          "y": 0.59,
+          "w": 0.075,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.67,
+          "y": 0.59,
+          "w": 0.075,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "music-box-crank",
+      "label": "오르골의 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.2,
+          "y": 0.73,
+          "w": 0.095,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.2,
+          "y": 0.73,
+          "w": 0.095,
+          "h": 0.11
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 인형극장. Scene: A cozy enchanted marionette theater at night with an ornate walnut proscenium, deep teal curtains, a round moon backdrop, a fox magician puppet in a blue pointed hat at center, a white rabbit puppet with a red bow tie on the right, a crescent lantern with a purple tassel on the left, hanging stars, warm footlights, and a small prop table holding a brass music box with a visible crank.\nArt direction: premium whimsical storybook illustration, deep indigo, teal, burgundy, walnut and warm gold palette, crisp object silhouettes, richly detailed but uncluttered, theatrical moonlight and amber footlights.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make exactly five localized changes: change the golden crescent emblem at the top center of the proscenium into a full moon disk, remove the purple tassel from the left crescent lantern, remove the blue feather from the fox magician puppet's hat, change the rabbit puppet's red bow tie to emerald green, and remove the crank from the brass music box on the front prop table. Preserve everything else exactly.",
+    "createdAt": "2026-08-20T04:30:40.478Z"
+  },
+  "publishedAt": "2026-08-20T04:33:54.515Z"
+}

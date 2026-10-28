@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "cat-detective-stormy-harbor-04",
+  "status": "published",
+  "title": "폭풍우 항구의 밀수품 추적",
+  "description": "비바람이 몰아치는 동물 도시의 항구 창고에서 고양이 탐정단과 함께 다섯 가지 밀수품 단서를 찾아보세요.",
+  "theme": "고양이 탐정단의 폭풍우 치는 밤 항구 창고 밀수품 추적",
+  "collectionId": "cat-detective-agency",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "violet-magnifying-lens",
+      "label": "보라색 빛 반사가 생긴 탐정의 청록 돋보기",
+      "zones": {
+        "a": {
+          "x": 0.24,
+          "y": 0.565,
+          "w": 0.13,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.24,
+          "y": 0.565,
+          "w": 0.13,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "missing-life-preserver-band",
+      "label": "왼쪽 아래 크림색 띠가 사라진 구명환",
+      "zones": {
+        "a": {
+          "x": 0.025,
+          "y": 0.285,
+          "w": 0.105,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.025,
+          "y": 0.285,
+          "w": 0.105,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-evidence-bottle",
+      "label": "마개가 사라진 오른쪽 증거 병",
+      "zones": {
+        "a": {
+          "x": 0.535,
+          "y": 0.525,
+          "w": 0.07,
+          "h": 0.2
+        },
+        "b": {
+          "x": 0.535,
+          "y": 0.525,
+          "w": 0.07,
+          "h": 0.2
+        }
+      }
+    },
+    {
+      "id": "golden-cargo-hook",
+      "label": "끝부분만 금빛으로 바뀐 붉은 화물 갈고리",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.055,
+          "w": 0.13,
+          "h": 0.31
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.055,
+          "w": 0.13,
+          "h": 0.31
+        }
+      }
+    },
+    {
+      "id": "crescent-umbrella-charm",
+      "label": "한 꼭짓점이 짧아진 우산 손잡이의 파란 별 장식",
+      "zones": {
+        "a": {
+          "x": 0.705,
+          "y": 0.875,
+          "w": 0.075,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.705,
+          "y": 0.875,
+          "w": 0.075,
+          "h": 0.105
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 고양이 탐정단의 폭풍우 치는 밤 항구 창고 밀수품 추적. Scene: A whimsical animal-city harbor warehouse during a dramatic but cozy nighttime rainstorm, viewed straight-on from a comfortable medium-wide angle. Warm amber warehouse lamps glow against deep navy rain, with a moored cargo boat and distant lighthouse outside through a wide open loading door, and no readable signs. At the lower-left, the recurring friendly orange tabby detective cat wears a cream trench coat and navy deerstalker hat while examining clues; the cat holds one oversized brass magnifying glass with one large clearly visible turquoise-blue lens. On the upper-left brick wall, one prominent coral-red life preserver has exactly four broad cream bands, all clearly separated. At center, one large open wooden evidence crate contains exactly four upright emerald-green glass bottles arranged in one clear row. At the upper-right, one large brass cargo crane hook hangs from a thick rope and is painted bright signal red. In the lower-right foreground, the recurring friendly gray mouse assistant in a burgundy raincoat holds one closed golden-yellow umbrella with exactly one large blue five-point star charm hanging from its curved handle. Add a kind beaver dockmaster in a plain cap, stacked blank wooden crates, coiled ropes, puddle reflections, a brass scale, fish baskets, rain-streaked windows, and distant harbor lights only as supporting atmosphere. Keep the turquoise magnifying-glass lens, four cream life-preserver bands, four green bottles, red cargo hook, and blue star umbrella charm large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium cozy mystery storybook game illustration matching the established Cat Detective Agency stages, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, charming rounded animal characters, crisp object silhouettes, cinematic rainy harbor atmosphere, cohesive midnight navy, storm teal, warm amber, cream, burgundy, emerald green, signal red, coral, and antique gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the oversized magnifying glass lens held by the orange tabby detective at lower-left from turquoise blue to violet purple, 2) remove exactly one of the four broad cream bands from the upper-left coral-red life preserver so three cream bands remain, 3) remove exactly one emerald-green bottle from the center evidence crate so three upright bottles remain, 4) change only the upper-right hanging cargo crane hook from bright signal red to golden yellow, 5) change only the large blue five-point star charm hanging from the lower-right yellow umbrella handle into a blue crescent-moon charm of similar size. Preserve every character, clothing, hat, umbrella, boat, lighthouse, loading door, warehouse lamps, crates, ropes, puddles, scale, fish baskets, windows, rain, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T10:45:11.657Z"
+  },
+  "publishedAt": "2026-08-21T10:49:40.013Z"
+}

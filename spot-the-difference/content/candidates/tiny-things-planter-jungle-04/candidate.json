@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "tiny-things-planter-jungle-04",
+  "status": "published",
+  "title": "화분 정글 탐험대",
+  "description": "거대한 잎과 물방울 사이를 달리는 조그만 화분 정글 탐험대에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "조그만 것들의 대도시 화분 정글 탐험대",
+  "collectionId": "tiny-things-city",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "yellow-jeep-wheels",
+      "label": "노란색으로 바뀐 병뚜껑 지프 바퀴",
+      "zones": {
+        "a": {
+          "x": 0.04,
+          "y": 0.57,
+          "w": 0.31,
+          "h": 0.28
+        },
+        "b": {
+          "x": 0.04,
+          "y": 0.57,
+          "w": 0.31,
+          "h": 0.28
+        }
+      }
+    },
+    {
+      "id": "missing-leaf-droplet",
+      "label": "하나 줄어든 잎 위 물방울",
+      "zones": {
+        "a": {
+          "x": 0.14,
+          "y": 0.23,
+          "w": 0.09,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.14,
+          "y": 0.23,
+          "w": 0.09,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "missing-helmet-headlamp",
+      "label": "사라진 안전모 램프",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-matchstick-bridge-railing",
+      "label": "사라진 성냥개비 다리 난간",
+      "zones": {
+        "a": {
+          "x": 0.39,
+          "y": 0.59,
+          "w": 0.29,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.39,
+          "y": 0.59,
+          "w": 0.29,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "reversed-leaf-sign-arrow",
+      "label": "반대 방향을 가리키는 나뭇잎 화살표",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.13,
+          "w": 0.19,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.13,
+          "w": 0.19,
+          "h": 0.18
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 조그만 것들의 대도시 화분 정글 탐험대. Scene: A charming macro miniature jungle expedition inside a large indoor terracotta planter, viewed straight-on from a comfortable medium-wide angle. Giant houseplant leaves, rich dark soil, and sparkling water droplets tower over a tiny handmade city expedition route. In the lower-left foreground, one prominent bottle-cap jeep made from a coral-red metal bottle cap and craft wood has exactly four large cobalt-blue button wheels, all clearly visible. At the upper-left, one broad emerald leaf holds exactly four large, clearly separated round water droplets. Near the center, the recurring small friendly mouse engineer wears a bright yellow work helmet with exactly one large round teal headlamp centered on the front and carries the same red postal satchel. Across the lower center, a small bridge made from pale matchsticks crosses a narrow ribbon stream and has one clearly visible coral-red railing along its front edge. At the upper-right, one large leaf-shaped trail sign on a wooden stem shows a single bold cream arrow pointing left, with no letters or numbers. Include curled fern shoots, moss, pebble paths, tiny rope coils, a thimble supply crate, and a few miniature explorers as supporting atmosphere. Keep the four blue jeep wheels, four leaf droplets, teal helmet lamp, coral bridge railing, and left-pointing leaf arrow large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium macro miniature diorama storybook game illustration matching the established Tiny Things teacup harbor, thread station, and button garden stages, warm natural window light, shallow but readable depth, tactile painted metal, wood, matchstick, paper, moss, soil, leaf, and water textures, polished animated-feature background quality, crisp object silhouettes, cohesive emerald green, moss green, terracotta, coral red, cream, cobalt blue, teal, sunny yellow, and warm wood palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the four large cobalt-blue button wheels on the lower-left bottle-cap jeep to sunny yellow while preserving their shape and count, 2) remove exactly one of the four round water droplets from the broad upper-left leaf so three remain, 3) remove only the round teal headlamp from the front of the mouse engineer's bright yellow work helmet while preserving the helmet, 4) remove only the coral-red front railing from the lower-center matchstick bridge while preserving the bridge deck and supports, 5) reverse only the bold cream arrow on the upper-right leaf-shaped trail sign so it points right instead of left. Preserve the planter, plants, soil, jeep, mouse engineer, red postal satchel, stream, bridge, trail sign, explorers, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T09:39:21.193Z"
+  },
+  "publishedAt": "2026-08-21T09:46:02.037Z"
+}

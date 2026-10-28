@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 심해 관측소. Scene: A cozy underwater observatory interior with a huge curved window looking onto coral reefs and fish, brass scientific instruments, specimen jars, diving gear, shells, maps without readable text, and a small octopus outside.
+Art direction: premium whimsical storybook illustration, luminous blue and coral palette, crisp object silhouettes, detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

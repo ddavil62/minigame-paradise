@@ -1,0 +1,5 @@
+Use case: precise-object-edit
+Asset type: correction pass for image B of a spot-the-difference puzzle
+Input images: Image 1 is the edit target.
+Primary request: Correct only two object counts in Image 1. On the oversized coral-red button at upper-left, add exactly one round hole so the button has exactly three round holes total, arranged clearly and naturally. Beneath the upper-right hanging silver thimble bell, add exactly one matching golden ribbon strip so exactly two golden ribbon strips hang beneath it total.
+Constraints: Change only those two tiny localized areas. Preserve the purple locomotive chimney, exactly two lower-left thread spools, the safety pin with no flag, every character and pose, camera, crop, dimensions, composition, lighting, color, texture, focus, and all other pixels and details as closely as possible. Do not reintroduce the removed third spool or teal flag. Do not change the thimble or the coral button other than the requested additions. No text, letters, numbers, logos, borders, or watermark.

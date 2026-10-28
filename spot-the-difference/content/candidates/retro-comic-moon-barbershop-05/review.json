@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "red-hair-dryer-dial",
+      "label": "빨간색으로 바뀐 헤어드라이어 다이얼",
+      "zones": {
+        "a": {
+          "x": 0.14,
+          "y": 0.215,
+          "w": 0.07,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.14,
+          "y": 0.215,
+          "w": 0.07,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "red-barber-bow-tie",
+      "label": "빨간색으로 바뀐 이발사의 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.385,
+          "y": 0.27,
+          "w": 0.085,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.385,
+          "y": 0.27,
+          "w": 0.085,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "yellow-ceiling-lamp",
+      "label": "노란색으로 바뀐 천장 조명",
+      "zones": {
+        "a": {
+          "x": 0.095,
+          "y": 0,
+          "w": 0.205,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.095,
+          "y": 0,
+          "w": 0.205,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "cyan-robot-star",
+      "label": "파란색으로 바뀐 로봇 가슴 별",
+      "zones": {
+        "a": {
+          "x": 0.83,
+          "y": 0.55,
+          "w": 0.075,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.83,
+          "y": 0.55,
+          "w": 0.075,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-porthole-stars",
+      "label": "사라진 창밖의 별 두 개",
+      "zones": {
+        "a": {
+          "x": 0.7,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.7,
+          "y": 0.07,
+          "w": 0.08,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 4348781,
+        "hash": "ff446e64758e02c5a7df380f739c468b4c1af5956182d209c4f25b5535033d41",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 4196323,
+        "hash": "b826c51f13d0d81f5a179adfbfeb50d3956b0b667da9f331b42d4b7f1e4e6973",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-20T02:00:19.061Z"
+}

@@ -1,0 +1,6 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly 5 localized, clearly visible object-level changes distributed across the scene.
+Use changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Requested change guidance: Make only these five changes: 1) change the fox mask cheek accents from blue to red, 2) remove the red tassel from the blue folding fan, 3) change the glossy candy apple from red to golden yellow, 4) remove exactly one blade from the four-bladed pinwheel so it has three blades, 5) change the tanuki statue's bib from green to purple. Keep both young adults, faces, hands, poses, yukata, shrine walkway, lanterns, torii, camera, crop, lighting, and every other object pixel-consistent.

@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 마법 시계공방. Scene: A cozy enchanted clockmaker workshop at night with a large round moonlit window in the center, a wooden workbench, an ornate brass mantel clock, a small blue cuckoo clock on the left wall, a crescent-shaped desk lamp, organized gears and tools, a sleepy black cat on a teal cushion, hanging pocket watches, glass jars, and tiny star-shaped charms.
+Art direction: premium whimsical storybook illustration, deep indigo, teal, walnut and warm brass palette, crisp object silhouettes, richly detailed but uncluttered, cinematic moonlight and amber lamplight.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

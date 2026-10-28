@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "cat-detective-midnight-theater-05",
+  "status": "published",
+  "title": "심야 극장의 사라진 왕관",
+  "description": "막이 내린 동물 도시의 오래된 극장에서 고양이 탐정단과 함께 사라진 왕관의 다섯 단서를 찾아보세요.",
+  "theme": "고양이 탐정단의 심야 극장 왕관 도난 사건",
+  "collectionId": "cat-detective-agency",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "star-theater-mask",
+      "label": "윗부분이 짧아진 보라색 가면의 금빛 초승달",
+      "zones": {
+        "a": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.13,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.13,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "pink-curtain-tassel",
+      "label": "윗 매듭만 분홍색인 무대 커튼의 청록 술 장식",
+      "zones": {
+        "a": {
+          "x": 0.015,
+          "y": 0.425,
+          "w": 0.105,
+          "h": 0.31
+        },
+        "b": {
+          "x": 0.015,
+          "y": 0.425,
+          "w": 0.105,
+          "h": 0.31
+        }
+      }
+    },
+    {
+      "id": "missing-crown-gemstone",
+      "label": "빛 반사가 사라진 왕관의 초록색 보석",
+      "zones": {
+        "a": {
+          "x": 0.49,
+          "y": 0.535,
+          "w": 0.065,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.49,
+          "y": 0.535,
+          "w": 0.065,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "missing-chandelier-crystal",
+      "label": "아래 끝이 짧아진 샹들리에의 파란 수정",
+      "zones": {
+        "a": {
+          "x": 0.885,
+          "y": 0.205,
+          "w": 0.07,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.885,
+          "y": 0.205,
+          "w": 0.07,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-fan-feather",
+      "label": "끝이 짧아진 생쥐 조수의 바깥쪽 부채 깃털",
+      "zones": {
+        "a": {
+          "x": 0.755,
+          "y": 0.595,
+          "w": 0.085,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.755,
+          "y": 0.595,
+          "w": 0.085,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 고양이 탐정단의 심야 극장 왕관 도난 사건. Scene: A whimsical grand animal-city theater just after the final curtain at midnight, viewed straight-on from a comfortable medium-wide angle. Deep burgundy velvet curtains frame a warmly lit stage with ornate antique-gold balconies, blank playbills without writing, and no audience. At the lower-left, the recurring friendly orange tabby detective cat wears a cream trench coat and navy deerstalker hat while holding one oversized violet theatrical mask; exactly one large golden crescent-moon motif is centered on the mask. At the upper-left, one thick burgundy stage curtain is gathered by a braided gold rope ending in exactly one large turquoise tassel. At center, one prominent antique-gold royal crown rests on a broad red velvet evidence pedestal and has exactly three large emerald-green oval gemstones arranged in one clear row. At the upper-right, one large brass chandelier hangs low and carries exactly four large cobalt-blue teardrop crystal pendants, clearly separated in a row. In the lower-right foreground, the recurring friendly gray mouse assistant in a burgundy waistcoat holds one large coral-red feather fan made from exactly five broad, clearly separated feathers. Add a kind owl stage manager with a blank cap badge, a wooden prop chest, coiled ropes, one cello, unlit footlights, scattered blank tickets, and painted moon-and-cloud scenery only as supporting atmosphere. Keep the mask motif, turquoise curtain tassel, three crown gemstones, four chandelier crystals, and five fan feathers large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium cozy mystery storybook game illustration matching the established Cat Detective Agency stages, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, charming rounded animal characters, crisp object silhouettes, cinematic old-theater atmosphere, cohesive midnight navy, burgundy velvet, warm amber, antique gold, cream, violet, turquoise, emerald green, cobalt blue, and coral palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the large golden crescent-moon motif centered on the lower-left violet theatrical mask into a golden five-point star motif of similar size, 2) change only the large turquoise tassel at the end of the upper-left curtain tieback to bright pink while preserving its shape, 3) remove exactly one emerald-green gemstone from the center crown so two large green gemstones remain, 4) remove exactly one cobalt-blue teardrop crystal pendant from the upper-right chandelier so three remain, 5) remove exactly one coral-red feather from the lower-right fan so four broad feathers remain. Preserve every character, pose, clothing, curtain, rope, mask, crown, pedestal, chandelier, fan handle, balconies, prop chest, cello, footlights, tickets, scenery, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T10:57:39.287Z"
+  },
+  "publishedAt": "2026-08-21T11:01:55.082Z"
+}

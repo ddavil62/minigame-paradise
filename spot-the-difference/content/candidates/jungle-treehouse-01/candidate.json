@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "jungle-treehouse-01",
+  "status": "published",
+  "title": "초록빛 정글 나무집",
+  "description": "신비한 정글 나무집에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "정글 나무집",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "yellow-hanging-flowers",
+      "label": "꽃바구니의 노란 꽃",
+      "zones": {
+        "a": {
+          "x": 0.45,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.45,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-bridge-rope",
+      "label": "밧줄다리의 사라진 세로줄",
+      "zones": {
+        "a": {
+          "x": 0.165,
+          "y": 0.59,
+          "w": 0.055,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.165,
+          "y": 0.59,
+          "w": 0.055,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "turquoise-telescope-rim",
+      "label": "망원경의 청록색 렌즈 테두리",
+      "zones": {
+        "a": {
+          "x": 0.325,
+          "y": 0.35,
+          "w": 0.045,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.325,
+          "y": 0.35,
+          "w": 0.045,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "blue-backpack-mat",
+      "label": "배낭 위의 파란 침낭",
+      "zones": {
+        "a": {
+          "x": 0.745,
+          "y": 0.62,
+          "w": 0.15,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.745,
+          "y": 0.62,
+          "w": 0.15,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "purple-foreground-plant",
+      "label": "왼쪽 아래의 보라색 잎",
+      "zones": {
+        "a": {
+          "x": 0,
+          "y": 0.79,
+          "w": 0.22,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0,
+          "y": 0.79,
+          "w": 0.22,
+          "h": 0.21
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 정글 나무집. Scene: A playful jungle explorer treehouse built around a giant tree, with rope bridge, canvas hammock, wooden telescope, colorful tropical bird, hanging lantern, explorer backpack, clay pots, large leaves, vines, and a distant waterfall.\nArt direction: premium whimsical storybook illustration, lush emerald green with warm wood and bright accent colors, crisp object silhouettes, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across the canopy, rope bridge, treehouse deck, backpack area, and lower plants; avoid global foliage or lighting changes",
+    "createdAt": "2026-08-19T12:02:08.372Z"
+  },
+  "publishedAt": "2026-08-19T15:06:28.835Z",
+  "collectionId": "world-adventure",
+  "stageType": "classic"
+}

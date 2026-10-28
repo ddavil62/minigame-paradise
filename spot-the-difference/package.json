@@ -1,0 +1,23 @@
+{
+  "name": "spot-the-difference",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js",
+    "record:humanlike-ai": "node scripts/record-humanlike-ai.mjs",
+    "content:list": "node scripts/content-pipeline.mjs list",
+    "content:prepare": "node scripts/content-pipeline.mjs prepare",
+    "content:finalize": "node scripts/content-pipeline.mjs finalize",
+    "content:review": "node scripts/content-pipeline.mjs review --local",
+    "content:publish": "node scripts/content-pipeline.mjs publish",
+    "content:reload": "node scripts/reload-stages.mjs",
+    "content:api:generate": "node scripts/content-pipeline.mjs generate",
+    "content:api:review": "node scripts/content-pipeline.mjs review",
+    "content:api:run": "node scripts/content-pipeline.mjs run"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

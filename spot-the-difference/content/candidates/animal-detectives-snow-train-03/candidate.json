@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "animal-detectives-snow-train-03",
+  "status": "published",
+  "title": "설원 특급열차의 식당칸",
+  "description": "눈보라 치는 밤, 여우 탐정과 토끼 조수가 설원 특급열차 식당칸에서 승객들의 수상한 다섯 단서를 찾아보세요.",
+  "theme": "동물 탐정단의 설원 특급열차 식당칸 사건",
+  "collectionId": "animal-detectives",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "emerald-round-saucer",
+      "label": "초록색 원형으로 바뀐 찻잔 받침",
+      "zones": {
+        "a": {
+          "x": 0.29,
+          "y": 0.82,
+          "w": 0.2,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.29,
+          "y": 0.82,
+          "w": 0.2,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "square-curtain-ring",
+      "label": "네모 모양으로 바뀐 커튼 고리",
+      "zones": {
+        "a": {
+          "x": 0.025,
+          "y": 0.3,
+          "w": 0.07,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.025,
+          "y": 0.3,
+          "w": 0.07,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "missing-scarf-stripe",
+      "label": "하나 줄어든 승객의 스카프 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.51,
+          "w": 0.1,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.51,
+          "w": 0.1,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "diamond-suitcase-clasp",
+      "label": "마름모 모양으로 바뀐 여행가방 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.8,
+          "y": 0.04,
+          "w": 0.105,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.8,
+          "y": 0.04,
+          "w": 0.105,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "crescent-beret-badge",
+      "label": "초승달 모양으로 바뀐 토끼 조수의 베레모 배지",
+      "zones": {
+        "a": {
+          "x": 0.76,
+          "y": 0.46,
+          "w": 0.11,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.76,
+          "y": 0.46,
+          "w": 0.11,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 동물 탐정단의 설원 특급열차 식당칸 사건. Scene: A luxurious whimsical 1930s express-train dining car crossing a snowy mountain pass at night, viewed straight-on from a comfortable medium-wide angle. Warm amber brass lamps and polished dark wood contrast with cool blue snow visible through large windows. At the lower-left, the recurring friendly fox detective wears the same burgundy trench coat and quietly studies the carriage. At the lower-right, the recurring friendly rabbit assistant wears the same teal beret with exactly one large gold five-point star badge centered on its front and holds a blank evidence notebook. On a small round table at center-left, one large cream teacup rests alone on one clearly visible burgundy hexagonal saucer. At the upper-left window, one burgundy curtain is gathered by one oversized antique-gold oval tieback ring. At center, a friendly white hare passenger in a midnight-blue coat wears one large coral-red scarf with exactly two broad, clearly separated cream stripes. On the upper-right brass luggage rack, one large navy suitcase faces the viewer with one oversized round antique-gold clasp centered on its front. Add a kind bear waiter in a cream jacket, plain plates and silverware, a small vase without flowers, velvet seats, brass railings, frosted window corners, distant snow-covered pines, and soft floor reflections only as supporting atmosphere. Keep the hexagonal saucer, oval curtain ring, two scarf stripes, suitcase clasp, and beret badge large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, or clock numerals..\nArt direction: original premium 1930s-inspired animal detective storybook game illustration, cinematic cozy mystery lighting, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive snow blue, sepia cream, burgundy, deep teal, warm amber, antique gold, midnight blue, and coral red palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the large burgundy hexagonal saucer beneath the cream teacup on the center-left table into a round emerald-green saucer of similar size, 2) change only the oversized antique-gold oval tieback ring on the upper-left burgundy window curtain into a square antique-gold ring of similar size, 3) remove exactly one of the two broad cream stripes from the center white hare passenger's coral-red scarf so one stripe remains, 4) change only the oversized round antique-gold clasp on the upper-right navy suitcase into an antique-gold diamond-shaped clasp of similar size, 5) change only the large gold five-point star badge on the lower-right rabbit assistant's teal beret into a gold crescent-moon badge of similar size. Preserve the fox detective, rabbit assistant, white hare passenger, bear waiter, train carriage, windows, snowy landscape, table, teacup, curtain, scarf, suitcase, luggage rack, notebook, seats, lamps, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T11:47:35.146Z"
+  },
+  "publishedAt": "2026-08-21T11:52:15.212Z"
+}

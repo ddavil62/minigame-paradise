@@ -1,0 +1,17 @@
+{
+  "id": "cat-detective-midnight-theater-05",
+  "title": "심야 극장의 사라진 왕관",
+  "description": "막이 내린 동물 도시의 오래된 극장에서 고양이 탐정단과 함께 사라진 왕관의 다섯 단서를 찾아보세요.",
+  "theme": "고양이 탐정단의 심야 극장 왕관 도난 사건",
+  "scene": "A whimsical grand animal-city theater just after the final curtain at midnight, viewed straight-on from a comfortable medium-wide angle. Deep burgundy velvet curtains frame a warmly lit stage with ornate antique-gold balconies, blank playbills without writing, and no audience. At the lower-left, the recurring friendly orange tabby detective cat wears a cream trench coat and navy deerstalker hat while holding one oversized violet theatrical mask; exactly one large golden crescent-moon motif is centered on the mask. At the upper-left, one thick burgundy stage curtain is gathered by a braided gold rope ending in exactly one large turquoise tassel. At center, one prominent antique-gold royal crown rests on a broad red velvet evidence pedestal and has exactly three large emerald-green oval gemstones arranged in one clear row. At the upper-right, one large brass chandelier hangs low and carries exactly four large cobalt-blue teardrop crystal pendants, clearly separated in a row. In the lower-right foreground, the recurring friendly gray mouse assistant in a burgundy waistcoat holds one large coral-red feather fan made from exactly five broad, clearly separated feathers. Add a kind owl stage manager with a blank cap badge, a wooden prop chest, coiled ropes, one cello, unlit footlights, scattered blank tickets, and painted moon-and-cloud scenery only as supporting atmosphere. Keep the mask motif, turquoise curtain tassel, three crown gemstones, four chandelier crystals, and five fan feathers large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers.",
+  "style": "original premium cozy mystery storybook game illustration matching the established Cat Detective Agency stages, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, charming rounded animal characters, crisp object silhouettes, cinematic old-theater atmosphere, cohesive midnight navy, burgundy velvet, warm amber, antique gold, cream, violet, turquoise, emerald green, cobalt blue, and coral palette, not imitating any specific artist or franchise",
+  "collectionId": "cat-detective-agency",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change only the large golden crescent-moon motif centered on the lower-left violet theatrical mask into a golden five-point star motif of similar size, 2) change only the large turquoise tassel at the end of the upper-left curtain tieback to bright pink while preserving its shape, 3) remove exactly one emerald-green gemstone from the center crown so two large green gemstones remain, 4) remove exactly one cobalt-blue teardrop crystal pendant from the upper-right chandelier so three remain, 5) remove exactly one coral-red feather from the lower-right fan so four broad feathers remain. Preserve every character, pose, clothing, curtain, rope, mask, crown, pedestal, chandelier, fan handle, balconies, prop chest, cello, footlights, tickets, scenery, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

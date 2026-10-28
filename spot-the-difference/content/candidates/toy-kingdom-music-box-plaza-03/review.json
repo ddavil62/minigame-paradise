@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "shorter-music-box-star-point",
+      "label": "윗 꼭짓점이 짧아진 오르골 별 장식",
+      "zones": {
+        "a": {
+          "x": 0.355,
+          "y": 0.07,
+          "w": 0.16,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.355,
+          "y": 0.07,
+          "w": 0.16,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "missing-ballerina-skirt-bead",
+      "label": "금빛 장식이 사라진 발레리나 치마",
+      "zones": {
+        "a": {
+          "x": 0.38,
+          "y": 0.5,
+          "w": 0.215,
+          "h": 0.065
+        },
+        "b": {
+          "x": 0.38,
+          "y": 0.5,
+          "w": 0.215,
+          "h": 0.065
+        }
+      }
+    },
+    {
+      "id": "missing-elephant-ear-stitch",
+      "label": "노란 바느질이 사라진 양철 코끼리 귀",
+      "zones": {
+        "a": {
+          "x": 0.13,
+          "y": 0.405,
+          "w": 0.115,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.13,
+          "y": 0.405,
+          "w": 0.115,
+          "h": 0.075
+        }
+      }
+    },
+    {
+      "id": "missing-middle-brass-bell-clapper",
+      "label": "추가 사라진 가운데 황동 종",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.075,
+          "w": 0.13,
+          "h": 0.255
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.075,
+          "w": 0.13,
+          "h": 0.255
+        }
+      }
+    },
+    {
+      "id": "upright-square-drum-emblem",
+      "label": "정사각형으로 바뀐 북의 청록 문양",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.605,
+          "w": 0.125,
+          "h": 0.175
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.605,
+          "w": 0.125,
+          "h": 0.175
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3156042,
+        "hash": "39e220506ea2786186c750289dbaf65dc5d997195e8f52404fdcf4ef3dd858c1",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2978405,
+        "hash": "72517c5e207fab54b51ef376d4a34016cd73c7a394dfb34a6017480a8962153c",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T15:02:36.960Z"
+}

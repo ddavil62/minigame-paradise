@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-delivery-moonlit-canal-boat-04",
+  "status": "published",
+  "title": "달빛 운하 우편선",
+  "description": "달빛 비가 내리는 마법 운하에서 수달 배달부와 비버 선장이 우편선을 타고 다섯 가지 변화를 찾아냅니다.",
+  "theme": "마법 배달부의 하루 — 달빛 운하 우편선 야간 배송",
+  "collectionId": "magic-delivery-office",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "yellow-canal-lantern",
+      "label": "아래 유리 한 칸만 노란빛인 청록 운하 등불",
+      "zones": {
+        "a": {
+          "x": 0.09,
+          "y": 0.105,
+          "w": 0.145,
+          "h": 0.365
+        },
+        "b": {
+          "x": 0.09,
+          "y": 0.105,
+          "w": 0.145,
+          "h": 0.365
+        }
+      }
+    },
+    {
+      "id": "diamond-mail-satchel-clasp",
+      "label": "가운데만 파란 마름모인 우편 가방 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.115,
+          "y": 0.755,
+          "w": 0.095,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.115,
+          "y": 0.755,
+          "w": 0.095,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "crescent-sail-emblem",
+      "label": "윗 꼭짓점이 평평해진 돛의 붉은 별 문양",
+      "zones": {
+        "a": {
+          "x": 0.505,
+          "y": 0.185,
+          "w": 0.145,
+          "h": 0.235
+        },
+        "b": {
+          "x": 0.505,
+          "y": 0.185,
+          "w": 0.145,
+          "h": 0.235
+        }
+      }
+    },
+    {
+      "id": "green-courier-umbrella",
+      "label": "한 줄만 초록색인 수달 배달부의 노란 우산",
+      "zones": {
+        "a": {
+          "x": 0.305,
+          "y": 0.33,
+          "w": 0.25,
+          "h": 0.165
+        },
+        "b": {
+          "x": 0.305,
+          "y": 0.33,
+          "w": 0.25,
+          "h": 0.165
+        }
+      }
+    },
+    {
+      "id": "purple-beaver-paddle",
+      "label": "손잡이 끝만 보라색인 비버 선장의 주황 노",
+      "zones": {
+        "a": {
+          "x": 0.62,
+          "y": 0.45,
+          "w": 0.285,
+          "h": 0.485
+        },
+        "b": {
+          "x": 0.62,
+          "y": 0.45,
+          "w": 0.285,
+          "h": 0.485
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 배달부의 하루 — 달빛 운하 우편선 야간 배송. Scene: A charming whimsical magical canal mail boat making an evening delivery in gentle moonlit rain, viewed straight-on from a comfortable medium-wide angle. The full small boat is shown side-on on calm indigo water between warm cream-stone canal houses, arched bridges, brass lamps, teal shutters, and softly glowing windows. At upper left, one large hanging lantern is isolated beneath an arch; its broad glass chamber glows vivid turquoise. At lower left on the dock, one large burgundy leather mail satchel faces the camera; its flap has one oversized circular antique-gold clasp. At upper center, the boat has one large cream triangular sail, fully visible against the violet sky; its center bears one oversized bright coral-red five-point-star emblem. At center, the recurring friendly young otter courier stands on deck in a deep-teal raincoat, holding one large mustard-yellow umbrella with exactly six broad visible panels and a simple curved wooden handle. At lower right, a friendly stocky beaver captain holds one large bright-orange wooden paddle diagonally across a clear area of the boat. Add blank parcels, coiled rope, canvas mail sacks, lily pads, a few glowing fireflies, and distant bridge details only as supporting atmosphere. Keep the turquoise lantern chamber, gold satchel clasp, coral star sail emblem, yellow umbrella, and orange paddle large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, addresses, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the magical postal collection, cinematic blue-hour moonlight with warm window glow and delicate rain, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive indigo, teal, cream, antique gold, burgundy, mustard yellow, coral red, vivid turquoise, and bright orange palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the broad vivid-turquoise glass chamber of the large upper-left hanging lantern to bright sunflower yellow while preserving the brass frame and glow shape, 2) change only the oversized circular antique-gold clasp on the lower-left burgundy mail satchel into a clearly visible cobalt-blue diamond-shaped clasp of similar size, 3) change only the oversized bright coral-red five-point-star emblem at the center of the cream sail into a vivid turquoise crescent-moon emblem of similar size, 4) change only the large mustard-yellow umbrella held by the center otter courier to emerald green while preserving its six panels, wooden handle, size, and shape, 5) change only the large bright-orange wooden paddle held by the lower-right beaver captain to plum purple while preserving its exact shape and position. Preserve the otter courier, beaver captain, faces, bodies, poses, raincoat, boat, sail, satchel, lantern, canal architecture, bridge, parcels, ropes, mail sacks, water, rain, camera, crop, lighting, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T12:43:09.035Z"
+  },
+  "publishedAt": "2026-08-21T12:47:29.749Z"
+}

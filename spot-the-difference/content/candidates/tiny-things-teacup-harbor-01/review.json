@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "쉬움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "coral-teacup-anchor",
+      "label": "산호색으로 바뀐 찻잔의 닻",
+      "zones": {
+        "a": {
+          "x": 0.255,
+          "y": 0.405,
+          "w": 0.125,
+          "h": 0.295
+        },
+        "b": {
+          "x": 0.255,
+          "y": 0.405,
+          "w": 0.125,
+          "h": 0.295
+        }
+      }
+    },
+    {
+      "id": "missing-sugar-crate",
+      "label": "하나 줄어든 각설탕 상자",
+      "zones": {
+        "a": {
+          "x": 0.035,
+          "y": 0.57,
+          "w": 0.17,
+          "h": 0.25
+        },
+        "b": {
+          "x": 0.035,
+          "y": 0.57,
+          "w": 0.17,
+          "h": 0.25
+        }
+      }
+    },
+    {
+      "id": "missing-spoon-flag",
+      "label": "사라진 티스푼 신호 깃발",
+      "zones": {
+        "a": {
+          "x": 0.495,
+          "y": 0.025,
+          "w": 0.13,
+          "h": 0.145
+        },
+        "b": {
+          "x": 0.495,
+          "y": 0.025,
+          "w": 0.13,
+          "h": 0.145
+        }
+      }
+    },
+    {
+      "id": "round-paper-boat-sail",
+      "label": "반원 모양으로 바뀐 종이배 돛",
+      "zones": {
+        "a": {
+          "x": 0.545,
+          "y": 0.595,
+          "w": 0.14,
+          "h": 0.24
+        },
+        "b": {
+          "x": 0.545,
+          "y": 0.595,
+          "w": 0.14,
+          "h": 0.24
+        }
+      }
+    },
+    {
+      "id": "missing-lighthouse-window",
+      "label": "하나 줄어든 주전자 등대 창문",
+      "zones": {
+        "a": {
+          "x": 0.715,
+          "y": 0.47,
+          "w": 0.075,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.715,
+          "y": 0.47,
+          "w": 0.075,
+          "h": 0.115
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2484364,
+        "hash": "442af41d62613283549c7d41d2075fb897cde9043a40ba87a0a4795937eeb37b",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2422002,
+        "hash": "c2e7e51ba56d2d7784844e66147951103ef6dfdf4fc1ff71187ca28c00791873",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.502Z"
+}

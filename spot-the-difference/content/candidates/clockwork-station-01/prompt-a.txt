@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 시계장치 기차역. Scene: A fantastical clockwork train station with a large round clock without numerals, brass gears, teal steam locomotive, luggage trolley, red suitcase, hanging lanterns, potted palm, ticket booth with no signs or lettering, and a small mechanical bird.
+Art direction: premium whimsical storybook illustration, polished brass, teal, and burgundy palette, crisp silhouettes, detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

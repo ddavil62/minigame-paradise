@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "magic-delivery-broom-workshop-02",
+  "status": "published",
+  "title": "빗자루 택배 정비소",
+  "description": "비행 빗자루와 날개 달린 배송 가방을 손보는 활기찬 마법 공방에서 수달 배달부와 너구리 정비사가 다섯 가지 변화를 점검합니다.",
+  "theme": "마법 배달부의 하루 — 비행 빗자루 택배 정비소",
+  "collectionId": "magic-delivery-office",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "coral-broom-tail-band",
+      "label": "가운데 띠만 산호색인 비행 빗자루 꼬리",
+      "zones": {
+        "a": {
+          "x": 0.115,
+          "y": 0.105,
+          "w": 0.095,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.115,
+          "y": 0.105,
+          "w": 0.095,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "square-toolbox-handle",
+      "label": "오른쪽 받침이 사라진 공구함의 금빛 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.095,
+          "y": 0.345,
+          "w": 0.145,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.095,
+          "y": 0.345,
+          "w": 0.145,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "two-blade-propeller",
+      "label": "아래쪽 날개 끝이 짧아진 파란 벽 프로펠러",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.105,
+          "w": 0.2,
+          "h": 0.285
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.105,
+          "w": 0.2,
+          "h": 0.285
+        }
+      }
+    },
+    {
+      "id": "green-mechanic-goggles",
+      "label": "초록색 빛 반사가 생긴 너구리 정비사 고글",
+      "zones": {
+        "a": {
+          "x": 0.395,
+          "y": 0.325,
+          "w": 0.13,
+          "h": 0.135
+        },
+        "b": {
+          "x": 0.395,
+          "y": 0.325,
+          "w": 0.13,
+          "h": 0.135
+        }
+      }
+    },
+    {
+      "id": "bat-wing-delivery-bag",
+      "label": "끝 깃털이 사라진 주황 배송 가방의 흰 날개",
+      "zones": {
+        "a": {
+          "x": 0.6,
+          "y": 0.625,
+          "w": 0.295,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.6,
+          "y": 0.625,
+          "w": 0.295,
+          "h": 0.29
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 배달부의 하루 — 비행 빗자루 택배 정비소. Scene: A bustling whimsical magical broom-delivery repair workshop in warm late-morning light, viewed straight-on from a comfortable medium-wide angle. The organized timber-and-brass workshop has tall blue windows, overhead rails, hanging broom racks, copper pipes, wooden benches, and gently floating golden dust motes. At upper left, one large horizontal flying broom is displayed alone against a pale wall; its broad straw tail is bound by one oversized vivid-turquoise band. At lower left, one large burgundy wooden toolbox sits on a clear workbench; its lid has one oversized smooth semicircular antique-gold handle. At upper right, one large wall-mounted cobalt-blue propeller has exactly three broad, clearly separated blades against a simple cream circular backing. At center, a friendly round raccoon mechanic wears a mustard apron and one oversized pair of brass work goggles pushed over the eyes; both large round lenses are vivid plum purple. At lower right, the recurring friendly young otter courier in a deep-teal delivery coat kneels beside one large bright-orange leather delivery satchel fitted with exactly two large symmetrical cream feathered bird wings. Add a second upright broom, blank parcels, spanners, jars without labels, coiled hose, a foot pump, and canvas mail sacks only as supporting atmosphere. Keep the turquoise broom-tail band, toolbox handle, three propeller blades, purple goggle lenses, and orange bag wings large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, addresses, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the magical postal collection, cinematic cozy workshop lighting, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive teal, cream, antique gold, burgundy, mustard, copper, vivid turquoise, plum purple, cobalt blue, and bright orange palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the oversized vivid-turquoise binding band around the straw tail of the large upper-left horizontal flying broom to coral red, 2) change only the smooth semicircular antique-gold handle on the lower-left burgundy toolbox into a clearly angular cobalt-blue square handle of similar size, 3) remove exactly one of the three broad blades from the large upper-right cobalt-blue wall propeller so exactly two blades remain while preserving the hub and cream backing, 4) change only both large plum-purple round lenses of the center raccoon mechanic's brass work goggles to emerald green, 5) change only the two large symmetrical cream feathered bird wings attached to the lower-right bright-orange delivery satchel into two teal bat-like scalloped wings of similar size. Preserve the raccoon mechanic, otter courier, workshop architecture, all brooms, toolbox, propeller assembly, goggles frame, orange satchel, parcels, tools, pipes, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T12:28:02.061Z"
+  },
+  "publishedAt": "2026-08-21T12:31:16.887Z"
+}

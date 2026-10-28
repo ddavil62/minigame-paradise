@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "yellow-dock-pennant",
+      "label": "끝부분만 노란색인 선착장의 청록 깃발",
+      "zones": {
+        "a": {
+          "x": 0.085,
+          "y": 0.045,
+          "w": 0.235,
+          "h": 0.165
+        },
+        "b": {
+          "x": 0.085,
+          "y": 0.045,
+          "w": 0.235,
+          "h": 0.165
+        }
+      }
+    },
+    {
+      "id": "crescent-mail-crate-clasp",
+      "label": "안쪽 문양이 초승달로 바뀐 우편 상자 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.105,
+          "y": 0.575,
+          "w": 0.13,
+          "h": 0.215
+        },
+        "b": {
+          "x": 0.105,
+          "y": 0.575,
+          "w": 0.13,
+          "h": 0.215
+        }
+      }
+    },
+    {
+      "id": "single-blade-airship-propeller",
+      "label": "끝이 짧아진 비행선 프로펠러 날개 하나",
+      "zones": {
+        "a": {
+          "x": 0.505,
+          "y": 0.19,
+          "w": 0.17,
+          "h": 0.3
+        },
+        "b": {
+          "x": 0.505,
+          "y": 0.19,
+          "w": 0.17,
+          "h": 0.3
+        }
+      }
+    },
+    {
+      "id": "green-otter-scarf",
+      "label": "끝 술만 초록색인 수달 배달부의 산호색 목도리",
+      "zones": {
+        "a": {
+          "x": 0.335,
+          "y": 0.39,
+          "w": 0.255,
+          "h": 0.235
+        },
+        "b": {
+          "x": 0.335,
+          "y": 0.39,
+          "w": 0.255,
+          "h": 0.235
+        }
+      }
+    },
+    {
+      "id": "star-control-lever-knob",
+      "label": "안쪽 문양이 별로 바뀐 관제 레버 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.65,
+          "y": 0.495,
+          "w": 0.085,
+          "h": 0.145
+        },
+        "b": {
+          "x": 0.65,
+          "y": 0.495,
+          "w": 0.085,
+          "h": 0.145
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3092037,
+        "hash": "5bbd823e00fed06b75d4a919dbfa1fa4346cc7691e2e92f543cef368145602f7",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 3008858,
+        "hash": "0df8a5e3fde63f293fcd54dd8eaae68906b374771a71dd1d3d7805d967126e5c",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T12:39:27.643Z"
+}

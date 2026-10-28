@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "toy-kingdom-patchwork-dragon-bridge-04",
+  "status": "published",
+  "title": "봉제 용 다리",
+  "description": "장난감 왕국의 저녁, 거대한 봉제 용이 지키는 나무 다리를 건너는 파란 망토 병정과 장난감 행렬 사이 다섯 가지 변화를 찾아냅니다.",
+  "theme": "장난감 왕국 대모험 — 봉제 용 다리의 저녁 행렬",
+  "collectionId": "toy-kingdom",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "missing-dragon-horn-seam",
+      "label": "한 줄이 사라진 봉제 용 뿔의 이음매",
+      "zones": {
+        "a": {
+          "x": 0.44,
+          "y": 0.025,
+          "w": 0.14,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.44,
+          "y": 0.025,
+          "w": 0.14,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "upside-down-heart-shield-emblem",
+      "label": "거꾸로 뒤집힌 병정 방패의 청록 하트",
+      "zones": {
+        "a": {
+          "x": 0.105,
+          "y": 0.635,
+          "w": 0.125,
+          "h": 0.175
+        },
+        "b": {
+          "x": 0.105,
+          "y": 0.635,
+          "w": 0.125,
+          "h": 0.175
+        }
+      }
+    },
+    {
+      "id": "missing-middle-lantern-cap",
+      "label": "아래 금빛 받침이 사라진 가운데 등불",
+      "zones": {
+        "a": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.105,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.105,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "dark-teal-wagon-wheel",
+      "label": "짙은 청록색으로 바뀐 수레 바퀴",
+      "zones": {
+        "a": {
+          "x": 0.765,
+          "y": 0.795,
+          "w": 0.16,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.765,
+          "y": 0.795,
+          "w": 0.16,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "notched-bridge-flag",
+      "label": "끝에 작은 홈이 생긴 다리 깃발",
+      "zones": {
+        "a": {
+          "x": 0.615,
+          "y": 0.13,
+          "w": 0.115,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.615,
+          "y": 0.13,
+          "w": 0.115,
+          "h": 0.19
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 장난감 왕국 대모험 — 봉제 용 다리의 저녁 행렬. Scene: A magical early-evening crossing in the same handcrafted toy kingdom, viewed straight-on from a comfortable medium-wide angle like a premium tabletop diorama. A broad arched bridge made from warm wooden building blocks spans a narrow ribbon-blue stream through the center. Behind the bridge, one enormous friendly patchwork plush dragon curls protectively around the far tower; its nearest oversized horn at upper center is bright sunflower yellow, fully isolated against the pale lavender sky. At lower left, the recurring small wooden soldier in a rich cobalt-blue cloth cape leads the procession and carries one large cream round shield bearing one simple vivid-turquoise heart emblem. At upper right, exactly three large round coral-red paper lanterns hang in one straight horizontal row beneath a wooden arch, clearly separated with empty space between them. At lower right, a little natural-wood pull wagon carries blank toy parcels; its nearest oversized wheel is a solid vivid-turquoise disk, fully visible. Near center-right, one large coral-red triangular pennant flies alone from a short antique-gold pole on the bridge tower. Add a plush bear traveler, wooden peg-doll citizens, a tin bird, felt reeds, round stepping beads, tiny blank gift blocks, and ribbon streamers only as supporting atmosphere. Keep the yellow dragon horn, turquoise shield heart, three red lanterns, turquoise wagon wheel, and triangular pennant large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established toy-kingdom stages, with a handcrafted wooden-and-fabric toy diorama look, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, warm natural wood grain, stitched felt and slightly worn painted tin textures, friendly rounded toy characters, crisp object silhouettes, cohesive cream, cobalt blue, sunflower yellow, coral red, vivid turquoise, lavender, and antique gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the enormous patchwork plush dragon's nearest oversized sunflower-yellow horn at upper center to rich plum purple while preserving its exact shape, size, stitching, position, and lighting, 2) change only the simple vivid-turquoise heart emblem on the wooden soldier's lower-left cream shield into one bright coral-red five-point-star emblem of similar size while preserving the shield and soldier, 3) remove exactly the middle lantern from the upper-right straight row of exactly three large coral-red round lanterns so exactly two lanterns remain in their original outer positions while preserving the arch, cords, and empty space, 4) change only the nearest oversized solid vivid-turquoise disk wheel on the lower-right pull wagon to bright orange while preserving the wheel shape, axle, wagon, parcels, and position, 5) change only the center-right coral-red triangular pennant into a square-ended flag while preserving its color, pole, folds, size, and position. Preserve the wooden soldier's cobalt-blue cape, all characters, faces, bodies, dragon, bridge, stream, towers, wagon, parcels, camera, crop, lighting, palette, textures, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T15:16:11.067Z",
+    "feedbackRevisionPrompt": "Create a harder B from A with exactly five subtle changes: one missing horn seam, upside-down shield heart, missing center-lantern cap, dark-teal cart wheel, and shallow flag notch; preserve everything else."
+  },
+  "publishedAt": "2026-08-21T15:19:34.235Z"
+}

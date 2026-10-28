@@ -1,0 +1,17 @@
+{
+  "id": "tiny-things-button-garden-03",
+  "title": "단추꽃 정원",
+  "description": "열린 서랍 속에 자라난 조그만 단추꽃 정원에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "조그만 것들의 도시 단추꽃 정원",
+  "scene": "A charming macro miniature garden city built inside an open vintage desk drawer, viewed straight-on from a comfortable medium-wide angle. At the upper-left, one oversized mint-green toy watering can stands on a cork terrace with exactly one large coral-red heart emblem clearly visible on its side. At the lower-left, exactly five large button flowers grow in one neat, clearly separated row, each flower made from one bright round button on a short green wire stem. At the center, one large open pair of polished silver embroidery scissors forms an arched footbridge over a narrow blue ribbon stream; exactly one sunny-yellow fabric bow is tied prominently around the left scissor handle. At the lower-right, one friendly miniature snail built from a small wooden thread spool has exactly one large cobalt-blue spiral motif painted on the circular side of its spool shell. At the upper-right, one tall wooden clothespin windmill has exactly four broad lavender fabric blades, all clearly separated and fully visible. Include seed packets without writing, thimble flowerpots, cork paths, pin-fence posts, moss lawns, tiny garden benches, and a few miniature residents. Include the recurring small friendly mouse engineer wearing a bright yellow work helmet and carrying one red postal satchel. Keep the watering-can heart, five button flowers, yellow scissor bow, blue spool-shell spiral, and four windmill blades large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers.",
+  "style": "original premium macro miniature diorama storybook game illustration matching the established Tiny Things teacup harbor and thread station stages, bright natural afternoon light, shallow but readable depth, tactile painted metal, polished steel, thread, wood, cork, felt, paper, and moss textures, polished animated-feature background quality, crisp object silhouettes, cohesive mint, coral red, cream, cobalt blue, lavender, sunny yellow, fresh green, warm wood, and silver palette, not imitating any specific artist or franchise",
+  "collectionId": "tiny-things-city",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "differenceCount": 5,
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "changeGuidance": "Make only these five changes: 1) change only the large coral-red heart emblem on the upper-left mint watering can into a coral-red five-point star of similar size, 2) remove exactly one of the five button flowers from the lower-left row so four remain, 3) change only the sunny-yellow fabric bow tied around the center scissors handle to purple, 4) change only the cobalt-blue spiral motif on the lower-right wooden spool-snail shell into a cobalt-blue crescent motif of similar size, 5) remove exactly one of the four lavender fabric blades from the upper-right clothespin windmill so three remain. Preserve the drawer, watering can, scissors bridge, ribbon stream, snail, windmill, mouse engineer, red postal satchel, residents, paths, fences, flowerpots, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

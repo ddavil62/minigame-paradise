@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "toy-kingdom-music-box-plaza-03",
+  "status": "published",
+  "title": "오르골 광장",
+  "description": "장난감 왕국의 거대한 오르골이 연주를 시작한 축제 광장에서 춤추는 인형과 악단 사이 다섯 가지 변화를 찾아냅니다.",
+  "theme": "장난감 왕국 대모험 — 오르골 광장의 정오 연주회",
+  "collectionId": "toy-kingdom",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "shorter-music-box-star-point",
+      "label": "윗 꼭짓점이 짧아진 오르골 별 장식",
+      "zones": {
+        "a": {
+          "x": 0.355,
+          "y": 0.07,
+          "w": 0.16,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.355,
+          "y": 0.07,
+          "w": 0.16,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "missing-ballerina-skirt-bead",
+      "label": "금빛 장식이 사라진 발레리나 치마",
+      "zones": {
+        "a": {
+          "x": 0.38,
+          "y": 0.5,
+          "w": 0.215,
+          "h": 0.065
+        },
+        "b": {
+          "x": 0.38,
+          "y": 0.5,
+          "w": 0.215,
+          "h": 0.065
+        }
+      }
+    },
+    {
+      "id": "missing-elephant-ear-stitch",
+      "label": "노란 바느질이 사라진 양철 코끼리 귀",
+      "zones": {
+        "a": {
+          "x": 0.13,
+          "y": 0.405,
+          "w": 0.115,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.13,
+          "y": 0.405,
+          "w": 0.115,
+          "h": 0.075
+        }
+      }
+    },
+    {
+      "id": "missing-middle-brass-bell-clapper",
+      "label": "추가 사라진 가운데 황동 종",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.075,
+          "w": 0.13,
+          "h": 0.255
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.075,
+          "w": 0.13,
+          "h": 0.255
+        }
+      }
+    },
+    {
+      "id": "upright-square-drum-emblem",
+      "label": "정사각형으로 바뀐 북의 청록 문양",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.605,
+          "w": 0.125,
+          "h": 0.175
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.605,
+          "w": 0.125,
+          "h": 0.175
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 장난감 왕국 대모험 — 오르골 광장의 정오 연주회. Scene: A festive toy-sized town square in the same handcrafted toy kingdom, viewed straight-on from a comfortable medium-wide angle like a premium tabletop diorama. A grand open wooden music box occupies the center, its cream lid raised behind a circular stage and one oversized antique-gold five-point star topper clearly isolated at upper center. On the stage, one graceful wooden ballerina turns in a sunflower-yellow bodice and one large coral-red stitched-felt skirt, fully visible. At lower left, the recurring small wooden soldier in a cobalt-blue cloth cape conducts a tiny toy orchestra; beside him stands one chunky painted-tin elephant musician whose single nearest oversized ear is vivid turquoise. At upper right, exactly three large polished brass bells hang in one straight horizontal row from the pale canopy, clearly separated with empty space between them. At lower right, a friendly plush rabbit musician stands behind one large cream toy drum whose front face bears one simple vivid-turquoise diamond emblem. Add wooden peg-doll musicians, blank sheet-music cards, a small xylophone, round stools, felt flowers, ribbon bunting, and scattered star confetti only as supporting atmosphere. Keep the gold star topper, coral skirt, turquoise elephant ear, three hanging bells, and turquoise drum emblem large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established toy-kingdom stages, with a handcrafted wooden-and-fabric toy diorama look, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, warm natural wood grain, stitched felt and slightly worn painted tin textures, friendly rounded toy characters, crisp object silhouettes, cohesive cream, cobalt blue, sunflower yellow, coral red, vivid turquoise, and antique gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the oversized antique-gold five-point star topper at upper center to rich plum purple while preserving its shape, size, position, material texture, and lighting, 2) change only the ballerina's large coral-red stitched-felt skirt at center to cobalt blue while preserving the skirt shape, folds, trim, body, and pose, 3) change only the tin elephant musician's single nearest oversized vivid-turquoise ear at lower left to bright orange while preserving the elephant and exact ear geometry, 4) remove exactly the middle bell from the upper-right straight row of exactly three large brass bells so exactly two bells remain in their original outer positions while preserving the canopy and chains, 5) change only the simple vivid-turquoise diamond emblem on the lower-right cream drum face into one bright coral-red circle of similar size while preserving the drum and rabbit musician. Preserve the wooden soldier's cobalt-blue cape, all faces and bodies, music box, stage, instruments, canopy, camera, crop, lighting, palette, textures, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T14:59:02.917Z",
+    "feedbackRevisionPrompt": "Create a harder B from A with exactly five subtle changes: shorter star point, one missing skirt bead, one missing elephant-ear stitch, missing center-bell clapper, and upright square drum emblem; preserve everything else."
+  },
+  "publishedAt": "2026-08-21T15:02:36.982Z"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "japanese-comics-rooftop-observatory-03",
+  "title": "별빛 옥상 관측회",
+  "description": "도시의 불빛 위로 별이 떠오르는 옥상 관측회에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "푸른 저녁의 옥상 천문 관측회",
+  "scene": "A peaceful Japanese university astronomy club rooftop at blue hour, viewed from a comfortable medium-wide angle. Two young adult club members prepare for stargazing beside a large tripod telescope. Include a red thermos, a pair of binoculars with a neck strap, a folded star chart with abstract dots and lines but no writing, a yellow folding chair, a small potted sunflower, a crescent-shaped hanging wind chime, a compact radio with blank controls, a weather vane, rooftop railings, water tanks, distant city lights, and the first stars in a violet sky. Every important prop is clearly separated and readable.",
+  "style": "original contemporary Japanese comics-inspired illustration, expressive clean ink linework, cinematic panel-like composition, selective full color with subtle screentone texture, polished game art, not imitating any specific artist or franchise",
+  "collectionId": "japanese-comics",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change the telescope lens rim from gold to bright red, 2) remove the binoculars' neck strap, 3) change the red thermos to teal, 4) remove the crescent-shaped ornament from the hanging wind chime, 5) reverse the weather vane arrow direction. Keep both club members, faces, hands, poses, telescope body and tripod, rooftop, skyline, camera, crop, lighting, and every other object pixel-consistent."
+}

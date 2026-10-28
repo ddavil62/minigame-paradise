@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "turquoise-carousel-crown",
+      "label": "청록색으로 바뀐 회전목마 왕관",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.01,
+          "w": 0.14,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.01,
+          "w": 0.14,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "blue-horse-saddle",
+      "label": "파란색으로 바뀐 흰 말의 안장",
+      "zones": {
+        "a": {
+          "x": 0.285,
+          "y": 0.525,
+          "w": 0.08,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.285,
+          "y": 0.525,
+          "w": 0.08,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "purple-popcorn-stripes",
+      "label": "보라색으로 바뀐 팝콘 통 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.085,
+          "y": 0.535,
+          "w": 0.1,
+          "h": 0.155
+        },
+        "b": {
+          "x": 0.085,
+          "y": 0.535,
+          "w": 0.1,
+          "h": 0.155
+        }
+      }
+    },
+    {
+      "id": "pink-bench-cushion",
+      "label": "분홍색으로 바뀐 벤치 방석",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.65,
+          "w": 0.08,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.65,
+          "w": 0.08,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "missing-pinwheel-blade",
+      "label": "하나가 사라진 바람개비 날개",
+      "zones": {
+        "a": {
+          "x": 0.74,
+          "y": 0.52,
+          "w": 0.09,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.74,
+          "y": 0.52,
+          "w": 0.09,
+          "h": 0.17
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3157913,
+        "hash": "c2938ce7886adf19b47ebb11fda8f3d4edb2057b75b25c78d82399a797330aed",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2995699,
+        "hash": "12c2be770bbada36eda0f9331d3fae0d73df72d57c24df0907b90502728422ba",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T05:59:21.491Z"
+}

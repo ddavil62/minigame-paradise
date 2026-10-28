@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "dragon-academy-starlight-graduation-05",
+  "status": "published",
+  "title": "별구름 졸업 축제",
+  "description": "구름 위 마법학교의 별빛 졸업 축제에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+  "theme": "꼬마 용 마법학교 대모험 — 별구름 졸업 축제",
+  "collectionId": "dragon-academy",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "crescent-graduation-clasp",
+      "label": "초승달 모양으로 바뀐 아기 용의 졸업 망토 장식",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "missing-middle-lantern-cap",
+      "label": "가운데 등불에서 사라진 작은 받침 장식",
+      "zones": {
+        "a": {
+          "x": 0.15,
+          "y": 0.07,
+          "w": 0.13,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.15,
+          "y": 0.07,
+          "w": 0.13,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "round-teacher-bell-clapper",
+      "label": "동그랗게 바뀐 부엉이 선생님의 종 추",
+      "zones": {
+        "a": {
+          "x": 0.22,
+          "y": 0.35,
+          "w": 0.13,
+          "h": 0.27
+        },
+        "b": {
+          "x": 0.22,
+          "y": 0.35,
+          "w": 0.13,
+          "h": 0.27
+        }
+      }
+    },
+    {
+      "id": "swallowtail-graduation-banner",
+      "label": "제비꼬리 모양으로 바뀐 졸업 배너",
+      "zones": {
+        "a": {
+          "x": 0.74,
+          "y": 0.35,
+          "w": 0.16,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.74,
+          "y": 0.35,
+          "w": 0.16,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "heart-keepsake-chest",
+      "label": "청록색 하트로 바뀐 졸업 기념 상자 문양",
+      "zones": {
+        "a": {
+          "x": 0.7,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.7,
+          "y": 0.73,
+          "w": 0.14,
+          "h": 0.18
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 꼬마 용 마법학교 대모험 — 별구름 졸업 축제. Scene: A joyful starlit graduation celebration in the open central courtyard of the same whimsical dragon academy high above the clouds, viewed straight-on from a comfortable medium-wide angle. Cream stone towers, dark-teal roofs, antique-brass rails, plum-purple blank pennants, glowing cloud banks, and a deep indigo sky create a magical school finale. At center, the recurring friendly young red baby dragon stands fully visible on a round cream graduation dais and wears one oversized cobalt-blue ceremonial cape fastened by one large antique-gold five-point-star clasp. At upper left, exactly three large round sunflower-yellow lanterns hang in one straight horizontal row beneath a simple pale arch, clearly separated with open space between them. At lower left, the gentle owl teacher in a deep-teal robe holds one large antique-brass handbell whose oversized vivid-turquoise diamond-shaped clapper is clearly visible. At upper right, one large cream-and-plum graduation banner hangs alone from a brass pole and ends in one oversized coral-red triangular tail, with no symbols or writing. At lower right, one large closed cobalt-blue keepsake chest stands front-facing on a low cream platform; its wide cream front panel bears one oversized vivid-turquoise crescent-moon emblem. Include the small mouse apprentice with round brass goggles, two small background baby dragons, blank rolled diplomas tied with plain ribbons, a simple telescope, tiny golden sparkles, and soft cloud puffs only as supporting atmosphere. Keep the gold star cape clasp, three yellow lanterns, turquoise bell clapper, coral banner tail, and turquoise chest crescent large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, runes, logos, constellations shaped like writing, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established dragon-academy hatchery, cloud-flight, potion-lab, and moon-observatory stages, with a cozy magical-school atmosphere, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded fantasy creatures, crisp object silhouettes, cohesive indigo night, sky blue, deep teal, cream, antique gold, plum purple, sunflower yellow, coral red, vivid turquoise, and cobalt blue palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the large antique-gold five-point-star clasp on the center red baby dragon's cobalt-blue ceremonial cape into one antique-gold crescent-moon clasp of similar size while preserving the cape and dragon, 2) remove exactly the middle lantern from the upper-left straight row of exactly three round sunflower-yellow lanterns so exactly two lanterns remain, 3) change only the large antique-brass handbell held by the lower-left owl teacher to vivid turquoise while preserving the entire bell shape, handle, teacher, pose, and position, 4) change only the coral-red tail section at the bottom of the upper-right cream-and-plum graduation banner to vivid turquoise while preserving its exact shape, border, size, and position, 5) change only the oversized vivid-turquoise crescent-moon emblem on the lower-right keepsake chest's cream front panel into one sunflower-yellow heart emblem of similar size while preserving the chest, panel, platform, and position. Preserve every character, face, body, wing, paw, pose, tower, roof, cloud, rail, pennant, dais, diploma, telescope, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-22T00:56:54.430Z",
+    "revisionPrompt": "Harder revision: change the gold cape clasp from star to crescent; remove only the middle lantern's small bottom cap while keeping all three lanterns; change only the bell clapper from diamond to round; change only the coral banner ending to a split swallowtail; change the chest emblem from turquoise crescent to turquoise heart. Preserve everything else."
+  },
+  "publishedAt": "2026-08-22T02:56:51.499Z"
+}

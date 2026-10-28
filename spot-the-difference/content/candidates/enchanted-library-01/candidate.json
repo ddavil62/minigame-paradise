@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "enchanted-library-01",
+  "status": "published",
+  "title": "별빛 마법 도서관",
+  "description": "별빛이 흐르는 마법 도서관에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "마법 도서관",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "emerald-window-crystal",
+      "label": "창가 수정 장식 색",
+      "zones": {
+        "a": {
+          "x": 0.275,
+          "y": 0.105,
+          "w": 0.06,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.275,
+          "y": 0.105,
+          "w": 0.06,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "crescent-window",
+      "label": "원형 창의 초승달",
+      "zones": {
+        "a": {
+          "x": 0.415,
+          "y": 0.02,
+          "w": 0.07,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.415,
+          "y": 0.02,
+          "w": 0.07,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "red-bookmark",
+      "label": "펼친 책의 책갈피 색",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.665,
+          "w": 0.055,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.665,
+          "w": 0.055,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "rug-crescent",
+      "label": "카펫 중앙의 초승달",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.84,
+          "w": 0.065,
+          "h": 0.07
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.84,
+          "w": 0.065,
+          "h": 0.07
+        }
+      }
+    },
+    {
+      "id": "owl-bow-tie",
+      "label": "부엉이의 붉은 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.155,
+          "y": 0.255,
+          "w": 0.055,
+          "h": 0.06
+        },
+        "b": {
+          "x": 0.155,
+          "y": 0.255,
+          "w": 0.055,
+          "h": 0.06
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 마법 도서관. Scene: A cozy enchanted library at night with tall curved bookshelves, a brass rolling ladder, a large arched window showing stars, a central reading desk with an open blank book, a blue globe, a sleepy owl on a perch, a tiny potted fern, candles, and floating crystal ornaments.\nArt direction: premium whimsical storybook illustration, deep indigo and warm amber palette, crisp object silhouettes, richly detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across the upper shelves, window, reading desk, floor, and owl perch; avoid changing global lighting or moving the camera",
+    "createdAt": "2026-08-19T12:02:07.150Z"
+  },
+  "publishedAt": "2026-08-19T14:34:56.744Z",
+  "collectionId": "moonlight-mystery",
+  "stageType": "classic"
+}

@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "id": "dragon-academy-moon-observatory-04",
+  "status": "published",
+  "title": "달빛 천문탑 관측 수업",
+  "description": "구름 위 마법학교의 달빛 천문탑에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+  "theme": "꼬마 용 마법학교 대모험 — 달빛 천문탑 관측 수업",
+  "collectionId": "dragon-academy",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "shorter-dragon-neckerchief-tail",
+      "label": "짧아진 아기 용 목도리의 오른쪽 꼬리",
+      "zones": {
+        "a": {
+          "x": 0.37,
+          "y": 0.41,
+          "w": 0.15,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.37,
+          "y": 0.41,
+          "w": 0.15,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "four-point-left-star-lantern",
+      "label": "네 꼭짓점으로 바뀐 왼쪽 황금 별 등불",
+      "zones": {
+        "a": {
+          "x": 0.17,
+          "y": 0.08,
+          "w": 0.12,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.17,
+          "y": 0.08,
+          "w": 0.12,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "star-telescope-emblem",
+      "label": "청록색 별로 바뀐 망원경 문양",
+      "zones": {
+        "a": {
+          "x": 0.7,
+          "y": 0.12,
+          "w": 0.12,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.7,
+          "y": 0.12,
+          "w": 0.12,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "round-teaching-pointer",
+      "label": "원 모양으로 바뀐 부엉이 선생님의 포인터",
+      "zones": {
+        "a": {
+          "x": 0.19,
+          "y": 0.35,
+          "w": 0.1,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.19,
+          "y": 0.35,
+          "w": 0.1,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "star-astronomy-case-emblem",
+      "label": "청록색 별로 바뀐 천문 관측 가방 문양",
+      "zones": {
+        "a": {
+          "x": 0.77,
+          "y": 0.6,
+          "w": 0.15,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.77,
+          "y": 0.6,
+          "w": 0.15,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 꼬마 용 마법학교 대모험 — 달빛 천문탑 관측 수업. Scene: A magical moonlit astronomy classroom at the top of the same whimsical dragon academy high above the clouds, viewed straight-on from a comfortable medium-wide angle. A huge open arched window reveals a deep indigo night sky, a large cream crescent moon, soft cloud banks, and tiny distant stars; cream stone walls, dark-teal roof beams, antique-brass rails, plum-purple blank pennants, and orderly wooden platforms create a cozy observatory. At center, the recurring friendly young red baby dragon stands fully visible on a round cream platform and wears one oversized cobalt-blue neckerchief tied in a broad simple knot. At upper left, exactly three large antique-gold five-point-star lanterns hang in one straight horizontal row from short separate cords, clearly isolated against a plain indigo sky area with open space between them. At upper right, one large antique-brass telescope points diagonally upward and is fully visible in profile; its wide cream side panel bears one oversized vivid-turquoise crescent-moon emblem. At lower left, the gentle owl teacher in a deep-teal robe holds one large coral-red triangular teaching pointer on a short natural-wood handle, clearly isolated against a plain cream wall. At lower right, one large closed plum-purple astronomy case stands front-facing on a low cream table; its cream front panel bears one oversized vivid-turquoise diamond emblem. Include one small mouse apprentice with round brass goggles, one small background baby dragon, a simple brass armillary sphere, blank rolled charts, plain lens cases, tiny golden sparkles, and small cloud puffs only as supporting atmosphere. Keep the blue neckerchief, three gold star lanterns, turquoise telescope crescent, coral triangular pointer, and turquoise case diamond large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, runes, logos, constellations shaped like writing, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established dragon-academy hatchery, cloud-flight, and potion-lab stages, with a cozy magical-school atmosphere, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded fantasy creatures, crisp object silhouettes, cohesive indigo night, sky blue, deep teal, cream, antique gold, plum purple, sunflower yellow, coral red, vivid turquoise, and cobalt blue palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the oversized cobalt-blue neckerchief on the center red baby dragon to bright sunflower yellow while preserving its exact shape, knot, folds, size, and position, 2) remove exactly the leftmost lantern from the upper-left straight row of exactly three antique-gold five-point-star lanterns so exactly two lanterns remain, 3) change only the oversized vivid-turquoise crescent-moon emblem on the upper-right telescope's cream side panel into one bright coral-red heart emblem of similar size while preserving the telescope, panel, tripod, direction, and position, 4) change only the large coral-red triangular teaching pointer held by the lower-left owl teacher into a coral-red circular pointer head of similar area while preserving the wooden handle, teacher, pose, and position, 5) change only the oversized vivid-turquoise diamond emblem on the lower-right astronomy case's cream panel into one sunflower-yellow five-point-star emblem of similar size while preserving the case, panel, table, and position. Preserve every character, face, body, wing, paw, pose, window, moon, cloud, wall, beam, rail, pennant, platform, armillary sphere, chart, lens case, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-22T00:31:33.882Z",
+    "revisionPrompt": "Harder revision: shorten only the right tail of the blue neckerchief; change the left gold lantern from five points to four while keeping all three lanterns; change the telescope emblem from turquoise crescent to turquoise star; change the coral pointer head from triangle to circle; change the case emblem from turquoise diamond to turquoise star. Preserve everything else.",
+    "feedbackRevisionPrompt": "Make the existing first difference clearly visible by shortening only the central dragon scarf tail on the viewer's right to roughly half length; preserve the other four differences and everything else."
+  },
+  "publishedAt": "2026-08-22T02:56:51.395Z"
+}

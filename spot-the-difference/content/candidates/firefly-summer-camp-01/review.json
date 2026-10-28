@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "full-moon",
+      "label": "초승달에서 보름달로 바뀐 달",
+      "zones": {
+        "a": {
+          "x": 0.655,
+          "y": 0.04,
+          "w": 0.075,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.655,
+          "y": 0.04,
+          "w": 0.075,
+          "h": 0.095
+        }
+      }
+    },
+    {
+      "id": "turquoise-center-lantern",
+      "label": "청록색으로 바뀐 중앙 랜턴 테두리",
+      "zones": {
+        "a": {
+          "x": 0.585,
+          "y": 0.185,
+          "w": 0.065,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.585,
+          "y": 0.185,
+          "w": 0.065,
+          "h": 0.095
+        }
+      }
+    },
+    {
+      "id": "turquoise-tent-pillow",
+      "label": "청록색으로 바뀐 텐트 안 베개",
+      "zones": {
+        "a": {
+          "x": 0.2,
+          "y": 0.455,
+          "w": 0.14,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.2,
+          "y": 0.455,
+          "w": 0.14,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "turquoise-kettle-lid",
+      "label": "청록색으로 바뀐 주전자 뚜껑",
+      "zones": {
+        "a": {
+          "x": 0.705,
+          "y": 0.69,
+          "w": 0.09,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.705,
+          "y": 0.69,
+          "w": 0.09,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "raccoon-neckerchief",
+      "label": "너구리의 청록색 목수건",
+      "zones": {
+        "a": {
+          "x": 0.17,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.17,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.15
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2808266,
+        "hash": "1190b75b905e2c0cd8948783795f720a45aff14e57d0ca802ee75aea3b287849",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2788159,
+        "hash": "0385f8d3590a700af38e1bbae816ae478423a5103befcb765eb2f8c7d213293c",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-20T04:48:19.634Z"
+}

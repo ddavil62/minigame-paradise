@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "snowy-toyshop-01",
+  "status": "published",
+  "title": "눈꽃 장난감 가게",
+  "description": "눈 내리는 장난감 가게에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "겨울 장난감 가게",
+  "difficulty": "쉬움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "blue-dollhouse-roof",
+      "label": "인형의 집 지붕 색",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.065,
+          "w": 0.125,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.065,
+          "w": 0.125,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "purple-train-car",
+      "label": "보라색 기차 객차",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.31,
+          "w": 0.075,
+          "h": 0.07
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.31,
+          "w": 0.075,
+          "h": 0.07
+        }
+      }
+    },
+    {
+      "id": "missing-counter-top",
+      "label": "계산대 위 팽이",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.465,
+          "w": 0.075,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.465,
+          "w": 0.075,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "purple-present",
+      "label": "보라색 선물 상자",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.7,
+          "w": 0.13,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.7,
+          "w": 0.13,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "teddy-scarf",
+      "label": "곰 인형의 목도리",
+      "zones": {
+        "a": {
+          "x": 0.65,
+          "y": 0.37,
+          "w": 0.095,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.65,
+          "y": 0.37,
+          "w": 0.095,
+          "h": 0.16
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 2,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 겨울 장난감 가게. Scene: A cozy old-fashioned toy shop at winter twilight, with wooden shelves of handmade toys, a rocking horse, toy train, teddy bear, spinning top, blocks without letters, wrapped gifts without text, a frosted window, and snow falling outside.\nArt direction: premium whimsical storybook illustration, warm amber interior against cool snowy blue, crisp object silhouettes, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across shelves, counter, floor, and window; avoid changing global snow or lighting",
+    "createdAt": "2026-08-19T09:15:14.555Z"
+  },
+  "publishedAt": "2026-08-21T04:38:48.206Z",
+  "collectionId": "seasonal-stories",
+  "stageType": "relaxed"
+}

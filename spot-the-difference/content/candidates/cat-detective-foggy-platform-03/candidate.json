@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "cat-detective-foggy-platform-03",
+  "status": "published",
+  "title": "안개 기차역의 수하물 추적",
+  "description": "막차가 떠나기 전, 안개 낀 동물 도시 기차역에서 고양이 탐정단과 함께 다섯 가지 수하물 단서를 찾아보세요.",
+  "theme": "고양이 탐정단의 안개 낀 야간 기차역 수하물 추적",
+  "collectionId": "cat-detective-agency",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "coral-detective-hat-ribbon",
+      "label": "가운데 한 구간만 산호색인 탐정 고양이 모자 리본",
+      "zones": {
+        "a": {
+          "x": 0.19,
+          "y": 0.43,
+          "w": 0.15,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.19,
+          "y": 0.43,
+          "w": 0.15,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "missing-clock-wing",
+      "label": "깃털 끝이 사라진 역 시계의 오른쪽 금빛 날개",
+      "zones": {
+        "a": {
+          "x": 0.045,
+          "y": 0.03,
+          "w": 0.15,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.045,
+          "y": 0.03,
+          "w": 0.15,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "missing-turquoise-suitcase",
+      "label": "손잡이가 사라진 오른쪽 청록색 여행 가방",
+      "zones": {
+        "a": {
+          "x": 0.6,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.24
+        },
+        "b": {
+          "x": 0.6,
+          "y": 0.45,
+          "w": 0.09,
+          "h": 0.24
+        }
+      }
+    },
+    {
+      "id": "flipped-semaphore-arm",
+      "label": "화살표 끝이 짧아진 붉은 철도 신호기",
+      "zones": {
+        "a": {
+          "x": 0.73,
+          "y": 0.05,
+          "w": 0.19,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.73,
+          "y": 0.05,
+          "w": 0.19,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "round-ticket-case-clasp",
+      "label": "윗 꼭짓점이 짧아진 조수 사건 가방의 별 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.81,
+          "w": 0.045,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.81,
+          "w": 0.045,
+          "h": 0.08
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 고양이 탐정단의 안개 낀 야간 기차역 수하물 추적. Scene: A whimsical grand animal-city railway platform at night, viewed straight-on from a comfortable medium-wide angle. A friendly vintage steam locomotive waits in the misty background under a glass-and-iron canopy, with warm amber platform lamps and no readable signs. At the lower-left, one friendly orange tabby detective cat in a cream trench coat and navy deerstalker hat examines the platform with a magnifying glass; the hat has exactly one large emerald-green ribbon band. On the upper-left wall, one prominent round brass station clock has plain hands and exactly one large golden wing ornament centered on top. At center, one broad wooden luggage trolley holds exactly four large turquoise suitcases arranged in one clearly separated row. At the upper-right, one large red semaphore signal arm clearly points diagonally up-left. In the lower-right foreground, a friendly gray mouse assistant carries one burgundy ticket-punch case with exactly one large gold five-point star clasp centered on its front. Add a kind owl conductor with a blank cap badge, a sleeping cream puppy on a bench, stacked plain parcels without labels, a brass luggage scale, a potted fern, rails, drifting steam, puddle reflections, and distant train windows only as supporting atmosphere. Keep the emerald hat ribbon, golden clock wing, four turquoise suitcases, red semaphore arm, and gold star case clasp large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium cozy mystery storybook game illustration, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, charming rounded animal characters, crisp object silhouettes, cinematic foggy railway atmosphere, cohesive midnight navy, mist teal, warm amber, cream, burgundy, turquoise, emerald green, signal red, and antique gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the orange tabby detective cat's large emerald-green hat ribbon band at lower-left to coral red while preserving its shape and position, 2) remove only the large golden wing ornament from the top of the upper-left brass station clock while preserving the clock and its hands, 3) remove exactly one turquoise suitcase from the row on the center luggage trolley so three remain, 4) flip only the upper-right red semaphore signal arm so it points diagonally up-right instead of up-left while preserving the signal post, 5) change only the gold five-point star clasp on the gray mouse assistant's lower-right burgundy ticket-punch case into a gold round clasp of similar size. Preserve every character, locomotive, canopy, lamps, clock hands, trolley, parcels, luggage scale, bench, puppy, owl conductor, rails, steam, puddles, train windows, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T10:35:11.483Z"
+  },
+  "publishedAt": "2026-08-21T10:40:09.299Z"
+}

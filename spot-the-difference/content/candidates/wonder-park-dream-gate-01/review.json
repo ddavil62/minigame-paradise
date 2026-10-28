@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "쉬움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "pink-arch-star",
+      "label": "분홍색으로 바뀐 입구의 별",
+      "zones": {
+        "a": {
+          "x": 0.45,
+          "y": 0.095,
+          "w": 0.12,
+          "h": 0.185
+        },
+        "b": {
+          "x": 0.45,
+          "y": 0.095,
+          "w": 0.12,
+          "h": 0.185
+        }
+      }
+    },
+    {
+      "id": "yellow-awning-stripe",
+      "label": "노란색으로 바뀐 차양 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.185,
+          "y": 0.335,
+          "w": 0.045,
+          "h": 0.175
+        },
+        "b": {
+          "x": 0.185,
+          "y": 0.335,
+          "w": 0.045,
+          "h": 0.175
+        }
+      }
+    },
+    {
+      "id": "purple-fountain-jewel",
+      "label": "보라색으로 바뀐 분수의 보석",
+      "zones": {
+        "a": {
+          "x": 0.47,
+          "y": 0.785,
+          "w": 0.055,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.47,
+          "y": 0.785,
+          "w": 0.055,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "missing-purple-balloon",
+      "label": "사라진 보라색 풍선",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.39,
+          "w": 0.095,
+          "h": 0.25
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.39,
+          "w": 0.095,
+          "h": 0.25
+        }
+      }
+    },
+    {
+      "id": "red-rabbit-bow",
+      "label": "빨간색으로 바뀐 토끼의 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.85,
+          "y": 0.66,
+          "w": 0.065,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.85,
+          "y": 0.66,
+          "w": 0.065,
+          "h": 0.095
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2818231,
+        "hash": "eabdcee4bf0bf18162e830ec5bfda759a9983911a11d0d4eec49a857b67085d4",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2717657,
+        "hash": "e52b3793337349dc119a3544774c4ed5d7700372db6adb6817809e0137b7a7ef",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T05:50:00.609Z"
+}

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "retro-comic-alien-laundromat-04",
+  "status": "published",
+  "title": "팝! 외계인 세탁소",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 세탁소에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 외계인 세탁소",
+  "collectionId": "style-lab",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "red-washer-door",
+      "label": "빨간색으로 바뀐 세탁기 문",
+      "zones": {
+        "a": {
+          "x": 0.01,
+          "y": 0.42,
+          "w": 0.15,
+          "h": 0.28
+        },
+        "b": {
+          "x": 0.01,
+          "y": 0.42,
+          "w": 0.15,
+          "h": 0.28
+        }
+      }
+    },
+    {
+      "id": "cyan-ceiling-lamp",
+      "label": "파란색으로 바뀐 천장 조명",
+      "zones": {
+        "a": {
+          "x": 0.185,
+          "y": 0.025,
+          "w": 0.135,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.185,
+          "y": 0.025,
+          "w": 0.135,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "red-alien-cap",
+      "label": "빨간색으로 바뀐 외계인 모자",
+      "zones": {
+        "a": {
+          "x": 0.415,
+          "y": 0.105,
+          "w": 0.13,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.415,
+          "y": 0.105,
+          "w": 0.13,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "missing-yellow-towel-stack",
+      "label": "사라진 노란 수건 더미",
+      "zones": {
+        "a": {
+          "x": 0.095,
+          "y": 0.18,
+          "w": 0.18,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.095,
+          "y": 0.18,
+          "w": 0.18,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "missing-robot-antenna-ball",
+      "label": "사라진 로봇 안테나 공",
+      "zones": {
+        "a": {
+          "x": 0.855,
+          "y": 0.17,
+          "w": 0.04,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.855,
+          "y": 0.17,
+          "w": 0.04,
+          "h": 0.09
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 2,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 레트로 만화 외계인 세탁소. Scene: A playful 1960s retro-futurist alien laundromat seen straight-on at eye level. A friendly green four-armed alien attendant stands at the center wearing a plain mustard-yellow cap. On the left are two large cream washing machines with clearly separated circular cyan-blue doors. On the right, a small rounded red ironing robot floats above a cream laundry cart; the robot has one short black antenna ending in a single yellow ball. A purple space dog without a collar sits beside the cart. Three large soap bubbles float in a clearly separated vertical group above a red wash basin. The background includes exposed pipes, a wide round window showing one ringed planet, a wall shelf with three neatly folded towels in mustard yellow, tomato red, and cyan blue, and a bold cream-and-black checkerboard floor. Keep every prop large, distinct, fully visible, and spatially separated. Do not include readable signs, labels, letters, or numbers..\nArt direction: original 1960s-inspired retro comic-book pop art matching a vintage offset-printed science-fiction comic, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, green, purple, cream, and black palette; not a modern glossy storybook illustration.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Edit the existing B image with exactly two localized corrections: remove the thin mustard-yellow collar from the purple space dog and restore natural purple neck fur; remove the mustard-yellow folded towel stack from the left wall shelf while leaving the red and cyan towel stacks and the shelf intact. Preserve the exact crop, camera, geometry, lighting, palette, halftone texture, existing four puzzle changes, dog pose, shelf shape and every other object. Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.",
+    "createdAt": "2026-08-20T01:35:09.195Z"
+  },
+  "publishedAt": "2026-08-20T09:09:33.565Z"
+}

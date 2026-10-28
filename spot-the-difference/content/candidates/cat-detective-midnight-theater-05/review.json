@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "star-theater-mask",
+      "label": "윗부분이 짧아진 보라색 가면의 금빛 초승달",
+      "zones": {
+        "a": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.13,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.13,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "pink-curtain-tassel",
+      "label": "윗 매듭만 분홍색인 무대 커튼의 청록 술 장식",
+      "zones": {
+        "a": {
+          "x": 0.015,
+          "y": 0.425,
+          "w": 0.105,
+          "h": 0.31
+        },
+        "b": {
+          "x": 0.015,
+          "y": 0.425,
+          "w": 0.105,
+          "h": 0.31
+        }
+      }
+    },
+    {
+      "id": "missing-crown-gemstone",
+      "label": "빛 반사가 사라진 왕관의 초록색 보석",
+      "zones": {
+        "a": {
+          "x": 0.49,
+          "y": 0.535,
+          "w": 0.065,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.49,
+          "y": 0.535,
+          "w": 0.065,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "missing-chandelier-crystal",
+      "label": "아래 끝이 짧아진 샹들리에의 파란 수정",
+      "zones": {
+        "a": {
+          "x": 0.885,
+          "y": 0.205,
+          "w": 0.07,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.885,
+          "y": 0.205,
+          "w": 0.07,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-fan-feather",
+      "label": "끝이 짧아진 생쥐 조수의 바깥쪽 부채 깃털",
+      "zones": {
+        "a": {
+          "x": 0.755,
+          "y": 0.595,
+          "w": 0.085,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.755,
+          "y": 0.595,
+          "w": 0.085,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2986647,
+        "hash": "f2a0bb19c56af3c8850462bcb89937e87a1284816c9d5d2230d0f6fa3e33bc15",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2901138,
+        "hash": "e742b32d7c7622a0e5c31c4bae6d95a4906c6b45828a755d34403eac5221be0c",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T11:01:55.063Z"
+}

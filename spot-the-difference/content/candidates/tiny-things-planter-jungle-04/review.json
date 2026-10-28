@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "yellow-jeep-wheels",
+      "label": "노란색으로 바뀐 병뚜껑 지프 바퀴",
+      "zones": {
+        "a": {
+          "x": 0.04,
+          "y": 0.57,
+          "w": 0.31,
+          "h": 0.28
+        },
+        "b": {
+          "x": 0.04,
+          "y": 0.57,
+          "w": 0.31,
+          "h": 0.28
+        }
+      }
+    },
+    {
+      "id": "missing-leaf-droplet",
+      "label": "하나 줄어든 잎 위 물방울",
+      "zones": {
+        "a": {
+          "x": 0.14,
+          "y": 0.23,
+          "w": 0.09,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.14,
+          "y": 0.23,
+          "w": 0.09,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "missing-helmet-headlamp",
+      "label": "사라진 안전모 램프",
+      "zones": {
+        "a": {
+          "x": 0.43,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.43,
+          "y": 0.27,
+          "w": 0.07,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-matchstick-bridge-railing",
+      "label": "사라진 성냥개비 다리 난간",
+      "zones": {
+        "a": {
+          "x": 0.39,
+          "y": 0.59,
+          "w": 0.29,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.39,
+          "y": 0.59,
+          "w": 0.29,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "reversed-leaf-sign-arrow",
+      "label": "반대 방향을 가리키는 나뭇잎 화살표",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.13,
+          "w": 0.19,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.13,
+          "w": 0.19,
+          "h": 0.18
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2878583,
+        "hash": "aae972a6af8cabe9f973dee176bc2c907518fcdecb464b02916be88af0767dea",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2730399,
+        "hash": "4d5163a255310d893d8e1bfa571c51b0c57c46538608a4fe4755065b42334a16",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.701Z"
+}

@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "쉬움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "heart-moonboat-ornament",
+      "label": "하트로 바뀐 문보트 장식",
+      "zones": {
+        "a": {
+          "x": 0.535,
+          "y": 0.56,
+          "w": 0.085,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.535,
+          "y": 0.56,
+          "w": 0.085,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "turquoise-shell-lantern",
+      "label": "청록색 조개 등불",
+      "zones": {
+        "a": {
+          "x": 0.03,
+          "y": 0.12,
+          "w": 0.17,
+          "h": 0.25
+        },
+        "b": {
+          "x": 0.03,
+          "y": 0.12,
+          "w": 0.17,
+          "h": 0.25
+        }
+      }
+    },
+    {
+      "id": "missing-bridge-pennant",
+      "label": "하나 줄어든 다리 깃발",
+      "zones": {
+        "a": {
+          "x": 0.445,
+          "y": 0.365,
+          "w": 0.16,
+          "h": 0.125
+        },
+        "b": {
+          "x": 0.445,
+          "y": 0.365,
+          "w": 0.16,
+          "h": 0.125
+        }
+      }
+    },
+    {
+      "id": "purple-mooring-lamp",
+      "label": "보라색 계류 기둥 등불",
+      "zones": {
+        "a": {
+          "x": 0.855,
+          "y": 0.105,
+          "w": 0.115,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0.855,
+          "y": 0.105,
+          "w": 0.115,
+          "h": 0.21
+        }
+      }
+    },
+    {
+      "id": "missing-parasol-handle",
+      "label": "사라진 양산의 금빛 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.665,
+          "w": 0.1,
+          "h": 0.135
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.665,
+          "w": 0.1,
+          "h": 0.135
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2797161,
+        "hash": "e3cae1f4e11cae124ae37328c12aea3337d9f688f5049fbd02ec8f2b732f7822",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2626186,
+        "hash": "319138563815d4de26cdbd2392151e51fa33da6e1e54da7480dd1f679369d38a",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.109Z"
+}

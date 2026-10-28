@@ -1,0 +1,6 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly 5 localized, clearly visible object-level changes distributed across the scene.
+Use changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Requested change guidance: Make only these five changes: 1) change the clearly visible coral-red feather on the upper-left wooden goblin mask to turquoise blue, 2) remove exactly one paintbrush from the lower-left brush stand so four remain, 3) change only the large jade-green bow beneath the center cream mask to purple, 4) change the cobalt-blue crescent motif in the center of the lower-right hand drum into a cobalt-blue five-petal flower of similar size, 5) remove exactly one gold chime strip from the upper-right bronze wind bell so two remain. Preserve every goblin, all masks, pigment bowls, paper, shelves, lanterns, hanok, full moon, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.

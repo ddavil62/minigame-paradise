@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "tiny-things-thread-station-02",
+  "status": "published",
+  "title": "실타래 기차역",
+  "description": "재봉 상자 위에 세워진 조그만 실타래 기차역에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "조그만 것들의 도시 실타래 기차역",
+  "collectionId": "tiny-things-city",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "three-hole-button-clock",
+      "label": "구멍이 하나 줄어든 단추 시계",
+      "zones": {
+        "a": {
+          "x": 0.06,
+          "y": 0.07,
+          "w": 0.15,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.06,
+          "y": 0.07,
+          "w": 0.15,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "missing-thread-spool",
+      "label": "하나 줄어든 실타래 짐",
+      "zones": {
+        "a": {
+          "x": 0.18,
+          "y": 0.56,
+          "w": 0.12,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.18,
+          "y": 0.56,
+          "w": 0.12,
+          "h": 0.29
+        }
+      }
+    },
+    {
+      "id": "purple-locomotive-chimney",
+      "label": "보라색으로 바뀐 기관차 굴뚝",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.37,
+          "w": 0.085,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.37,
+          "w": 0.085,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "missing-safety-pin-flag",
+      "label": "사라진 안전핀 신호 깃발",
+      "zones": {
+        "a": {
+          "x": 0.845,
+          "y": 0.36,
+          "w": 0.15,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.845,
+          "y": 0.36,
+          "w": 0.15,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "missing-thimble-bell-ribbon",
+      "label": "하나 줄어든 골무 종 리본",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.19,
+          "w": 0.13,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.19,
+          "w": 0.13,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 조그만 것들의 도시 실타래 기차역. Scene: A charming macro miniature railway station built across an open vintage sewing box, viewed straight-on from a comfortable medium-wide angle. At the upper-left, one oversized coral-red four-hole coat button is mounted vertically as the station clock, with all four round holes large and clearly visible. At the lower-left, exactly three chunky wooden thread spools stand upright together as passenger luggage, each wrapped with a different solid-colored thread. In the center, one prominent toy locomotive made from a polished walnut shell and brass craft pieces waits beside a ruler-platform with no markings or numbers; it has exactly one large cobalt-blue chimney. At the lower-right, one oversized silver safety pin rises as a railway signal mast and carries exactly one teal triangular signal flag. At the upper-right, one large silver thimble hangs like a station bell with exactly three clearly separated golden ribbon strips dangling beneath it. Include tiny rails made from straight sewing needles, a measuring-tape canopy with no markings, matchbox station sheds without writing, pin-cushion hills, loose buttons, and a few miniature residents. Include the recurring small friendly mouse engineer wearing a bright yellow work helmet and carrying one red postal satchel. Keep the four button holes, three thread spools, blue chimney, safety-pin flag, and three bell ribbons large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, ruler marks, or numbers..\nArt direction: original premium macro miniature diorama storybook game illustration matching the established Tiny Things teacup harbor stage, warm natural late-morning light, shallow but readable depth, tactile wood, thread, brushed metal, walnut shell, paper, and woven-fabric textures, polished animated-feature background quality, crisp object silhouettes, cohesive cream, honey amber, mint, cobalt blue, coral red, teal, warm wood, sunny yellow, and silver palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) remove exactly one of the four round holes from the oversized coral-red button station clock at the upper-left so three holes remain, 2) remove exactly one of the three upright thread-spool luggage pieces at the lower-left so two remain, 3) change only the large cobalt-blue chimney on the center walnut-shell locomotive to purple, 4) remove only the teal triangular signal flag from the lower-right silver safety-pin mast while preserving the safety pin, 5) remove exactly one of the three golden ribbon strips beneath the upper-right thimble bell so two remain. Preserve the sewing box, button clock, locomotive, mouse engineer, red postal satchel, rails, canopy, sheds, pin cushions, residents, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T09:19:18.125Z"
+  },
+  "publishedAt": "2026-08-21T09:51:04.912Z"
+}

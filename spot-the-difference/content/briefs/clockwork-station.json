@@ -1,0 +1,17 @@
+{
+  "id": "clockwork-station-01",
+  "title": "황동빛 시계장치 역",
+  "description": "황동 기계가 움직이는 기차역에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "시계장치 기차역",
+  "scene": "A fantastical clockwork train station with a large round clock without numerals, brass gears, teal steam locomotive, luggage trolley, red suitcase, hanging lanterns, potted palm, ticket booth with no signs or lettering, and a small mechanical bird",
+  "style": "premium whimsical storybook illustration, polished brass, teal, and burgundy palette, crisp silhouettes, detailed but uncluttered",
+  "changeGuidance": "Spread changes across the clock, hanging fixtures, locomotive, luggage, and platform; keep all architecture and perspective unchanged",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "world-adventure",
+  "stageType": "classic"
+}

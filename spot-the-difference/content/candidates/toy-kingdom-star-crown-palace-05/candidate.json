@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "id": "toy-kingdom-star-crown-palace-05",
+  "status": "published",
+  "title": "별왕관 궁전",
+  "description": "장난감 왕국의 밤, 별왕관 궁전에서 열리는 축하 대관식에 도착한 파란 망토 병정과 장난감 친구들 사이 다섯 가지 변화를 찾아냅니다.",
+  "theme": "장난감 왕국 대모험 — 별왕관 궁전의 밤 대관식",
+  "collectionId": "toy-kingdom",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "missing-palace-crescent-engraving",
+      "label": "소용돌이 하나가 사라진 궁전 초승달 장식",
+      "zones": {
+        "a": {
+          "x": 0.41,
+          "y": 0.02,
+          "w": 0.155,
+          "h": 0.245
+        },
+        "b": {
+          "x": 0.41,
+          "y": 0.02,
+          "w": 0.155,
+          "h": 0.245
+        }
+      }
+    },
+    {
+      "id": "missing-castle-shield-battlement",
+      "label": "가운데 톱니가 사라진 병정 방패의 성 문양",
+      "zones": {
+        "a": {
+          "x": 0.16,
+          "y": 0.615,
+          "w": 0.12,
+          "h": 0.2
+        },
+        "b": {
+          "x": 0.16,
+          "y": 0.615,
+          "w": 0.12,
+          "h": 0.2
+        }
+      }
+    },
+    {
+      "id": "missing-lion-bow-stitch",
+      "label": "흰 바느질이 사라진 사자 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.275,
+          "y": 0.56,
+          "w": 0.05,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.275,
+          "y": 0.56,
+          "w": 0.05,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "shorter-middle-star-lantern-point",
+      "label": "왼쪽 아래 꼭짓점이 짧아진 가운데 별 등불",
+      "zones": {
+        "a": {
+          "x": 0.77,
+          "y": 0.105,
+          "w": 0.1,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.77,
+          "y": 0.105,
+          "w": 0.1,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "upright-square-box-emblem",
+      "label": "정사각형으로 바뀐 깜짝상자의 청록 문양",
+      "zones": {
+        "a": {
+          "x": 0.78,
+          "y": 0.755,
+          "w": 0.13,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.78,
+          "y": 0.755,
+          "w": 0.13,
+          "h": 0.18
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 장난감 왕국 대모험 — 별왕관 궁전의 밤 대관식. Scene: A triumphant moonlit coronation celebration in the courtyard of the same handcrafted toy kingdom, viewed straight-on from a comfortable medium-wide angle like a premium tabletop diorama. A grand cream-and-natural-wood toy palace fills the background with rounded block towers, warm glowing windows, stitched velvet curtains, and a broad central dais. At center, a friendly wooden queen doll sits on an ornate toy throne beneath one oversized antique-gold crescent-moon ornament isolated against a deep lavender sky at upper center. At lower left, the recurring small wooden soldier in a rich cobalt-blue cloth cape stands proudly with one large cream round shield bearing one simple vivid-turquoise castle emblem. At center-left, a cheerful plush lion herald stands in a clear area wearing one oversized coral-red stitched bow tie. At upper right, exactly three large sunflower-yellow five-point star lanterns hang in one straight horizontal row beneath a pale wooden arch, clearly separated with empty space between them. At lower right, one large open coral-red jack-in-the-box sits fully visible; its cream front panel bears one simple oversized vivid-turquoise diamond emblem. Add wooden peg-doll courtiers, a plush rabbit musician, a small tin elephant, blank gift blocks, felt flowers, ribbon garlands, round beads, and star confetti only as supporting atmosphere. Keep the gold crescent ornament, turquoise shield emblem, coral bow tie, three star lanterns, and turquoise box emblem large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established toy-kingdom stages, with a handcrafted wooden-and-fabric toy diorama look, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, warm natural wood grain, stitched felt and slightly worn painted tin textures, friendly rounded toy characters, crisp object silhouettes, cohesive cream, cobalt blue, sunflower yellow, coral red, vivid turquoise, deep lavender, and antique gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the oversized antique-gold crescent-moon ornament at upper center above the throne to rich plum purple while preserving its exact shape, size, position, material texture, and lighting, 2) change only the simple vivid-turquoise castle emblem on the wooden soldier's lower-left cream shield into one bright coral-red crown emblem of similar size while preserving the shield and soldier, 3) change only the plush lion herald's oversized coral-red stitched bow tie at center-left to cobalt blue while preserving its exact shape, folds, stitching, size, and position, 4) remove exactly the middle lantern from the upper-right straight row of exactly three large sunflower-yellow five-point star lanterns so exactly two lanterns remain in their original outer positions while preserving the arch and cords, 5) change only the simple vivid-turquoise diamond emblem on the lower-right jack-in-the-box cream front panel into one bright orange circle of similar size while preserving the box, lid, toy, and panel. Preserve the wooden soldier's cobalt-blue cape, all characters, faces, bodies, queen, throne, palace, towers, windows, curtains, jack-in-the-box, camera, crop, lighting, palette, textures, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T15:34:50.229Z",
+    "feedbackRevisionPrompt": "Create a harder B from A with exactly five subtle changes: one missing crescent engraving, missing center shield battlement, one missing bow stitch, shorter point on the center star lantern, and upright square box emblem; preserve everything else."
+  },
+  "publishedAt": "2026-08-21T15:38:19.089Z"
+}

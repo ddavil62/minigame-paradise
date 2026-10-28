@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 비 오는 밤의 만화 작업실. Scene: A cozy late-night Japanese manga artist studio during gentle rain. A young adult artist sits at a wide drafting desk, viewed from a comfortable medium-wide angle, surrounded by a desk lamp, drawing tools, blank comic pages without writing, a sleepy cat, small original character figurines, a wall clock, a potted plant, a closed umbrella, shelves, and a rain-streaked window. All important props are clearly separated and readable..
+Art direction: original contemporary Japanese comics-inspired illustration, expressive clean ink linework, cinematic panel-like composition, selective full color with subtle screentone texture, polished game art, not imitating any specific artist or franchise.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

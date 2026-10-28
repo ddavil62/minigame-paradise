@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "goblin-night-moon-ferry-dock-04",
+  "status": "published",
+  "title": "달빛 도깨비 나룻터",
+  "description": "달빛 물결이 반짝이는 도깨비 나룻터에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "도깨비 마을의 달빛 나룻터",
+  "collectionId": "goblin-night-village",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "turquoise-oar-tassel",
+      "label": "청록색으로 바뀐 노의 술 장식",
+      "zones": {
+        "a": {
+          "x": 0.075,
+          "y": 0.17,
+          "w": 0.055,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.075,
+          "y": 0.17,
+          "w": 0.055,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "missing-lotus-lantern",
+      "label": "하나 줄어든 바구니의 연꽃등",
+      "zones": {
+        "a": {
+          "x": 0.03,
+          "y": 0.64,
+          "w": 0.13,
+          "h": 0.2
+        },
+        "b": {
+          "x": 0.03,
+          "y": 0.64,
+          "w": 0.13,
+          "h": 0.2
+        }
+      }
+    },
+    {
+      "id": "purple-ferry-bow",
+      "label": "보라색으로 바뀐 뱃머리 리본",
+      "zones": {
+        "a": {
+          "x": 0.555,
+          "y": 0.31,
+          "w": 0.11,
+          "h": 0.25
+        },
+        "b": {
+          "x": 0.555,
+          "y": 0.31,
+          "w": 0.11,
+          "h": 0.25
+        }
+      }
+    },
+    {
+      "id": "flower-fan-motif",
+      "label": "꽃 모양으로 바뀐 부채 문양",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.69,
+          "w": 0.12,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.69,
+          "w": 0.12,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "missing-ferry-wind-bell-chime",
+      "label": "하나 줄어든 풍경의 금빛 조각",
+      "zones": {
+        "a": {
+          "x": 0.865,
+          "y": 0.245,
+          "w": 0.045,
+          "h": 0.155
+        },
+        "b": {
+          "x": 0.865,
+          "y": 0.245,
+          "w": 0.045,
+          "h": 0.155
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 도깨비 마을의 달빛 나룻터. Scene: A charming Korean folklore fantasy ferry dock at night, viewed straight-on from a comfortable medium-wide angle. A wooden pier crosses a calm moonlit river beneath a large round full moon, with a tiled-roof ferry shelter, distant hanok village lights, reeds, and low indigo mountains in the background. At the upper-left beneath the shelter roof, one large wooden oar hangs diagonally with exactly one clearly visible coral-red tassel tied near its handle. In the lower-left foreground, a shallow round woven basket holds exactly five large, clearly separated glowing lotus lanterns in one neat cluster. At center, a friendly rounded ferryman goblin stands beside a small traditional wooden ferry; one wide jade-green ribbon is tied in a large bow around the ferry's upright prow post. In the lower-right foreground, one large open cream-colored folding fan rests against a travel chest with one simple cobalt-blue crescent motif painted in its center. At the upper-right, one bronze wind bell hangs from the shelter beam with exactly three clearly separated gold leaf-shaped chime strips dangling below it. Include the recurring small friendly blue-robed goblin guide holding a softly glowing crescent lantern, plus coiled rope, plain ceramic jars, a mooring post, stepping stones, fireflies, and a few floating lotus leaves only as supporting atmosphere. Keep the red oar tassel, five lotus lanterns, jade bow, fan motif, and three wind-bell chime strips large, unobstructed, spatially separated, and away from the outer 3% safe margin. Do not include any readable writing, letters, numbers, seals, or calligraphy..\nArt direction: original premium Korean folklore storybook game illustration inspired by the warmth, flat decorative rhythm, and tactile paper quality of traditional Korean folk painting without copying any specific artwork or artist; clean expressive ink contours, soft cel shading, subtle hanji paper texture, polished animated-feature background quality, friendly rounded goblins, crisp object silhouettes, cohesive deep indigo, moonlit cream, warm amber, dancheong teal, coral red, muted jade, cobalt blue, and gold palette.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the clearly visible coral-red tassel tied near the upper-left hanging oar handle to turquoise blue, 2) remove exactly one glowing lotus lantern from the lower-left basket so four remain, 3) change only the large jade-green bow around the center ferry prow post to purple, 4) change the cobalt-blue crescent motif in the center of the lower-right cream folding fan into a cobalt-blue five-petal flower of similar size, 5) remove exactly one gold leaf-shaped chime strip from the upper-right bronze wind bell so two remain. Preserve every goblin, ferry, pier, shelter, river, village, moon, reeds, rope, jars, chest, fireflies, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T08:49:04.689Z"
+  },
+  "publishedAt": "2026-08-21T08:54:55.679Z"
+}

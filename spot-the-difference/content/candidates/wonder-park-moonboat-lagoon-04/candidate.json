@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "wonder-park-moonboat-lagoon-04",
+  "status": "published",
+  "title": "노을빛 문보트 라군",
+  "description": "별빛이 켜지기 시작한 원더파크의 문보트 라군에서 다섯 가지 차이를 찾아보세요!",
+  "theme": "노을과 별빛이 어우러진 마법 테마파크 보트 라군",
+  "collectionId": "wonder-park",
+  "stageType": "relaxed",
+  "difficulty": "쉬움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "heart-moonboat-ornament",
+      "label": "하트로 바뀐 문보트 장식",
+      "zones": {
+        "a": {
+          "x": 0.535,
+          "y": 0.56,
+          "w": 0.085,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.535,
+          "y": 0.56,
+          "w": 0.085,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "turquoise-shell-lantern",
+      "label": "청록색 조개 등불",
+      "zones": {
+        "a": {
+          "x": 0.03,
+          "y": 0.12,
+          "w": 0.17,
+          "h": 0.25
+        },
+        "b": {
+          "x": 0.03,
+          "y": 0.12,
+          "w": 0.17,
+          "h": 0.25
+        }
+      }
+    },
+    {
+      "id": "missing-bridge-pennant",
+      "label": "하나 줄어든 다리 깃발",
+      "zones": {
+        "a": {
+          "x": 0.445,
+          "y": 0.365,
+          "w": 0.16,
+          "h": 0.125
+        },
+        "b": {
+          "x": 0.445,
+          "y": 0.365,
+          "w": 0.16,
+          "h": 0.125
+        }
+      }
+    },
+    {
+      "id": "purple-mooring-lamp",
+      "label": "보라색 계류 기둥 등불",
+      "zones": {
+        "a": {
+          "x": 0.855,
+          "y": 0.105,
+          "w": 0.115,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0.855,
+          "y": 0.105,
+          "w": 0.115,
+          "h": 0.21
+        }
+      }
+    },
+    {
+      "id": "missing-parasol-handle",
+      "label": "사라진 양산의 금빛 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.665,
+          "w": 0.1,
+          "h": 0.135
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.665,
+          "w": 0.1,
+          "h": 0.135
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 노을과 별빛이 어우러진 마법 테마파크 보트 라군. Scene: A serene whimsical theme park moonboat lagoon at sunset, viewed straight-on from a comfortable medium-wide angle. A calm turquoise lagoon fills the middle with one prominent cream crescent-moon paddle boat in the center, carrying exactly one gold star ornament on its bow. On the left foreground is a mint ticket kiosk with one large coral seashell lantern on its roof. A short arched cream footbridge crosses the water in the background and has exactly three clearly separated turquoise pennants hanging beneath its center rail. On the right foreground stands one ornate lavender mooring post topped by a round yellow lamp. Near the lower right stands the same original cream-colored rabbit park mascot from the earlier Wonder Park scenes, with long pink-lined ears and a teal bow tie, holding exactly one closed coral parasol with a gold handle. Add water lilies, separated flower planters, warm park lamps, distant rounded park towers, and a few small visitor silhouettes. Keep the bow star, shell lantern, three bridge pennants, mooring lamp, and rabbit parasol large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers..\nArt direction: original premium whimsical storybook game illustration matching the established Wonder Park stages, clean expressive ink contours, soft cel shading, gently hand-painted textures, polished animated-feature background quality, cheerful rounded shapes, cohesive mint, coral, cream, turquoise, lavender, sunset peach, midnight blue, and gold palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the gold five-point star ornament on the center moonboat's bow to a gold heart, 2) change the coral seashell lantern on the left ticket kiosk roof to turquoise, 3) remove exactly one of the three turquoise pennants beneath the background footbridge so two remain, 4) change the right lavender mooring post's round yellow lamp to purple, 5) remove the gold handle from the rabbit mascot's closed coral parasol while preserving the parasol canopy and shaft. Preserve the moonboat, lagoon, kiosk, bridge, mooring post, rabbit mascot, visitors, flowers, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T06:23:46.403Z"
+  },
+  "publishedAt": "2026-08-21T06:30:00.099Z"
+}

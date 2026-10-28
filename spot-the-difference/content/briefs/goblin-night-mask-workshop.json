@@ -1,0 +1,17 @@
+{
+  "id": "goblin-night-mask-workshop-03",
+  "title": "달빛 도깨비 탈 공방",
+  "description": "달빛이 스미는 도깨비 탈 공방에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "도깨비 마을의 달빛 탈 공방",
+  "scene": "A charming Korean folklore fantasy mask workshop at night, viewed straight-on from a comfortable medium-wide angle inside an open-sided traditional hanok studio. A round full moon and deep indigo sky are visible beyond wooden lattice windows. At the upper-left, one large finished wooden goblin mask hangs on the wall with exactly one clearly visible coral-red feather tucked above its left brow. In the lower-left foreground, a low rectangular brush stand holds exactly five large, clearly separated upright paintbrushes in one neat row. At center, a friendly rounded artisan goblin paints a large cream-colored wooden mask resting on a stand; one wide jade-green ribbon is tied in a large bow beneath that mask. In the lower-right foreground, one round hand drum leans toward the viewer with one large simple cobalt-blue crescent motif painted in its center. At the upper-right, one large bronze wind bell hangs from a beam with exactly three clearly separated gold chime strips dangling below it. Include the recurring small friendly blue-robed goblin guide holding a softly glowing crescent lantern, plus plain pigment bowls, folded hanji paper, carved wooden blanks, shelves, and warm paper lanterns only as supporting atmosphere. Keep the red feather, five brushes, jade bow, drum motif, and three wind-bell chime strips large, unobstructed, spatially separated, and away from the outer 3% safe margin. Do not include any readable writing, letters, numbers, seals, or calligraphy.",
+  "style": "original premium Korean folklore storybook game illustration inspired by the warmth, flat decorative rhythm, and tactile paper quality of traditional Korean folk painting without copying any specific artwork or artist; clean expressive ink contours, soft cel shading, subtle hanji paper texture, polished animated-feature background quality, friendly rounded goblins, crisp object silhouettes, cohesive deep indigo, moonlit cream, warm amber, dancheong teal, coral red, muted jade, cobalt blue, and gold palette",
+  "collectionId": "goblin-night-village",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change the clearly visible coral-red feather on the upper-left wooden goblin mask to turquoise blue, 2) remove exactly one paintbrush from the lower-left brush stand so four remain, 3) change only the large jade-green bow beneath the center cream mask to purple, 4) change the cobalt-blue crescent motif in the center of the lower-right hand drum into a cobalt-blue five-petal flower of similar size, 5) remove exactly one gold chime strip from the upper-right bronze wind bell so two remain. Preserve every goblin, all masks, pigment bowls, paper, shelves, lanterns, hanok, full moon, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

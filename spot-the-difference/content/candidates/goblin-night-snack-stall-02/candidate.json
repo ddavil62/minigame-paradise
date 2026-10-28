@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "goblin-night-snack-stall-02",
+  "status": "published",
+  "title": "도깨비 야식 포장마차",
+  "description": "달빛 개울가의 흥겨운 도깨비 포장마차에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "도깨비 마을의 야식 포장마차",
+  "collectionId": "goblin-night-village",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "turquoise-club-tip",
+      "label": "청록색으로 바뀐 도깨비 방망이 끝 장식",
+      "zones": {
+        "a": {
+          "x": 0.205,
+          "y": 0.105,
+          "w": 0.075,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.205,
+          "y": 0.105,
+          "w": 0.075,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "missing-brazier-skewer",
+      "label": "하나 줄어든 화로 꼬치",
+      "zones": {
+        "a": {
+          "x": 0.04,
+          "y": 0.64,
+          "w": 0.29,
+          "h": 0.27
+        },
+        "b": {
+          "x": 0.04,
+          "y": 0.64,
+          "w": 0.29,
+          "h": 0.27
+        }
+      }
+    },
+    {
+      "id": "purple-kettle-lid",
+      "label": "보라색으로 바뀐 주전자 뚜껑",
+      "zones": {
+        "a": {
+          "x": 0.405,
+          "y": 0.585,
+          "w": 0.125,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.405,
+          "y": 0.585,
+          "w": 0.125,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "flower-plate-motif",
+      "label": "꽃 모양으로 바뀐 접시 무늬",
+      "zones": {
+        "a": {
+          "x": 0.665,
+          "y": 0.76,
+          "w": 0.175,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.665,
+          "y": 0.76,
+          "w": 0.175,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "forked-lantern-tassel",
+      "label": "두 갈래로 바뀐 등불 술",
+      "zones": {
+        "a": {
+          "x": 0.895,
+          "y": 0.29,
+          "w": 0.065,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.895,
+          "y": 0.29,
+          "w": 0.065,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 도깨비 마을의 야식 포장마차. Scene: A cheerful Korean folklore fantasy night snack stall beside a moonlit stream, viewed straight-on from a comfortable medium-wide angle. A striped fabric canopy shelters a warm wooden counter, with a small stone bridge, reeds, and deep indigo hills in the background. At the upper-left canopy post, one clearly visible small wooden goblin club hangs horizontally, with one large round coral-red ornament fixed to its tip. In the lower-left foreground, a rectangular charcoal brazier holds exactly five clearly separated food skewers in one neat row. At the center of the counter sits one round brass kettle with a large clearly visible jade-green lid. In the lower-right foreground, one cream ceramic plate has one large simple cobalt-blue crescent motif painted in its center. At the upper-right corner hangs one large warm paper lantern ending in a clearly visible straight gold tassel. Include two friendly rounded goblins enjoying skewers and savory pancakes, plus the recurring small friendly blue-robed goblin guide holding a softly glowing crescent lantern. Add plain bowls, a folded cloth, a small pancake griddle, reeds, stepping stones, and fireflies only as supporting atmosphere. Keep the club-tip ornament, five skewers, kettle lid, plate motif, and lantern tassel large, unobstructed, spatially separated, and away from the outer 3% safe margin. Do not include any readable writing, letters, numbers, seals, or calligraphy..\nArt direction: original premium Korean folklore storybook game illustration inspired by the warmth, flat decorative rhythm, and tactile paper quality of traditional Korean folk painting without copying any specific artwork or artist; clean expressive ink contours, soft cel shading, subtle hanji paper texture, polished animated-feature background quality, friendly rounded goblins, crisp object silhouettes, cohesive deep indigo, moonlit cream, warm amber, dancheong teal, coral red, muted jade, cobalt blue, and gold palette.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the large coral-red round ornament on the tip of the hanging wooden goblin club at upper-left to turquoise blue, 2) remove exactly one skewer from the lower-left brazier so four remain, 3) change only the jade-green lid of the brass kettle at center to purple, 4) change the cobalt-blue crescent motif in the center of the lower-right cream plate into a cobalt-blue five-petal flower of similar size, 5) change the straight gold tassel under the upper-right paper lantern into a clearly forked two-tail gold tassel. Preserve every goblin, all food, stall, canopy, counter, stream, bridge, reeds, fireflies, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T08:27:50.286Z"
+  },
+  "publishedAt": "2026-08-21T08:34:13.041Z"
+}

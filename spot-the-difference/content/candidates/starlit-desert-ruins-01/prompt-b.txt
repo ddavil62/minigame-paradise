@@ -1,0 +1,5 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly these changes: turn the upper-left crescent moon into a full moon; make the large astrolabe's central hub turquoise; make the lower-left blue jar's lid coral red; remove the turquoise treasure chest's round gold lock plate; add a turquoise collar with one gold bell to the fennec fox.
+Do not make any other changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.

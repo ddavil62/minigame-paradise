@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "cobalt-signal-paddle-center",
+      "label": "코발트색으로 바뀐 역무원 신호판 중앙",
+      "zones": {
+        "a": {
+          "x": 0.055,
+          "y": 0.35,
+          "w": 0.135,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.055,
+          "y": 0.35,
+          "w": 0.135,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "shorter-station-clock-hand",
+      "label": "짧아진 역 시계의 오른쪽 바늘",
+      "zones": {
+        "a": {
+          "x": 0.535,
+          "y": 0.075,
+          "w": 0.155,
+          "h": 0.245
+        },
+        "b": {
+          "x": 0.535,
+          "y": 0.075,
+          "w": 0.155,
+          "h": 0.245
+        }
+      }
+    },
+    {
+      "id": "notched-coral-station-flag",
+      "label": "끝에 작은 홈이 생긴 산호색 역 깃발",
+      "zones": {
+        "a": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.18,
+          "h": 0.225
+        },
+        "b": {
+          "x": 0.79,
+          "y": 0.075,
+          "w": 0.18,
+          "h": 0.225
+        }
+      }
+    },
+    {
+      "id": "ochre-middle-suitcase",
+      "label": "황토색으로 바뀐 가운데 여행가방",
+      "zones": {
+        "a": {
+          "x": 0.665,
+          "y": 0.72,
+          "w": 0.175,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.665,
+          "y": 0.72,
+          "w": 0.175,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "coral-chimney-bird-beak",
+      "label": "산호색으로 바뀐 굴뚝 위 양철 새의 부리",
+      "zones": {
+        "a": {
+          "x": 0.345,
+          "y": 0.14,
+          "w": 0.045,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.345,
+          "y": 0.14,
+          "w": 0.045,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2951469,
+        "hash": "b87fc7cda292cf1fb0c402573dbc1a6a5d3504382dba110bd934c887537c8861",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2675356,
+        "hash": "531703825f406d123c4369dc38f7f206ed7876a3f238dbd74c500d0c006ac5d6",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T14:15:24.432Z"
+}

@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "yellow-desk-lamp",
+      "label": "노란색으로 바뀐 책상 조명",
+      "zones": {
+        "a": {
+          "x": 0.19,
+          "y": 0.12,
+          "w": 0.16,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.19,
+          "y": 0.12,
+          "w": 0.16,
+          "h": 0.29
+        }
+      }
+    },
+    {
+      "id": "teal-drawing-ruler",
+      "label": "청록색으로 바뀐 긴 그림 자",
+      "zones": {
+        "a": {
+          "x": 0.245,
+          "y": 0.815,
+          "w": 0.11,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.245,
+          "y": 0.815,
+          "w": 0.11,
+          "h": 0.13
+        }
+      }
+    },
+    {
+      "id": "missing-plant-leaf",
+      "label": "한 장 사라진 화분 잎",
+      "zones": {
+        "a": {
+          "x": 0.905,
+          "y": 0.38,
+          "w": 0.085,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.905,
+          "y": 0.38,
+          "w": 0.085,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "reversed-umbrella-handle",
+      "label": "방향이 바뀐 우산 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.9,
+          "y": 0.54,
+          "w": 0.09,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.9,
+          "y": 0.54,
+          "w": 0.09,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-robot-star",
+      "label": "사라진 로봇 가슴의 별",
+      "zones": {
+        "a": {
+          "x": 0.715,
+          "y": 0.18,
+          "w": 0.065,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.715,
+          "y": 0.18,
+          "w": 0.065,
+          "h": 0.105
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2796435,
+        "hash": "0c8727b4f9710c0348b425255195a67f9d5017f163e422e76c903054a9beea09",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2551106,
+        "hash": "f67f8e1c473643dc81870ac644c8529def41c33169c0599dc887e66c0e3ac638",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T04:44:24.656Z"
+}

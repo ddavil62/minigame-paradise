@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 여름밤 숲속 캠핑. Scene: A cozy whimsical summer campsite in a forest clearing at night, with a large canvas tent, a glowing campfire ring, a red enamel kettle, a picnic basket, a striped blanket, a wooden acoustic guitar without lettering, a lantern string between two trees, three marshmallows on roasting sticks, a small friendly raccoon, wildflowers, fireflies, and a crescent moon above distant pine-covered hills.
+Art direction: premium whimsical storybook illustration, deep summer greens and indigo blue balanced with warm amber firelight, coral red and golden accents, crisp readable props, richly detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

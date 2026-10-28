@@ -1,0 +1,5 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly these changes: turn the crescent moon into a full moon; make the center hanging lantern frame turquoise; make the large tent pillow turquoise; make the red kettle lid turquoise; add a turquoise neckerchief to the raccoon.
+Do not make any other changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.

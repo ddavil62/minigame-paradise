@@ -1,0 +1,17 @@
+{
+  "id": "goblin-night-cloud-garden-05",
+  "title": "산신령의 구름 정원",
+  "description": "달맞이 잔치를 준비하는 구름 정원에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "도깨비 마을의 산신령 구름 정원",
+  "scene": "A majestic yet welcoming Korean folklore fantasy cloud garden at night, viewed straight-on from a comfortable medium-wide angle on a high mountain summit above layered moonlit clouds. A large round full moon, low indigo peaks, sculpted cloud terraces, pine branches, and a small traditional tiled pavilion frame a festive moon-viewing garden. In the lower-left foreground, one friendly plump orange tiger wears a wide teal collar with exactly one large clearly visible coral-red round bell at its throat. At the upper-left, one elegant white crane stands on a flat cloud terrace wearing exactly one small jade-green feather ornament on top of its head. At the lower center-left, one large pale-blue cloud-shaped planter holds exactly five large, clearly separated white moonflowers in one neat fan-shaped cluster. At center-right, a kind elderly mountain spirit in flowing cream and muted-jade robes holds one large open cream-colored round hand fan with one simple cobalt-blue crescent motif painted in its center. At the upper-right, one tall warm moon lantern stands beside the pavilion and is topped by exactly one large gold crescent finial. Include the recurring small friendly blue-robed goblin guide holding a softly glowing crescent lantern, plus plain fruit trays, folded cloth, smooth rocks, cloud-shaped stepping stones, fireflies, and small warm lanterns only as supporting atmosphere. Keep the tiger bell, crane head ornament, five moonflowers, fan motif, and moon-lantern finial large, unobstructed, spatially separated, and away from the outer 3% safe margin. Do not include any readable writing, letters, numbers, seals, or calligraphy.",
+  "style": "original premium Korean folklore storybook game illustration inspired by the warmth, flat decorative rhythm, and tactile paper quality of traditional Korean folk painting without copying any specific artwork or artist; clean expressive ink contours, soft cel shading, subtle hanji paper texture, polished animated-feature background quality, friendly rounded characters, crisp object silhouettes, cohesive deep indigo, moonlit cream, warm amber, dancheong teal, coral red, muted jade, cobalt blue, pale cloud blue, and gold palette",
+  "collectionId": "goblin-night-village",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) remove only the large coral-red round bell from the friendly tiger's teal collar in the lower-left while preserving the collar, 2) change only the jade-green feather ornament on top of the upper-left white crane's head to purple, 3) remove exactly one white moonflower from the pale-blue cloud-shaped planter at lower center-left so four remain, 4) change the cobalt-blue crescent motif in the center of the mountain spirit's cream round hand fan into a cobalt-blue five-petal flower of similar size, 5) change the large gold crescent finial on top of the upper-right moon lantern into a gold five-point star of similar size. Preserve the mountain spirit, tiger, crane, goblin guide, pavilion, clouds, peaks, pine, full moon, fruit, cloth, stones, fireflies, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

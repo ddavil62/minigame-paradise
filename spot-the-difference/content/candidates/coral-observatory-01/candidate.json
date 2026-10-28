@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "coral-observatory-01",
+  "status": "published",
+  "title": "심해 산호 관측소",
+  "description": "푸른 바닷속 관측소에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "심해 관측소",
+  "difficulty": "쉬움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "purple-octopus",
+      "label": "보라색 문어",
+      "zones": {
+        "a": {
+          "x": 0.465,
+          "y": 0.12,
+          "w": 0.075,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.465,
+          "y": 0.12,
+          "w": 0.075,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "angelfish-stripe",
+      "label": "천사고기 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.13,
+          "w": 0.085,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.13,
+          "w": 0.085,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "missing-desk-shell",
+      "label": "책상 위 붉은 조개",
+      "zones": {
+        "a": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.055,
+          "h": 0.065
+        },
+        "b": {
+          "x": 0.245,
+          "y": 0.605,
+          "w": 0.055,
+          "h": 0.065
+        }
+      }
+    },
+    {
+      "id": "missing-cabinet-shell",
+      "label": "오른쪽 소라 껍데기",
+      "zones": {
+        "a": {
+          "x": 0.85,
+          "y": 0.45,
+          "w": 0.12,
+          "h": 0.14
+        },
+        "b": {
+          "x": 0.85,
+          "y": 0.45,
+          "w": 0.12,
+          "h": 0.14
+        }
+      }
+    },
+    {
+      "id": "amber-goggles",
+      "label": "잠수 안경 렌즈",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.65,
+          "w": 0.12,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.65,
+          "w": 0.12,
+          "h": 0.11
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 2,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 심해 관측소. Scene: A cozy underwater observatory interior with a huge curved window looking onto coral reefs and fish, brass scientific instruments, specimen jars, diving gear, shells, maps without readable text, and a small octopus outside.\nArt direction: premium whimsical storybook illustration, luminous blue and coral palette, crisp object silhouettes, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across foreground, middle ground, and underwater background; preserve all sea creatures' poses",
+    "createdAt": "2026-08-19T09:15:13.746Z"
+  },
+  "publishedAt": "2026-08-19T09:27:22.988Z",
+  "collectionId": "world-adventure",
+  "stageType": "relaxed"
+}

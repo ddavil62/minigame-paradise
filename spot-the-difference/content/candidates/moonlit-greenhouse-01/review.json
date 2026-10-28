@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "쉬움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "crystal-color",
+      "label": "유리 돔 수정 색",
+      "zones": {
+        "a": {
+          "x": 0.285,
+          "y": 0.475,
+          "w": 0.105,
+          "h": 0.145
+        },
+        "b": {
+          "x": 0.285,
+          "y": 0.475,
+          "w": 0.105,
+          "h": 0.145
+        }
+      }
+    },
+    {
+      "id": "missing-scissors",
+      "label": "책상 위 가위",
+      "zones": {
+        "a": {
+          "x": 0.375,
+          "y": 0.625,
+          "w": 0.105,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.375,
+          "y": 0.625,
+          "w": 0.105,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "crescent-moon",
+      "label": "보름달과 초승달",
+      "zones": {
+        "a": {
+          "x": 0.71,
+          "y": 0.105,
+          "w": 0.11,
+          "h": 0.155
+        },
+        "b": {
+          "x": 0.71,
+          "y": 0.105,
+          "w": 0.11,
+          "h": 0.155
+        }
+      }
+    },
+    {
+      "id": "watering-can-color",
+      "label": "물뿌리개 색",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.72,
+          "w": 0.145,
+          "h": 0.205
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.72,
+          "w": 0.145,
+          "h": 0.205
+        }
+      }
+    },
+    {
+      "id": "golden-calla-lily",
+      "label": "오른쪽 칼라꽃 색",
+      "zones": {
+        "a": {
+          "x": 0.84,
+          "y": 0.43,
+          "w": 0.085,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.84,
+          "y": 0.43,
+          "w": 0.085,
+          "h": 0.15
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2989074,
+        "hash": "9f6e23d393ac6c18477979017b7ff6e4603a7574572952eb605a9157c893dcbc",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2588373,
+        "hash": "aba6193d421aa8eb173c834ff6f9b3f2dc6c98e9f20870047cdc6d4b1784453d",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-20T05:23:34.281Z"
+}

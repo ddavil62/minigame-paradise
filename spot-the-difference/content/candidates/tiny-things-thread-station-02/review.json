@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "three-hole-button-clock",
+      "label": "구멍이 하나 줄어든 단추 시계",
+      "zones": {
+        "a": {
+          "x": 0.06,
+          "y": 0.07,
+          "w": 0.15,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.06,
+          "y": 0.07,
+          "w": 0.15,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "missing-thread-spool",
+      "label": "하나 줄어든 실타래 짐",
+      "zones": {
+        "a": {
+          "x": 0.18,
+          "y": 0.56,
+          "w": 0.12,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.18,
+          "y": 0.56,
+          "w": 0.12,
+          "h": 0.29
+        }
+      }
+    },
+    {
+      "id": "purple-locomotive-chimney",
+      "label": "보라색으로 바뀐 기관차 굴뚝",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.37,
+          "w": 0.085,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.37,
+          "w": 0.085,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "missing-safety-pin-flag",
+      "label": "사라진 안전핀 신호 깃발",
+      "zones": {
+        "a": {
+          "x": 0.845,
+          "y": 0.36,
+          "w": 0.15,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.845,
+          "y": 0.36,
+          "w": 0.15,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "missing-thimble-bell-ribbon",
+      "label": "하나 줄어든 골무 종 리본",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.19,
+          "w": 0.13,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.19,
+          "w": 0.13,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2866285,
+        "hash": "087ef760ec2b147aabb2d3f64190ad611621aed6a15e19de966816e24dd6a116",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2822261,
+        "hash": "56fb3b6a39c15e24822a487180bbd8f15b7aea815e7e8d8ad99dd6319512dd65",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.569Z"
+}

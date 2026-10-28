@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "seaside-bakery-01",
+  "status": "published",
+  "title": "파도빛 해변 제과점",
+  "description": "햇살 가득한 해변 제과점에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "해변 제과점",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "turquoise-awning-stripe",
+      "label": "차양의 청록색 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.74,
+          "y": 0.025,
+          "w": 0.06,
+          "h": 0.2
+        },
+        "b": {
+          "x": 0.74,
+          "y": 0.025,
+          "w": 0.06,
+          "h": 0.2
+        }
+      }
+    },
+    {
+      "id": "blue-sailboat-stripe",
+      "label": "바다 범선의 선체 줄무늬",
+      "zones": {
+        "a": {
+          "x": 0.8,
+          "y": 0.435,
+          "w": 0.07,
+          "h": 0.055
+        },
+        "b": {
+          "x": 0.8,
+          "y": 0.435,
+          "w": 0.07,
+          "h": 0.055
+        }
+      }
+    },
+    {
+      "id": "blue-muffin-wrapper",
+      "label": "진열대 머핀 포장지 색",
+      "zones": {
+        "a": {
+          "x": 0.125,
+          "y": 0.44,
+          "w": 0.055,
+          "h": 0.07
+        },
+        "b": {
+          "x": 0.125,
+          "y": 0.44,
+          "w": 0.055,
+          "h": 0.07
+        }
+      }
+    },
+    {
+      "id": "coral-teapot-knob",
+      "label": "찻주전자 뚜껑 손잡이 색",
+      "zones": {
+        "a": {
+          "x": 0.835,
+          "y": 0.665,
+          "w": 0.045,
+          "h": 0.055
+        },
+        "b": {
+          "x": 0.835,
+          "y": 0.665,
+          "w": 0.045,
+          "h": 0.055
+        }
+      }
+    },
+    {
+      "id": "basket-blue-bow",
+      "label": "빵 바구니의 파란 리본",
+      "zones": {
+        "a": {
+          "x": 0.56,
+          "y": 0.7,
+          "w": 0.095,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.56,
+          "y": 0.7,
+          "w": 0.095,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 해변 제과점. Scene: A cheerful seaside bakery in the morning with an open window facing turquoise waves, striped awning, pastry display, round loaves, croissants, a ceramic teapot, seashell decorations, a small sailboat model, a woven basket, and a friendly seagull perched outside.\nArt direction: premium whimsical storybook illustration, sunlit aqua and coral palette, crisp readable objects, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Spread changes across the awning, window view, pastry display, counter, and floor basket; preserve the sea, camera, and lighting",
+    "createdAt": "2026-08-19T12:02:07.561Z"
+  },
+  "publishedAt": "2026-08-19T14:40:30.815Z",
+  "collectionId": "seasonal-stories",
+  "stageType": "speed"
+}

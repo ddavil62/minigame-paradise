@@ -43,6 +43,7 @@ import { createApp as createMoonlightKitchenExpressApp } from '../moonlight-kitc
 import { createApp as createVeneziaApp } from '../venezia/server.js';
 import { createApp as createSichuanBattleApp } from '../sichuan-battle/server.js';
 import { createApp as createWordchainBattleApp } from '../wordchain-battle/server.js';
+import { createApp as createSpotTheDifferenceApp } from '../spot-the-difference/server.js';
 import { createApp as createMahjongApp } from '../mahjong/server.js';
 
 // ── P0-A 안전망: WS 핸들러에서 빠져나온 예외가 런처 프로세스를 종료시키지 않게 한다.
@@ -122,7 +123,7 @@ const MIME = {
 // ── 통합 라우터: 10개 게임 앱 인스턴스 ────────────────────────────
 /**
  * key는 URL path 첫 segment 및 games.json의 `id` 필드와 정확히 일치해야 한다.
- * @type {Record<string, { handleHttp: Function, handleUpgrade: Function, setHostUrl?: Function }>}
+ * @type {Record<string, { handleHttp: Function, handleUpgrade: Function, setHostUrl?: Function, prepareMatch?: Function }>}
  */
 const GAME_APPS = {
   'codenames-duet': createCodenamesApp(),
@@ -180,6 +181,7 @@ const GAME_APPS = {
   'wordchain-battle': createWordchainBattleApp({
     getBotUrl: () => getBotUrl('wordchain-battle'),
   }),
+  'spot-the-difference': createSpotTheDifferenceApp(),
   // 마작 — 4인 일본식 리치마작. 사람 1~4명이 방 설정 화면에서 모이고 빈자리는 게임 서버가 AI로 채운다.
   'mahjong': createMahjongApp(),
 };
@@ -739,6 +741,8 @@ function checkReady(room, game) {
   // roomId/ensureRoom은 봇 spawn·REDIRECT 브로드캐스트보다 먼저 처리해야 한다(아래 참조).
   const isTetrisBattle = room.gameId === 'tetris-battle';
   const roomId = isTetrisBattle ? crypto.randomUUID() : null;
+  const wordchainMatchId = room.gameId === 'wordchain-battle' ? crypto.randomUUID() : null;
+  const spotDifferenceMatchId = room.gameId === 'spot-the-difference' ? crypto.randomUUID() : null;
 
   // Room-is-full/Room-not-found 근본원인 4차 fix(2026-08-03): 런처가 발급한 roomId는
   // tetris-battle 서버의 roomMap에 등록된 적이 없어, 클라이언트/봇이 이 ID로 접속하면
@@ -746,6 +750,36 @@ function checkReady(room, game) {
   // 결함이 있었다. REDIRECT/봇 spawn 이전에 룸을 선제 등록해 이 문제를 근본적으로 막는다.
   if (isTetrisBattle) {
     GAME_APPS['tetris-battle'].ensureRoom(roomId);
+  }
+  if (wordchainMatchId) {
+    const prepared = GAME_APPS['wordchain-battle'].prepareMatch(wordchainMatchId);
+    if (!prepared) {
+      for (const [client, meta] of room.clients) {
+        meta.ready = false;
+        sendJson(client, {
+          type: 'ERROR',
+          code: 'game_busy',
+          message: '현재 끝말잇기 경기가 진행 중입니다. 잠시 후 다시 준비해 주세요.',
+        });
+      }
+      broadcastRoomState(room);
+      return;
+    }
+  }
+  if (spotDifferenceMatchId) {
+    const prepared = GAME_APPS['spot-the-difference'].prepareMatch(spotDifferenceMatchId);
+    if (!prepared) {
+      for (const [client, meta] of room.clients) {
+        meta.ready = false;
+        sendJson(client, {
+          type: 'ERROR',
+          code: 'game_busy',
+          message: '현재 틀린그림찾기 경기가 진행 중입니다. 잠시 후 다시 준비해 주세요.',
+        });
+      }
+      broadcastRoomState(room);
+      return;
+    }
   }
 
   // 2. AI 봇 spawn (aiSlotCount > 0 && botAvailable)
@@ -774,7 +808,10 @@ function checkReady(room, game) {
         : `/${room.gameId}/?room=${roomId}`;
     } else {
       mode = usesGameManagedAi ? 'ai' : 'human';
-      redirectPath = `/${room.gameId}/`;
+      const matchId = wordchainMatchId || spotDifferenceMatchId;
+      redirectPath = matchId
+        ? `/${room.gameId}/?matchId=${encodeURIComponent(matchId)}`
+        : `/${room.gameId}/`;
     }
 
     sendJson(ws, {
@@ -785,6 +822,7 @@ function checkReady(room, game) {
       playerCount,
       role: meta.id === 'p1' ? 'p1' : 'p2',
       roomId,
+      matchId: wordchainMatchId || spotDifferenceMatchId,
       transitionMs: 300,
     });
   }

@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": 94,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "cyan-rocket-nose",
+      "label": "파란색으로 바뀐 로켓 앞부분",
+      "zones": {
+        "a": {
+          "x": 0.425,
+          "y": 0.08,
+          "w": 0.095,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.425,
+          "y": 0.08,
+          "w": 0.095,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "red-apron-pocket",
+      "label": "외계인 앞치마의 빨간 주머니",
+      "zones": {
+        "a": {
+          "x": 0.435,
+          "y": 0.56,
+          "w": 0.09,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.435,
+          "y": 0.56,
+          "w": 0.09,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "pink-jukebox-light",
+      "label": "분홍색으로 바뀐 주크박스 가운데 불빛",
+      "zones": {
+        "a": {
+          "x": 0.845,
+          "y": 0.515,
+          "w": 0.06,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.845,
+          "y": 0.515,
+          "w": 0.06,
+          "h": 0.085
+        }
+      }
+    },
+    {
+      "id": "missing-cake-cherry",
+      "label": "사라진 케이크 체리",
+      "zones": {
+        "a": {
+          "x": 0.205,
+          "y": 0.425,
+          "w": 0.06,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.205,
+          "y": 0.425,
+          "w": 0.06,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "missing-window-star",
+      "label": "사라진 창밖의 별",
+      "zones": {
+        "a": {
+          "x": 0.67,
+          "y": 0.09,
+          "w": 0.045,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.67,
+          "y": 0.09,
+          "w": 0.045,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 4446835,
+        "hash": "1a3401f73f4704de00d934b0da675c7056ed19cf5912846a326335d3985f7266",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 4180229,
+        "hash": "74f1e0ab03a4150dbdc0f66bfa5ba4024cc2e5a60cbf83f16f03a607b77f0c22",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-20T01:09:33.736Z"
+}

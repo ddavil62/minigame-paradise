@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "shorter-dragon-neckerchief-tail",
+      "label": "짧아진 아기 용 목도리의 오른쪽 꼬리",
+      "zones": {
+        "a": {
+          "x": 0.37,
+          "y": 0.41,
+          "w": 0.15,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.37,
+          "y": 0.41,
+          "w": 0.15,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "four-point-left-star-lantern",
+      "label": "네 꼭짓점으로 바뀐 왼쪽 황금 별 등불",
+      "zones": {
+        "a": {
+          "x": 0.17,
+          "y": 0.08,
+          "w": 0.12,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.17,
+          "y": 0.08,
+          "w": 0.12,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "star-telescope-emblem",
+      "label": "청록색 별로 바뀐 망원경 문양",
+      "zones": {
+        "a": {
+          "x": 0.7,
+          "y": 0.12,
+          "w": 0.12,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.7,
+          "y": 0.12,
+          "w": 0.12,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "round-teaching-pointer",
+      "label": "원 모양으로 바뀐 부엉이 선생님의 포인터",
+      "zones": {
+        "a": {
+          "x": 0.19,
+          "y": 0.35,
+          "w": 0.1,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.19,
+          "y": 0.35,
+          "w": 0.1,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "star-astronomy-case-emblem",
+      "label": "청록색 별로 바뀐 천문 관측 가방 문양",
+      "zones": {
+        "a": {
+          "x": 0.77,
+          "y": 0.6,
+          "w": 0.15,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.77,
+          "y": 0.6,
+          "w": 0.15,
+          "h": 0.22
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3105568,
+        "hash": "7be62324d2b8cd527c37a69bc82324e41f784e010575c7e5034f3b904b422d8f",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2992596,
+        "hash": "7ee8b63bc5a8c241250b06ec08edb0d132bc406be681c00f4e06552ad917f522",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-22T02:56:51.242Z"
+}

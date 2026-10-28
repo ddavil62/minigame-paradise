@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "star-watering-can-emblem",
+      "label": "별 모양으로 바뀐 물뿌리개 문양",
+      "zones": {
+        "a": {
+          "x": 0.14,
+          "y": 0.19,
+          "w": 0.12,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.14,
+          "y": 0.19,
+          "w": 0.12,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "missing-button-flower",
+      "label": "하나 줄어든 단추꽃",
+      "zones": {
+        "a": {
+          "x": 0.015,
+          "y": 0.57,
+          "w": 0.1,
+          "h": 0.23
+        },
+        "b": {
+          "x": 0.015,
+          "y": 0.57,
+          "w": 0.1,
+          "h": 0.23
+        }
+      }
+    },
+    {
+      "id": "purple-scissor-bow",
+      "label": "보라색으로 바뀐 가위 리본",
+      "zones": {
+        "a": {
+          "x": 0.32,
+          "y": 0.41,
+          "w": 0.14,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.32,
+          "y": 0.41,
+          "w": 0.14,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "crescent-spool-snail-shell",
+      "label": "초승달로 바뀐 실패 달팽이 문양",
+      "zones": {
+        "a": {
+          "x": 0.74,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.74,
+          "y": 0.61,
+          "w": 0.11,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "missing-clothespin-windmill-blade",
+      "label": "하나 줄어든 집게 풍차 날개",
+      "zones": {
+        "a": {
+          "x": 0.83,
+          "y": 0.04,
+          "w": 0.13,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.83,
+          "y": 0.04,
+          "w": 0.13,
+          "h": 0.17
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3006568,
+        "hash": "8237d8615170ca9dc179791792c9e3a810d27199505ea2572e1c10236e8e149e",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2905333,
+        "hash": "0a424471b38fed96e51ea2fe7a5bd0e83ad9737714ab17e019c76057036b803a",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T09:50:51.636Z"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "wonder-park-moonboat-lagoon-04",
+  "title": "노을빛 문보트 라군",
+  "description": "별빛이 켜지기 시작한 원더파크의 문보트 라군에서 다섯 가지 차이를 찾아보세요!",
+  "theme": "노을과 별빛이 어우러진 마법 테마파크 보트 라군",
+  "scene": "A serene whimsical theme park moonboat lagoon at sunset, viewed straight-on from a comfortable medium-wide angle. A calm turquoise lagoon fills the middle with one prominent cream crescent-moon paddle boat in the center, carrying exactly one gold star ornament on its bow. On the left foreground is a mint ticket kiosk with one large coral seashell lantern on its roof. A short arched cream footbridge crosses the water in the background and has exactly three clearly separated turquoise pennants hanging beneath its center rail. On the right foreground stands one ornate lavender mooring post topped by a round yellow lamp. Near the lower right stands the same original cream-colored rabbit park mascot from the earlier Wonder Park scenes, with long pink-lined ears and a teal bow tie, holding exactly one closed coral parasol with a gold handle. Add water lilies, separated flower planters, warm park lamps, distant rounded park towers, and a few small visitor silhouettes. Keep the bow star, shell lantern, three bridge pennants, mooring lamp, and rabbit parasol large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers.",
+  "style": "original premium whimsical storybook game illustration matching the established Wonder Park stages, clean expressive ink contours, soft cel shading, gently hand-painted textures, polished animated-feature background quality, cheerful rounded shapes, cohesive mint, coral, cream, turquoise, lavender, sunset peach, midnight blue, and gold palette, not imitating any specific artist or franchise",
+  "collectionId": "wonder-park",
+  "stageType": "relaxed",
+  "difficulty": "쉬움",
+  "differenceCount": 5,
+  "durationMs": 120000,
+  "missPenaltyMs": 3000,
+  "hintPenaltyMs": 5000,
+  "maxHints": 3,
+  "changeGuidance": "Make only these five changes: 1) change the gold five-point star ornament on the center moonboat's bow to a gold heart, 2) change the coral seashell lantern on the left ticket kiosk roof to turquoise, 3) remove exactly one of the three turquoise pennants beneath the background footbridge so two remain, 4) change the right lavender mooring post's round yellow lamp to purple, 5) remove the gold handle from the rabbit mascot's closed coral parasol while preserving the parasol canopy and shaft. Preserve the moonboat, lagoon, kiosk, bridge, mooring post, rabbit mascot, visitors, flowers, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes."
+}

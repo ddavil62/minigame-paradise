@@ -1,0 +1,10 @@
+Use case: precise-object-edit
+Asset type: corrected retry of image B for a premium cooperative spot-the-difference game
+Input images: Image 1 is the sole edit target. Start again from Image 1, not from any prior edited version.
+Primary request: Make exactly these five localized changes and absolutely no others:
+1. Change only the full moon inside the upper-right arched window into a crescent moon.
+2. Change only the metal body of the foreground watering can near the sleeping cat from olive green to copper red.
+3. Add only one thin turquoise collar around the sleeping cat's neck.
+4. Remove only the black metal scissors resting across the open book and table near the lower center.
+5. Change only the purple crystal cluster inside the large central glass bell jar to sapphire blue.
+Constraints: Preserve the exact camera, crop, dimensions, composition, geometry, plant count, flower colors, terrariums, lamps, furniture, outdoor garden, lighting, palette, texture, and every detail not explicitly listed. No text, UI, markers, split screen, or watermark.

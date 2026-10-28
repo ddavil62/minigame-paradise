@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 마법 온실. Scene: A cozy glass greenhouse at night, filled with unusual plants, tiny gardening tools, warm hanging lamps, a sleeping cat, and moonlight beyond the windows.
+Art direction: premium whimsical storybook illustration, warm teal and amber palette, crisp object silhouettes, detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

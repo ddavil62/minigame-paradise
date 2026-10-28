@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "purple-detective-bow-tie",
+      "label": "보라색으로 바뀐 탐정 고양이 나비넥타이",
+      "zones": {
+        "a": {
+          "x": 0.19,
+          "y": 0.53,
+          "w": 0.11,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.19,
+          "y": 0.53,
+          "w": 0.11,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "missing-clock-bird",
+      "label": "부리가 사라진 시계 위 산호색 새",
+      "zones": {
+        "a": {
+          "x": 0.08,
+          "y": 0.01,
+          "w": 0.11,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.08,
+          "y": 0.01,
+          "w": 0.11,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "missing-blue-marble",
+      "label": "빛 반사가 사라진 오른쪽 파란 구슬",
+      "zones": {
+        "a": {
+          "x": 0.535,
+          "y": 0.64,
+          "w": 0.055,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.535,
+          "y": 0.64,
+          "w": 0.055,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "flipped-umbrella-handle",
+      "label": "금빛 끝마개가 사라진 노란 우산 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.79,
+          "y": 0.13,
+          "w": 0.16,
+          "h": 0.23
+        },
+        "b": {
+          "x": 0.79,
+          "y": 0.13,
+          "w": 0.16,
+          "h": 0.23
+        }
+      }
+    },
+    {
+      "id": "round-messenger-bag-buckle",
+      "label": "윗 꼭짓점이 짧아진 조수 가방의 별 버클",
+      "zones": {
+        "a": {
+          "x": 0.845,
+          "y": 0.85,
+          "w": 0.08,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.845,
+          "y": 0.85,
+          "w": 0.08,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2683726,
+        "hash": "c9a3947487acfb7a4fa93147d86bf6293a0c6fbae03e5720967867fa4dfaeefc",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2571380,
+        "hash": "eccf38b72b12fcb4ac033b2e650d3f051d2e6fe0d2732eb6ce2d3e130aff7706",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T10:12:56.327Z"
+}

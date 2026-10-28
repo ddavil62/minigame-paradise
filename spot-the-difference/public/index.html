@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>틀린그림찾기</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">CO-OP PUZZLE</p>
+        <h1>틀린그림찾기</h1>
+      </div>
+      <div class="topbar-actions">
+        <button id="audio-toggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="BGM과 효과음 끄기">🔊 소리</button>
+        <div class="stats" aria-live="polite">
+          <div class="stat"><span>남은 시간</span><strong id="timer">1:30</strong></div>
+          <div class="stat"><span>오답</span><strong id="misses">0</strong></div>
+        </div>
+      </div>
+    </header>
+
+    <section id="stage-select" class="stage-select" aria-labelledby="stage-select-title">
+      <div class="stage-select-heading">
+        <div>
+          <p class="eyebrow">THEME LIBRARY</p>
+          <h2 id="stage-select-title">오늘은 어떤 세계로 떠날까요?</h2>
+          <p id="stage-select-copy">스테이지를 고르거나 아직 완료하지 않은 그림을 랜덤으로 시작하세요.</p>
+        </div>
+        <div class="stage-select-actions">
+          <a id="stage-lobby-button" class="stage-lobby-button" href="/">← 미니게임천국 로비</a>
+          <button id="random-stage-button" class="random-stage-button" type="button">랜덤 스테이지</button>
+        </div>
+      </div>
+      <fieldset id="difficulty-selector" class="difficulty-selector" aria-label="난이도 선택">
+        <legend>게임 난이도를 선택하세요</legend>
+        <div id="difficulty-options" class="difficulty-options"></div>
+      </fieldset>
+      <div id="stage-list" class="stage-list"></div>
+      <p id="stage-wait" class="stage-wait hidden">방장이 스테이지를 고르고 있어요.</p>
+    </section>
+
+    <section id="mission" class="mission hidden">
+      <div>
+        <p id="connection-status">경기에 연결하는 중…</p>
+        <div id="players" class="players"></div>
+      </div>
+      <div class="progress-wrap">
+        <div id="progress" class="progress" aria-label="발견 현황"></div>
+        <span id="progress-label">0 / 5</span>
+      </div>
+      <span id="active-rule" class="active-rule"></span>
+      <button id="stage-report-button" class="stage-report-button" type="button">판정 누락 신고</button>
+      <button id="hint-button" class="hint-button" type="button">힌트 <span id="hint-count">2</span></button>
+    </section>
+
+    <section id="stage-report-guide" class="stage-report-guide hidden" role="status">
+      <span><strong>신고할 위치를 선택해 주세요.</strong> 판정되지 않은 차이를 그림 A 또는 B에서 누르세요.</span>
+      <button id="stage-report-cancel" type="button">취소</button>
+    </section>
+
+    <section id="board" class="board hidden" aria-label="틀린그림찾기 보드">
+      <figure class="picture" data-image="a">
+        <figcaption>그림 A</figcaption>
+        <div class="image-stage"><img id="image-a" alt="틀린그림 A" draggable="false"><div class="markers"></div><div class="cursors"></div></div>
+      </figure>
+      <figure class="picture" data-image="b">
+        <figcaption>그림 B</figcaption>
+        <div class="image-stage"><img id="image-b" alt="틀린그림 B" draggable="false"><div class="markers"></div><div class="cursors"></div></div>
+      </figure>
+    </section>
+
+    <p id="game-help" class="help hidden">두 플레이어 모두 양쪽 그림을 자유롭게 오가며 누를 수 있어요. 힌트를 쓰면 표시된 위치를 직접 눌러야 정답이 됩니다.</p>
+  </main>
+
+  <div id="celebration" class="celebration hidden" aria-hidden="true"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="result" class="result hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div class="result-card">
+      <span id="result-icon" class="result-icon">✨</span>
+      <h2 id="result-title">모두 찾았어요!</h2>
+      <p id="result-copy"></p>
+      <div class="result-actions">
+        <button id="restart-button" type="button">같은 그림 다시 하기</button>
+        <button id="next-stage-button" type="button">다음 스테이지 하기</button>
+        <button id="result-random-stage-button" class="secondary" type="button">랜덤 스테이지 하기</button>
+        <button id="stage-button" class="secondary" type="button">다른 스테이지 고르기</button>
+        <button id="result-report-button" class="secondary" type="button">판정 누락 신고</button>
+        <button id="lobby-button" class="secondary" type="button">다른 종목 보기</button>
+      </div>
+    </div>
+  </div>
+  <div id="stage-report-dialog" class="stage-report-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="stage-report-title">
+    <div class="stage-report-card">
+      <p class="eyebrow">STAGE REPORT</p>
+      <h2 id="stage-report-title">이 위치를 판정 누락으로 신고할까요?</h2>
+      <p id="stage-report-location" class="stage-report-location"></p>
+      <label for="stage-report-note">추가 설명 <span>(선택)</span></label>
+      <textarea id="stage-report-note" rows="3" maxlength="500" placeholder="무엇이 다르게 보이는지 알려주세요."></textarea>
+      <div class="stage-report-actions">
+        <button id="stage-report-reselect" class="secondary" type="button">다시 선택</button>
+        <button id="stage-report-submit" type="button">이 위치 신고하기</button>
+      </div>
+    </div>
+  </div>
+  <script src="client.js" type="module"></script>
+</body>
+</html>

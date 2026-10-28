@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "autumn-alchemy-kitchen-01",
+  "status": "published",
+  "title": "단풍빛 연금술 부엌",
+  "description": "가을 향기 가득한 연금술 부엌에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "가을 연금술 부엌",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "cyan-round-bottle",
+      "label": "선반의 청록색 둥근 약병",
+      "zones": {
+        "a": {
+          "x": 0.15,
+          "y": 0.13,
+          "w": 0.065,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.15,
+          "y": 0.13,
+          "w": 0.065,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "ivory-window-pumpkin",
+      "label": "창가의 상아색 호박",
+      "zones": {
+        "a": {
+          "x": 0.675,
+          "y": 0.45,
+          "w": 0.05,
+          "h": 0.06
+        },
+        "b": {
+          "x": 0.675,
+          "y": 0.45,
+          "w": 0.05,
+          "h": 0.06
+        }
+      }
+    },
+    {
+      "id": "turquoise-cauldron-emblem",
+      "label": "가마솥의 청록색 문양",
+      "zones": {
+        "a": {
+          "x": 0.465,
+          "y": 0.55,
+          "w": 0.045,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.465,
+          "y": 0.55,
+          "w": 0.045,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "green-table-pumpkin",
+      "label": "작업대의 초록색 호박",
+      "zones": {
+        "a": {
+          "x": 0.42,
+          "y": 0.69,
+          "w": 0.06,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.42,
+          "y": 0.69,
+          "w": 0.06,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "cushion-maple-embroidery",
+      "label": "고양이 방석의 단풍잎 자수",
+      "zones": {
+        "a": {
+          "x": 0.765,
+          "y": 0.64,
+          "w": 0.065,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.765,
+          "y": 0.64,
+          "w": 0.065,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 가을 연금술 부엌. Scene: A cozy autumn alchemist kitchen with copper pots, a bubbling purple cauldron, shelves of unlabeled glass bottles, pumpkins, dried herbs, a mortar and pestle, an orange cat, leaf garlands, a round window showing autumn trees, and a wooden table.\nArt direction: premium whimsical storybook illustration, burnt orange, plum, moss green, and copper palette, crisp object silhouettes, detailed but uncluttered.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Edit the existing B image with exactly two localized corrections: remove the blue collar from the orange cat and restore natural neck fur; add one small golden embroidered maple-leaf motif to the exposed front-left area of the purple cushion beneath the cat. Preserve the exact crop, camera, geometry, lighting, palette, texture, cat pose, cushion shape and every other object. Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.",
+    "createdAt": "2026-08-19T12:02:08.777Z"
+  },
+  "publishedAt": "2026-08-20T05:33:45.486Z",
+  "collectionId": "seasonal-stories",
+  "stageType": "classic"
+}

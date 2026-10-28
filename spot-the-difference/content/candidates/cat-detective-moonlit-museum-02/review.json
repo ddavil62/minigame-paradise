@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "coral-detective-feather",
+      "label": "끝만 산호색으로 바뀐 탐정 고양이 모자 깃털",
+      "zones": {
+        "a": {
+          "x": 0.09,
+          "y": 0.29,
+          "w": 0.12,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.09,
+          "y": 0.29,
+          "w": 0.12,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "star-shield-emblem",
+      "label": "윗부분이 짧아진 파란 방패의 금빛 초승달",
+      "zones": {
+        "a": {
+          "x": 0.06,
+          "y": 0.11,
+          "w": 0.11,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.06,
+          "y": 0.11,
+          "w": 0.11,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "missing-ruby-gemstone",
+      "label": "받침 리벳이 사라진 오른쪽 붉은 보석",
+      "zones": {
+        "a": {
+          "x": 0.57,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.57,
+          "y": 0.46,
+          "w": 0.075,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-owl-top-hat",
+      "label": "금빛 버클이 사라진 부엉이의 보라색 모자",
+      "zones": {
+        "a": {
+          "x": 0.77,
+          "y": 0.045,
+          "w": 0.075,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.77,
+          "y": 0.045,
+          "w": 0.075,
+          "h": 0.11
+        }
+      }
+    },
+    {
+      "id": "round-suitcase-clasp",
+      "label": "가운데만 둥글어진 조수 가방의 마름모 잠금장치",
+      "zones": {
+        "a": {
+          "x": 0.695,
+          "y": 0.87,
+          "w": 0.055,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.695,
+          "y": 0.87,
+          "w": 0.055,
+          "h": 0.09
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2859221,
+        "hash": "da0ed26c69738f1019c9651baa337c950ad38fabf749d7674e8a05df8caa3d39",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2516314,
+        "hash": "61f9ff3f700d634caa675656a9a8a3a88fa31dbcf84ee9cff5ccf594e0224c34",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T10:31:27.609Z"
+}

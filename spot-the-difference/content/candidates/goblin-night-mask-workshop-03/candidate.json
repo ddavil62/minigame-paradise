@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "goblin-night-mask-workshop-03",
+  "status": "published",
+  "title": "달빛 도깨비 탈 공방",
+  "description": "달빛이 스미는 도깨비 탈 공방에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "도깨비 마을의 달빛 탈 공방",
+  "collectionId": "goblin-night-village",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "turquoise-mask-feather",
+      "label": "청록색으로 바뀐 도깨비 탈의 깃털",
+      "zones": {
+        "a": {
+          "x": 0.04,
+          "y": 0.07,
+          "w": 0.06,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.04,
+          "y": 0.07,
+          "w": 0.06,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "missing-brush",
+      "label": "하나 줄어든 붓꽂이의 붓",
+      "zones": {
+        "a": {
+          "x": 0.215,
+          "y": 0.515,
+          "w": 0.05,
+          "h": 0.39
+        },
+        "b": {
+          "x": 0.215,
+          "y": 0.515,
+          "w": 0.05,
+          "h": 0.39
+        }
+      }
+    },
+    {
+      "id": "purple-mask-bow",
+      "label": "보라색으로 바뀐 탈의 리본",
+      "zones": {
+        "a": {
+          "x": 0.385,
+          "y": 0.59,
+          "w": 0.2,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.385,
+          "y": 0.59,
+          "w": 0.2,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "flower-drum-motif",
+      "label": "꽃 모양으로 바뀐 북의 문양",
+      "zones": {
+        "a": {
+          "x": 0.815,
+          "y": 0.645,
+          "w": 0.135,
+          "h": 0.23
+        },
+        "b": {
+          "x": 0.815,
+          "y": 0.645,
+          "w": 0.135,
+          "h": 0.23
+        }
+      }
+    },
+    {
+      "id": "missing-wind-bell-chime",
+      "label": "하나 줄어든 풍경의 금빛 조각",
+      "zones": {
+        "a": {
+          "x": 0.805,
+          "y": 0.235,
+          "w": 0.045,
+          "h": 0.21
+        },
+        "b": {
+          "x": 0.805,
+          "y": 0.235,
+          "w": 0.045,
+          "h": 0.21
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 도깨비 마을의 달빛 탈 공방. Scene: A charming Korean folklore fantasy mask workshop at night, viewed straight-on from a comfortable medium-wide angle inside an open-sided traditional hanok studio. A round full moon and deep indigo sky are visible beyond wooden lattice windows. At the upper-left, one large finished wooden goblin mask hangs on the wall with exactly one clearly visible coral-red feather tucked above its left brow. In the lower-left foreground, a low rectangular brush stand holds exactly five large, clearly separated upright paintbrushes in one neat row. At center, a friendly rounded artisan goblin paints a large cream-colored wooden mask resting on a stand; one wide jade-green ribbon is tied in a large bow beneath that mask. In the lower-right foreground, one round hand drum leans toward the viewer with one large simple cobalt-blue crescent motif painted in its center. At the upper-right, one large bronze wind bell hangs from a beam with exactly three clearly separated gold chime strips dangling below it. Include the recurring small friendly blue-robed goblin guide holding a softly glowing crescent lantern, plus plain pigment bowls, folded hanji paper, carved wooden blanks, shelves, and warm paper lanterns only as supporting atmosphere. Keep the red feather, five brushes, jade bow, drum motif, and three wind-bell chime strips large, unobstructed, spatially separated, and away from the outer 3% safe margin. Do not include any readable writing, letters, numbers, seals, or calligraphy..\nArt direction: original premium Korean folklore storybook game illustration inspired by the warmth, flat decorative rhythm, and tactile paper quality of traditional Korean folk painting without copying any specific artwork or artist; clean expressive ink contours, soft cel shading, subtle hanji paper texture, polished animated-feature background quality, friendly rounded goblins, crisp object silhouettes, cohesive deep indigo, moonlit cream, warm amber, dancheong teal, coral red, muted jade, cobalt blue, and gold palette.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change the clearly visible coral-red feather on the upper-left wooden goblin mask to turquoise blue, 2) remove exactly one paintbrush from the lower-left brush stand so four remain, 3) change only the large jade-green bow beneath the center cream mask to purple, 4) change the cobalt-blue crescent motif in the center of the lower-right hand drum into a cobalt-blue five-petal flower of similar size, 5) remove exactly one gold chime strip from the upper-right bronze wind bell so two remain. Preserve every goblin, all masks, pigment bowls, paper, shelves, lanterns, hanok, full moon, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T08:40:42.444Z"
+  },
+  "publishedAt": "2026-08-21T08:45:34.160Z"
+}

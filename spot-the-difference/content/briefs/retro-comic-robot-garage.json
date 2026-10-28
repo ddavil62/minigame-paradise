@@ -1,0 +1,17 @@
+{
+  "id": "retro-comic-robot-garage-01",
+  "title": "팝! 로봇 정비소",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 로봇 정비소에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 로봇 정비소",
+  "scene": "A playful retro-futurist robot repair garage seen straight-on at eye level. A friendly rounded tin robot stands at the center with a circular chest light. Around it are a red rocket scooter with two mirrors, a wall-mounted tool board with large separated tools including one red wrench, a cream starburst wall clock without numbers, a chunky tabletop radio with no lettering, an oil can, stacked tires, a black cat without a collar sitting on a yellow stool, checkerboard floor tiles, pipes, and a round window showing a simple city skyline. Keep every prop large, distinct, fully visible, and spatially separated.",
+  "style": "original 1960s-inspired retro comic-book pop art, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, cream, and black palette; not a modern glossy storybook illustration",
+  "changeGuidance": "Make exactly these five localized changes only: change the robot circular chest light from yellow to red; remove only the left mirror from the rocket scooter; change the large red wrench on the wall tool board to cyan blue; remove one ray from the cream starburst wall clock; add a small green collar to the black cat. Preserve every other object, halftone pattern, ink line, camera angle, color, and lighting exactly.",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "style-lab",
+  "stageType": "classic"
+}

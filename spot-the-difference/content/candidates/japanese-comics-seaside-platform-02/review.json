@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "red-traveler-scarf",
+      "label": "붉은색으로 바뀐 여행자의 목도리",
+      "zones": {
+        "a": {
+          "x": 0.35,
+          "y": 0.18,
+          "w": 0.18,
+          "h": 0.32
+        },
+        "b": {
+          "x": 0.35,
+          "y": 0.18,
+          "w": 0.18,
+          "h": 0.32
+        }
+      }
+    },
+    {
+      "id": "missing-bicycle-basket",
+      "label": "사라진 자전거 앞바구니",
+      "zones": {
+        "a": {
+          "x": 0.035,
+          "y": 0.49,
+          "w": 0.125,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.035,
+          "y": 0.49,
+          "w": 0.125,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "reversed-cat-tail",
+      "label": "방향이 바뀐 고양이 꼬리",
+      "zones": {
+        "a": {
+          "x": 0.575,
+          "y": 0.82,
+          "w": 0.125,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.575,
+          "y": 0.82,
+          "w": 0.125,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "missing-yellow-flower",
+      "label": "한 송이 사라진 노란 꽃",
+      "zones": {
+        "a": {
+          "x": 0.255,
+          "y": 0.71,
+          "w": 0.15,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.255,
+          "y": 0.71,
+          "w": 0.15,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "amber-signal-lamp",
+      "label": "주황빛으로 바뀐 신호등",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.18,
+          "w": 0.055,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.18,
+          "w": 0.055,
+          "h": 0.12
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3154555,
+        "hash": "1c688fd395d641396d196c98319153de45541ce9b18a33ddc0f87e2aad76fe83",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 4081184,
+        "hash": "0de8f17b90c4159f6ce672baa8f18ff769c67a1495819cbc5e23102e35d900fc",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T04:28:08.300Z"
+}

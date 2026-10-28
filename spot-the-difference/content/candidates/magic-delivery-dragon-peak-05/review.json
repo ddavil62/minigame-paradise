@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "swallowtail-summit-flag",
+      "label": "끝에 작은 홈이 생긴 정상 깃발",
+      "zones": {
+        "a": {
+          "x": 0.29,
+          "y": 0.045,
+          "w": 0.12,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.29,
+          "y": 0.045,
+          "w": 0.12,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "round-silver-boot-buckle",
+      "label": "가운데만 둥글어진 배달부 부츠 버클",
+      "zones": {
+        "a": {
+          "x": 0.255,
+          "y": 0.705,
+          "w": 0.07,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.255,
+          "y": 0.705,
+          "w": 0.07,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "overhand-loop-rope-knot",
+      "label": "매듭 옆 끝부분이 짧아진 파란 등산 로프",
+      "zones": {
+        "a": {
+          "x": 0.49,
+          "y": 0.79,
+          "w": 0.19,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.49,
+          "y": 0.79,
+          "w": 0.19,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "turquoise-star-parcel-seal",
+      "label": "가운데만 청록색 별인 소포 봉인",
+      "zones": {
+        "a": {
+          "x": 0.585,
+          "y": 0.63,
+          "w": 0.105,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.585,
+          "y": 0.63,
+          "w": 0.105,
+          "h": 0.16
+        }
+      }
+    },
+    {
+      "id": "yellow-diamond-dragon-pendant",
+      "label": "가운데만 노란 마름모인 아기 용 목걸이",
+      "zones": {
+        "a": {
+          "x": 0.58,
+          "y": 0.455,
+          "w": 0.08,
+          "h": 0.13
+        },
+        "b": {
+          "x": 0.58,
+          "y": 0.455,
+          "w": 0.08,
+          "h": 0.13
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3328698,
+        "hash": "1e9f6c37fa072a5871c9e4ebca92f0f5e026b62f6f15b3cac9559676ae27996e",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 3199632,
+        "hash": "136a190661bb2d4d5eee28ee17c7e997d218e7739ff27301656c1079714b37e2",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T12:59:04.550Z"
+}

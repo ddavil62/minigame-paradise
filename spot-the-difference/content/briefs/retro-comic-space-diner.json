@@ -1,0 +1,17 @@
+{
+  "id": "retro-comic-space-diner-02",
+  "title": "팝! 우주 배달 식당",
+  "description": "강렬한 망점과 잉크선으로 그린 복고풍 우주 식당에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "레트로 만화 우주 배달 식당",
+  "scene": "A playful retro-futurist space diner seen straight-on at eye level. A friendly three-eyed alien server stands behind a curved cream counter wearing a plain mustard apron without a pocket. Around the diner are a red rocket-shaped hanging sign with three round portholes and a nose pointing right, a cyan jukebox with three yellow circular lights, a glass cake dome holding one pink frosted cake topped with exactly three red cherries, two large milkshake glasses, a checkerboard floor, red vinyl stools, a small tabletop napkin holder, wall pipes, and a wide round window showing one large ringed planet and three small stars. Keep every prop large, distinct, fully visible, and spatially separated. Do not include any readable menu, labels, lettering, or numbers.",
+  "style": "original 1960s-inspired retro comic-book pop art matching a vintage offset-printed sci-fi comic, bold black ink contours, flat cel colors, visible halftone dot shading, slightly imperfect offset print registration, dynamic but clean shapes, limited mustard yellow, tomato red, cyan blue, cream, pink, and black palette; not a modern glossy storybook illustration",
+  "changeGuidance": "Make exactly these five localized changes only: change the rocket sign's nose cone from red to cyan blue; add one small red pocket to the alien server's mustard apron; change the jukebox's center circular light from yellow to pink; remove exactly one cherry from the cake so two remain; remove exactly one of the three small stars beside the ringed planet. Preserve every other object, halftone pattern, ink line, camera angle, color, and lighting exactly.",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "style-lab",
+  "stageType": "classic"
+}

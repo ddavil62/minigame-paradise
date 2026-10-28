@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "id": "dragon-academy-potion-lab-03",
+  "status": "published",
+  "title": "별빛 물약 실험 수업",
+  "description": "구름 위 마법학교의 반짝이는 물약 실험실에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+  "theme": "꼬마 용 마법학교 대모험 — 별빛 물약 실험 수업",
+  "collectionId": "dragon-academy",
+  "stageType": "speed",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b-balanced.png",
+  "durationMs": 75000,
+  "missPenaltyMs": 7000,
+  "hintPenaltyMs": 12000,
+  "maxHints": 1,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "purple-potion-cork",
+      "label": "보라색으로 바뀐 노란 물약병의 마개",
+      "zones": {
+        "a": {
+          "x": 0.12,
+          "y": 0.075,
+          "w": 0.1,
+          "h": 0.22
+        },
+        "b": {
+          "x": 0.12,
+          "y": 0.075,
+          "w": 0.1,
+          "h": 0.22
+        }
+      }
+    },
+    {
+      "id": "silver-crescent-badge",
+      "label": "은색으로 바뀐 아기 용 모자의 초승달 장식",
+      "zones": {
+        "a": {
+          "x": 0.44,
+          "y": 0.235,
+          "w": 0.085,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.44,
+          "y": 0.235,
+          "w": 0.085,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "four-point-cauldron-star",
+      "label": "네 갈래로 바뀐 가마솥의 청록색 별 문양",
+      "zones": {
+        "a": {
+          "x": 0.15,
+          "y": 0.705,
+          "w": 0.09,
+          "h": 0.135
+        },
+        "b": {
+          "x": 0.15,
+          "y": 0.705,
+          "w": 0.09,
+          "h": 0.135
+        }
+      }
+    },
+    {
+      "id": "blue-right-scale-crystal",
+      "label": "파란색으로 바뀐 저울의 오른쪽 수정",
+      "zones": {
+        "a": {
+          "x": 0.745,
+          "y": 0.275,
+          "w": 0.05,
+          "h": 0.095
+        },
+        "b": {
+          "x": 0.745,
+          "y": 0.275,
+          "w": 0.05,
+          "h": 0.095
+        }
+      }
+    },
+    {
+      "id": "triangular-spellbook-clasp",
+      "label": "삼각형으로 바뀐 주문서 잠금장치의 청록색 장식",
+      "zones": {
+        "a": {
+          "x": 0.865,
+          "y": 0.775,
+          "w": 0.06,
+          "h": 0.085
+        },
+        "b": {
+          "x": 0.865,
+          "y": 0.775,
+          "w": 0.06,
+          "h": 0.085
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 꼬마 용 마법학교 대모험 — 별빛 물약 실험 수업. Scene: A cheerful potion-brewing classroom inside the same whimsical dragon academy high above the clouds, viewed straight-on from a comfortable medium-wide angle. Tall arched windows reveal a clear blue sky and soft clouds; cream stone walls, dark-teal beams, antique-brass pipes, plum-purple blank pennants, wooden shelves, and organized worktables create a cozy magical laboratory. At center, the recurring friendly young red baby dragon stands fully visible behind a low cream worktable and wears one oversized plum-purple pointed wizard hat whose broad front bears one large antique-gold crescent-moon badge. At upper left, exactly three large round potion bottles sit in a straight row on an isolated cream shelf: vivid turquoise, sunflower yellow, and coral red from left to right; each bottle has the same plain cork and no label. At lower left, one large cobalt-blue cauldron stands front-facing on a clear brass trivet; its cream oval front panel bears one oversized vivid-turquoise five-point-star emblem. At upper right, one large antique-brass balance scale is fully visible against a simple pale wall; its left pan contains exactly two large separate plum-purple crystal gems while its right pan is empty. At lower right, one large closed natural-leather spellbook lies alone on a cream table, facing the viewer; it has one oversized vivid-turquoise diamond-shaped clasp centered on its front edge and a blank cover with no markings. The gentle owl teacher in a deep-teal robe supervises from the far left, and a small mouse apprentice with round brass goggles stirs a plain glass beaker near the right table. Add blank jars, wooden spoons, coiled hose, folded cloths, tiny golden sparkles, and small cloud puffs only as supporting atmosphere. Keep the yellow center potion bottle, gold crescent badge, turquoise cauldron star, two purple scale crystals, and turquoise diamond book clasp large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, runes, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established dragon-academy hatchery and cloud-flight stages, with a cozy magical-school atmosphere, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded fantasy creatures, crisp object silhouettes, cohesive sky blue, deep teal, cream, antique gold, plum purple, sunflower yellow, coral red, vivid turquoise, and cobalt blue palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the sunflower-yellow liquid in the middle bottle of the upper-left row of exactly three large potion bottles to bright emerald green while preserving the bottle, cork, glass, shape, size, and position, 2) change only the oversized antique-gold crescent-moon badge on the center red baby dragon's plum-purple wizard hat into one antique-gold five-point-star badge of similar size while preserving the hat and dragon, 3) change only the oversized vivid-turquoise five-point-star emblem on the lower-left cobalt-blue cauldron's cream oval panel into one bright coral-red heart emblem of similar size while preserving the cauldron, panel, trivet, and steam, 4) remove exactly one of the two large plum-purple crystal gems from the left pan of the upper-right antique-brass balance scale so exactly one crystal remains while preserving the entire scale, both pans, balance, and position, 5) change only the oversized vivid-turquoise diamond-shaped clasp centered on the lower-right closed spellbook's front edge into one sunflower-yellow circular clasp of similar size while preserving the book, cover, pages, table, and position. Preserve every character, face, body, wing, paw, pose, window, cloud, wall, beam, pipe, shelf, table, bottle, tool, jar, beaker, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-22T00:23:16.013Z"
+  },
+  "difficultyRevision": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "asset": "image-b-balanced.png",
+    "prompt": "Using image A as the edit target, preserve the composition and make exactly five clearly visible medium-small differences: a purple cork on the yellow potion bottle, a silver crescent badge, a turquoise four-point cauldron star, a blue right-hand scale crystal, and a turquoise triangular spellbook clasp.",
+    "createdAt": "2026-08-22T03:05:00.000Z"
+  },
+  "publishedAt": "2026-08-22T00:28:18.319Z"
+}

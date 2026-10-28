@@ -1,0 +1,6 @@
+Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.
+Preserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.
+Make exactly 5 localized, clearly visible object-level changes distributed across the scene.
+Use changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.
+Do not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Requested change guidance: Make exactly five localized changes: change the golden crescent emblem at the top center of the proscenium into a full moon disk, remove the purple tassel from the left crescent lantern, remove the blue feather from the fox magician puppet's hat, change the rabbit puppet's red bow tie to emerald green, and remove the crank from the brass music box on the front prop table. Preserve everything else exactly.

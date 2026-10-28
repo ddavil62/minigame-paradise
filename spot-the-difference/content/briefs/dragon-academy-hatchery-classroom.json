@@ -1,0 +1,17 @@
+{
+  "id": "dragon-academy-hatchery-classroom-01",
+  "title": "아기 용 부화 교실",
+  "description": "구름 위 마법 학교의 따뜻한 부화 교실에서 아기 용과 견습생들 사이 다섯 가지 변화를 찾아보세요.",
+  "theme": "꼬마 용 마법학교 대모험 — 아기 용 부화 교실",
+  "scene": "A cozy whimsical dragon academy hatchery classroom high above the clouds at sunrise, viewed straight-on from a comfortable medium-wide angle. Warm golden light enters through tall arched windows into an orderly circular stone classroom with dark teal roof beams, antique-brass fixtures, cream plaster, and plum-purple banners with no writing. At upper center, one large antique-gold dragon egg rests alone in a brass warming cradle; the egg has exactly three large vivid-turquoise diamond spots arranged vertically and clearly visible. At lower center, the recurring friendly young red baby dragon sits fully visible on a round cream cushion and wears one oversized cobalt-blue bow tie. At lower left, a cheerful mouse apprentice in a deep teal robe holds one large coral-red magic wand whose tip is a simple five-point star. At upper right, exactly four large sunflower-yellow potion bottles stand in one straight row on an isolated pale shelf, clearly separated with empty space between them. At lower right, one large round plum-purple cauldron is fully visible; its cream front medallion bears one oversized vivid-turquoise crescent-moon emblem. Include one gentle owl teacher, two additional small dragon eggs without spots, blank books, folded blankets, plain jars, clouds beyond the windows, and tiny golden sparkles only as supporting atmosphere. Keep the three egg spots, blue bow tie, coral star wand tip, four yellow bottles, and turquoise cauldron emblem large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, runes, logos, or clock numerals.",
+  "style": "original premium whimsical European storybook game illustration with a cozy magical-school atmosphere, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded fantasy creatures, crisp object silhouettes, cohesive dawn blue, deep teal, cream, antique gold, plum purple, sunflower yellow, coral red, vivid turquoise, and cobalt blue palette, not imitating any specific artist or franchise",
+  "collectionId": "dragon-academy",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make exactly five subtle but still discoverable localized changes for a hard puzzle: 1) remove only the thin circular rim around the viewer-right eyeglass lens of the owl teacher, 2) flip only the internal highlight direction of the middle turquoise diamond motif on the large golden egg, 3) remove only the thin middle horizontal ring from the gold stopper of the second potion bottle from the left, 4) remove only the short inner membrane crease line inside the red baby dragon's viewer-right wing, 5) change only the tiny inward curl at the tip of the purple cauldron's viewer-right handle into a smooth blunt rounded tip. Preserve all object counts, colors, silhouettes, positions, characters, faces, anatomy, camera, crop, lighting, palette, texture, and every other detail exactly. Do not make any additional changes."
+}

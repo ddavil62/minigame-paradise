@@ -1,0 +1,17 @@
+{
+  "id": "cat-detective-rainy-office-01",
+  "title": "빗소리 고양이 탐정 사무소",
+  "description": "비 내리는 밤, 고양이 탐정단의 아늑한 사무소에 숨은 다섯 가지 차이를 찾아보세요.",
+  "theme": "고양이 탐정단의 비 오는 밤 사무소",
+  "scene": "A cozy whimsical animal detective office on a rainy night, viewed straight-on from a comfortable medium-wide angle. A large rain-streaked window fills the center background, showing soft teal city lights without readable signs. At the lower-left, one friendly orange tabby detective cat in a cream trench coat stands beside a wooden desk; the cat wears exactly one large emerald-green bow tie. On the upper-left wall, one prominent round brass evidence clock has two black hands set in a clear V shape and exactly one small coral-red bird ornament perched on top. At center, a broad dark-wood desk holds a large cream case folder with no writing, a brass magnifying glass, and exactly five clearly separated cobalt-blue glass marbles arranged in one neat row. At the upper-right, one tall coat stand holds a bright yellow umbrella with a large curved handle pointing left. In the lower-right foreground, a friendly gray mouse assistant carries one teal messenger bag with exactly one large gold five-point star buckle centered on its flap. Add a green-shaded desk lamp, plain pinned photographs without text, a rotary telephone, stacked blank folders, a steaming mug, filing drawers, a sleeping cream kitten, rain puddle reflections, and warm amber lamps only as supporting atmosphere. Keep the emerald bow tie, coral bird ornament, five blue marbles, yellow umbrella handle, and gold star bag buckle large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, or numbers.",
+  "style": "original premium cozy mystery storybook game illustration, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, charming rounded animal characters, crisp object silhouettes, cinematic rainy-window atmosphere, cohesive midnight navy, rain teal, warm amber, cream, coral red, cobalt blue, emerald green, and sunny yellow palette, not imitating any specific artist or franchise",
+  "collectionId": "cat-detective-agency",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change only the orange tabby detective cat's large emerald-green bow tie at lower-left to purple while preserving its shape and position, 2) remove only the small coral-red bird ornament from the top of the upper-left brass evidence clock while preserving the clock, 3) remove exactly one cobalt-blue glass marble from the row on the center desk so four remain, 4) flip only the upper-right yellow umbrella's large curved handle so it points right instead of left while preserving the umbrella and coat stand, 5) change only the gold five-point star buckle on the gray mouse assistant's lower-right teal messenger bag into a gold round buckle of similar size. Preserve every character, desk, window, rain, city lights, clock hands, magnifying glass, folder, lamp, telephone, photographs, drawers, kitten, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes."
+}

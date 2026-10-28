@@ -1,0 +1,6 @@
+Create image A for a premium cooperative spot-the-difference game.
+Landscape 3:2 composition, fixed camera, richly detailed but visually readable.
+Theme: 하늘 공방. Scene: An open-air fantasy airship workshop on a floating island above the clouds, with a small wooden airship, brass propellers, tool benches, ropes, gears, colorful pennants without symbols, crates, goggles, and distant floating islands.
+Art direction: premium whimsical storybook illustration, bright sky blue and warm brass palette, crisp object silhouettes, detailed but uncluttered.
+Do not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.
+Keep important objects away from the outer 3% safe margin.

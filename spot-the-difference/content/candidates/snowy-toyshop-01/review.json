@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "쉬움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "blue-dollhouse-roof",
+      "label": "인형의 집 지붕 색",
+      "zones": {
+        "a": {
+          "x": 0.735,
+          "y": 0.065,
+          "w": 0.125,
+          "h": 0.105
+        },
+        "b": {
+          "x": 0.735,
+          "y": 0.065,
+          "w": 0.125,
+          "h": 0.105
+        }
+      }
+    },
+    {
+      "id": "purple-train-car",
+      "label": "보라색 기차 객차",
+      "zones": {
+        "a": {
+          "x": 0.72,
+          "y": 0.31,
+          "w": 0.075,
+          "h": 0.07
+        },
+        "b": {
+          "x": 0.72,
+          "y": 0.31,
+          "w": 0.075,
+          "h": 0.07
+        }
+      }
+    },
+    {
+      "id": "missing-counter-top",
+      "label": "계산대 위 팽이",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.465,
+          "w": 0.075,
+          "h": 0.09
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.465,
+          "w": 0.075,
+          "h": 0.09
+        }
+      }
+    },
+    {
+      "id": "purple-present",
+      "label": "보라색 선물 상자",
+      "zones": {
+        "a": {
+          "x": 0.59,
+          "y": 0.7,
+          "w": 0.13,
+          "h": 0.17
+        },
+        "b": {
+          "x": 0.59,
+          "y": 0.7,
+          "w": 0.13,
+          "h": 0.17
+        }
+      }
+    },
+    {
+      "id": "teddy-scarf",
+      "label": "곰 인형의 목도리",
+      "zones": {
+        "a": {
+          "x": 0.65,
+          "y": 0.37,
+          "w": 0.095,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.65,
+          "y": 0.37,
+          "w": 0.095,
+          "h": 0.16
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2843845,
+        "hash": "8e44decd190351775ba845de42a15176ab7114de6b4eaa8e12f37390edc786f0",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2649729,
+        "hash": "db1bab5f035e689b37d97b171d5e63d57a84b0913a9c373cc929a5d134f86788",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-21T04:38:48.128Z"
+}

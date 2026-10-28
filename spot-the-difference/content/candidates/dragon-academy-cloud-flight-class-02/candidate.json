@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "dragon-academy-cloud-flight-class-02",
+  "status": "published",
+  "title": "구름 운동장 비행 수업",
+  "description": "구름 위 마법학교의 야외 운동장에서 아기 용들의 신나는 비행 수업 속 다섯 가지 변화를 찾아보세요.",
+  "theme": "꼬마 용 마법학교 대모험 — 구름 운동장 비행 수업",
+  "collectionId": "dragon-academy",
+  "stageType": "classic",
+  "difficulty": "어려움",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "turquoise-owl-clasp",
+      "label": "청록색 마름모로 바뀐 부엉이 선생님의 망토 고리",
+      "zones": {
+        "a": { "x": 0.145, "y": 0.285, "w": 0.065, "h": 0.08 },
+        "b": { "x": 0.145, "y": 0.285, "w": 0.065, "h": 0.08 }
+      }
+    },
+    {
+      "id": "missing-left-hoop-finial",
+      "label": "꼭대기 장식이 사라진 왼쪽 비행 고리",
+      "zones": {
+        "a": { "x": 0.335, "y": 0.045, "w": 0.055, "h": 0.07 },
+        "b": { "x": 0.335, "y": 0.045, "w": 0.055, "h": 0.07 }
+      }
+    },
+    {
+      "id": "ivory-red-dragon-horn-tip",
+      "label": "상아색으로 바뀐 붉은 아기 용의 뿔 끝",
+      "zones": {
+        "a": { "x": 0.445, "y": 0.285, "w": 0.085, "h": 0.11 },
+        "b": { "x": 0.445, "y": 0.285, "w": 0.085, "h": 0.11 }
+      }
+    },
+    {
+      "id": "silver-blue-dragon-horns",
+      "label": "은빛으로 바뀐 파란 아기 용의 두 뿔",
+      "zones": {
+        "a": { "x": 0.68, "y": 0.54, "w": 0.07, "h": 0.1 },
+        "b": { "x": 0.68, "y": 0.54, "w": 0.07, "h": 0.1 }
+      }
+    },
+    {
+      "id": "teal-mouse-helmet-button",
+      "label": "청록색으로 바뀐 생쥐 기록원의 헬멧 단추",
+      "zones": {
+        "a": { "x": 0.21, "y": 0.69, "w": 0.06, "h": 0.1 },
+        "b": { "x": 0.21, "y": 0.69, "w": 0.06, "h": 0.1 }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 꼬마 용 마법학교 대모험 — 구름 운동장 비행 수업. Scene: A cheerful outdoor flight-training courtyard at the same whimsical dragon academy high above the clouds on a clear blue morning, viewed straight-on from a comfortable medium-wide angle. Cream stone towers, dark teal roofs, antique-brass railings, pale cloud banks, and plum-purple blank pennants frame an orderly open training field. At center, the recurring friendly young red baby dragon flies low and fully visible with open wings, wearing one oversized flowing cobalt-blue scarf. At upper left, the gentle owl teacher stands on a small cream stone platform and holds one large coral-red triangular signal flag on a short wooden pole, isolated against a simple pale cloud area. At upper center, exactly three large antique-gold circular flight hoops float in one straight horizontal row, clearly separated with open sky between them. At upper right, one large pale-blue windsock hangs fully visible from a brass pole and has exactly three broad sunflower-yellow horizontal stripes. At lower right, one large natural-wood equipment chest stands front-facing; its cream front panel bears one oversized vivid-turquoise five-point-star emblem. Include two small background baby dragons waiting calmly, one mouse apprentice with a blank clipboard, plain helmets, folded practice mats, small cloud puffs, and tiny golden sparkles only as supporting atmosphere. Keep the blue scarf, coral triangular flag, three gold hoops, three windsock stripes, and turquoise chest star large, crisp, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, runes, logos, or clock numerals..\nArt direction: original premium whimsical European storybook game illustration matching the established dragon-academy hatchery stage, with a cozy magical-school atmosphere, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded fantasy creatures, crisp object silhouettes, cohesive sky blue, deep teal, cream, antique gold, plum purple, sunflower yellow, coral red, vivid turquoise, and cobalt blue palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the oversized flowing cobalt-blue scarf on the center red baby dragon to bright sunflower yellow while preserving its exact shape, folds, size, and position, 2) change only the large coral-red triangular signal flag held by the upper-left owl teacher into a coral-red square flag of similar area while preserving the pole and teacher, 3) remove exactly the middle hoop from the upper-center straight row of exactly three antique-gold circular flight hoops so exactly two hoops remain in their original outer positions, 4) remove exactly the middle sunflower-yellow stripe from the upper-right pale-blue windsock so exactly two yellow stripes remain while preserving the windsock, pole, direction, shape, and color, 5) change only the oversized vivid-turquoise five-point-star emblem on the lower-right equipment chest's cream panel into one bright plum-purple crescent-moon emblem of similar size while preserving the chest and panel. Preserve every character, face, body, wing, pose, tower, roof, railing, cloud, pennant, platform, helmet, mat, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "hardening": {
+      "provider": "codex-subscription-imagegen",
+      "model": "built-in-imagegen",
+      "prompt": "Create a harder B image with exactly five small localized changes: owl cloak clasp, left hoop finial, red dragon horn band, blue dragon horn tip, and mouse helmet button. Preserve all large focal objects and every unedited detail.",
+      "createdAt": "2026-08-22T01:30:33.000Z"
+    },
+    "createdAt": "2026-08-21T15:59:32.766Z"
+  },
+  "publishedAt": "2026-08-21T16:02:25.909Z"
+}

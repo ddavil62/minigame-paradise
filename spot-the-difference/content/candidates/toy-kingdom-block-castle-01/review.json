@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "missing-middle-castle-crenellation",
+      "label": "가운데 톱니가 사라진 성문 꼭대기 블록",
+      "zones": {
+        "a": {
+          "x": 0.37,
+          "y": 0.07,
+          "w": 0.245,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.37,
+          "y": 0.07,
+          "w": 0.245,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "flipped-crescent-soldier-shield",
+      "label": "방향이 반대로 바뀐 병정 방패의 청록 초승달",
+      "zones": {
+        "a": {
+          "x": 0.22,
+          "y": 0.59,
+          "w": 0.12,
+          "h": 0.24
+        },
+        "b": {
+          "x": 0.22,
+          "y": 0.59,
+          "w": 0.12,
+          "h": 0.24
+        }
+      }
+    },
+    {
+      "id": "missing-rabbit-vest-button",
+      "label": "하나가 사라진 토끼 악사의 조끼 단추",
+      "zones": {
+        "a": {
+          "x": 0.56,
+          "y": 0.53,
+          "w": 0.13,
+          "h": 0.15
+        },
+        "b": {
+          "x": 0.56,
+          "y": 0.53,
+          "w": 0.13,
+          "h": 0.15
+        }
+      }
+    },
+    {
+      "id": "missing-elephant-saddle-stud",
+      "label": "노란 테두리가 사라진 양철 코끼리 안장",
+      "zones": {
+        "a": {
+          "x": 0.31,
+          "y": 0.55,
+          "w": 0.08,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.31,
+          "y": 0.55,
+          "w": 0.08,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "dark-teal-cart-garland-bead",
+      "label": "짙은 청록색으로 바뀐 수레 구슬 하나",
+      "zones": {
+        "a": {
+          "x": 0.68,
+          "y": 0.71,
+          "w": 0.21,
+          "h": 0.11
+        },
+        "b": {
+          "x": 0.68,
+          "y": 0.71,
+          "w": 0.21,
+          "h": 0.11
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2949569,
+        "hash": "925268cc0f8afc1ed62c63e7a8fce3801d5ce637c62961032a88e1af91cfd231",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2867465,
+        "hash": "a0f49c7a6ce9c5c0a888b69ad58d0fd29debedb2726de844886949bf5996c6b1",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T13:56:55.521Z"
+}

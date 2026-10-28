@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "animal-detectives-moonlit-lighthouse-05",
+  "status": "published",
+  "title": "달빛 등대의 마지막 신호",
+  "description": "폭풍이 지나간 달빛 등대의 지도실에서 여우 탐정과 토끼 조수가 사라진 항로 지도의 마지막 다섯 단서를 찾아냅니다.",
+  "theme": "동물 탐정단의 달빛 등대 지도실 최종 수사",
+  "collectionId": "animal-detectives",
+  "stageType": "relaxed",
+  "difficulty": "보통",
+  "imageA": "image-a.png",
+  "imageB": "image-b.png",
+  "durationMs": 120000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "differenceTarget": 5,
+  "differences": [
+    {
+      "id": "green-compass-needle",
+      "label": "초록색으로 바뀐 벽 나침반 바늘",
+      "zones": {
+        "a": {
+          "x": 0.09,
+          "y": 0.075,
+          "w": 0.07,
+          "h": 0.205
+        },
+        "b": {
+          "x": 0.09,
+          "y": 0.075,
+          "w": 0.07,
+          "h": 0.205
+        }
+      }
+    },
+    {
+      "id": "missing-teal-pennant",
+      "label": "사라진 청록색 사각 신호기",
+      "zones": {
+        "a": {
+          "x": 0.525,
+          "y": 0.105,
+          "w": 0.12,
+          "h": 0.205
+        },
+        "b": {
+          "x": 0.525,
+          "y": 0.105,
+          "w": 0.12,
+          "h": 0.205
+        }
+      }
+    },
+    {
+      "id": "blue-center-sail",
+      "label": "파란색으로 바뀐 모형 배의 가운데 돛",
+      "zones": {
+        "a": {
+          "x": 0.405,
+          "y": 0.34,
+          "w": 0.105,
+          "h": 0.34
+        },
+        "b": {
+          "x": 0.405,
+          "y": 0.34,
+          "w": 0.105,
+          "h": 0.34
+        }
+      }
+    },
+    {
+      "id": "star-lantern-window",
+      "label": "별 모양으로 바뀐 등대지기의 신호등 창",
+      "zones": {
+        "a": {
+          "x": 0.745,
+          "y": 0.36,
+          "w": 0.105,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.745,
+          "y": 0.36,
+          "w": 0.105,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "yellow-telescope-eyepiece",
+      "label": "노란색으로 바뀐 망원경 렌즈",
+      "zones": {
+        "a": {
+          "x": 0.635,
+          "y": 0.585,
+          "w": 0.075,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.635,
+          "y": 0.585,
+          "w": 0.075,
+          "h": 0.16
+        }
+      }
+    }
+  ],
+  "generation": {
+    "provider": "codex-subscription-imagegen",
+    "model": "built-in-imagegen",
+    "attempt": 1,
+    "promptA": "Create image A for a premium cooperative spot-the-difference game.\nLandscape 3:2 composition, fixed camera, richly detailed but visually readable.\nTheme: 동물 탐정단의 달빛 등대 지도실 최종 수사. Scene: A grand whimsical 1930s lighthouse chart room on a calm moonlit night just after a storm, viewed straight-on from a comfortable medium-wide angle. Warm amber lamplight mixes with cool blue moonlight through tall curved windows, with the lighthouse's glowing Fresnel lens visible in an upper glass chamber. At the lower-left, the recurring friendly fox detective wears the same burgundy trench coat and studies the room beside a broad wooden chart table. At the lower-right, the recurring friendly rabbit assistant wears the same teal beret and looks through one oversized antique-brass hand telescope whose large eyepiece rim is clearly turquoise. At center on the chart table, one large decorative model sailboat has exactly three broad, clearly separated ivory sails; the middle sail alone is coral red. On the upper-left wall, one oversized round brass compass has one thick coral-red triangular needle pointing straight upward. Across the upper-middle, exactly three large maritime signal pennants hang separately on one rope: a burgundy triangle, a cream swallowtail, and a teal square. At the far right, a friendly owl lighthouse keeper in a midnight-blue coat holds one oversized antique-gold signal lantern whose front window has one clearly visible crescent-moon-shaped opening glowing warm amber. Add blank rolled sea charts without writing, a ship wheel, coiled rope, a brass bell, a raincoat on a peg, distant dark ocean waves, and soft wet-floor reflections only as supporting atmosphere. Keep the turquoise telescope eyepiece, coral center sail, compass needle, three signal pennants, and lantern window large, unobstructed, spatially separated, and away from the outer 3% safe margin. No readable signs, labels, letters, numbers, compass letters, or clock numerals..\nArt direction: original premium 1930s-inspired animal detective storybook game illustration, cinematic cozy mystery lighting, clean expressive ink contours, soft cel shading, gently hand-painted paper texture, polished animated-feature background quality, friendly rounded anthropomorphic animals, crisp object silhouettes, cohesive moonlit blue, sepia cream, burgundy, deep teal, warm amber, antique gold, turquoise, coral red, and ivory palette, not imitating any specific artist or franchise.\nDo not include text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nKeep important objects away from the outer 3% safe margin.",
+    "promptB": "Create image B by editing this image for a spot-the-difference puzzle with exactly 5 differences.\nPreserve the camera, crop, characters, composition, lighting, palette, texture, and every unedited detail exactly.\nMake exactly 5 localized, clearly visible object-level changes distributed across the scene.\nUse changes such as one object color, a small accessory, count, direction, or missing object. Avoid global color or lighting changes.\nDo not add text, letters, numbers, logos, signatures, borders, split screens, or watermarks.\nRequested change guidance: Make only these five changes: 1) change only the large turquoise eyepiece rim of the lower-right rabbit assistant's antique-brass hand telescope to bright yellow, 2) change only the broad coral-red middle sail of the model sailboat on the center chart table to cobalt blue while preserving its shape, 3) change only the thick coral-red triangular needle in the oversized upper-left wall compass to emerald green while preserving its upward direction, 4) remove exactly one of the three large upper-middle signal pennants so only the burgundy triangle and cream swallowtail remain, 5) change only the crescent-moon-shaped glowing opening in the far-right owl keeper's antique-gold signal lantern into a five-point-star-shaped opening of similar size. Preserve the fox detective, rabbit assistant, owl keeper, lighthouse room, Fresnel lens, windows, ocean, chart table, sailboat, compass case, pennant rope, telescope, lantern, charts, wheel, rope, bell, raincoat, camera, crop, lighting, palette, texture, and every other object exactly. Do not make any additional changes.",
+    "createdAt": "2026-08-21T12:11:31.024Z"
+  },
+  "publishedAt": "2026-08-21T12:14:38.099Z"
+}

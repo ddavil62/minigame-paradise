@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "green-compass-needle",
+      "label": "초록색으로 바뀐 벽 나침반 바늘",
+      "zones": {
+        "a": {
+          "x": 0.09,
+          "y": 0.075,
+          "w": 0.07,
+          "h": 0.205
+        },
+        "b": {
+          "x": 0.09,
+          "y": 0.075,
+          "w": 0.07,
+          "h": 0.205
+        }
+      }
+    },
+    {
+      "id": "missing-teal-pennant",
+      "label": "사라진 청록색 사각 신호기",
+      "zones": {
+        "a": {
+          "x": 0.525,
+          "y": 0.105,
+          "w": 0.12,
+          "h": 0.205
+        },
+        "b": {
+          "x": 0.525,
+          "y": 0.105,
+          "w": 0.12,
+          "h": 0.205
+        }
+      }
+    },
+    {
+      "id": "blue-center-sail",
+      "label": "파란색으로 바뀐 모형 배의 가운데 돛",
+      "zones": {
+        "a": {
+          "x": 0.405,
+          "y": 0.34,
+          "w": 0.105,
+          "h": 0.34
+        },
+        "b": {
+          "x": 0.405,
+          "y": 0.34,
+          "w": 0.105,
+          "h": 0.34
+        }
+      }
+    },
+    {
+      "id": "star-lantern-window",
+      "label": "별 모양으로 바뀐 등대지기의 신호등 창",
+      "zones": {
+        "a": {
+          "x": 0.745,
+          "y": 0.36,
+          "w": 0.105,
+          "h": 0.19
+        },
+        "b": {
+          "x": 0.745,
+          "y": 0.36,
+          "w": 0.105,
+          "h": 0.19
+        }
+      }
+    },
+    {
+      "id": "yellow-telescope-eyepiece",
+      "label": "노란색으로 바뀐 망원경 렌즈",
+      "zones": {
+        "a": {
+          "x": 0.635,
+          "y": 0.585,
+          "w": 0.075,
+          "h": 0.16
+        },
+        "b": {
+          "x": 0.635,
+          "y": 0.585,
+          "w": 0.075,
+          "h": 0.16
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3034092,
+        "hash": "41e6c3dc84bd8910c805af4194469bc2605d218a776dcf40111a650be057bbc9",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2837927,
+        "hash": "83e3326edf107384ddc9dd445a9f834b402530ed93ba2c939fa478f0f04b1566",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T12:14:38.077Z"
+}

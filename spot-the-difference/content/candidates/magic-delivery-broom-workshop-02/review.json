@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "어려움",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "coral-broom-tail-band",
+      "label": "가운데 띠만 산호색인 비행 빗자루 꼬리",
+      "zones": {
+        "a": {
+          "x": 0.115,
+          "y": 0.105,
+          "w": 0.095,
+          "h": 0.18
+        },
+        "b": {
+          "x": 0.115,
+          "y": 0.105,
+          "w": 0.095,
+          "h": 0.18
+        }
+      }
+    },
+    {
+      "id": "square-toolbox-handle",
+      "label": "받침 리벳이 사라진 공구함의 금빛 손잡이",
+      "zones": {
+        "a": {
+          "x": 0.095,
+          "y": 0.345,
+          "w": 0.145,
+          "h": 0.115
+        },
+        "b": {
+          "x": 0.095,
+          "y": 0.345,
+          "w": 0.145,
+          "h": 0.115
+        }
+      }
+    },
+    {
+      "id": "two-blade-propeller",
+      "label": "끝이 짧아진 벽 프로펠러 날개 하나",
+      "zones": {
+        "a": {
+          "x": 0.69,
+          "y": 0.105,
+          "w": 0.2,
+          "h": 0.285
+        },
+        "b": {
+          "x": 0.69,
+          "y": 0.105,
+          "w": 0.2,
+          "h": 0.285
+        }
+      }
+    },
+    {
+      "id": "green-mechanic-goggles",
+      "label": "초록색 빛 반사가 생긴 너구리 정비사 고글",
+      "zones": {
+        "a": {
+          "x": 0.395,
+          "y": 0.325,
+          "w": 0.13,
+          "h": 0.135
+        },
+        "b": {
+          "x": 0.395,
+          "y": 0.325,
+          "w": 0.13,
+          "h": 0.135
+        }
+      }
+    },
+    {
+      "id": "bat-wing-delivery-bag",
+      "label": "끝 깃털이 사라진 주황 배송 가방의 흰 날개",
+      "zones": {
+        "a": {
+          "x": 0.6,
+          "y": 0.625,
+          "w": 0.295,
+          "h": 0.29
+        },
+        "b": {
+          "x": 0.6,
+          "y": 0.625,
+          "w": 0.295,
+          "h": 0.29
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 3196388,
+        "hash": "f415d415d11bd865cd403563c5ff5023c8e2918ec60e24ff1230b50b6c6624d2",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2996256,
+        "hash": "558129f671f7d62a7190f2af2d3b845641096991d4dd7e0f18caaed093e4da21",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "codex-subscription-imagegen",
+  "reviewedAt": "2026-08-21T12:31:16.866Z"
+}

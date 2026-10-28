@@ -1,0 +1,17 @@
+{
+  "id": "jungle-treehouse-01",
+  "title": "초록빛 정글 나무집",
+  "description": "신비한 정글 나무집에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "정글 나무집",
+  "scene": "A playful jungle explorer treehouse built around a giant tree, with rope bridge, canvas hammock, wooden telescope, colorful tropical bird, hanging lantern, explorer backpack, clay pots, large leaves, vines, and a distant waterfall",
+  "style": "premium whimsical storybook illustration, lush emerald green with warm wood and bright accent colors, crisp object silhouettes, detailed but uncluttered",
+  "changeGuidance": "Spread changes across the canopy, rope bridge, treehouse deck, backpack area, and lower plants; avoid global foliage or lighting changes",
+  "differenceCount": 5,
+  "difficulty": "보통",
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "collectionId": "world-adventure",
+  "stageType": "classic"
+}

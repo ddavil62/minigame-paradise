@@ -1,0 +1,17 @@
+{
+  "id": "wonder-park-carousel-garden-02",
+  "title": "햇살 회전목마 정원",
+  "description": "꽃향기와 음악이 흐르는 원더파크의 회전목마 정원에서 다섯 가지 차이를 찾아보세요.",
+  "theme": "햇살 가득한 마법 테마파크 회전목마 정원",
+  "scene": "A cheerful whimsical theme park carousel garden in clear golden daytime, viewed straight-on from a comfortable medium-wide angle. A large ornate cream-and-mint carousel fills the center, crowned by one clearly visible golden crown-shaped topper. At the front-left of the carousel is one large white horse with a clearly visible red saddle. On the far left is a compact coral popcorn cart with one large red-and-cream striped popcorn bucket sitting clearly on its counter. On the right is a decorative mint garden bench holding exactly one round yellow cushion. Near the lower right stands the same original cream-colored rabbit park mascot from the entrance plaza, with long pink-lined ears and a teal bow tie, now holding one clearly visible pink pinwheel with exactly four broad blades. Surround the scene with separated flower planters, ribbon garlands without writing, trimmed hedges, and a few small distant visitor silhouettes. Keep the crown topper, red saddle, popcorn bucket, yellow cushion, and four-bladed pinwheel large, unobstructed, spatially separated, and away from the image edges. No readable signs, labels, letters, or numbers.",
+  "style": "original premium whimsical storybook game illustration matching the established Wonder Park entrance stage, clean expressive ink contours, soft cel shading, gently hand-painted textures, polished animated-feature background quality, cheerful rounded shapes, cohesive mint, coral, cream, turquoise, pink, and gold palette, not imitating any specific artist or franchise",
+  "collectionId": "wonder-park",
+  "stageType": "classic",
+  "difficulty": "보통",
+  "differenceCount": 5,
+  "durationMs": 90000,
+  "missPenaltyMs": 5000,
+  "hintPenaltyMs": 10000,
+  "maxHints": 2,
+  "changeGuidance": "Make only these five changes: 1) change the golden crown-shaped topper at the top center of the carousel from gold to turquoise, 2) change the front-left white carousel horse's red saddle to blue, 3) change the red stripes on the popcorn bucket at the far-left cart to purple while preserving its cream stripes, 4) change the single round yellow cushion on the right garden bench to pink, 5) remove exactly one blade from the rabbit mascot's four-bladed pink pinwheel so three blades remain. Preserve the carousel, horses, popcorn cart, bench, rabbit mascot, visitor silhouettes, flowers, camera, crop, lighting, palette, and every other object exactly. Do not make any additional changes."
+}

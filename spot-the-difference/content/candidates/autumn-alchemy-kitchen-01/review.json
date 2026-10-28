@@ -1,0 +1,120 @@
+{
+  "decision": "approve",
+  "qualityScore": null,
+  "difficulty": "보통",
+  "reasons": [],
+  "retryPrompt": "",
+  "differences": [
+    {
+      "id": "cyan-round-bottle",
+      "label": "선반의 청록색 둥근 약병",
+      "zones": {
+        "a": {
+          "x": 0.15,
+          "y": 0.13,
+          "w": 0.065,
+          "h": 0.12
+        },
+        "b": {
+          "x": 0.15,
+          "y": 0.13,
+          "w": 0.065,
+          "h": 0.12
+        }
+      }
+    },
+    {
+      "id": "ivory-window-pumpkin",
+      "label": "창가의 상아색 호박",
+      "zones": {
+        "a": {
+          "x": 0.675,
+          "y": 0.45,
+          "w": 0.05,
+          "h": 0.06
+        },
+        "b": {
+          "x": 0.675,
+          "y": 0.45,
+          "w": 0.05,
+          "h": 0.06
+        }
+      }
+    },
+    {
+      "id": "turquoise-cauldron-emblem",
+      "label": "가마솥의 청록색 문양",
+      "zones": {
+        "a": {
+          "x": 0.465,
+          "y": 0.55,
+          "w": 0.045,
+          "h": 0.08
+        },
+        "b": {
+          "x": 0.465,
+          "y": 0.55,
+          "w": 0.045,
+          "h": 0.08
+        }
+      }
+    },
+    {
+      "id": "green-table-pumpkin",
+      "label": "작업대의 초록색 호박",
+      "zones": {
+        "a": {
+          "x": 0.42,
+          "y": 0.69,
+          "w": 0.06,
+          "h": 0.1
+        },
+        "b": {
+          "x": 0.42,
+          "y": 0.69,
+          "w": 0.06,
+          "h": 0.1
+        }
+      }
+    },
+    {
+      "id": "cushion-maple-embroidery",
+      "label": "고양이 방석의 단풍잎 자수",
+      "zones": {
+        "a": {
+          "x": 0.765,
+          "y": 0.64,
+          "w": 0.065,
+          "h": 0.075
+        },
+        "b": {
+          "x": 0.765,
+          "y": 0.64,
+          "w": 0.065,
+          "h": 0.075
+        }
+      }
+    }
+  ],
+  "deterministic": {
+    "decision": "approve",
+    "errors": [],
+    "warnings": [],
+    "images": {
+      "a": {
+        "bytes": 2809769,
+        "hash": "adb5b3436a4598bb84f0a60599f761c1380738e021db095dcae935a31916c9f5",
+        "width": 1536,
+        "height": 1024
+      },
+      "b": {
+        "bytes": 2631582,
+        "hash": "d08b7c8ed143d8a467c73c260b129d6c674edac4af58c8cfbbb84309880d57c0",
+        "width": 1536,
+        "height": 1024
+      }
+    }
+  },
+  "reviewer": "local-validator",
+  "reviewedAt": "2026-08-20T05:33:45.412Z"
+}
