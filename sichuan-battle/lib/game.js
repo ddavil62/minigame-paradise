@@ -8,7 +8,7 @@ import { createPrng, deriveSeed } from './prng.js';
 
 const STORED_EFFECT_ITEMS = new Set(['lock', 'flip', 'fog', 'hint']);
 const DEADLOCK_WAIT_MS = 5_000;
-export const AUTO_HINT_TIMING = Object.freeze({ first: 6_000, pair: 9_000, path: 12_000, pathDuration: 1_000 });
+export const AUTO_HINT_TIMING = Object.freeze({ first: 4_000, pair: 7_000, path: 10_000, pathDuration: 1_000 });
 
 /** @param {string} id 플레이어 ID @param {string} name 표시 이름 @returns {object} 경기 플레이어 상태 */
 function createPlayer(id, name, isBot = false) {

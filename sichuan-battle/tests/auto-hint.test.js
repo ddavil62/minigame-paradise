@@ -15,7 +15,7 @@ function createStartedGame(seed = 31) {
   return { game, player: game.players[0], setNow, getNow: () => now };
 }
 
-test('자동 힌트는 6초·9초·12초에 한 타일, 짝, 1초 경로 순서로 진행된다', () => {
+test('자동 힌트는 4초·7초·10초에 한 타일, 짝, 1초 경로 순서로 진행된다', () => {
   const { game, setNow } = createStartedGame();
   setNow(game.startedAt + AUTO_HINT_TIMING.first - 1);
   assert.equal(game.snapshot('p1').me.autoHint, null);
