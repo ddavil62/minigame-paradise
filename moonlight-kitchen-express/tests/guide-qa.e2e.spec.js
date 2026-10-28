@@ -24,8 +24,9 @@ test('버전 키와 네 페이지 한국어·영어 문구가 정확하다',asyn
   };
   for(const locale of ['ko','en']){
     const context=await browser.newContext();
-    await context.addInitScript(()=>localStorage.setItem('moonlightKitchenGuideSeen:v0','1'));
     const page=await context.newPage();await page.goto(`/?name=CopyQA&role=p1&locale=${locale}`);
+    await expect(page.locator('#network-overlay')).toBeHidden();
+    await page.locator('#lobby-help-button').click();
     await expect(page.locator('#play-guide')).toBeVisible();
     for(let index=0;index<4;index+=1){
       await page.evaluate(value=>window.__kitchenGuide.page(value),index);
@@ -84,7 +85,7 @@ test('누르고 있던 입력도 가이드가 즉시 중립화하고 닫은 뒤 
   await Promise.all(contexts.map(context=>context.addInitScript(key=>localStorage.setItem(key,'1'),seenKey)));
   const [p1,p2]=await Promise.all(contexts.map(context=>context.newPage()));await p1.goto('/?name=NeutralP1&role=p1');await p2.goto('/?name=NeutralP2&role=p2');
   await Promise.all([p1.locator('#ready').click(),p2.locator('#ready').click()]);await expect.poll(()=>p1.evaluate(()=>window.__kitchenState.snapshot.phase)).toBe('playing');
-  await p1.keyboard.down('w');await p1.waitForTimeout(180);await p1.locator('#help-button').click();
+  await p1.keyboard.down('w');await p1.waitForTimeout(180);await p1.locator('#help-button').click();await p1.waitForTimeout(100);
   const atOpen=await p1.evaluate(()=>{const me=window.__kitchenState.snapshot.players.find(p=>p.id===window.__kitchenState.playerId);return{x:me.x,y:me.y,held:me.heldItemId};});
   await p1.keyboard.press('e');await p1.keyboard.press('Space');await p1.keyboard.press('q');await p1.waitForTimeout(320);
   const whileOpen=await p1.evaluate(()=>{const me=window.__kitchenState.snapshot.players.find(p=>p.id===window.__kitchenState.playerId);return{x:me.x,y:me.y,held:me.heldItemId};});expect(whileOpen).toEqual(atOpen);

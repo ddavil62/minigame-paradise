@@ -54,7 +54,7 @@ test('8초 미냉각 과열 사고는 음식 소각·감점·콤보 초기화를
 });
 
 test('전체 9주문·5역·4커브 경계와 만료 시각이 정확하다', () => {
-  assert.deepEqual(ORDER_WAVES.map(w => [w.revealMs, w.count]), [[15000,1],[60000,2],[115000,2],[170000,2],[220000,2]]);
+  assert.deepEqual(ORDER_WAVES.map(w => [w.revealMs, w.count]), [[0,1],[60000,2],[115000,2],[170000,2],[220000,2]]);
   assert.deepEqual(STOPS.map(s => [s.openMs,s.closeMs]), [[50000,68000],[95000,113000],[150000,168000],[205000,223000],[265000,288000]]);
   assert.deepEqual(CURVES.map(c => [c.startMs,c.endMs,c.direction]), [[82000,88000,1],[137000,143000,-1],[192000,198000,1],[247000,253000,-1]]);
   const simulation = createSimulation(11); simulation.phase = 'playing';

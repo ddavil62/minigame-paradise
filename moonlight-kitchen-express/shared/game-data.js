@@ -15,7 +15,7 @@ export const RECIPES = Object.freeze({
 });
 
 export const STOPS = Object.freeze([{ index: 1, openMs: 50000, closeMs: 68000 }, { index: 2, openMs: 95000, closeMs: 113000 }, { index: 3, openMs: 150000, closeMs: 168000 }, { index: 4, openMs: 205000, closeMs: 223000 }, { index: 5, openMs: 265000, closeMs: 288000 }]);
-export const ORDER_WAVES = Object.freeze([{ revealMs: 15000, stationIndex: 1, count: 1 }, { revealMs: 60000, stationIndex: 2, count: 2 }, { revealMs: 115000, stationIndex: 3, count: 2 }, { revealMs: 170000, stationIndex: 4, count: 2 }, { revealMs: 220000, stationIndex: 5, count: 2 }]);
+export const ORDER_WAVES = Object.freeze([{ revealMs: 0, stationIndex: 1, count: 1 }, { revealMs: 60000, stationIndex: 2, count: 2 }, { revealMs: 115000, stationIndex: 3, count: 2 }, { revealMs: 170000, stationIndex: 4, count: 2 }, { revealMs: 220000, stationIndex: 5, count: 2 }]);
 export const CURVES = Object.freeze([{ startMs: 82000, endMs: 88000, direction: 1 }, { startMs: 137000, endMs: 143000, direction: -1 }, { startMs: 192000, endMs: 198000, direction: 1 }, { startMs: 247000, endMs: 253000, direction: -1 }]);
 
 export const STATIONS = Object.freeze([
@@ -25,7 +25,6 @@ export const STATIONS = Object.freeze([
   { id: 'cooling_pump', type: 'cooling_pump', x: 448, y: 424, w: 96, h: 96 }, { id: 'brazier', type: 'brazier', x: 744, y: 160, w: 112, h: 80 },
   { id: 'steamer', type: 'steamer', x: 888, y: 160, w: 112, h: 80 }, { id: 'pot', type: 'pot', x: 1032, y: 160, w: 112, h: 80 },
   { id: 'noodle_supply', type: 'noodle_supply', kind: 'star_noodle', x: 1152, y: 160, w: 64, h: 80 },
-  { id: 'plating_a', type: 'plating', x: 752, y: 424, w: 112, h: 72 }, { id: 'plating_b', type: 'plating', x: 888, y: 424, w: 112, h: 72 },
   { id: 'trash', type: 'trash', x: 1040, y: 424, w: 80, h: 80 }, { id: 'service', type: 'service', x: 1168, y: 288, w: 48, h: 160 },
   { id: 'exhaust_valve', type: 'exhaust_valve', x: 1096, y: 520, w: 96, h: 80 }
 ]);
@@ -46,5 +45,7 @@ export function buildRecipeCatalog(seed = 1) {
   const base = ['mushroom_skewer', 'lantern_dumpling', 'comet_noodle', 'mushroom_skewer', 'lantern_dumpling', 'comet_noodle', 'mushroom_skewer', 'lantern_dumpling', 'comet_noodle'];
   let state = seed >>> 0;
   for (let index = base.length - 1; index > 0; index -= 1) { state = (state * 1664525 + 1013904223) >>> 0; const target = state % (index + 1); [base[index], base[target]] = [base[target], base[index]]; }
+  const tutorialRecipeIndex = base.indexOf('mushroom_skewer');
+  [base[0], base[tutorialRecipeIndex]] = [base[tutorialRecipeIndex], base[0]];
   return base;
 }

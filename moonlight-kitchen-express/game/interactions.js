@@ -13,9 +13,9 @@ export function resolvePendingInteractions(simulation) {
   for (const request of simulation.pendingInteractions) {
     const player = simulation.players.find((entry) => entry.id === request.playerId);
     const target = findInteractionTarget(simulation, player);
-    if (!target) continue;
+    if (!target) { feedback(simulation, player.id, 'NO_TARGET'); continue; }
     if (claims.has(target.id)) { simulation.directMessages.push({ playerId: player.id, message: { type: 'BUSY', targetId: target.id, reason: 'CLAIMED' } }); continue; }
-    claims.add(target.id); interactWithTarget(simulation, player, target);
+    claims.add(target.id); const result = interactWithTarget(simulation, player, target); if (!result.ok) feedback(simulation, player.id, result.reason, target.id);
   }
   simulation.pendingInteractions.length = 0;
 }
@@ -36,14 +36,16 @@ export function findInteractionTarget(simulation, player) {
 
 /** @param {object} simulation 시뮬레이션 @param {object} player 플레이어 @param {object} target 대상 @returns {void} */
 function interactWithTarget(simulation, player, target) {
-  if (target.targetKind === 'item') { if (!player.heldItemId) pickFloorItem(simulation, player, target.id); return; }
+  if (target.targetKind === 'item') { if (player.heldItemId) return fail('HANDS_FULL'); pickFloorItem(simulation, player, target.id); return success(); }
   const station = simulation.stations.find((entry) => entry.id === target.id);
-  if (['crate', 'noodle_supply'].includes(station.type) && !player.heldItemId) { const item = createItem(simulation, station.kind, station.kind === 'star_noodle' ? PROCESS.PREPPED : PROCESS.RAW, ITEM_LOCATION.HELD); assignHeld(item, player); player.contributions.carried += 1; return; }
-  if (station.type === 'plate_shelf' && !player.heldItemId) { const item = createItem(simulation, 'plate', PROCESS.RAW, ITEM_LOCATION.HELD); assignHeld(item, player); return; }
-  if (station.type === 'trash' && player.heldItemId) { trashHeld(simulation, player); return; }
-  if (station.type === 'service' && player.heldItemId) { serveHeld(simulation, player); return; }
-  if (['board', 'dough'].includes(station.type)) { handlePrepStation(simulation, player, station); return; }
-  if (['brazier', 'steamer', 'pot'].includes(station.type)) handleCookStation(simulation, player, station);
+  if (['crate', 'noodle_supply'].includes(station.type)) { if (player.heldItemId) return fail('HANDS_FULL'); const item = createItem(simulation, station.kind, station.kind === 'star_noodle' ? PROCESS.PREPPED : PROCESS.RAW, ITEM_LOCATION.HELD); assignHeld(item, player); player.contributions.carried += 1; return success(); }
+  if (station.type === 'plate_shelf') { if (player.heldItemId) return fail('HANDS_FULL'); const item = createItem(simulation, 'plate', PROCESS.RAW, ITEM_LOCATION.HELD); assignHeld(item, player); return success(); }
+  if (station.type === 'trash') { if (!player.heldItemId) return fail('EMPTY_HANDS'); trashHeld(simulation, player); return success(); }
+  if (station.type === 'service') return serveHeld(simulation, player);
+  if (['board', 'dough'].includes(station.type)) return handlePrepStation(simulation, player, station);
+  if (['brazier', 'steamer', 'pot'].includes(station.type)) return handleCookStation(simulation, player, station);
+  if (['cooling_pump', 'exhaust_valve'].includes(station.type)) return fail('USE_SPACE');
+  return fail('NOT_INTERACTIVE');
 }
 
 /**
@@ -79,25 +81,28 @@ export function stepWorkAndStations(simulation, dtMs) {
 function handlePrepStation(simulation, player, station) {
   if (!station.contents.length && player.heldItemId) {
     const item = heldItem(simulation, player); const expected = prepStationFor(item.kind);
-    if (expected !== station.type) return;
-    releaseToStation(item, player, station); item.process = PROCESS.PREPPING; station.state = STATION_STATE.OCCUPIED; return;
+    if (expected !== station.type) return fail('WRONG_PREP_STATION');
+    releaseToStation(item, player, station); item.process = PROCESS.PREPPING; station.state = STATION_STATE.OCCUPIED; return success();
   }
-  if (station.contents.length && !player.heldItemId && [STATION_STATE.READY, STATION_STATE.OCCUPIED].includes(station.state)) takeStationItem(simulation, player, station);
+  if (station.contents.length && !player.heldItemId && [STATION_STATE.READY, STATION_STATE.OCCUPIED].includes(station.state)) { takeStationItem(simulation, player, station); return success(); }
+  return fail(player.heldItemId ? 'STATION_OCCUPIED' : 'EMPTY_HANDS');
 }
 
 /** @param {object} simulation 시뮬레이션 @param {object} player 플레이어 @param {object} station 조리 설비 @returns {void} */
 function handleCookStation(simulation, player, station) {
-  if (station.state === STATION_STATE.READY && player.heldItemId && heldItem(simulation, player)?.kind === 'plate') { plateCookedDish(simulation, player, station); return; }
-  if (station.state === STATION_STATE.BURNT && !player.heldItemId) { const item = createItem(simulation, 'burnt_food', PROCESS.BURNT, ITEM_LOCATION.HELD); assignHeld(item, player); clearStation(simulation, station); return; }
-  if (!player.heldItemId || ![STATION_STATE.IDLE, STATION_STATE.OCCUPIED].includes(station.state)) return;
+  if (station.state === STATION_STATE.READY) { if (player.heldItemId && heldItem(simulation, player)?.kind === 'plate') { plateCookedDish(simulation, player, station); return success(); } return fail('NEED_PLATE'); }
+  if (station.state === STATION_STATE.BURNT && !player.heldItemId) { const item = createItem(simulation, 'burnt_food', PROCESS.BURNT, ITEM_LOCATION.HELD); assignHeld(item, player); clearStation(simulation, station); return success(); }
+  if (!player.heldItemId) return fail('EMPTY_HANDS');
+  if (![STATION_STATE.IDLE, STATION_STATE.OCCUPIED].includes(station.state)) return fail('NOT_READY');
   const item = heldItem(simulation, player);
-  if (item.process !== PROCESS.PREPPED) return;
+  if (item.process !== PROCESS.PREPPED) return fail('NEED_PREPPED');
   const possible = Object.values(RECIPES).filter((recipe) => recipe.cookStation === station.type && recipe.ingredients.includes(item.kind));
-  if (!possible.length) return;
+  if (!possible.length) return fail('WRONG_COOKER');
   releaseToStation(item, player, station); station.state = STATION_STATE.OCCUPIED;
   const kinds = station.contents.map((id) => simulation.items.find((entry) => entry.id === id).kind).sort();
   const recipe = possible.find((entry) => [...entry.ingredients].sort().join('|') === kinds.join('|'));
   if (recipe) { station.recipeId = recipe.id; station.state = STATION_STATE.ACTIVE; station.progressMs = 0; player.contributions.cooked += 1; }
+  return success();
 }
 
 /** @param {object} simulation 시뮬레이션 @param {object} player 플레이어 @param {object} station 조리 설비 @returns {void} */
@@ -107,7 +112,11 @@ function plateCookedDish(simulation, player, station) { const plate = heldItem(s
 function clearStation(simulation, station) { for (const id of station.contents) { const item = simulation.items.find((entry) => entry.id === id); item.location = ITEM_LOCATION.TRASHED; item.stationId = null; item.revision += 1; } station.contents = []; station.state = STATION_STATE.IDLE; station.progressMs = 0; station.readyMs = 0; station.recipeId = null; station.revision += 1; }
 
 /** @param {object} simulation 시뮬레이션 @param {object} player 플레이어 @returns {void} */
-function serveHeld(simulation, player) { const item = heldItem(simulation, player); if (!item || item.process !== PROCESS.COOKED || !RECIPES[item.kind]) return; const result = serveDish(simulation, item.kind, player.id); if (result.ok) { item.location = ITEM_LOCATION.TRASHED; item.holderId = null; player.heldItemId = null; item.revision += 1; } }
+function serveHeld(simulation, player) { const item = heldItem(simulation, player); if (!item) return fail('EMPTY_HANDS'); if (item.process !== PROCESS.COOKED || !RECIPES[item.kind]) return fail('WRONG_DISH'); const result = serveDish(simulation, item.kind, player.id); if (!result.ok) return fail(simulation.train.stopIndex ? 'WRONG_DISH' : 'SERVICE_CLOSED'); item.location = ITEM_LOCATION.TRASHED; item.holderId = null; player.heldItemId = null; item.revision += 1; return success(); }
+
+function success() { return { ok: true }; }
+function fail(reason) { return { ok: false, reason }; }
+function feedback(simulation, playerId, reason, targetId = null) { simulation.directMessages.push({ playerId, message: { type: 'INTERACTION_FEEDBACK', ok: false, reason, targetId } }); }
 
 /** @param {object} simulation 시뮬레이션 @param {object} player 플레이어 @returns {void} */
 export function dropHeld(simulation, player) { const item = heldItem(simulation, player); if (!item) return; item.location = ITEM_LOCATION.FLOOR; item.holderId = null; item.x = Math.max(40, Math.min(1240, player.x + player.facingX * 40)); item.y = Math.max(144, Math.min(600, player.y + player.facingY * 40)); item.revision += 1; player.heldItemId = null; }
@@ -119,7 +128,7 @@ function pickFloorItem(simulation, player, itemId) { const item = simulation.ite
 function trashHeld(simulation, player) { const item = heldItem(simulation, player); item.location = ITEM_LOCATION.TRASHED; item.holderId = null; item.revision += 1; player.heldItemId = null; }
 
 /** @param {object} simulation 시뮬레이션 @param {object} player 플레이어 @param {object} station 설비 @returns {void} */
-function takeStationItem(simulation, player, station) { const item = simulation.items.find((entry) => entry.id === station.contents.shift()); assignHeld(item, player); station.state = STATION_STATE.IDLE; station.progressMs = 0; station.operatorId = null; station.revision += 1; }
+function takeStationItem(simulation, player, station) { const itemId = station.contents.shift(); const item = simulation.items.find((entry) => entry.id === itemId); if (!item) { station.state = STATION_STATE.IDLE; station.progressMs = 0; station.operatorId = null; station.revision += 1; return false; } assignHeld(item, player); station.state = STATION_STATE.IDLE; station.progressMs = 0; station.operatorId = null; station.revision += 1; return true; }
 
 /** @param {object} item 아이템 @param {object} player 플레이어 @param {object} station 설비 @returns {void} */
 function releaseToStation(item, player, station) { item.location = ITEM_LOCATION.STATION; item.holderId = null; item.stationId = station.id; item.revision += 1; station.contents.push(item.id); station.revision += 1; player.heldItemId = null; }

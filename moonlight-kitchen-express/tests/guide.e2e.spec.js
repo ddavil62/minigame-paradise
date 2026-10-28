@@ -12,13 +12,16 @@ async function expectInside(locator,viewport){const box=await locator.boundingBo
 /** 도구·연결·모바일 HUD·경고 사이의 모든 가시 영역 교차가 없는지 확인한다. @param {import('@playwright/test').Page} page 페이지 @returns {Promise<void>} */
 async function expectHudSeparation(page){const selectors=['#help-button','#launcher-button','#connection','#mobile-orders','#mobile-timeline','#warning'];const entries=[];for(const selector of selectors){const locator=page.locator(selector);if(await locator.isVisible()){const box=await locator.boundingBox();if(box)entries.push([selector,box]);}}for(let i=0;i<entries.length;i+=1){for(let j=i+1;j<entries.length;j+=1){expect(overlap(entries[i][1],entries[j][1]),`${entries[i][0]}와 ${entries[j][0]} 교차`).toBe(0);}}}
 
-test('첫 로비에서 한 번 열리고 닫은 뒤에는 수동으로 다시 연다',async({page})=>{
-  await page.goto('/?name=GuideAuto&role=p1');
+test('첫 로비를 가리지 않고 도움말 버튼으로 가이드를 연다',async({page})=>{
+  await page.goto('/?name=GuideManual&role=p1');
+  await expect(page.locator('#play-guide')).toBeHidden();
+  await expect(page.locator('#network-overlay')).toBeHidden();
+  await page.locator('#lobby-help-button').click();
   await expect(page.locator('#play-guide')).toBeVisible();
   await expect(page.locator('#guide-title')).toHaveText('주문 완성하기');
   await expect(page.locator('#guide-close')).toBeFocused();
   await page.locator('#guide-close').click();
-  await expect(page.locator('#language')).toBeFocused();
+  await expect(page.locator('#lobby-help-button')).toBeFocused();
   await expect.poll(()=>page.evaluate(key=>localStorage.getItem(key),seenKey)).toBe('1');
   await page.reload();
   await expect(page.locator('#play-guide')).toBeHidden();

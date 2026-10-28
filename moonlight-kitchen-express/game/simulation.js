@@ -11,7 +11,7 @@ import { stepTrainEvents } from './train-events.js';
  */
 export function createSimulation(seed = 20260719) {
   return {
-    phase: 'waiting', seed, tick: 0, elapsedMs: 0, nextItemId: 0, nextEventId: 0, receiveOrdinal: 0, items: [], events: [], directMessages: [], pendingInteractions: [], result: null,
+    phase: 'waiting', seed, tick: 0, elapsedMs: 0, nextItemId: 0, nextEventId: 0, receiveOrdinal: 0, items: [], events: [], directMessages: [], pendingInteractions: [], aiPlayers: {}, result: null,
     players: [createPlayer('p1', 128, 272, 1), createPlayer('p2', 800, 304, -1)],
     stations: STATIONS.map((station) => ({ ...station, state: STATION_STATE.IDLE, contents: [], progressMs: 0, readyMs: 0, operatorId: null, recipeId: null, revision: 0 })),
     orderState: createOrderState(seed), train: { heat: 0, curveDirection: 0, curveWarningDirection: 0, stopIndex: null, stopWarningIndex: null, coolingProgressMs: 0, coolingStartedAt: null, overheatStartedAt: null, overheatRemainingMs: null, accidentGuardUntil: 0, overheatAccidents: 0 }
@@ -74,7 +74,8 @@ function collides(x, y) { const box = { x: x - PLAYER_COLLIDER.w / 2, y: y - PLA
  * @returns {object} JSON 안전 스냅샷
  */
 export function snapshotSimulation(simulation) {
-  return { tick: simulation.tick, phase: simulation.phase, elapsedMs: simulation.elapsedMs, players: simulation.players.map(({ input, previousInput, ...player }) => ({ ...player })), items: simulation.items.filter((item) => item.location !== 'TRASHED').map((item) => ({ ...item })), stations: simulation.stations.map((station) => ({ ...station, contents: [...station.contents] })), orders: simulation.orderState.orders.map((order) => ({ ...order })), train: { ...simulation.train }, heat: simulation.train.heat, score: simulation.orderState.score, combo: Math.min(2, 1 + simulation.orderState.comboStep * 0.25), result: simulation.result };
+  const aiPlayers = Object.values(simulation.aiPlayers ?? {}).map(({ playerId, orderId, recipeId, deliveryStationIndex, deliveryOpenMs, deliveryCloseMs, estimatedReadyMs, goal, targetId, action, path, pathIndex, stuckTicks, updatedAtTick }) => ({ playerId, orderId, recipeId, deliveryStationIndex, deliveryOpenMs, deliveryCloseMs, estimatedReadyMs, goal, targetId, action, pathLength: path?.length ?? 0, pathIndex, stuckTicks, updatedAtTick }));
+  return { tick: simulation.tick, phase: simulation.phase, elapsedMs: simulation.elapsedMs, players: simulation.players.map(({ input, previousInput, ...player }) => ({ ...player })), items: simulation.items.filter((item) => item.location !== 'TRASHED').map((item) => ({ ...item })), stations: simulation.stations.map((station) => ({ ...station, contents: [...station.contents] })), orders: simulation.orderState.orders.map((order) => ({ ...order })), aiPlayers, train: { ...simulation.train }, heat: simulation.train.heat, score: simulation.orderState.score, combo: Math.min(2, 1 + simulation.orderState.comboStep * 0.25), result: simulation.result };
 }
 
 /** @param {object} simulation 시뮬레이션 @returns {void} */
