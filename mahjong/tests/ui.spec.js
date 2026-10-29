@@ -103,8 +103,11 @@ test('룰 가이드: 헤더 버튼으로 열고 탭 전환, Esc로 닫는다. �
   expect(await page.locator('.guide .goal .tile').count()).toBe(14);
   await page.locator('.g-tab[data-tab="score"]').click();
   await expect(page.locator('.g-pane.on')).toHaveAttribute('data-pane', 'score');
+  await page.locator('.g-tab[data-tab="call"]').click();
+  await expect(page.locator('.g-pane.on')).toHaveAttribute('data-pane', 'call');
+  await expect(page.locator('.guide .call')).toHaveCount(3);
   await page.locator('.g-tab[data-tab="flow"]').click();
-  await page.locator('.g-link[data-goto="yaku"]').click();
+  await page.locator('.g-pane[data-pane="flow"] .g-link[data-goto="yaku"]').click();
   await expect(page.locator('.g-pane.on')).toHaveAttribute('data-pane', 'yaku');
   await expect(page.locator('.guide .yk')).toHaveCount(8);
 

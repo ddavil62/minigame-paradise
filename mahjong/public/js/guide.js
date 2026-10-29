@@ -1,5 +1,5 @@
 /**
- * @fileoverview 룰 가이드: 헤더 버튼으로 여는 4개 탭 안내 오버레이.
+ * @fileoverview 룰 가이드: 헤더 버튼으로 여는 5개 탭 안내 오버레이.
  *
  * 무대는 STATE마다 innerHTML이 갈아엎어지므로 가이드 요소는 한 번만 만들어 두고
  * 열려 있는 동안 재렌더 직후 `attach()`로 다시 붙인다(탭·스크롤 상태가 DOM에 그대로 남는다).
@@ -31,7 +31,14 @@ const YAKU = [
   { n: '또이또이', h: '2판', tag: 'open', d: '몸통 4개가 전부 커쯔(같은 패 3장). 퐁을 많이 하면 노리기 좋아요.', t: '2m 2m 2m | 7p 7p 7p | 3z 3z 3z | 9m 9m | 4s 4s 4s' },
   { n: '혼일색', h: '3판', tag: 'open', d: '한 종류 숫자패 + 자패만. 울면 2판이 돼요.', t: '1p 2p 3p | 4p 5p 6p | 5z 5z 5z | 4z 4z | 7p 8p 9p' },
 ];
-const DORA_EX = [['3m', '4m'], ['9p', '1p'], ['4z', '1z'], ['7z', '5z']];
+// 울기 예시: 마지막(빛나는) 패 = 남이 버려서 가져온 패
+const CALLS = [
+  ['퐁', '3s 3s 3s', 2, '같은 패 2장 + 남이 버린 1장. 누가 버려도 돼요.'],
+  ['치', '3m 4m 5m', 0, '연속 3장 중 1장을 바로 앞 사람(왼쪽)이 버린 패로.'],
+  ['깡', '9p 9p 9p 9p', 3, '같은 패 3장 + 버린 1장. 내 손의 4장(암깡)은 울기가 아니에요.'],
+];
+const callsHtml = CALLS.map(([n, c, w, d]) => `<div class="call"><div class="call-head"><em>${n}</em><div class="tiles">${row(split(c), 't-meldo', w)}</div></div><small>${d}</small></div>`).join('');
+const DORA_EX =[['3m', '4m'], ['9p', '1p'], ['4z', '1z'], ['7z', '5z']];
 
 const goalHtml = GOAL_SETS.map(([c, l], i) => `<div class="goal-set${i === 4 ? ' head' : ''}"><div class="tiles">${row(split(c), 't-res')}</div><em>${l}</em></div>`).join('');
 const suitsHtml = SUITS.map(([n, c]) => `<span>${n}</span><div class="tiles">${row(split(c), 't-meldo')}</div>`).join('')
@@ -42,7 +49,7 @@ const yakuHtml = YAKU.map((y) => {
 }).join('');
 const doraHtml = DORA_EX.map(([a, b]) => `<div>${tileHtml(a, 't-meld')}→${tileHtml(b, 't-meld', 'win')}</div>`).join('');
 
-const TABS = [['flow', '기본 흐름'], ['buttons', '버튼 설명'], ['yaku', '자주 나오는 역'], ['score', '점수·용어']];
+const TABS = [['flow', '기본 흐름'], ['buttons', '버튼 설명'], ['yaku', '자주 나오는 역'], ['score', '점수·용어'], ['call', '울기']];
 
 function bodyHtml() {
   return `
@@ -58,7 +65,7 @@ function bodyHtml() {
         <ol class="steps">
           <li><div>내 차례에 패를 1장 뽑아요<small>뽑은 패는 손패 오른쪽에 떨어져 놓여요.</small></div></li>
           <li><div>필요 없는 패 1장을 버려요<small>생각 시간 15초 + 대국 전체 여유 20초. 넘기면 방금 뽑은 패를 자동으로 버려요.</small></div></li>
-          <li><div>남이 버린 패가 필요하면 가져올 수 있어요<small>퐁·치·깡·론 버튼이 10초 동안 떠요. 자세한 건 2번 탭.</small></div></li>
+          <li><div>남이 버린 패가 필요하면 가져올 수 있어요<small>퐁·치·깡으로 가져오면 "울기"예요(5번 탭). 10초 안에 골라요.</small></div></li>
           <li><div>누군가 화료하거나 패가 다 떨어지면 한 국이 끝나요<small>동풍전은 4국, 반장전은 8국을 해요.</small></div></li>
         </ol>
       </div>
@@ -95,6 +102,25 @@ function bodyHtml() {
     <p class="lead" style="margin-bottom:10px">역은 "이런 모양으로 이기면 점수를 준다"는 조건이에요. 하나 이상 있어야 화료할 수 있어요. <b style="color:var(--ui-text)">빛나는 패</b>가 마지막으로 들어온 패예요.</p>
     <div class="yaku-grid">${yakuHtml}</div>
     <p class="more"><b>문전</b> = 퐁·치·밝은 깡을 하지 않은 상태. 더 높은 역은 결과 화면의 <b>ⓘ</b>에 마우스를 올리거나 탭하면 설명이 나와요.</p>
+  </section>
+
+  <section class="g-pane" data-pane="call">
+    <div class="g-card">
+      <h3>울기 — 남이 버린 패를 가져와 몸통을 만드는 것</h3>
+      <p class="lead" style="margin-bottom:10px">내가 뽑지 않고 남이 버린 패(빛나는 패)로 세트를 만들면 "울었다"고 해요. 울린 세트는 패를 눕혀 모두에게 보여 줘요.</p>
+      <div class="calls">${callsHtml}</div>
+    </div>
+    <div class="g-row two" style="margin-top:14px">
+      <div class="g-card">
+        <h3>좋은 점</h3>
+        <p>손패를 <b>빨리 완성</b>할 수 있어요. 탕야오·또이또이·역패처럼 울어도 되는 역으로 빠르게 이길 때 써요.</p>
+      </div>
+      <div class="g-card">
+        <h3>잃는 것 — 문전이 깨져요</h3>
+        <p><b>리치</b>를 할 수 없고, <b>멘젠쯔모·핑후</b>가 붙지 않아요. 혼일색 같은 역은 <b>1판 줄어요.</b></p>
+      </div>
+    </div>
+    <div class="g-tip"><span class="ic">⚠</span><span>역이 없으면 화료할 수 없어요. 역이 확실하지 않으면 <b>울지 말고 리치</b>를 노리는 게 안전해요.</span><button class="g-link" type="button" data-goto="yaku">3. 역 보기 →</button></div>
   </section>
 
   <section class="g-pane" data-pane="score">
