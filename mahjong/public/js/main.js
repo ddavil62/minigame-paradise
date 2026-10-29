@@ -706,8 +706,7 @@ function resultHtml(v) {
       const from = w.tsumo ? '쯔모' : `론 (${esc(seatInfo(w.from).name)})`;
       const isDealer = w.seat === v.dealer;
       return `<div class="res-win" data-w="${wi}">
-        <div class="res-head"><h2>${w.tsumo ? '쯔모' : '론'}</h2><span>${esc(info.name)} (${WIND_KO[v.players[w.seat].wind]}가${isDealer ? ' · 친' : ''}) 화료 · ${from}${isDealer ? infoBtn(`dealer:${wi}`, '친') : ''}</span>${w.limit ? `<span class="limit">${w.limit}</span>` : ''}</div>
-        ${isDealer ? tipBox(`dealer:${wi}`, TERM_INFO.dealer) : ''}
+        <div class="res-head"><h2>${w.tsumo ? '쯔모' : '론'}</h2><span>${esc(info.name)} (${WIND_KO[v.players[w.seat].wind]}가${isDealer ? ' · 친' : ''}) 화료 · ${from}${isDealer ? infoBtn(`dealer:${wi}`, '친') : ''}</span>${w.limit ? `<span class="limit">${w.limit}</span>` : ''}${isDealer ? tipBox(`dealer:${wi}`, TERM_INFO.dealer) : ''}</div>
         <div class="res-hand">${concealed}${tileHtml(code(w.winTile), 't-res', 'win', '', { id: w.winTile })}${melds ? `<div class="melds">${melds}</div>` : ''}</div>
         <div class="res-body"><div>
           <div class="res-dora"><div>도라 ${r.dora.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>${w.riichi ? `<div>뒷도라 ${r.ura.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>` : ''}</div>
