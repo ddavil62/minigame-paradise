@@ -188,10 +188,13 @@ function captureRects() {
 const STAGE_H = 760;
 const STAGE_MIN_W = 1200;
 const STAGE_MAX_W = 1600;
-/** 내 기준 상대 좌석(0=나,1=오른쪽,2=맞은편,3=왼쪽) 연출 중심. 무대 폭이 가변이라 가운데 x를 매번 계산한다. */
+const BOARD_SCALE = 1.3; // 중앙 영역(.board) 확대 배율. 연못 3줄까지 겹치지 않는 한계 — 올리기 전에 연못 3줄 상태로 확인한다
+/** 내 기준 상대 좌석(0=나,1=오른쪽,2=맞은편,3=왼쪽) 연출 중심. 무대 폭이 가변이고 판 중심(y=338)을 기준으로 확대되므로 매번 계산한다. */
 function seatAnchor(rel) {
   const cx = S.stageW / 2;
-  return [[cx, 548], [cx + 200, 330], [cx, 196], [cx - 200, 330]][rel];
+  const cy = 338;
+  const [ox, oy] = [[0, 210], [200, -8], [0, -142], [-200, -8]][rel];
+  return [cx + ox * BOARD_SCALE, cy + oy * BOARD_SCALE];
 }
 const POND_ANGLE = [0, -90, 180, 90]; // 좌석별 연못 회전각
 const CALL_STYLE = {
@@ -826,6 +829,7 @@ function fit() {
   S.stageW = w;
   stage.style.width = `${w}px`;
   stage.style.setProperty('--dx', `${(w - STAGE_MIN_W) / 2}px`);
+  stage.style.setProperty('--board-scale', String(BOARD_SCALE));
   stage.style.transform = `scale(${scale})`;
   inner.style.width = `${w * scale}px`;
   inner.style.height = `${STAGE_H * scale}px`;

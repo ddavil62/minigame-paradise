@@ -94,4 +94,5 @@ npx playwright test --config=playwright.config.js   # UI 회귀(격리 포트에
 - `view.players[].melds[].called`는 울린 패 id다(암깡은 null). 클라이언트가 눕힌 패 위치를 이 값과 `from`으로 정한다.
 - 클라이언트는 매 STATE마다 무대 전체를 다시 그린다. 호버/선택 상태는 `S`(main.js) 안에 두고 DOM에 의존하지 않는다.
 - 무대는 높이 760 고정, 폭은 `fit()`(main.js)이 창 비율에 맞춰 1200~1600px로 정하고 transform으로 배율을 맞춘다. 가운데 기준 요소(`.board`·`.my-hand`·`.strip`·`.plate.p-top`)의 `left`는 `calc(N px + var(--dx))`로 쓰고, 모서리 기준 요소(side-hand·좌우 plate·actions·legend)는 `left`/`right`만 쓴다. 연출 좌표는 `seatAnchor()`와 `stage.offsetWidth`로 폭에 따라 계산한다(1200 같은 숫자를 새로 박지 않는다).
+- 중앙 영역(`.board`)은 `BOARD_SCALE`(main.js, 현재 1.3)만큼 확대된다. 1.3은 연못 3줄 상태에서 손패·상대 패와 겹치지 않는 한계다(1.4는 내 쪽 13px·위쪽 −8px로 겹침, 4줄은 드물지만 겹칠 수 있음). 올리기 전에 연못 3줄 상태로 간격을 잰다. 확대 때문에 도우미 띠(`.strip`)는 연못 왼쪽 빈 곳(left 84, 폭 380)에 있고, `flyDiscard`는 착지 배율을 `.board`의 실제 배율에 맞춘다.
 - UI 변경은 1280×720·1920×1080·4:3·울트라와이드에서 가로 스크롤 없이 무대가 창에 맞는지 실제 브라우저로 확인한다. 세로 모바일은 가로 모드 안내를 띄운다.

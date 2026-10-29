@@ -161,6 +161,9 @@ export function createFx(stage) {
     const d = toStage(dest.getBoundingClientRect());
     const s = toStage(srcRect);
     const w = dest.offsetWidth;
+    // 판(.board)이 확대돼 있으면 실제 연못 패도 그만큼 커 보이므로 착지 배율을 맞춘다(복제본은 배율 없는 크기로 만든다)
+    const board = stage.querySelector('.board');
+    const bs = board ? board.getBoundingClientRect().width / (stage.getBoundingClientRect().width / stage.offsetWidth) / board.offsetWidth : 1;
     const clone = dest.cloneNode(true);
     clone.classList.remove('last', 'taken');
     clone.classList.add('fx-fly');
@@ -179,10 +182,10 @@ export function createFx(stage) {
     const T = (x, y2, rot, sc) => `translate(${x}px,${y2}px) rotate(${rot}deg) scale(${sc})`;
     const a = clone.animate([
       { transform: T(dx, dy, angle + spin, s0), filter: 'drop-shadow(0 6px 4px rgba(0,0,0,.25))' },
-      { transform: T(dx * 0.3, dy * 0.3 - lift, angle + spin * 0.3, 1.9), filter: 'drop-shadow(0 26px 14px rgba(0,0,0,.35))', offset: 0.5 },
-      { transform: T(0, 0, angle, 1), filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))', offset: 0.82 },
-      { transform: `${T(0, 2, angle, 1)} scale(1.16,.84)`, offset: 0.9 },
-      { transform: T(0, 0, angle, 1), offset: 1 },
+      { transform: T(dx * 0.3, dy * 0.3 - lift, angle + spin * 0.3, 1.9 * bs), filter: 'drop-shadow(0 26px 14px rgba(0,0,0,.35))', offset: 0.5 },
+      { transform: T(0, 0, angle, bs), filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))', offset: 0.82 },
+      { transform: `${T(0, 2, angle, bs)} scale(1.16,.84)`, offset: 0.9 },
+      { transform: T(0, 0, angle, bs), offset: 1 },
     ], { duration: riichi ? 520 : 400, easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'forwards' });
     a.onfinish = () => {
       clone.remove();
