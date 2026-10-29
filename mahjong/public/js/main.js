@@ -8,6 +8,7 @@
 import { tileHtml, backHtml, sideHtml, codeOf, codeOfKind, kindName, esc } from './tiles.js';
 import { createSounds } from './sounds.js';
 import { createFx } from './fx.js';
+import { createGuide } from './guide.js';
 import { YAKU_INFO, TERM_INFO, limitInfo } from './yaku-info.js';
 
 const WIND_KANJI = ['東', '南', '西', '北'];
@@ -23,6 +24,7 @@ const $ = (id) => document.getElementById(id);
 const stage = $('stage');
 const sounds = createSounds();
 const fx = createFx(stage);
+const guide = createGuide(stage, { onToggle: (open) => $('btn-guide').classList.toggle('on', open) });
 
 const params = new URLSearchParams(location.search);
 const store = {
@@ -764,6 +766,7 @@ function render() {
   if (S.st && S.room && S.room.phase !== 'lobby') renderGame();
   else { renderLobby(); S.shown = null; S.anims = []; }
   fx.attach();
+  guide.attach();
   document.getElementById('btn-assist').classList.toggle('on', S.assist);
   document.getElementById('btn-names').classList.toggle('on', S.showNames);
 }
@@ -881,6 +884,7 @@ function leave() {
 }
 
 $('btn-back').addEventListener('click', leave);
+$('btn-guide').addEventListener('click', () => guide.toggle());
 $('btn-assist').addEventListener('click', toggleAssist);
 $('btn-names').addEventListener('click', toggleNames);
 const soundBtn = $('btn-sound');

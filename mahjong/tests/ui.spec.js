@@ -90,3 +90,42 @@ test('두 번째 사람이 들어오면 마주 보는 자리에 앉는다', asyn
   await expect(b.locator('.board')).toBeVisible();
   await expect(a.locator('.plate.p-top')).toContainText('도윤');
 });
+
+test('룰 가이드: 헤더 버튼으로 열고 탭 전환, Esc로 닫는다. 대국 중 재렌더에도 유지된다', async ({ page }) => {
+  await page.goto(`${base}/?name=테스터`);
+  const guide = page.locator('.guide');
+  await expect(guide).toHaveCount(0);
+  await page.locator('#btn-guide').click();
+  await expect(guide).toBeVisible();
+  await expect(page.locator('#btn-guide')).toHaveClass(/on/);
+  await expect(page.locator('.g-pane.on')).toHaveAttribute('data-pane', 'flow');
+  // 패 그림이 실제 렌더러로 그려진다.
+  expect(await page.locator('.guide .goal .tile').count()).toBe(14);
+  await page.locator('.g-tab[data-tab="score"]').click();
+  await expect(page.locator('.g-pane.on')).toHaveAttribute('data-pane', 'score');
+  await page.locator('.g-tab[data-tab="flow"]').click();
+  await page.locator('.g-link[data-goto="yaku"]').click();
+  await expect(page.locator('.g-pane.on')).toHaveAttribute('data-pane', 'yaku');
+  await expect(page.locator('.guide .yk')).toHaveCount(8);
+
+  await page.keyboard.press('Escape');
+  await expect(guide).toHaveCount(0);
+
+  // 대국 중에 열면 STATE 재렌더가 여러 번 일어나도 열린 상태와 탭이 유지된다.
+  await page.locator('[data-do="start"]').click();
+  await expect(page.locator('.board')).toBeVisible();
+  await page.locator('#btn-guide').click();
+  await page.locator('.g-tab[data-tab="yaku"]').click();
+  await page.waitForTimeout(1200);
+  await expect(guide).toBeVisible();
+  await expect(page.locator('.g-pane.on')).toHaveAttribute('data-pane', 'yaku');
+
+  await page.keyboard.press('Escape');
+  await expect(guide).toHaveCount(0);
+  await expect(page.locator('#btn-guide')).not.toHaveClass(/on/);
+  // 다시 열고 배경을 눌러 닫는다.
+  await page.locator('#btn-guide').click();
+  await expect(guide).toBeVisible();
+  await page.locator('#guide-layer').click({ position: { x: 5, y: 5 } });
+  await expect(guide).toHaveCount(0);
+});
