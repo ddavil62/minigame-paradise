@@ -10,7 +10,7 @@ import { decide } from '../lib/ai.js';
 import { seededRng } from '../lib/tiles.js';
 
 const FAST = {
-  baseMs: 400, bankMs: 400, reactionMs: 400, ackMs: 300,
+  baseMs: 400, bankMs: 400, reactionMs: 400,
   aiTurnMs: [0, 3], aiReactionMs: [0, 3], aiAckMs: [0, 3], awayMs: 5,
   lobbyGraceMs: 150, emptyResetMs: 150,
 };
@@ -29,7 +29,7 @@ async function boot(timing = FAST) {
 }
 
 /** 사람 대신 AI 로직으로 행동하는 테스트 클라이언트 */
-function client(port, { key, name, play = true, level = 'normal', role = '' }, t) {
+function client(port, { key, name, play = true, level = 'normal', role = '', holdAck = false }, t) {
   const ws = new WebSocket(`ws://127.0.0.1:${port}/mahjong/ws?key=${key}&name=${encodeURIComponent(name)}${role ? `&role=${role}` : ''}`);
   const c = { ws, room: null, state: null, joined: null, errors: [], states: 0, hints: null, events: [] };
   let lastSig = '';
@@ -46,7 +46,7 @@ function client(port, { key, name, play = true, level = 'normal', role = '' }, t
       c.events.push(...msg.events);
       const v = msg.view;
       const sig = `${v.handNo}|${v.phase}|${v.turn}|${v.myHand.join()}|${v.myDrawn}|${v.players.map((p) => p.discards.length + p.melds.length).join()}|${v.legal?.kind}`;
-      if (play && v.legal && sig !== lastSig) {
+      if (play && v.legal && !(holdAck && v.legal.kind === 'ack') && sig !== lastSig) {
         lastSig = sig;
         const action = decide(v, { level });
         if (action) c.send({ type: 'ACT', action });
@@ -187,6 +187,25 @@ test('타임아웃이면 자동으로 쯔모기리하고 연속 타임아웃 시
   await until(() => a.state.view.handNo >= 1 && a.state.view.players[0].discards.length >= 3, 15000);
   const slot = srv.app._room.slots[0];
   assert.ok(slot.autoPlay, '2회 연속 시간 초과 후 자동 진행');
+  a.ws.close();
+  srv.close();
+});
+
+test('국 결과 확인은 시간이 지나도 넘어가지 않고 사람이 직접 눌러야 넘어간다', async (t) => {
+  const srv = await boot();
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'kack', name: '나', holdAck: true }, t);
+  await until(() => a.room);
+  a.send({ type: 'START' });
+  await until(() => a.state?.view.phase === 'ack' && a.state.view.result, 60000);
+  const handNo = a.state.view.handNo;
+  // 접속 중인 사람의 확인 타이머는 만들지 않으므로 여러 타이머 주기가 지나도 그대로여야 한다.
+  await new Promise((r) => setTimeout(r, 1500));
+  assert.equal(a.state.view.phase, 'ack');
+  assert.equal(a.state.view.handNo, handNo);
+  assert.equal(a.state.timers.length, 0, '결과 확인에는 카운트다운이 없다');
+  a.send({ type: 'ACT', action: { type: 'next' } });
+  await until(() => a.state.view.handNo !== handNo || a.state.view.phase === 'over', 10000);
   a.ws.close();
   srv.close();
 });

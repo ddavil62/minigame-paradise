@@ -691,7 +691,7 @@ function resultHtml(v) {
   }).join('');
   const nextBtn = mineDone
     ? `<span>다른 플레이어를 기다리는 중… (${waiting}명)</span>`
-    : `<span>${waiting > 1 ? `${waiting}명 확인 대기` : ''}</span><button class="act" data-do="next">다음 국 →</button>`;
+    : `<span>${waiting > 1 ? `${waiting}명 확인 대기` : '다 읽었으면 눌러 주세요'}</span><button class="act" data-do="next">다음 국 →</button>`;
   let body;
   if (r.kind === 'agari') {
     body = r.winners.map((w) => {

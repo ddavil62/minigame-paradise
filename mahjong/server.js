@@ -39,7 +39,6 @@ export const DEFAULT_TIMING = Object.freeze({
   baseMs: 15000,
   bankMs: 20000,
   reactionMs: 10000,
-  ackMs: 25000,
   aiTurnMs: [700, 1400],
   aiReactionMs: [350, 800],
   aiAckMs: [600, 1200],
@@ -309,14 +308,16 @@ export function createApp(opts = {}) {
       } else if (!slot.connected || slot.autoPlay) {
         kind = 'away';
         ms = T.awayMs;
+      } else if (p.type === 'ack') {
+        // 결과 확인은 시간 제한이 없다. 접속 중인 사람이 모두 직접 누를 때까지 기다린다(설명을 읽는 중에 넘어가지 않게).
+        continue;
       } else if (p.type === 'turn' && isRiichiLocked(g, seat)) {
         kind = 'riichi';
         ms = T.riichiAutoMs;
       } else {
         kind = 'timeout';
         if (p.type === 'turn') { base = T.baseMs; total = T.baseMs + slot.bank; slot.turnStart = now; }
-        else if (p.type === 'reaction') { base = total = T.reactionMs; }
-        else { base = total = T.ackMs; }
+        else { base = total = T.reactionMs; }
         ms = total;
       }
       const handle = setTimeout(() => runAuto(seat, token, kind), ms);
@@ -547,7 +548,7 @@ if (isDirectExecution() && !process.env.MAHJONG_NO_LISTEN) {
   // MAHJONG_FAST=1은 화면 검증용으로 AI 지연과 제한 시간을 줄인다.
   const fast = process.env.MAHJONG_FAST === '1';
   const app = createApp(fast ? {
-    timing: { aiTurnMs: [20, 60], aiReactionMs: [10, 40], aiAckMs: [30, 80], ackMs: 3000, baseMs: 6000, bankMs: 6000, reactionMs: 4000 },
+    timing: { aiTurnMs: [20, 60], aiReactionMs: [10, 40], aiAckMs: [30, 80], baseMs: 6000, bankMs: 6000, reactionMs: 4000 },
   } : {});
   const server = http.createServer((req, res) => {
     // 단독 실행에서는 /mahjong/ 접두어도 허용한다.

@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 import { createApp } from '../server.js';
 
 const FAST = {
-  baseMs: 8000, bankMs: 8000, reactionMs: 4000, ackMs: 4000,
+  baseMs: 8000, bankMs: 8000, reactionMs: 4000,
   aiTurnMs: [20, 60], aiReactionMs: [10, 40], aiAckMs: [20, 60], awayMs: 5, riichiAutoMs: 50,
 };
 
