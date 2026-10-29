@@ -188,6 +188,7 @@ function captureRects() {
 const STAGE_H = 760;
 const STAGE_MIN_W = 1200;
 const STAGE_MAX_W = 1600;
+const ACTION_SCALE = 1.25; // 퐁·치·깡·론 선택 버튼(.actions) 확대 배율. 5개가 한 줄로 내 연못과 안 겹치는 한계 근처
 const BOARD_SCALE = 1.3; // 중앙 영역(.board) 확대 배율. 연못 3줄까지 겹치지 않는 한계 — 올리기 전에 연못 3줄 상태로 확인한다
 /** 내 기준 상대 좌석(0=나,1=오른쪽,2=맞은편,3=왼쪽) 연출 중심. 무대 폭이 가변이고 판 중심(y=338)을 기준으로 확대되므로 매번 계산한다. */
 function seatAnchor(rel) {
@@ -597,7 +598,8 @@ function actionsHtml(v, legal) {
     });
     btns += '<button class="act ghost" data-do="pass">패스</button>';
   }
-  return `<div class="actions">${btns}</div>${legal.kind === 'reaction' ? '<div class="call-timer"><i id="call-bar"></i></div>' : ''}`;
+  const many = (btns.match(/<button/g) || []).length >= 4 ? ' many' : '';
+  return `<div class="actions${many}">${btns}</div>${legal.kind === 'reaction' ? '<div class="call-timer"><i id="call-bar"></i></div>' : ''}`;
 }
 
 function renderGame() {
@@ -830,6 +832,8 @@ function fit() {
   stage.style.width = `${w}px`;
   stage.style.setProperty('--dx', `${(w - STAGE_MIN_W) / 2}px`);
   stage.style.setProperty('--board-scale', String(BOARD_SCALE));
+  stage.style.setProperty('--act-scale', String(ACTION_SCALE));
+  stage.style.setProperty('--stage-w', `${w}px`);
   stage.style.transform = `scale(${scale})`;
   inner.style.width = `${w * scale}px`;
   inner.style.height = `${STAGE_H * scale}px`;
