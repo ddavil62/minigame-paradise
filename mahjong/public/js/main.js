@@ -544,6 +544,9 @@ function boardHtml(v) {
   return html;
 }
 
+/** 향청수 → 도우미 문구. 용어를 몰라도 "몇 장 더 바꿔야 하는지"가 보이게 풀어 쓴다 */
+const shantenText = (n) => `텐파이까지 ${n}향청(${n}장 교체)`;
+
 function hintStrip(v, legal) {
   const h = S.st.hints;
   const vis = visibleCounts(v);
@@ -566,7 +569,7 @@ function hintStrip(v, legal) {
     if (h.note) return `<span class="k">도우미</span><b>${esc(h.note)}</b>`;
     const bestK = h.best?.[0];
     const e = bestK != null ? h.discards[bestK] : null;
-    const state = h.shanten === 0 ? '텐파이!' : `텐파이까지 ${h.shanten}향청`;
+    const state = h.shanten === 0 ? '텐파이!' : shantenText(h.shanten);
     if (e) {
       const waits = e.waits?.length ? ` · 버리면 대기 ${miniTiles(e.waits.map((w) => w.kind))} 남은 ${e.waits.reduce((a, w) => a + w.remaining, 0)}장` : '';
       return `<span class="k">도우미</span>${state} · 추천 버림 <b>${kindName(bestK)}</b>${waits}`;
@@ -576,7 +579,7 @@ function hintStrip(v, legal) {
   if (h.waits?.length) {
     return `<span class="k">도우미</span>텐파이! 대기 ${miniTiles(h.waits.map((w) => w.kind))} 남은 ${h.waits.reduce((a, w) => a + w.remaining, 0)}장`;
   }
-  if (typeof h.shanten === 'number') return `<span class="k">도우미</span>텐파이까지 ${h.shanten}향청`;
+  if (typeof h.shanten === 'number') return `<span class="k">도우미</span>${shantenText(h.shanten)}`;
   return '';
 }
 

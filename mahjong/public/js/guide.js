@@ -159,7 +159,7 @@ function bodyHtml() {
           <h3>자주 보는 말</h3>
           <dl class="terms">
             <div><dt>텐파이</dt><dd>1장만 오면 완성되는 상태</dd></div>
-            <div><dt>향청수</dt><dd>텐파이까지 몇 장 더 바꿔야 하는지</dd></div>
+            <div><dt>향청</dt><dd>텐파이까지 남은 정도. 3향청 = 3장 더 바꿔야 해요(0이면 텐파이)</dd></div>
             <div><dt>후리텐</dt><dd>내가 버린 패로 완성되면 론은 못 해요(쯔모는 OK)</dd></div>
             <div><dt>울기</dt><dd>퐁·치·깡으로 남이 버린 패를 가져오는 것</dd></div>
             <div><dt>적도라</dt><dd>빨간 5. 1장당 +1판</dd></div>
