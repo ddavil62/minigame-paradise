@@ -10,7 +10,7 @@ mahjong/
 ├── lib/agari.js    # 분해·대기패·향청수·역/부수 평가·점수 계산(순수 함수)
 ├── lib/game.js     # 대국 상태 머신(MahjongGame) — 모든 규칙 판정과 국 진행
 ├── lib/ai.js       # AI(easy/normal/hard). viewFor() 뷰만 사용한다
-├── lib/hints.js    # 초보 도우미(향청수·대기패·안전패·추천 버림)
+├── lib/hints.js    # 초보 도우미(향청수·대기패·역 유무·안전패·추천 버림·울기 영향)
 ├── server.js       # WebSocket 룸, AI 스케줄러, 타이머, 정적 파일
 ├── public/         # index.html, css/style.css, js/{main,tiles,sounds,fx,guide,yaku-info}.js
 └── tests/          # node:test + Playwright UI, record-demo.mjs(두 가상 플레이어 시연 영상 녹화)
@@ -99,4 +99,5 @@ npx playwright test --config=playwright.config.js   # UI 회귀(격리 포트에
 - 결과 화면 역 설명: `agari.js`가 형태 역에 관련 패 종류 목록 `hl`을 붙이고, `game.js`의 `attachHighlights()`가 이를 실제 패 id로 바꾼다(도라·뒷도라·적도라는 직접 고른다). 리치·쯔모처럼 패와 무관한 역은 `hl`이 없다. 클라이언트는 결과 패(부로 포함)의 `data-id`와 대조해 강조하고, 설명 문구는 `public/js/yaku-info.js`에 있다. 새 역을 추가하면 `YAKU_INFO`에도 같은 이름으로 문구를 넣는다. ⓘ 설명(`.tip`)은 모달이 아니라 결과창 안에 떠 있는 팝오버(`position:absolute`, `pointer-events:none`)다(마우스는 호버, 터치는 탭). 문서 흐름에 넣으면 창이 커지며 가운데 정렬로 ⓘ가 커서 밑에서 밀려나 호버가 풀렸다 다시 걸리는 떨림이 생기므로 설명이 결과창 크기를 바꾸게 만들지 않는다. 상태(`S.resFocus`/`S.resTip`)는 재렌더 뒤에도 `applyResUi()`로 복원한다.
 - 룰 가이드(`public/js/guide.js`, 헤더 `#btn-guide`): 5탭 오버레이(기본 흐름·버튼 설명·자주 나오는 역·점수·용어·울기). 요소를 한 번만 만들어 두고 `render()`마다 `guide.attach()`로 무대에 다시 붙이므로 열린 상태·탭이 재렌더에도 유지된다. 열려 있어도 타이머는 멈추지 않고, 오버레이가 아래 화면의 클릭을 막는다(Esc·✕·배경 클릭으로 닫는다). CSS는 전부 `.guide` 아래에 두어 게임 클래스와 겹치지 않게 한다. 규칙 수치(타이머 15·20·10초, 점수표 등)나 역 목록이 바뀌면 guide.js 문구도 함께 고친다. 목업 원본은 `studio-mockup/minigame-paradise/mahjong-rule-guide-v1.html`.
 - BGM(`sounds.js`): 외부 음원 없이 WebAudio로 합성하는 116BPM 16마디 루프(멜로디·베이스·코드·드럼). 앞서 예약하는 스케줄러(120ms 주기, 0.5초 선행)로 박자를 유지하고, 첫 클릭의 `unlock()`에서 시작한다(자동재생 차단 때문). 헤더 `#btn-bgm`으로 따로 끄고(`mahjong:bgm`), 🔊 음소거는 BGM도 멈춘다. 탭이 숨겨지면 멈추고 돌아오면 이어서 시작한다. 악보는 `sounds.js` 상단 `BGM_*` 상수(8분음표 8칸 = 1마디).
+- 도우미(`lib/hints.js`)의 추천 버림은 향청수 → (텐파이면) 역이 있는 대기 → 수용 장수 → 도라·적도라 남기기 → 자패·1·9 먼저 순으로 고르고, 쿠이카에로 금지된 패(`view.legal.discard`에 없는 패)는 추천하지 않는다. 리치한 상대가 있고 내 손이 2향청 이상이면 현물(`safe`)을 우선(`bestWhy:'fold'`)한다. 대기마다 `agari.evaluateHand`로 역 유무(`ok`/`tsumo`/`none`/`partial`)를 구하므로 규칙·역을 바꾸면 도우미도 같이 맞춰진다. 힌트는 `viewFor`가 주는 뷰만 쓴다(상대 손패 금지, 테스트가 확인). 문구는 `main.js`의 `hintStrip()`이 만들며 해요체로 통일한다.
 - UI 변경은 1280×720·1920×1080·4:3·울트라와이드에서 가로 스크롤 없이 무대가 창에 맞는지 실제 브라우저로 확인한다. 세로 모바일은 가로 모드 안내를 띄운다.

@@ -491,7 +491,13 @@ function handHtml(v, legal) {
   const discardIds = canAct ? legal.discard : [];
   const best = new Set(hints?.best || []);
   const safe = new Set(hints?.safe || []);
-  let bestShown = false;
+  // 같은 종류가 여러 장이면 적도라가 아닌 패에 추천 태그를 붙인다.
+  const isRed = (id) => id === 16 || id === 52 || id === 88;
+  let bestId = null;
+  if (S.assist && canAct && !S.riichiMode && best.size) {
+    const ids = [...v.myHand, ...(v.myDrawn != null ? [v.myDrawn] : [])].filter((id) => best.has(id >> 2) && discardIds.includes(id));
+    bestId = ids.find((id) => !isRed(id)) ?? ids[0] ?? null;
+  }
   const mk = (id, extra = '') => {
     const k = id >> 2;
     let cls = `hand ${extra}`;
@@ -501,7 +507,7 @@ function handHtml(v, legal) {
     else if (canAct && !discardIds.includes(id)) cls += ' forbid';
     if (S.showNames) inner += `<span class="cap">${kindName(k)}</span>`;
     if (S.assist && canAct && !S.riichiMode) {
-      if (best.has(k) && !bestShown && discardIds.includes(id)) { inner += '<span class="tag best">추천</span>'; bestShown = true; }
+      if (id === bestId) inner += `<span class="tag best">${safe.has(k) ? '추천·안전' : '추천'}</span>`;
       else if (safe.has(k)) inner += '<span class="tag safe">안전</span>';
     } else if (S.assist && safe.has(k)) inner += '<span class="tag safe">안전</span>';
     return tileHtml(code(id), 't-hand', cls, inner, { id });
@@ -544,40 +550,73 @@ function boardHtml(v) {
   return html;
 }
 
-/** 향청수 → 도우미 문구. 용어를 몰라도 "몇 장 더 바꿔야 하는지"가 보이게 풀어 쓴다 */
-const shantenText = (n) => `텐파이까지 ${n}향청(${n}장 교체)`;
+/** 향청수 → 도우미 문구. 용어를 몰라도 "몇 단계 남았는지"가 보이게 풀어 쓴다 */
+const shantenText = (n) => `텐파이까지 ${n}단계(${n}향청)`;
+
+/** 대기패의 역 상태(ok·tsumo·none·partial) → 안내 문구. 문제없으면 '' */
+function yakuText(status, fixable) {
+  if (status === 'none') return fixable ? '지금은 역이 없어요. 리치하면 생겨요' : '⚠ 역이 없어서 이 대기로는 화료할 수 없어요';
+  if (status === 'tsumo') return '쯔모로만 이길 수 있어요. 리치하면 론도 돼요';
+  if (status === 'partial') return '⚠ 일부 대기는 역이 없어요';
+  return '';
+}
+const warnSpan = (text) => (text ? `<span class="warn">${text}</span>` : '');
+const dot = (parts) => parts.filter(Boolean).join(' · ');
+
+/** 퐁·치를 했을 때 도우미가 알려 주는 변화(h.call) */
+function callText(c) {
+  const speed = c.after < c.before
+    ? (c.after === 0 ? '울면 텐파이가 돼요' : `울면 ${c.before}향청 → ${c.after}향청으로 빨라져요`)
+    : c.after === c.before
+      ? (c.before === 0 ? '이미 텐파이라 울어도 같아요' : '울어도 속도는 그대로예요')
+      : '울면 오히려 멀어져요';
+  return dot([
+    speed,
+    c.opens ? '문전이 깨져 리치를 못 해요' : '',
+    c.yakuAfter === 'none' ? '<span class="warn">⚠ 울고 텐파이가 돼도 역이 없어요</span>' : '',
+    c.yakuAfter === 'partial' ? '<span class="warn">⚠ 일부 대기는 역이 없어요</span>' : '',
+  ]);
+}
 
 function hintStrip(v, legal) {
   const h = S.st.hints;
   const vis = visibleCounts(v);
   const remain = (kinds) => kinds.reduce((a, k) => a + Math.max(0, 4 - vis[k]), 0);
+  const riichiNames = v.players.filter((p) => p.seat !== v.me && p.riichi).map((p) => seatInfo(p.seat).name).join(', ');
+  const waitsText = (waits) => `대기 ${miniTiles(waits.map((w) => w.kind))} (안 보이는 패 ${waits.reduce((a, w) => a + w.remaining, 0)}장)`;
   if (S.riichiMode && legal?.kind === 'turn') {
-    if (S.selected == null) return '<span class="k">리치</span>리치할 패를 고르세요 (밝게 보이는 패)';
+    if (S.selected == null) return '<span class="k">리치</span>리치할 패를 골라요 (밝게 보이는 패)';
     const k = S.selected >> 2;
     const waits = legal.riichiWaits?.[k] || [];
-    return `<span class="k">리치</span><b>${kindName(k)}</b>을 버리면 대기 ${miniTiles(waits)} <span>남은 ${remain(waits)}장</span>`;
+    return `<span class="k">리치</span><b>${kindName(k)}</b> 버리고 리치하면 대기 ${miniTiles(waits)} (안 보이는 패 ${remain(waits)}장)`;
   }
   if (legal?.kind === 'reaction') {
     const tile = legal.tile;
-    const who = seatInfo(legal.from).name;
+    const who = `${esc(seatInfo(legal.from).name)}(${WIND_KO[v.players[legal.from].wind]}가)`;
     const label = legal.ron ? '론 가능' : legal.pon ? '퐁 가능' : legal.chi ? '치 가능' : '깡 가능';
-    const note = S.assist && h?.note ? ` · <b>${esc(h.note)}</b>` : '';
-    return `<span class="k">${label}</span>${esc(who)}(${WIND_KANJI[v.players[legal.from].wind]})가 ${miniTiles([tile >> 2])} 를 버렸습니다${note}`;
+    const info = S.assist && h ? dot([h.call ? callText(h.call) : '', h.note ? `<b>${esc(h.note)}</b>` : '']) : '';
+    return `<span class="k">${label}</span>${who}의 버림패 ${miniTiles([tile >> 2])}${info ? ` · ${info}` : ''}`;
   }
   if (!S.assist || !h) return '';
   if (legal?.kind === 'turn') {
-    if (h.note) return `<span class="k">도우미</span><b>${esc(h.note)}</b>`;
+    if (h.note && legal.tsumo) return `<span class="k">도우미</span><b>${esc(h.note)}</b>`;
     const bestK = h.best?.[0];
     const e = bestK != null ? h.discards[bestK] : null;
-    const state = h.shanten === 0 ? '텐파이!' : shantenText(h.shanten);
-    if (e) {
-      const waits = e.waits?.length ? ` · 버리면 대기 ${miniTiles(e.waits.map((w) => w.kind))} 남은 ${e.waits.reduce((a, w) => a + w.remaining, 0)}장` : '';
-      return `<span class="k">도우미</span>${state} · 추천 버림 <b>${kindName(bestK)}</b>${waits}`;
-    }
-    return `<span class="k">도우미</span>${state}`;
+    const state = h.shanten === 0 ? '버리면 텐파이!' : h.shanten > 0 ? shantenText(h.shanten) : '';
+    const lead = h.note ? warnSpan(esc(h.note)) : '';
+    if (!e) return `<span class="k">도우미</span>${dot([lead, state])}`;
+    let why = '';
+    if (h.bestWhy === 'fold') why = `리치한 ${esc(riichiNames)}님이 있고 아직 멀어서, 이미 나온 안전패를 골랐어요`;
+    else if (h.bestWhy === 'tenpai' && e.waits?.length) why = dot([waitsText(e.waits), warnSpan(yakuText(e.yaku, h.fixable))]);
+    else if (e.u > 0) why = `도움 되는 패가 ${e.u}장 남아 있어요`;
+    return `<span class="k">도우미</span>${dot([
+      lead, state, `추천 버림 <b>${kindName(bestK)}</b>`, why,
+      h.bestSavedDora ? '도라는 남겨 뒀어요' : '',
+      h.bestRisky ? warnSpan(`⚠ 리치한 ${esc(riichiNames)}님에게 위험한 패예요`) : '',
+    ])}`;
   }
   if (h.waits?.length) {
-    return `<span class="k">도우미</span>텐파이! 대기 ${miniTiles(h.waits.map((w) => w.kind))} 남은 ${h.waits.reduce((a, w) => a + w.remaining, 0)}장`;
+    return `<span class="k">도우미</span>${dot(['텐파이!', waitsText(h.waits), warnSpan(yakuText(h.yaku, h.fixable))])}`;
   }
   if (typeof h.shanten === 'number') return `<span class="k">도우미</span>${shantenText(h.shanten)}`;
   return '';
@@ -625,7 +664,7 @@ function renderGame() {
   html += actionsHtml(v, legal);
   if (S.assist && S.st.hints?.safe?.length) {
     const rp = v.players.filter((p) => p.seat !== v.me && p.riichi).map((p) => seatInfo(p.seat).name);
-    if (rp.length) html += `<div class="legend"><b>${esc(rp.join(', '))}</b>님이 리치 중<br><span class="tag safe" style="position:static;display:inline-block;margin-right:4px;transform:none">안전</span> 리치한 사람이 이미 버린 패(현물) — 론당하지 않아요</div>`;
+    if (rp.length) html += `<div class="legend"><b>${esc(rp.join(', '))}</b>님이 리치 중<br><span class="tag safe" style="position:static;display:inline-block;margin-right:4px;transform:none">안전</span> 리치한 사람이 이미 버린 패(현물)라서 론당하지 않아요</div>`;
   }
   if (v.phase === 'ack' && v.result) html += resultHtml(v);
   if (v.phase === 'over' && v.final) html += finalHtml(v);
