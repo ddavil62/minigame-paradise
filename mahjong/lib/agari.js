@@ -292,6 +292,27 @@ function allCounts(counts, melds) {
 }
 
 /**
+ * 개수 배열을 종류 목록(중복 포함)으로 펼친다. 역의 관련 패(hl) 표기에 쓴다.
+ * @param {number[]} counts 종류별 개수
+ * @returns {number[]} 종류 목록
+ */
+function expandKinds(counts) {
+  const out = [];
+  counts.forEach((n, k) => { for (let i = 0; i < n; i++) out.push(k); });
+  return out;
+}
+
+/** @param {{t:string,k:number}[]} groups 면자 목록 @returns {number[]} 면자를 이루는 종류 목록 */
+function groupKinds(groups) {
+  const out = [];
+  for (const g of groups) {
+    if (g.t === 'seq') out.push(g.k, g.k + 1, g.k + 2);
+    else for (let i = 0; i < (g.t === 'kan' ? 4 : 3); i++) out.push(g.k);
+  }
+  return out;
+}
+
+/**
  * 전체 패 구성에서 성립하는 일반 역(형태 무관)을 추가한다.
  * @returns {void}
  */
@@ -315,12 +336,13 @@ function addCommonYaku(ctx, menzen, all, out) {
     if (isYaochuu(k)) simple = false; else allYaochuu = false;
     if (isHonor(k)) hasHonor = true; else suits.add(suitOf(k));
   }
-  if (simple && (menzen || ctx.rules.kuitan)) out.push({ name: '탕야오', han: 1 });
+  const hl = expandKinds(all);
+  if (simple && (menzen || ctx.rules.kuitan)) out.push({ name: '탕야오', han: 1, hl });
   if (suits.size === 1) {
-    if (hasHonor) out.push({ name: '혼일색', han: menzen ? 3 : 2 });
-    else out.push({ name: '청일색', han: menzen ? 6 : 5 });
+    if (hasHonor) out.push({ name: '혼일색', han: menzen ? 3 : 2, hl });
+    else out.push({ name: '청일색', han: menzen ? 6 : 5, hl });
   }
-  if (allYaochuu && hasHonor && suits.size >= 1) out.push({ name: '혼노두', han: 2 });
+  if (allYaochuu && hasHonor && suits.size >= 1) out.push({ name: '혼노두', han: 2, hl });
 }
 
 /**
@@ -337,9 +359,10 @@ function addCommonYakuman(ctx, all, out) {
     if (!isTerminal(k)) allTerm = false;
     if (!GREEN_KINDS.has(k)) allGreen = false;
   }
-  if (allHonor) out.push({ name: '자일색', yakuman: 1 });
-  if (allTerm) out.push({ name: '청노두', yakuman: 1 });
-  if (allGreen) out.push({ name: '녹일색', yakuman: 1 });
+  const hl = expandKinds(all);
+  if (allHonor) out.push({ name: '자일색', yakuman: 1, hl });
+  if (allTerm) out.push({ name: '청노두', yakuman: 1, hl });
+  if (allGreen) out.push({ name: '녹일색', yakuman: 1, hl });
   if (ctx.tenhou) out.push({ name: '천화', yakuman: 1 });
   if (ctx.chiihou) out.push({ name: '지화', yakuman: 1 });
 }
@@ -395,13 +418,16 @@ function evalStandard(ctx, d, interp, melds, menzen, all) {
 
   // 역만
   const ym = [];
-  if (menzen && concealedTrips === 4) ym.push({ name: '스안커', yakuman: interp.wait === 'tanki' ? 2 : 1 });
-  const dragonTrips = trips.filter((g) => isDragon(g.k)).length;
-  if (dragonTrips === 3) ym.push({ name: '대삼원', yakuman: 1 });
-  const windTrips = trips.filter((g) => isWind(g.k)).length;
-  if (windTrips === 4) ym.push({ name: '대사희', yakuman: 2 });
-  else if (windTrips === 3 && isWind(pair)) ym.push({ name: '소사희', yakuman: 1 });
-  if (kans.length === 4) ym.push({ name: '스깡쯔', yakuman: 1 });
+  const allHl = expandKinds(all);
+  if (menzen && concealedTrips === 4) ym.push({ name: '스안커', yakuman: interp.wait === 'tanki' ? 2 : 1, hl: allHl });
+  const dragonGroups = trips.filter((g) => isDragon(g.k));
+  const dragonTrips = dragonGroups.length;
+  if (dragonTrips === 3) ym.push({ name: '대삼원', yakuman: 1, hl: groupKinds(dragonGroups) });
+  const windGroups = trips.filter((g) => isWind(g.k));
+  const windTrips = windGroups.length;
+  if (windTrips === 4) ym.push({ name: '대사희', yakuman: 2, hl: groupKinds(windGroups) });
+  else if (windTrips === 3 && isWind(pair)) ym.push({ name: '소사희', yakuman: 1, hl: [...groupKinds(windGroups), pair, pair] });
+  if (kans.length === 4) ym.push({ name: '스깡쯔', yakuman: 1, hl: groupKinds(kans) });
   if (melds.length === 0 && suitOf(pair) < 3) {
     // 구련보등: 멘젠 한 가지 색 3111111113 + 1장
     const base = suitOf(pair) * 9;
@@ -409,7 +435,7 @@ function evalStandard(ctx, d, interp, melds, menzen, all) {
     for (let n = 0; n < 9; n++) sum += all[base + n];
     if (sum === 14 && CHUUREN_BASE.every((v, n) => all[base + n] >= v)) {
       const pure = CHUUREN_BASE.every((v, n) => all[base + n] - (n === ctx.winKind - base ? 1 : 0) === v);
-      ym.push({ name: pure ? '순정구련보등' : '구련보등', yakuman: pure ? 2 : 1 });
+      ym.push({ name: pure ? '순정구련보등' : '구련보등', yakuman: pure ? 2 : 1, hl: allHl });
     }
   }
   addCommonYakuman(ctx, all, ym);
@@ -424,27 +450,28 @@ function evalStandard(ctx, d, interp, melds, menzen, all) {
   // 핑후
   const pairYakuhai = isDragon(pair) || pair === seatWind || pair === roundWind;
   const isPinfu = menzen && seqs.length === 4 && !pairYakuhai && interp.wait === 'ryanmen';
-  if (isPinfu) y.push({ name: '핑후', han: 1 });
+  if (isPinfu) y.push({ name: '핑후', han: 1, hl: expandKinds(all) });
 
   // 페코
   if (menzen) {
     const seqCount = {};
     for (const g of seqs) seqCount[g.k] = (seqCount[g.k] || 0) + 1;
     const pairs = Object.values(seqCount).reduce((a, n) => a + Math.floor(n / 2), 0);
-    if (pairs >= 2) y.push({ name: '량페코', han: 3 });
-    else if (pairs === 1) y.push({ name: '이페코', han: 1 });
+    const dupSeqs = Object.entries(seqCount).flatMap(([k, n]) => Array(Math.floor(n / 2) * 2).fill({ t: 'seq', k: +k }));
+    if (pairs >= 2) y.push({ name: '량페코', han: 3, hl: groupKinds(dupSeqs) });
+    else if (pairs === 1) y.push({ name: '이페코', han: 1, hl: groupKinds(dupSeqs) });
   }
   // 삼색동순 / 일기통관
   const seqKinds = new Set(seqs.map((g) => g.k));
   for (let n = 0; n < 7; n++) {
     if (seqKinds.has(n) && seqKinds.has(9 + n) && seqKinds.has(18 + n)) {
-      y.push({ name: '삼색동순', han: menzen ? 2 : 1 });
+      y.push({ name: '삼색동순', han: menzen ? 2 : 1, hl: groupKinds([n, 9 + n, 18 + n].map((k) => ({ t: 'seq', k }))) });
       break;
     }
   }
   for (let s = 0; s < 3; s++) {
     if (seqKinds.has(s * 9) && seqKinds.has(s * 9 + 3) && seqKinds.has(s * 9 + 6)) {
-      y.push({ name: '일기통관', han: menzen ? 2 : 1 });
+      y.push({ name: '일기통관', han: menzen ? 2 : 1, hl: groupKinds([0, 3, 6].map((k) => ({ t: 'seq', k: s * 9 + k }))) });
       break;
     }
   }
@@ -455,23 +482,23 @@ function evalStandard(ctx, d, interp, melds, menzen, all) {
       && trips.every((g) => isYaochuu(g.k))
       && seqs.every((g) => g.k % 9 === 0 || g.k % 9 === 6);
     if (allTerm) {
-      if (hasHonor) y.push({ name: '찬타', han: menzen ? 2 : 1 });
-      else y.push({ name: '준찬타', han: menzen ? 3 : 2 });
+      if (hasHonor) y.push({ name: '찬타', han: menzen ? 2 : 1, hl: allHl });
+      else y.push({ name: '준찬타', han: menzen ? 3 : 2, hl: allHl });
     }
   }
-  if (seqs.length === 0) y.push({ name: '또이또이', han: 2 });
-  if (concealedTrips === 3) y.push({ name: '산안커', han: 2 });
+  if (seqs.length === 0) y.push({ name: '또이또이', han: 2, hl: allHl });
+  if (concealedTrips === 3) y.push({ name: '산안커', han: 2, hl: groupKinds(trips.filter((g) => !g.open)) });
   for (let n = 0; n < 9; n++) {
     const has = (s) => trips.some((g) => g.k === s * 9 + n);
-    if (has(0) && has(1) && has(2)) { y.push({ name: '삼색동각', han: 2 }); break; }
+    if (has(0) && has(1) && has(2)) { y.push({ name: '삼색동각', han: 2, hl: groupKinds([0, 1, 2].map((s) => ({ t: 'tri', k: s * 9 + n }))) }); break; }
   }
-  if (kans.length === 3) y.push({ name: '산깡쯔', han: 2 });
-  if (dragonTrips === 2 && isDragon(pair)) y.push({ name: '소삼원', han: 2 });
+  if (kans.length === 3) y.push({ name: '산깡쯔', han: 2, hl: groupKinds(kans) });
+  if (dragonTrips === 2 && isDragon(pair)) y.push({ name: '소삼원', han: 2, hl: [...groupKinds(dragonGroups), pair, pair] });
   const hakuNames = { 31: '역패 백', 32: '역패 발', 33: '역패 중' };
   for (const g of trips) {
-    if (isDragon(g.k)) y.push({ name: hakuNames[g.k], han: 1 });
-    if (g.k === roundWind) y.push({ name: '장풍패', han: 1 });
-    if (g.k === seatWind) y.push({ name: '자풍패', han: 1 });
+    if (isDragon(g.k)) y.push({ name: hakuNames[g.k], han: 1, hl: groupKinds([g]) });
+    if (g.k === roundWind) y.push({ name: '장풍패', han: 1, hl: groupKinds([g]) });
+    if (g.k === seatWind) y.push({ name: '자풍패', han: 1, hl: groupKinds([g]) });
   }
 
   // 부수
@@ -535,7 +562,7 @@ export function evaluateHand(rawCtx) {
 
   if (melds.length === 0 && isKokushi(counts)) {
     const thirteen = counts[ctx.winKind] === 2;
-    const ym = [{ name: thirteen ? '국사무쌍 13면' : '국사무쌍', yakuman: thirteen ? 2 : 1 }];
+    const ym = [{ name: thirteen ? '국사무쌍 13면' : '국사무쌍', yakuman: thirteen ? 2 : 1, hl: expandKinds(all) }];
     if (ctx.tenhou) ym.push({ name: '천화', yakuman: 1 });
     if (ctx.chiihou) ym.push({ name: '지화', yakuman: 1 });
     consider({ han: 0, fu: 0, yaku: ym, yakuman: ym.reduce((a, v) => a + v.yakuman, 0), shape: 'kokushi' });
@@ -547,7 +574,7 @@ export function evaluateHand(rawCtx) {
     if (ym.length > 0) {
       consider({ han: 0, fu: 0, yaku: ym, yakuman: ym.reduce((a, v) => a + v.yakuman, 0), shape: 'chiitoi' });
     } else {
-      const y = [{ name: '치또이츠', han: 2 }];
+      const y = [{ name: '치또이츠', han: 2, hl: expandKinds(all) }];
       addCommonYaku(ctx, true, all, y);
       consider({ han: y.reduce((a, v) => a + v.han, 0), fu: 25, yaku: y, yakuman: 0, shape: 'chiitoi' });
     }

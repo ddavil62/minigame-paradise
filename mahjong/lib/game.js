@@ -180,8 +180,38 @@ export class MahjongGame {
       aka: this.settings.aka ? all.filter(isRedId).length : 0,
       rules: { kuitan: this.settings.kuitan },
     });
-    if (r) r.limit = limitName(r.han, r.fu, r.yakuman);
+    if (r) {
+      r.limit = limitName(r.han, r.fu, r.yakuman);
+      this.attachHighlights(r, all, doraKinds, uraKinds);
+    }
     return r;
+  }
+
+  /**
+   * 각 역에 결과 화면에서 강조할 패 id 목록(hl)을 붙인다. 형태 역은 agari.js가 준 종류 목록을
+   * 실제 패 id에 대응시키고, 도라류는 해당 패를 직접 고른다. 패와 무관한 역은 hl이 없다.
+   * @param {{yaku:{name:string,hl?:number[]}[]}} r 평가 결과
+   * @param {number[]} all 화료 손의 모든 패 id(멘젠 + 부로 + 화료패)
+   * @param {number[]} doraKinds 도라 종류
+   * @param {number[]} uraKinds 뒷도라 종류
+   * @returns {void}
+   */
+  attachHighlights(r, all, doraKinds, uraKinds) {
+    const byKind = (kinds) => {
+      const used = new Set();
+      const out = [];
+      for (const k of kinds) {
+        const id = all.find((t) => kindOf(t) === k && !used.has(t));
+        if (id != null) { used.add(id); out.push(id); }
+      }
+      return out;
+    };
+    for (const y of r.yaku) {
+      if (y.name === '도라') y.hl = all.filter((id) => doraKinds.includes(kindOf(id)));
+      else if (y.name === '뒷도라') y.hl = all.filter((id) => uraKinds.includes(kindOf(id)));
+      else if (y.name === '적도라') y.hl = all.filter(isRedId);
+      else if (y.hl) y.hl = byKind(y.hl);
+    }
   }
 
   canRon(seat, tileId, { chankan = false } = {}) {

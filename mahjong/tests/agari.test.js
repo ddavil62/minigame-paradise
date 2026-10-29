@@ -149,3 +149,47 @@ test('론으로 완성한 샤보 각자는 명각 취급(스안커 불성립)', 
   const tsumo = evaluateHand({ ...BASE, tsumo: true, counts: parse('111m222p333s444z55z'), winKind: kind('4z') });
   assert.equal(tsumo.yakuman, 1);
 });
+
+// ── 역별 관련 패(hl): 결과 화면 강조용 ──────────────────────
+
+/** hl이 화료 손(멘젠 + 부로)의 부분 다중집합인지 확인한다. */
+function assertHlWithin(r, counts, melds = []) {
+  const left = counts.slice();
+  for (const m of melds) {
+    const n = m.type === 'chi' ? [0, 1, 2] : m.type === 'pon' ? [0, 0, 0] : [0, 0, 0, 0];
+    for (const d of n) left[m.k + d]++;
+  }
+  for (const y of r.yaku) {
+    const need = new Array(34).fill(0);
+    for (const k of y.hl || []) need[k]++;
+    need.forEach((n, k) => assert.ok(n <= left[k], `${y.name}: kind ${k} hl ${n} > hand ${left[k]}`));
+  }
+}
+
+test('hl: 이페코는 같은 순쯔 2개, 삼색동순은 세 색 순쯔', () => {
+  const counts = parse('112233m456p789s11z');
+  const r = evaluateHand({ ...BASE, counts, winKind: kind('3m') });
+  assert.deepEqual(r.yaku.find((y) => y.name === '이페코').hl.slice().sort((a, b) => a - b), [0, 0, 1, 1, 2, 2]);
+  assertHlWithin(r, counts);
+  const c2 = parse('234m234p234s567s11z');
+  const r2 = evaluateHand({ ...BASE, counts: c2, winKind: kind('7s'), riichi: 1 });
+  assert.deepEqual(r2.yaku.find((y) => y.name === '삼색동순').hl.slice().sort((a, b) => a - b), [1, 2, 3, 10, 11, 12, 19, 20, 21]);
+  assertHlWithin(r2, c2);
+});
+
+test('hl: 패와 무관한 역(리치·멘젠쯔모)은 hl이 없고 형태 역은 손 안에 있다', () => {
+  const counts = parse('234m456p678s34p55s' + '5p');
+  const r = evaluateHand({ ...BASE, tsumo: true, counts, winKind: kind('5p'), riichi: 1 });
+  for (const n of ['리치', '멘젠쯔모']) assert.equal(r.yaku.find((y) => y.name === n).hl, undefined);
+  for (const n of ['탕야오', '핑후']) assert.equal(r.yaku.find((y) => y.name === n).hl.length, 14);
+  assertHlWithin(r, counts);
+});
+
+test('hl: 역패·부로 포함 손에서도 손 안의 패만 가리킨다', () => {
+  const counts = parse('234m456p99s');
+  const melds = [{ type: 'pon', k: kind('5z') }, { type: 'chi', k: kind('2s') }];
+  const r = evaluateHand({ ...BASE, counts, melds, winKind: kind('9s') });
+  assert.ok(r);
+  assertHlWithin(r, counts, melds);
+  assert.deepEqual(r.yaku.find((y) => y.name === '역패 백').hl, [31, 31, 31]);
+});

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MahjongGame } from '../lib/game.js';
-import { kindOf, seededRng, sortTiles } from '../lib/tiles.js';
+import { kindOf, seededRng, sortTiles, doraFromIndicator, isRedId } from '../lib/tiles.js';
 import { playFullMatch } from './helpers.js';
 
 /** "123m456p789s11z" → 종류 배열 */
@@ -351,4 +351,50 @@ test('퍼즈: 시드별 대국이 예외 없이 끝나고 점수 합이 보존�
     assert.equal(total + game.kyotaku * 1000, 100000, `seed ${seed}`);
     assert.ok(game.final);
   }
+});
+
+test('결과의 역별 강조 패(hl)는 실제 패 id이며 이페코는 같은 순쯔 2개를 가리킨다', () => {
+  const g = setup({
+    hands: { 0: '112233m456p789s1z' },
+    drawn: { seat: 0, kind: kinds('1z')[0] },
+    callsHappened: true,
+  });
+  g.act(0, { type: 'tsumo' });
+  const w = g.result.winners[0];
+  const hand = new Set([...w.concealed, w.winTile]);
+  const iipeiko = w.yaku.find((y) => y.name === '이페코');
+  assert.deepEqual(iipeiko.hl.map(kindOf).sort((a, b) => a - b), [0, 0, 1, 1, 2, 2]);
+  assert.equal(new Set(iipeiko.hl).size, 6);
+  assert.ok(iipeiko.hl.every((id) => hand.has(id)));
+  assert.equal(w.yaku.find((y) => y.name === '멘젠쯔모').hl, undefined);
+});
+
+test('퍼즈: 모든 화료 결과의 hl이 화료 손 안의 중복 없는 패 id이고 도라류는 해당 패를 가리킨다', () => {
+  let checked = 0;
+  let withHl = 0;
+  const seen = new WeakSet();
+  for (let seed = 1; seed <= 4; seed++) {
+    playFullMatch(seed, {
+      settings: { aka: true, length: 'east' },
+      onStep: (game) => {
+        const r = game.result;
+        if (!r || r.kind !== 'agari' || seen.has(r)) return;
+        seen.add(r);
+        const doraKinds = r.dora.map((id) => doraFromIndicator(kindOf(id)));
+        for (const w of r.winners) {
+          const pool = new Set([...w.concealed, w.winTile, ...w.melds.flatMap((m) => m.tiles)]);
+          for (const y of w.yaku) {
+            if (!y.hl) continue;
+            withHl++;
+            assert.equal(new Set(y.hl).size, y.hl.length, `seed ${seed} ${y.name} 중복`);
+            assert.ok(y.hl.every((id) => pool.has(id)), `seed ${seed} ${y.name} 손 밖의 패`);
+            if (y.name === '도라') assert.ok(y.hl.every((id) => doraKinds.includes(kindOf(id))));
+            if (y.name === '적도라') assert.ok(y.hl.every(isRedId));
+          }
+          checked++;
+        }
+      },
+    });
+  }
+  assert.ok(checked > 0 && withHl > 0, `화료 ${checked}건, hl ${withHl}건`);
 });

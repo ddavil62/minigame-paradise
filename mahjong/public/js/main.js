@@ -8,6 +8,7 @@
 import { tileHtml, backHtml, sideHtml, codeOf, codeOfKind, kindName, esc } from './tiles.js';
 import { createSounds } from './sounds.js';
 import { createFx } from './fx.js';
+import { YAKU_INFO, TERM_INFO, limitInfo } from './yaku-info.js';
 
 const WIND_KANJI = ['東', '南', '西', '北'];
 const WIND_KO = ['동', '남', '서', '북'];
@@ -51,6 +52,8 @@ const S = {
   stageW: 1200, // 무대 폭(fit()이 창 비율에 맞춰 갱신)
   anims: [], // 재렌더로 끊기지 않게 이어서 재생하는 짧은 연출 {at, ttl, run(elapsed)}
   shown: null, // 결과/종료 화면 연출을 이미 시작한 키
+  resFocus: null, // 결과 화면에서 강조 중인 역 '화료자:역' (재렌더에도 유지)
+  resTip: null, // 결과 화면에서 펼친 ⓘ 설명 키
 };
 
 // ── 접속 ────────────────────────────────────────────────────
@@ -255,7 +258,7 @@ function overlayIn(elapsed, { late = 0, final = false } = {}) {
   if (box) fx.stagger([box], [{ transform: 'scale(.6) translateY(60px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 520, delay: base, easing: 'cubic-bezier(.2,1.35,.4,1)', elapsed });
   const heads = ov.querySelectorAll('.res-head .limit, .res-head h2');
   fx.stagger([...heads], [{ transform: 'scale(3.2) rotate(-14deg)', opacity: 0 }, { transform: 'scale(1) rotate(0)', opacity: 1 }], { dur: 420, delay: base + 250, step: 220, easing: 'cubic-bezier(.2,1.6,.4,1)', elapsed });
-  fx.stagger([...ov.querySelectorAll('.yaku > span')], [{ transform: 'translateX(-40px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 320, delay: base + 600, step: 90, easing: 'ease-out', elapsed });
+  fx.stagger([...ov.querySelectorAll('.yaku > .yrow')], [{ transform: 'translateX(-40px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 320, delay: base + 600, step: 90, easing: 'ease-out', elapsed });
   fx.stagger([...ov.querySelectorAll('.total, .tenpai-row')], [{ transform: 'scale(.6)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, delay: base + 900, step: 120, elapsed });
   fx.stagger([...ov.querySelectorAll('.delta, .rank-row')], [{ transform: 'translateX(60px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, delay: base + (final ? 350 : 1000), step: final ? 260 : 140, easing: 'cubic-bezier(.2,1.2,.4,1)', elapsed });
   ov.querySelectorAll('.delta .plus, .delta .minus').forEach((e, i) => {
@@ -360,10 +363,11 @@ function seatInfo(seat) { return S.st?.seats?.[seat] || S.room?.seats?.[seat] ||
 function avatarChar(info) { return AI_CHAR[info.name] || (info.name || '?').slice(0, 1); }
 function avatarClass(info, seat) { return info.type === 'ai' ? 'av-ai' : `av-${seat}`; }
 
-function meldHtml(m, owner, size) {
+function meldHtml(m, owner, size, withIds = false) {
   const rotCls = size === 't-meld' ? 'meld' : 'meldo';
-  const rot = (id, extra = '') => sideHtml(code(id), size, rotCls, extra);
-  const up = (id) => tileHtml(code(id), size);
+  const attrs = (id) => (withIds ? { id } : {});
+  const rot = (id, extra = '') => sideHtml(code(id), size, rotCls, extra, attrs(id));
+  const up = (id) => tileHtml(code(id), size, '', '', attrs(id));
   if (m.type === 'ankan') {
     const [, b, c] = m.tiles;
     return `<div class="meld-g">${backHtml(size)}${up(b)}${up(c)}${backHtml(size)}</div>`;
@@ -626,16 +630,48 @@ function renderGame() {
   const overKey = v.phase === 'ack' && v.result ? `r${v.handNo}` : (v.phase === 'over' && v.final ? 'final' : null);
   if (overKey && S.shown !== overKey) {
     S.shown = overKey;
+    S.resFocus = null;
+    S.resTip = null;
     const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? 1250 : 350);
     S.anims.push({ at: performance.now(), ttl: late + 3500, run: (el) => overlayIn(el, { late, final: overKey === 'final' }) });
   }
+  applyResUi();
   resumeAnims();
   updateTimers();
 }
 
 // ── 결과 / 종료 ────────────────────────────────────────────
-function yakuLine(y) {
-  return `<span>${esc(y.name)}</span><span>${y.yakuman ? `${y.yakuman >= 2 ? `${y.yakuman}배 ` : ''}역만` : `${y.han}판`}</span>`;
+/** ⓘ 버튼. key는 펼칠 설명(.tip[data-tipbox])과 짝이다. */
+const infoBtn = (key, label) => `<button class="info" data-tip="${key}" aria-label="${esc(label)} 설명">ⓘ</button>`;
+const tipBox = (key, text) => `<div class="tip" data-tipbox="${key}">${esc(text)}</div>`;
+
+/** 역 한 줄. 줄에 올리면 관련 패(data-hl 패 id)가 강조되고 ⓘ를 올리면 설명이 펼쳐진다. */
+function yakuRow(y, wi, i) {
+  const key = `${wi}:${i}`;
+  const info = YAKU_INFO[y.name];
+  const han = y.yakuman ? `${y.yakuman >= 2 ? `${y.yakuman}배 ` : ''}역만` : `${y.han}판`;
+  return `<div class="yrow" data-yk="${key}" data-hl="${(y.hl || []).join(',')}"><div class="yline"><span class="yn">${esc(y.name)}${info ? infoBtn(`y:${key}`, y.name) : ''}</span><span class="yh">${han}</span></div>${info ? tipBox(`y:${key}`, info) : ''}</div>`;
+}
+
+/** 결과 화면의 강조·설명 상태(S.resFocus/S.resTip)를 현재 DOM에 반영한다. 재렌더 후에도 호출한다. */
+function applyResUi() {
+  const box = stage.querySelector('.result');
+  if (!box) return;
+  box.querySelectorAll('.yrow').forEach((r) => r.classList.toggle('on', r.dataset.yk === S.resFocus));
+  box.querySelectorAll('[data-tip], [data-tipbox]').forEach((el) => el.classList.toggle('open', (el.dataset.tip ?? el.dataset.tipbox) === S.resTip));
+  box.querySelectorAll('.res-win').forEach((win) => {
+    const row = S.resFocus ? win.querySelector(`.yrow[data-yk="${S.resFocus}"]`) : null;
+    const ids = new Set((row?.dataset.hl || '').split(',').filter(Boolean).map(Number));
+    const hand = win.querySelector('.res-hand');
+    hand.classList.toggle('focus', ids.size > 0);
+    hand.querySelectorAll('.tile[data-id]').forEach((t) => t.classList.toggle('hl', ids.has(+t.dataset.id)));
+  });
+}
+
+function setResUi({ focus = S.resFocus, tip = S.resTip } = {}) {
+  S.resFocus = focus;
+  S.resTip = tip;
+  applyResUi();
 }
 
 function resultHtml(v) {
@@ -655,18 +691,23 @@ function resultHtml(v) {
   if (r.kind === 'agari') {
     body = r.winners.map((w) => {
       const info = seatInfo(w.seat);
-      const concealed = w.concealed.map((id) => tileHtml(code(id), 't-res')).join('');
-      const melds = w.melds.map((m) => meldHtml({ ...m, called: m.tiles[0] }, w.seat, 't-meld')).join('');
-      const yaku = w.yaku.map(yakuLine).join('');
+      const wi = r.winners.indexOf(w);
+      const concealed = w.concealed.map((id) => tileHtml(code(id), 't-res', '', '', { id })).join('');
+      const melds = w.melds.map((m) => meldHtml({ ...m, called: m.tiles[0] }, w.seat, 't-meld', true)).join('');
+      const yaku = w.yaku.map((y, i) => yakuRow(y, wi, i)).join('');
       const total = w.yakuman ? `${w.limit}` : `${w.han}판 ${w.fu}부${w.limit ? ` · ${w.limit}` : ''}`;
+      const first = w === r.winners[0];
+      const scoreTip = w.yakuman ? limitInfo(w.limit) : `${TERM_INFO.score}${w.limit && limitInfo(w.limit) ? ` ${w.limit}: ${limitInfo(w.limit)}` : ''}`;
       const from = w.tsumo ? '쯔모' : `론 (${esc(seatInfo(w.from).name)})`;
-      return `<div class="res-win">
-        <div class="res-head"><h2>${w.tsumo ? '쯔모' : '론'}</h2><span>${esc(info.name)} (${WIND_KO[v.players[w.seat].wind]}가${w.seat === v.dealer ? ' · 친' : ''}) 화료 · ${from}</span>${w.limit ? `<span class="limit">${w.limit}</span>` : ''}</div>
-        <div class="res-hand">${concealed}${tileHtml(code(w.winTile), 't-res', 'win')}${melds ? `<div class="melds">${melds}</div>` : ''}</div>
+      const isDealer = w.seat === v.dealer;
+      return `<div class="res-win" data-w="${wi}">
+        <div class="res-head"><h2>${w.tsumo ? '쯔모' : '론'}</h2><span>${esc(info.name)} (${WIND_KO[v.players[w.seat].wind]}가${isDealer ? ' · 친' : ''}) 화료 · ${from}${isDealer ? infoBtn(`dealer:${wi}`, '친') : ''}</span>${w.limit ? `<span class="limit">${w.limit}</span>` : ''}</div>
+        ${isDealer ? tipBox(`dealer:${wi}`, TERM_INFO.dealer) : ''}
+        <div class="res-hand">${concealed}${tileHtml(code(w.winTile), 't-res', 'win', '', { id: w.winTile })}${melds ? `<div class="melds">${melds}</div>` : ''}</div>
         <div class="res-body"><div>
           <div class="res-dora"><div>도라 ${r.dora.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>${w.riichi ? `<div>뒷도라 ${r.ura.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>` : ''}</div>
           <div class="yaku">${yaku}</div>
-          <div class="total">${total}<small>${w.points.toLocaleString()}점${r.sticks && w === r.winners[0] ? ` + 공탁 ${(r.sticks * 1000).toLocaleString()}점` : ''}${r.honba && w === r.winners[0] ? ` (${r.honba}본장 포함)` : ''}</small></div>
+          <div class="total">${total}${scoreTip ? infoBtn(`score:${wi}`, '판·부') : ''}${scoreTip ? tipBox(`score:${wi}`, scoreTip) : ''}<small>${w.points.toLocaleString()}점${r.sticks && first ? ` + 공탁 ${(r.sticks * 1000).toLocaleString()}점${infoBtn('sticks', '공탁')}` : ''}${r.honba && first ? ` (${r.honba}본장 포함)${infoBtn('honba', '본장')}` : ''}</small>${r.sticks && first ? tipBox('sticks', TERM_INFO.sticks) : ''}${r.honba && first ? tipBox('honba', TERM_INFO.honba) : ''}</div>
         </div>${w === r.winners[0] ? `<div class="deltas">${deltaRows}</div>` : '<div></div>'}</div></div>`;
     }).join('');
   } else {
@@ -740,8 +781,42 @@ function toggleNames() {
   render();
 }
 
+// 결과 화면 설명: 마우스는 올리면 펼치고 벗어나면 접는다. 터치·키보드는 탭(클릭)으로 토글한다.
+let lastPointer = 'mouse';
+stage.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType; }, true);
+stage.addEventListener('pointerover', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const info = e.target.closest('.result .info[data-tip]');
+  const row = e.target.closest('.result .yrow');
+  if (!info && !row) return;
+  setResUi({ focus: row ? row.dataset.yk : S.resFocus, tip: info ? info.dataset.tip : S.resTip });
+});
+stage.addEventListener('pointerout', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const from = e.target.closest('.result .info[data-tip], .result .yrow');
+  if (!from) return;
+  const row = from.closest('.yrow');
+  const to = e.relatedTarget;
+  if (row && !(to instanceof Element && row.contains(to))) setResUi({ focus: null, tip: S.resTip?.startsWith('y:') ? null : S.resTip });
+  else if (!row && !(to instanceof Element && from.contains(to))) setResUi({ tip: null });
+});
+
+function onResultTap(e) {
+  const info = e.target.closest('.result .info[data-tip]');
+  const row = e.target.closest('.result .yrow');
+  if (info) {
+    const open = S.resTip !== info.dataset.tip;
+    setResUi({ tip: open ? info.dataset.tip : null, focus: row ? (open ? row.dataset.yk : null) : S.resFocus });
+    return true;
+  }
+  if (row) { setResUi({ focus: S.resFocus === row.dataset.yk ? null : row.dataset.yk }); return true; }
+  if (e.target.closest('.result') && !e.target.closest('[data-do]') && (S.resFocus || S.resTip)) setResUi({ focus: null, tip: null });
+  return false;
+}
+
 stage.addEventListener('click', (e) => {
   sounds.unlock();
+  if ((lastPointer !== 'mouse' || e.detail === 0) && onResultTap(e)) return;
   const tile = e.target.closest('.tile.hand[data-id]');
   if (tile) { onTileClick(+tile.dataset.id); return; }
   const cfg = e.target.closest('[data-cfg]');
