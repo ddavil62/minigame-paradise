@@ -91,6 +91,16 @@ test('두 번째 사람이 들어오면 마주 보는 자리에 앉는다', asyn
   await expect(a.locator('.plate.p-top')).toContainText('도윤');
 });
 
+test('BGM 버튼으로 배경 음악을 껐다 켠다', async ({ page }) => {
+  await page.goto(`${base}/?name=테스터`);
+  const btn = page.locator('#btn-bgm');
+  await expect(btn).toHaveClass(/on/);
+  await btn.click();
+  await expect(btn).not.toHaveClass(/on/);
+  await btn.click();
+  await expect(btn).toHaveClass(/on/);
+});
+
 test('룰 가이드: 헤더 버튼으로 열고 탭 전환, Esc로 닫는다. 대국 중 재렌더에도 유지된다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
   const guide = page.locator('.guide');

@@ -896,6 +896,14 @@ soundBtn.addEventListener('click', () => {
   soundBtn.classList.toggle('on', !sounds.isMuted());
   sounds.unlock();
 });
+const bgmBtn = $('btn-bgm');
+const paintBgm = () => { bgmBtn.classList.toggle('on', sounds.isBgm()); bgmBtn.textContent = sounds.isBgm() ? '🎵 BGM' : '🎵 BGM 꺼짐'; };
+paintBgm();
+bgmBtn.addEventListener('click', () => {
+  sounds.setBgm(!sounds.isBgm());
+  paintBgm();
+  sounds.unlock();
+});
 
 // ── 화면 비율 맞춤 ────────────────────────────────────────
 // 무대 높이는 760 고정, 폭은 창 비율에 맞춰 1200~1600으로 늘린다(가운데 기준 요소는 CSS --dx로 가운데 유지).

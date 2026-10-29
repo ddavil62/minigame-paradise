@@ -1,10 +1,28 @@
 /**
- * @fileoverview Web Audio 기반 간단한 효과음. 외부 음원 파일 없이 합성한다.
+ * @fileoverview Web Audio 기반 효과음과 BGM. 외부 음원 파일 없이 합성한다.
  */
 
 const MUTE_KEY = 'mahjong:muted';
+const BGM_KEY = 'mahjong:bgm';
 
-/** @returns {{play:(name:string)=>void, setMuted:(m:boolean)=>void, isMuted:()=>boolean, unlock:()=>void}} */
+// ── BGM 악보(8분음표 8칸 = 1마디, MIDI 번호, 0은 쉼표) ──
+// A·B 두 구간(8마디씩)을 이어 붙여 약 33초짜리 루프를 만든다. 코드: A = C G Am F C G F G, B = F G Em Am F G C G
+const BGM_BPM = 116;
+const mel = (s) => s.trim().split(/\s+/).map(Number);
+const BGM_MELODY = [
+  ...['76 0 72 76 79 0 76 72', '74 0 71 74 79 0 74 71', '72 0 76 0 69 72 76 72', '69 72 77 72 69 0 72 0',
+    '79 0 76 0 72 76 79 84', '79 0 74 0 71 74 79 0', '77 0 72 0 69 72 77 76', '74 0 74 71 0 67 71 74'],
+  ...['77 0 81 77 72 0 77 72', '79 0 74 79 83 0 79 74', '76 0 79 76 71 0 76 71', '72 76 81 76 72 0 69 0',
+    '77 0 81 77 84 0 81 77', '83 0 79 0 74 79 83 0', '84 0 79 0 76 79 84 79', '74 0 79 74 71 0 67 71'],
+].map(mel);
+const BGM_BASS = [48, 43, 45, 41, 48, 43, 41, 43, 41, 43, 40, 45, 41, 43, 48, 43];
+const BGM_CHORDS = [
+  [60, 64, 67], [59, 62, 67], [57, 60, 64], [57, 60, 65], [60, 64, 67], [59, 62, 67], [57, 60, 65], [59, 62, 67],
+  [57, 60, 65], [59, 62, 67], [59, 64, 67], [57, 60, 64], [57, 60, 65], [59, 62, 67], [60, 64, 67], [59, 62, 67],
+];
+const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+/** @returns {{play:(name:string)=>void, setMuted:(m:boolean)=>void, isMuted:()=>boolean, setBgm:(on:boolean)=>void, isBgm:()=>boolean, unlock:()=>void}} */
 export function createSounds() {
   let ctx = null;
   let muted = false;
@@ -20,7 +38,7 @@ export function createSounds() {
     return ctx;
   }
 
-  function tone(freq, start, dur, type = 'sine', gain = 0.12) {
+  function tone(freq, start, dur, type = 'sine', gain = 0.12, dest = null) {
     const c = ctx;
     const o = c.createOscillator();
     const g = c.createGain();
@@ -29,27 +47,111 @@ export function createSounds() {
     g.gain.setValueAtTime(0.0001, c.currentTime + start);
     g.gain.exponentialRampToValueAtTime(gain, c.currentTime + start + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
-    o.connect(g).connect(c.destination);
+    o.connect(g).connect(dest || c.destination);
     o.start(c.currentTime + start);
     o.stop(c.currentTime + start + dur + 0.02);
   }
 
-  function clack(gain = 0.35) {
+  function clack(gain = 0.35, dest = null, freq = 1800, dur = 0.06, type = 'bandpass', startAt = 0) {
     const c = ctx;
-    const len = Math.floor(c.sampleRate * 0.06);
+    const len = Math.floor(c.sampleRate * dur);
     const buf = c.createBuffer(1, len, c.sampleRate);
     const d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
     const src = c.createBufferSource();
     src.buffer = buf;
     const f = c.createBiquadFilter();
-    f.type = 'bandpass';
-    f.frequency.value = 1800;
+    f.type = type;
+    f.frequency.value = freq;
     const g = c.createGain();
     g.gain.value = gain;
-    src.connect(f).connect(g).connect(c.destination);
-    src.start();
+    src.connect(f).connect(g).connect(dest || c.destination);
+    src.start(c.currentTime + startAt);
   }
+
+  // ── BGM: 외부 음원 없이 합성하는 경쾌한 루프. 앞서 예약하는 스케줄러로 박자를 유지한다 ──
+  let bgmOn = true;
+  try { bgmOn = localStorage.getItem(BGM_KEY) !== '0'; } catch { /* noop */ }
+  let unlocked = false;
+  let bgmBus = null;
+  let bgmTimer = null;
+  let bgmStep = 0;
+  let bgmNext = 0;
+  const STEP = 60 / BGM_BPM / 2;
+
+  function kick(t, out) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.frequency.setValueAtTime(130, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    g.gain.setValueAtTime(0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 0.2);
+  }
+
+  function bgmNote(t, out, midi, dur, type, gain) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(midiHz(midi), t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(out);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+
+  function bgmSchedule(step, t) {
+    const out = bgmBus;
+    const bar = Math.floor(step / 8) % BGM_MELODY.length;
+    const k = step % 8;
+    const m = BGM_MELODY[bar][k];
+    if (m) bgmNote(t, out, m, STEP * 1.7, 'triangle', 0.16);
+    if (k % 2 === 0) bgmNote(t, out, BGM_BASS[bar] + (k === 4 ? 7 : 0), STEP * 1.6, 'sine', 0.3);
+    if (k === 3 || k === 7) BGM_CHORDS[bar].forEach((n) => bgmNote(t, out, n, STEP * 0.9, 'square', 0.022));
+    if (k === 0 || k === 4) kick(t, out);
+    if (k === 2 || k === 6) clack(0.1, out, 2400, 0.09, 'bandpass', t - ctx.currentTime);
+    clack(k % 2 ? 0.05 : 0.03, out, 7000, 0.03, 'highpass', t - ctx.currentTime);
+  }
+
+  function bgmTick() {
+    if (!ctx) return;
+    while (bgmNext < ctx.currentTime + 0.5) {
+      bgmSchedule(bgmStep, bgmNext);
+      bgmNext += STEP;
+      bgmStep = (bgmStep + 1) % (BGM_MELODY.length * 8);
+    }
+  }
+
+  function bgmStart() {
+    if (bgmTimer || muted || !bgmOn || !unlocked || document.hidden) return;
+    if (!ensure()) return;
+    bgmBus = ctx.createGain();
+    bgmBus.gain.setValueAtTime(0.0001, ctx.currentTime);
+    bgmBus.gain.exponentialRampToValueAtTime(0.32, ctx.currentTime + 1.2);
+    bgmBus.connect(ctx.destination);
+    bgmNext = ctx.currentTime + 0.1;
+    bgmStep = 0;
+    bgmTick();
+    bgmTimer = setInterval(bgmTick, 120);
+  }
+
+  function bgmStop() {
+    if (!bgmTimer) return;
+    clearInterval(bgmTimer);
+    bgmTimer = null;
+    const bus = bgmBus;
+    bgmBus = null;
+    bus.gain.cancelScheduledValues(ctx.currentTime);
+    bus.gain.setValueAtTime(Math.max(bus.gain.value, 0.0001), ctx.currentTime);
+    bus.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+    setTimeout(() => bus.disconnect(), 600);
+  }
+
+  document.addEventListener('visibilitychange', () => (document.hidden ? bgmStop() : bgmStart()));
 
   const SOUNDS = {
     discard: () => clack(0.4),
@@ -73,8 +175,16 @@ export function createSounds() {
     setMuted(m) {
       muted = !!m;
       try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch { /* noop */ }
+      if (muted) bgmStop(); else bgmStart();
     },
     isMuted: () => muted,
-    unlock() { if (!muted) ensure(); },
+    setBgm(on) {
+      bgmOn = !!on;
+      try { localStorage.setItem(BGM_KEY, bgmOn ? '1' : '0'); } catch { /* noop */ }
+      if (bgmOn) bgmStart(); else bgmStop();
+    },
+    isBgm: () => bgmOn,
+    /** 첫 사용자 입력에서 호출한다(브라우저가 소리를 막고 있다가 이때 풀린다). BGM도 이때 시작한다. */
+    unlock() { unlocked = true; if (!muted) { ensure(); bgmStart(); } },
   };
 }
