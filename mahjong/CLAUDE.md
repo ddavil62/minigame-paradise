@@ -55,7 +55,7 @@ mahjong/
 
 ## 연출(fx)
 
-- `public/js/fx.js`는 비행 패·착지 충격·배너·파티클을 **재렌더로 지워지지 않는 `#fx` 레이어**에 그린다. 클라이언트는 매 STATE마다 `stage.innerHTML`을 갈아엎으므로 연출 DOM을 `#content` 안에 두면 안 된다(렌더 직후 `fx.attach()`).
+- `public/js/fx.js`는 비행 패·착지 충격·배너·파티클을 **재렌더로 지워지지 않는 `#fx` 레이어**에 그린다(무대 폭이 가변이라 좌표 변환은 `stage.offsetWidth` 기준). 클라이언트는 매 STATE마다 `stage.innerHTML`을 갈아엎으므로 연출 DOM을 `#content` 안에 두면 안 된다(렌더 직후 `fx.attach()`).
 - 이벤트 연출은 **렌더 후** `playEvents()`에서 한다. 버림 패는 렌더 직전 `captureRects()`로 잡아 둔 손패/상대 패 더미 위치에서 연못의 실제 자리(`.pond [data-id]`)까지 날아가며, 날아가는 동안 실제 패는 `visibility:hidden`(렌더 때마다 `fx.rehide()`)이다.
 - 손패 돌리기·뽑기·도라·결과창처럼 재렌더에 끊길 수 있는 연출은 `addAnim`/`S.anims`에 시작 시각을 기억하고 `resumeAnims()`가 경과 시간(`currentTime`)만큼 이어서 재생한다. 새 연출도 이 경로를 쓴다.
 - `prefers-reduced-motion`이면 연출은 건너뛰고 효과음만 낸다. 테스트 전용 `?auto=N`은 결과 확인 대기를 `max(2200, N×5)`ms로 둔다(연출 확인용).
@@ -93,4 +93,5 @@ npx playwright test --config=playwright.config.js   # UI 회귀(격리 포트에
 - `legalTurn()`의 `riichiWaits`는 클라이언트의 리치 확인 문구가 사용하므로 형식을 유지한다.
 - `view.players[].melds[].called`는 울린 패 id다(암깡은 null). 클라이언트가 눕힌 패 위치를 이 값과 `from`으로 정한다.
 - 클라이언트는 매 STATE마다 무대 전체를 다시 그린다. 호버/선택 상태는 `S`(main.js) 안에 두고 DOM에 의존하지 않는다.
-- UI 변경은 1200×760 고정 무대가 작은 뷰포트에서 비율 축소되는지 실제 브라우저로 확인한다. 세로 모바일은 가로 모드 안내를 띄운다.
+- 무대는 높이 760 고정, 폭은 `fit()`(main.js)이 창 비율에 맞춰 1200~1600px로 정하고 transform으로 배율을 맞춘다. 가운데 기준 요소(`.board`·`.my-hand`·`.strip`·`.plate.p-top`)의 `left`는 `calc(N px + var(--dx))`로 쓰고, 모서리 기준 요소(side-hand·좌우 plate·actions·legend)는 `left`/`right`만 쓴다. 연출 좌표는 `seatAnchor()`와 `stage.offsetWidth`로 폭에 따라 계산한다(1200 같은 숫자를 새로 박지 않는다).
+- UI 변경은 1280×720·1920×1080·4:3·울트라와이드에서 가로 스크롤 없이 무대가 창에 맞는지 실제 브라우저로 확인한다. 세로 모바일은 가로 모드 안내를 띄운다.

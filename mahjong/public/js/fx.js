@@ -7,11 +7,10 @@
  */
 
 const REDUCED = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-const STAGE_W = 1200;
 const rand = (a, b) => a + Math.random() * (b - a);
 
 /**
- * @param {HTMLElement} stage 1200px 고정 무대(비율 축소 transform이 걸려 있음)
+ * @param {HTMLElement} stage 폭이 가변(1200~1600px)인 무대(비율 축소 transform이 걸려 있음)
  */
 export function createFx(stage) {
   const layer = document.createElement('div');
@@ -24,7 +23,7 @@ export function createFx(stage) {
   /** 화면 rect → 무대 좌표(중심 x,y / 크기 w,h) */
   function toStage(r) {
     const sr = stage.getBoundingClientRect();
-    const sc = sr.width / STAGE_W || 1;
+    const sc = sr.width / stage.offsetWidth || 1;
     return { x: (r.left + r.width / 2 - sr.left) / sc, y: (r.top + r.height / 2 - sr.top) / sc, w: r.width / sc, h: r.height / sc };
   }
 
@@ -96,7 +95,7 @@ export function createFx(stage) {
   }
 
   function confettiRain(n = 50) {
-    for (let i = 0; i < 4; i++) confetti(rand(120, 1080), -20, { n: Math.round(n / 4), spread: 160, up: 0, fall: 820, dur: 1900 });
+    for (let i = 0; i < 4; i++) confetti(rand(120, stage.offsetWidth - 120), -20, { n: Math.round(n / 4), spread: 160, up: 0, fall: 820, dur: 1900 });
   }
 
   function shake(amp = 4, dur = 260) {

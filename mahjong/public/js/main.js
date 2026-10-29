@@ -48,6 +48,7 @@ const S = {
   toast: '',
   busy: false,
   kanPick: false,
+  stageW: 1200, // 무대 폭(fit()이 창 비율에 맞춰 갱신)
   anims: [], // 재렌더로 끊기지 않게 이어서 재생하는 짧은 연출 {at, ttl, run(elapsed)}
   shown: null, // 결과/종료 화면 연출을 이미 시작한 키
 };
@@ -184,7 +185,14 @@ function captureRects() {
   return { hand, opp };
 }
 
-const SEAT_ANCHOR = [[600, 548], [800, 330], [600, 196], [400, 330]]; // 내 기준 상대 좌석(0=나,1=오른쪽,2=맞은편,3=왼쪽) 연출 중심
+const STAGE_H = 760;
+const STAGE_MIN_W = 1200;
+const STAGE_MAX_W = 1600;
+/** 내 기준 상대 좌석(0=나,1=오른쪽,2=맞은편,3=왼쪽) 연출 중심. 무대 폭이 가변이라 가운데 x를 매번 계산한다. */
+function seatAnchor(rel) {
+  const cx = S.stageW / 2;
+  return [[cx, 548], [cx + 200, 330], [cx, 196], [cx - 200, 330]][rel];
+}
 const POND_ANGLE = [0, -90, 180, 90]; // 좌석별 연못 회전각
 const CALL_STYLE = {
   pon: { text: '퐁!', color: '#ff9f43' }, chi: { text: '치!', color: '#4dabf7' },
@@ -204,7 +212,7 @@ function resumeAnims() {
 }
 
 /** 좌석 → 연출 위치(내 시점 기준) */
-function anchorOf(seat) { return SEAT_ANCHOR[relOf(seat)]; }
+function anchorOf(seat) { return seatAnchor(relOf(seat)); }
 
 function dealIn(elapsed) {
   const from = [{ transform: 'translateY(-200px) rotate(-14deg) scale(.5)', opacity: 0 }, { transform: 'none', opacity: 1 }];
@@ -299,7 +307,7 @@ function playEvents(events, view, prev) {
       }
       case 'riichi': {
         const rel = relOf(ev.seat);
-        const [x, y] = SEAT_ANCHOR[rel];
+        const [x, y] = seatAnchor(rel);
         sounds.play('riichi');
         fx.flash('#ff3b2f', 0.3, 520);
         fx.banner(ev.double ? '더블 리치!' : '리치!', { color: '#ff6a5a', sub: seatInfo(ev.seat).name, y: 330, dur: 1200 });
@@ -806,16 +814,21 @@ soundBtn.addEventListener('click', () => {
 });
 
 // ── 화면 비율 맞춤 ────────────────────────────────────────
+// 무대 높이는 760 고정, 폭은 창 비율에 맞춰 1200~1600으로 늘린다(가운데 기준 요소는 CSS --dx로 가운데 유지).
 function fit() {
   const outer = $('fit');
   const inner = $('fit-inner');
-  const availW = outer.clientWidth - 20;
+  const availW = Math.max(200, outer.clientWidth - 48);
   const header = document.querySelector('.game-header').offsetHeight + 40;
-  const availH = window.innerHeight - header;
-  const scale = Math.max(0.2, Math.min(availW / 1200, availH / 760, 1.25));
+  const availH = Math.max(150, window.innerHeight - header);
+  const w = Math.round(Math.min(STAGE_MAX_W, Math.max(STAGE_MIN_W, STAGE_H * availW / availH)));
+  const scale = Math.max(0.2, Math.min(availW / w, availH / STAGE_H, 3));
+  S.stageW = w;
+  stage.style.width = `${w}px`;
+  stage.style.setProperty('--dx', `${(w - STAGE_MIN_W) / 2}px`);
   stage.style.transform = `scale(${scale})`;
-  inner.style.width = `${1200 * scale}px`;
-  inner.style.height = `${760 * scale}px`;
+  inner.style.width = `${w * scale}px`;
+  inner.style.height = `${STAGE_H * scale}px`;
   inner.style.margin = '0 auto';
 }
 window.addEventListener('resize', fit);
