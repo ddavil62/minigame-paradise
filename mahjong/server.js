@@ -46,7 +46,6 @@ export const DEFAULT_TIMING = Object.freeze({
   riichiAutoMs: 900,
   lobbyGraceMs: 8000,
   emptyResetMs: 90000,
-  pauseLimit: 3, // 사람당 한 판에 일시정지할 수 있는 횟수
 });
 
 /** @param {unknown} name 입력 이름 @returns {string} 안전한 표시 이름 */
@@ -103,7 +102,6 @@ export function createApp(opts = {}) {
     pendingRef: null,
     seatTimers: {},
     pause: null, // 일시정지 중이면 {seat, name, at}. 시간 제한은 없고 누구든 재개할 때까지 멈춘다
-    pauseUsed: {}, // 세션키 → 이번 판에 쓴 일시정지 횟수
     lobbyTimers: new Map(),
     emptyTimer: null,
   };
@@ -216,7 +214,6 @@ export function createApp(opts = {}) {
         seats: seatsPublic(),
         timers,
         pause: room.pause,
-        pausesLeft: Math.max(0, T.pauseLimit - (room.pauseUsed[slot.key] || 0)),
         bank: slot.bank,
         assist: !!slot.assist,
         hints: slot.assist ? computeHints(view) : null,
@@ -337,12 +334,9 @@ export function createApp(opts = {}) {
     }
   }
 
-  /** 일시정지: 모든 좌석 타이머를 멈추고 남은 시간을 기억한다. 누구든 재개할 수 있다. */
+  /** 일시정지: 모든 좌석 타이머를 멈추고 남은 시간을 기억한다. 횟수·시간 제한 없이 누구든 재개할 수 있다. */
   function pauseGame(slot) {
     if (room.phase !== 'playing' || !room.game || room.pause) return { ok: false, error: 'not_pausable' };
-    const used = room.pauseUsed[slot.key] || 0;
-    if (used >= T.pauseLimit) return { ok: false, error: 'pause_limit' };
-    room.pauseUsed[slot.key] = used + 1;
     const now = Date.now();
     for (const t of Object.values(room.seatTimers)) {
       clearTimeout(t.handle);
@@ -377,7 +371,6 @@ export function createApp(opts = {}) {
 
   function startGame() {
     clearPause();
-    room.pauseUsed = {};
     // 빈 자리를 AI로 채운다.
     const used = new Set(room.slots.filter((s) => s && s.type === 'ai').map((s) => s.name));
     const names = AI_NAMES.filter((n) => !used.has(n));
@@ -532,11 +525,9 @@ export function createApp(opts = {}) {
           }
           break;
         }
-        case 'PAUSE': {
-          const res = pauseGame(slot);
-          if (res.error === 'pause_limit') send(ws, { type: 'ERROR', code: 'pause_limit', message: `일시정지는 한 판에 ${T.pauseLimit}번까지 쓸 수 있어요.` });
+        case 'PAUSE':
+          pauseGame(slot);
           break;
-        }
         case 'RESUME':
           if (room.pause) resumeGame(slot);
           break;

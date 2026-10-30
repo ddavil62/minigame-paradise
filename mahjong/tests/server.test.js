@@ -277,7 +277,7 @@ test('다시 하기: 방장이 누르면 게스트도 연결과 자리를 유지
 });
 
 test('일시정지: 타이머와 행동이 멈추고, 아무나 재개하면 남은 시간부터 이어진다', async (t) => {
-  const srv = await boot({ ...FAST, baseMs: 600, bankMs: 0, aiTurnMs: [0, 3], pauseLimit: 2, pauseMaxMs: 60000 });
+  const srv = await boot({ ...FAST, baseMs: 600, bankMs: 0, aiTurnMs: [0, 3] });
   t.after(srv.close);
   const a = client(srv.port, { key: 'kp1', name: '가', play: false }, t);
   const b = client(srv.port, { key: 'kp2', name: '나', play: false }, t);
@@ -289,8 +289,6 @@ test('일시정지: 타이머와 행동이 멈추고, 아무나 재개하면 남
   a.send({ type: 'PAUSE' });
   await until(() => a.state.pause && b.state.pause);
   assert.equal(a.state.pause.name, '가');
-  assert.equal(a.state.pausesLeft, 1);
-  assert.equal(b.state.pausesLeft, 2, '횟수는 사람마다 센다');
   const handBefore = a.state.view.myHand.join();
   const discardsBefore = a.state.view.players[0].discards.length;
   const id = a.state.view.legal.discard[0];
@@ -303,7 +301,7 @@ test('일시정지: 타이머와 행동이 멈추고, 아무나 재개하면 남
   // 상대가 재개할 수 있다.
   b.send({ type: 'RESUME' });
   await until(() => !a.state.pause && !b.state.pause);
-  assert.ok(a.events.some((e) => e.t === 'resume' && e.name === '나' && !e.auto));
+  assert.ok(a.events.some((e) => e.t === 'resume' && e.name === '나'));
   // 재개 뒤에는 남은 시간이 지나면 다시 자동 진행한다.
   await until(() => a.state.view.players[0].discards.length > discardsBefore, 3000);
   a.ws.close();
@@ -311,8 +309,8 @@ test('일시정지: 타이머와 행동이 멈추고, 아무나 재개하면 남
   srv.close();
 });
 
-test('일시정지: 시간 제한 없이 재개할 때까지 멈춰 있고, 횟수 제한을 넘으면 거절된다', async (t) => {
-  const srv = await boot({ ...FAST, baseMs: 5000, bankMs: 0, pauseLimit: 1 });
+test('일시정지: 시간·횟수 제한 없이 재개할 때까지 멈춰 있고 몇 번이든 다시 멈출 수 있다', async (t) => {
+  const srv = await boot({ ...FAST, baseMs: 5000, bankMs: 0 });
   t.after(srv.close);
   const a = client(srv.port, { key: 'kq1', name: '가', play: false }, t);
   await until(() => a.room);
@@ -327,10 +325,14 @@ test('일시정지: 시간 제한 없이 재개할 때까지 멈춰 있고, 횟�
   a.send({ type: 'RESUME' });
   await until(() => !a.state.pause);
   assert.ok(a.events.some((e) => e.t === 'resume' && e.name === '가'));
-  a.send({ type: 'PAUSE' });
-  await until(() => a.errors.some((e) => e.code === 'pause_limit'));
-  assert.equal(a.state.pause, null);
-  assert.equal(a.state.pausesLeft, 0);
+  // 횟수 제한이 없으니 여러 번 멈췄다 풀어도 거절되지 않는다.
+  for (let i = 0; i < 5; i++) {
+    a.send({ type: 'PAUSE' });
+    await until(() => a.state.pause);
+    a.send({ type: 'RESUME' });
+    await until(() => !a.state.pause);
+  }
+  assert.deepEqual(a.errors, []);
   a.ws.close();
   srv.close();
 });

@@ -348,7 +348,6 @@ button { font: inherit; cursor: pointer; }
 .hdr-pause { border-color: rgba(255,150,80,.6); color: #ffa766; }
 .hdr-pause:hover { background: #2a1d16; }
 .hdr-pause.on { border-color: #ff8a3d; background: #ff8a3d; color: #231203; }
-.hdr-pause:disabled { opacity: .45; cursor: not-allowed; }
 .hdr-guide { border-color: rgba(242,196,90,.55); color: var(--gold); }
 .hdr-guide:hover { background: #222033; }
 .hdr-guide.on { border-color: var(--gold); background: var(--gold); color: #1d1608; }

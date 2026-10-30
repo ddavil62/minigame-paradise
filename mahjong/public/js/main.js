@@ -1053,11 +1053,9 @@ function paintPause() {
   btn.classList.toggle('hidden', !visible);
   if (!visible) return;
   const paused = !!st.pause;
-  const left = st.pausesLeft ?? 0;
   btn.classList.toggle('on', paused);
-  btn.disabled = !paused && left <= 0;
-  btn.textContent = paused ? '▶ 재개' : `⏸ 일시정지 (${left})`;
-  btn.title = paused ? '대국을 이어 가요 (P)' : `대국을 잠시 멈춰요. 누구든 다시 시작할 수 있어요. 한 판에 ${left}번 더 쓸 수 있어요 (P)`;
+  btn.textContent = paused ? '▶ 재개' : '⏸ 일시정지';
+  btn.title = paused ? '대국을 이어 가요 (P)' : '대국을 잠시 멈춰요. 누구든 다시 시작할 수 있어요 (P)';
 }
 
 // ── 입력 ───────────────────────────────────────────────────
@@ -1188,7 +1186,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() !== 'p' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) return;
   const btn = $('btn-pause');
-  if (!btn.classList.contains('hidden') && !btn.disabled) btn.click();
+  if (!btn.classList.contains('hidden')) btn.click();
 });
 $('btn-assist').addEventListener('click', toggleAssist);
 $('btn-names').addEventListener('click', toggleNames);
