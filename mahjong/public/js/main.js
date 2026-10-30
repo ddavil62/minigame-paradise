@@ -255,6 +255,12 @@ function riichiStick(rel, elapsed) {
   if (t) fx.stagger([t], [{ transform: 'translateY(-70px) scaleX(.2)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, elapsed });
 }
 
+/** 리치 선언 순간 이름판이 커졌다가 쾅 박힌다 */
+function riichiPlate(rel, elapsed) {
+  const pl = stage.querySelector(`.plate.p-${['me', 'right', 'top', 'left'][rel]}`);
+  if (pl) fx.stagger([pl], [{ transform: 'scale(1.5)', filter: 'brightness(2.2)' }, { transform: 'scale(.95)', filter: 'brightness(1.4)', offset: 0.45 }, { transform: 'none', filter: 'none' }], { dur: 600, easing: 'cubic-bezier(.2,.9,.3,1)', elapsed });
+}
+
 /** 결과/종료 화면 등장: 화료 연출 뒤에 팝업이 뜨고 역·점수가 차례로 나온다 */
 function overlayIn(elapsed, { late = 0, final = false } = {}) {
   const ov = stage.querySelector('.overlay');
@@ -426,6 +432,7 @@ function playEvents(events, view, prev) {
         fx.sparks(x, y, { n: 22, dist: 150, size: 7, colors: ['#ff6a5a', '#ffe27a', '#fff'] });
         fx.shake(7, 380);
         addAnim(450, (el) => riichiStick(rel, el));
+        addAnim(600, (el) => riichiPlate(rel, el));
         break;
       }
       case 'pause':
@@ -607,7 +614,8 @@ function plateHtml(seat, v, posCls) {
   if (info.type === 'ai' && info.level) sub += ` · ${LEVEL_KO[info.level]}`;
   if (info.type === 'human' && !isMe) sub = `<span class="${info.connected ? 'dot-online' : 'dot-offline'}"></span>${info.connected ? '접속 중' : '끊김'} · ${sub}`;
   const timer = isMe && turn ? '<div class="timer" id="my-timer"><span>-</span></div>' : '';
-  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${info.away ? ' away' : ''}${winner ? ' winner' : ''}">
+  const phase = p.riichi ? ` style="--ph:-${Math.round(performance.now() % 1400)}ms"` : '';
+  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${info.away ? ' away' : ''}${winner ? ' winner' : ''}"${phase}>
     <div class="avatar ${avatarClass(info, seat)}">${esc(avatarChar(info))}<span class="wind">${WIND_KANJI[p.wind]}</span>${seat === v.dealer ? '<span class="dealer">親</span>' : ''}</div>
     <div><div class="name">${esc(info.name)}${badge}</div><div class="sub">${sub}</div></div>${timer}</div>`;
 }

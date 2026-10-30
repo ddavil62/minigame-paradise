@@ -139,7 +139,16 @@ button { font: inherit; cursor: pointer; }
 .plate.p-me { top: 644px; left: 18px; }
 .plate.turn { border-color: var(--turn); box-shadow: 0 0 0 2px var(--turn), 0 0 24px color-mix(in srgb, var(--turn) 45%, transparent); }
 .plate.away { opacity: .7; }
-.plate.riichi { border-color: #ff6a5a; box-shadow: 0 0 0 1px #ff6a5a, 0 0 22px rgba(255,90,69,.55); }
+.plate.riichi { border-color: #ff5a45; box-shadow: 0 0 0 1px #ff5a45, 0 0 22px rgba(255,90,69,.55); animation: riichi-pulse 1.4s ease-in-out var(--ph, 0ms) infinite; }
+/* 위기감: 붉은 사선 경고띠가 흐르고 테두리·아바타가 심장처럼 맥동한다(리치한 사람 근처 패는 위험하다는 신호) */
+.plate.riichi::before { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; content: ""; background: repeating-linear-gradient(-45deg, rgba(255,60,40,.2) 0 7px, transparent 7px 14px); background-size: 20px 20px; animation: riichi-tape 1.4s linear var(--ph, 0ms) infinite; }
+.plate.riichi .avatar { box-shadow: 0 0 0 2px #ff5a45, 0 0 14px rgba(255,80,60,.9); animation: riichi-avatar 1.4s ease-in-out var(--ph, 0ms) infinite; }
+.plate.riichi .name { color: #ffc2b8; text-shadow: 0 0 8px rgba(255,70,50,.85); }
+.plate.riichi .badge.riichi { box-shadow: 0 0 10px rgba(255,70,50,.9); animation: riichi-badge 1.4s ease-in-out var(--ph, 0ms) infinite; }
+@keyframes riichi-pulse { 50% { border-color: #ff2f20; box-shadow: 0 0 0 2px #ff3b2e, 0 0 40px rgba(255,60,40,.95); } }
+@keyframes riichi-tape { to { background-position: 20px 0; } }
+@keyframes riichi-avatar { 50% { box-shadow: 0 0 0 3px #ff3b2e, 0 0 24px rgba(255,60,40,1); } }
+@keyframes riichi-badge { 50% { transform: scale(1.15); box-shadow: 0 0 16px rgba(255,60,40,1); } }
 .plate.turn { animation: turn-glow 1.3s ease-in-out infinite; }
 @keyframes turn-glow { 50% { box-shadow: 0 0 0 3px var(--turn), 0 0 34px color-mix(in srgb, var(--turn) 70%, transparent); } }
 .avatar { position: relative; display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 6px; font-size: 19px; font-weight: 900; color: #fff; }
@@ -350,7 +359,7 @@ button { font: inherit; cursor: pointer; }
 .badge.win { background: #ffd23f; color: #2a1c00; }
 .tile.agari-tile, .rot.agari-tile > .tile { position: relative; z-index: 6; box-shadow: 0 2px 0 var(--tile-side), 0 0 0 3px #ffe27a, 0 0 26px 6px rgba(255,226,122,.95); animation: agari-tile-pulse .6s ease-in-out infinite alternate; }
 @keyframes agari-tile-pulse { to { filter: brightness(1.22); box-shadow: 0 2px 0 var(--tile-side), 0 0 0 4px #fff2b0, 0 0 40px 12px rgba(255,226,122,1); } }
-@media (prefers-reduced-motion: reduce) { .plate.turn, .my-hand.cue::before, .plate.winner, .tile.agari-tile, .rot.agari-tile > .tile { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .plate.riichi, .plate.riichi::before, .plate.riichi .avatar, .plate.riichi .badge.riichi, .plate.turn, .my-hand.cue::before, .plate.winner, .tile.agari-tile, .rot.agari-tile > .tile { animation: none; } }
 
 /* ── 룰 가이드(헤더 버튼으로 여는 4탭 오버레이) ── */
 .hdr-pause { border-color: rgba(255,150,80,.6); color: #ffa766; }
