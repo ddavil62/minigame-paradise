@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MahjongGame } from '../lib/game.js';
-import { computeHints } from '../lib/hints.js';
+import { computeHints, fallbackDiscard } from '../lib/hints.js';
 import { kindOf, seededRng, sortTiles } from '../lib/tiles.js';
 
 /** "123m456p789s11z" → 종류 배열 */
@@ -239,4 +239,33 @@ test('손패 묶음: 완성 면자가 많은 해석을 우선한다(3455 → 345
 test('손패 묶음: 치또이츠가 더 가까우면 생략한다', () => {
   const hints = hintsFor13({ hands: { 0: '1133m5577p9988s1z' } });
   assert.equal(hints.groups, null);
+});
+
+test('시간 초과 버림: 방금 뽑은 패가 있으면 그 패를 그대로 버린다(쯔모기리)', () => {
+  const g = setup({ hands: { 0: '123m456p789s1122z' }, drawn: { seat: 0, kind: 33 } });
+  const v = g.viewFor(0);
+  assert.equal(v.legal.kind, 'turn');
+  assert.equal(fallbackDiscard(v), v.myDrawn);
+});
+
+test('시간 초과 버림: 치·퐁 직후(뽑은 패 없음)에는 왼쪽 끝 패가 아니라 추천 패를 버린다', () => {
+  // 중 퐁 + 234m 567p 345s 78p(11장). 7p·8p 중 하나를 버리면 텐파이, 왼쪽 끝은 2만이다.
+  const g = setup({
+    hands: { 0: '234m567p345s78p' },
+    melds: { 0: [{ type: 'pon', k: 33, kinds: [33, 33, 33] }] },
+    callsHappened: true,
+  });
+  const v = g.viewFor(0);
+  assert.equal(v.legal.kind, 'turn');
+  assert.equal(v.myDrawn, null);
+  const id = fallbackDiscard(v);
+  assert.ok(v.legal.discard.includes(id));
+  assert.ok([15, 16].includes(kindOf(id)), `7p·8p를 버려야 하는데 종류 ${kindOf(id)}`);
+});
+
+test('시간 초과 버림: 내 차례가 아니면 null', () => {
+  const g = setup({ hands: { 0: '123m456p789s1122z' }, drawn: { seat: 0, kind: 33 } });
+  const v = g.viewFor(0);
+  v.legal = null;
+  assert.equal(fallbackDiscard(v), null);
 });

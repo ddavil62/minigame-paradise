@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { MahjongGame } from './lib/game.js';
 import { decide } from './lib/ai.js';
-import { computeHints } from './lib/hints.js';
+import { computeHints, fallbackDiscard } from './lib/hints.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -245,9 +245,7 @@ export function createApp(opts = {}) {
     if (legal.kind === 'ack') return { type: 'next' };
     if (legal.kind === 'reaction') return { type: 'pass' };
     if (legal.tsumo) return { type: 'tsumo' };
-    const drawn = g.h.drawn;
-    if (drawn != null && legal.discard.includes(drawn)) return { type: 'discard', id: drawn };
-    return { type: 'discard', id: legal.discard[0] };
+    return { type: 'discard', id: fallbackDiscard(g.viewFor(seat)) ?? legal.discard[0] };
   }
 
   function runAuto(seat, token, kind) {

@@ -342,3 +342,22 @@ export function computeHints(view) {
     return fixable ? { advice: 'no', why: 'closed-no-yaku' } : { advice: 'maybe', why: 'open-no-yaku' };
   }
 }
+
+/**
+ * 시간 초과·자리 비움일 때 서버가 대신 버릴 패 id. 내 차례(turn)가 아니면 null.
+ * 방금 뽑은 패가 있으면 그대로 버린다(쯔모기리). 치·퐁 직후처럼 뽑은 패가 없으면 도우미 추천 패를,
+ * 그것도 없으면 손패 맨 오른쪽 패를 버린다(왼쪽 끝은 1만 같은 쓸 만한 패라 피한다).
+ */
+export function fallbackDiscard(view) {
+  const legal = view?.legal;
+  if (!legal || legal.kind !== 'turn' || legal.discard.length === 0) return null;
+  if (view.myDrawn != null && legal.discard.includes(view.myDrawn)) return view.myDrawn;
+  try {
+    const best = computeHints(view)?.best?.[0];
+    if (best != null) {
+      const ids = legal.discard.filter((id) => kindOf(id) === best);
+      if (ids.length > 0) return ids.find((id) => !isRedId(id)) ?? ids[0];
+    }
+  } catch { /* 힌트 계산 실패 시 아래 기본값 */ }
+  return legal.discard[legal.discard.length - 1];
+}
