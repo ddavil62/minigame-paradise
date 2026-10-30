@@ -172,6 +172,9 @@ export function createSounds() {
     riichi: () => { tone(330, 0, 0.18, 'sawtooth', 0.08); tone(495, 0.12, 0.18, 'sawtooth', 0.08); tone(660, 0.24, 0.3, 'sawtooth', 0.08); },
     win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.35, 'triangle', 0.13)),
     dora: () => tone(880, 0, 0.2, 'sine', 0.08),
+    // 내 차례 알림(띠-리-링)과 한동안 안 눌렀을 때의 재촉
+    myturn: () => [[659, 0], [880, 0.09], [1319, 0.18]].forEach(([f, t]) => tone(f, t, 0.28, 'triangle', 0.13)),
+    nudge: () => { tone(988, 0, 0.12, 'sine', 0.1); tone(988, 0.15, 0.12, 'sine', 0.1); },
     over: () => [392, 523, 659, 784].forEach((f, i) => tone(f, i * 0.14, 0.4, 'triangle', 0.12)),
     error: () => tone(180, 0, 0.18, 'square', 0.06),
   };

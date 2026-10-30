@@ -118,9 +118,9 @@ export function createFx(stage) {
   }
 
   /** 화면 가운데를 가로지르는 큰 글씨 배너 */
-  function banner(text, { color = '#ffe27a', sub = '', y = 330, dur = 1500 } = {}) {
+  function banner(text, { color = '#ffe27a', sub = '', y = 330, dur = 1500, compact = false } = {}) {
     if (REDUCED) return;
-    const band = mk('fx-band', { top: `${y - 80}px` });
+    const band = mk(compact ? 'fx-band compact' : 'fx-band', { top: `${y - (compact ? 40 : 80)}px` });
     band.innerHTML = `<span class="fx-band-t" style="color:${color}">${text}</span>${sub ? `<span class="fx-band-s">${sub}</span>` : ''}`;
     run(band, [
       { opacity: 0, transform: 'scaleY(.1)' },

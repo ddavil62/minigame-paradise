@@ -119,6 +119,7 @@ function onMessage(m) {
       break;
     case 'STATE': {
       const prev = captureRects();
+      const prevView = S.st?.view;
       S.st = m;
       S.recvAt = Date.now();
       // 서버가 아는 도우미 상태가 내 설정과 다르면(재접속·재시작 등) 바로 맞춘다. 안 맞으면 버튼만 켜진 채 힌트가 사라진다.
@@ -129,6 +130,7 @@ function onMessage(m) {
       if (S.selected != null && !(m.view.myHand.includes(S.selected) || m.view.myDrawn === S.selected)) S.selected = null;
       render();
       playEvents(m.events || [], m.view, prev);
+      trackMyTurn(prevView, m);
       if (params.get('auto')) autoPlay(m.view);
       break;
     }
@@ -271,6 +273,59 @@ function overlayIn(elapsed, { late = 0, final = false } = {}) {
     const abs = Math.abs(parseInt(e.textContent.replace(/[^\d-]/g, '') || '0', 10));
     fx.countUp(e, abs, (n) => `(${sign}${n.toLocaleString()})`, { delay: base + 1000 + i * 140, dur: 900, elapsed });
   });
+}
+
+/** 지금 내가 버릴 패를 골라야 하는 차례인가(리치 후 자동 쯔모기리처럼 고를 게 없으면 아님) */
+function isDecideTurn(v) {
+  const l = v?.legal;
+  if (!l || l.kind !== 'turn') return false;
+  const locked = v.players[v.me].riichi && !l.tsumo && l.ankan.length === 0 && l.kakan.length === 0;
+  return !locked;
+}
+
+/** 내 차례 알림: 효과음·배너·손패 링. 치·퐁·패스 뒤처럼 뽑는 연출이 없어도 차례가 온 걸 알려 준다. */
+function myTurnCue({ loud = true, banner = true } = {}) {
+  const hand = stage.querySelector('.my-hand');
+  sounds.play(loud ? 'myturn' : 'nudge');
+  if (banner) fx.banner('당신 차례예요!', { color: '#ffe27a', sub: '버릴 패를 골라요', y: 598, dur: 1000, compact: true });
+  if (!hand) return;
+  const p = fx.toStage(hand.getBoundingClientRect());
+  fx.ring(p.x, p.y, { r: loud ? 150 : 110, color: '#ffcf4a', width: loud ? 6 : 4 });
+  if (loud) {
+    fx.ring(p.x, p.y, { r: 100, color: '#fff', width: 3, delay: 100 });
+    fx.sparks(p.x, p.y - 30, { n: 14, dist: 110, size: 6, colors: ['#ffcf4a', '#fff'] });
+  } else {
+    fx.shake(3, 220);
+  }
+}
+
+const NUDGE_AFTER_MS = [6000, 12000];
+
+function clearMyTurnTimer() {
+  clearTimeout(S.cueTimer);
+  S.cueTimer = null;
+}
+
+/** 차례가 이어지는 동안 한동안 안 눌렀으면(6초·12초) 한 번 더 알린다. */
+function armMyTurnNudges(token, i = 0) {
+  if (i >= NUDGE_AFTER_MS.length) return;
+  const wait = NUDGE_AFTER_MS[i] - (i ? NUDGE_AFTER_MS[i - 1] : 0);
+  S.cueTimer = setTimeout(() => {
+    if (S.cueToken !== token || !isDecideTurn(S.st?.view)) return;
+    myTurnCue({ loud: false, banner: false });
+    armMyTurnNudges(token, i + 1);
+  }, wait);
+}
+
+/** STATE를 받을 때마다 호출: 내 차례가 새로 시작됐을 때만 알림을 내고, 끝나면 재촉 타이머를 끈다. */
+function trackMyTurn(prevView, m) {
+  if (!isDecideTurn(m.view)) { clearMyTurnTimer(); return; }
+  if (isDecideTurn(prevView)) return; // 같은 차례의 재전송(도우미 토글 등)
+  clearMyTurnTimer();
+  S.cueToken = (S.cueToken || 0) + 1;
+  // 새 국 첫 차례(친)는 섞기 소리·국 배너와 겹치지 않게 알림을 생략하고 안내 표시만 둔다.
+  if (!(m.events || []).some((e) => e.t === 'hand_start')) myTurnCue();
+  armMyTurnNudges(S.cueToken);
 }
 
 /** 이벤트별 소리·비행·이펙트. 렌더가 끝난 뒤(새 DOM 기준)에 호출한다. */
@@ -539,7 +594,7 @@ function handHtml(v, legal) {
   const tiles = v.myHand.map((id) => mk(id)).join('');
   const drawn = v.myDrawn != null ? mk(v.myDrawn, 'drawn') : '';
   const melds = v.players[v.me].melds.map((m) => meldHtml(m, v.me, 't-meld')).join('');
-  return `<div class="my-hand${canAct ? ' can' : ''}">${tiles}${drawn}${melds ? `<div class="melds">${melds}</div>` : ''}</div>`;
+  return `<div class="my-hand${canAct ? ' can' : ''}${isDecideTurn(v) ? ' cue' : ''}">${tiles}${drawn}${melds ? `<div class="melds">${melds}</div>` : ''}</div>`;
 }
 
 function opponentHands(v) {

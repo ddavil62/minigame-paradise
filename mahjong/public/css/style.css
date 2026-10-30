@@ -77,6 +77,9 @@ button { font: inherit; cursor: pointer; }
 .my-hand .tile.hand { cursor: default; }
 .my-hand.can .tile.hand:not(.dim) { cursor: pointer; }
 .my-hand .melds { display: flex; align-items: flex-end; gap: 10px; margin-left: 20px; }
+/* 내 차례(버릴 패를 골라야 할 때): 손패 위에 계속 떠 있는 안내 */
+.my-hand.cue::before { content: '▼ 버릴 패를 골라요'; position: absolute; left: 50%; top: -50px; z-index: 3; padding: 4px 16px; border-radius: 99px; background: var(--turn); color: #2a1c00; font-size: 15px; font-weight: 900; white-space: nowrap; pointer-events: none; box-shadow: 0 0 20px var(--turn); animation: cue-bob 1s ease-in-out infinite; }
+@keyframes cue-bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -6px); box-shadow: 0 0 30px var(--turn); } }
 .meld-g { display: flex; align-items: flex-end; gap: 1px; }
 .tile .cap { position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%); color: var(--ui-muted); font-size: 11px; font-weight: 800; white-space: nowrap; }
 .tile .tag { position: absolute; top: -10px; left: 50%; z-index: 2; transform: translateX(-50%); padding: 1px 5px; border-radius: 99px; font-size: 9.5px; font-weight: 900; white-space: nowrap; }
@@ -327,8 +330,11 @@ button { font: inherit; cursor: pointer; }
 .fx-band { left: 0; width: 100%; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: linear-gradient(90deg, transparent 0, rgba(0,0,0,.78) 14%, rgba(0,0,0,.78) 86%, transparent 100%); border-top: 2px solid rgba(255,226,122,.55); border-bottom: 2px solid rgba(255,226,122,.55); }
 .fx-band-t { font-size: 104px; font-weight: 900; line-height: 1; letter-spacing: .08em; -webkit-text-stroke: 3px #1a0e04; paint-order: stroke fill; text-shadow: 0 0 28px currentColor, 0 6px 0 rgba(0,0,0,.45); }
 .fx-band-s { color: #f6eedb; font-size: 20px; font-weight: 800; letter-spacing: .12em; }
+.fx-band.compact { height: 80px; flex-direction: row; gap: 18px; }
+.fx-band.compact .fx-band-t { font-size: 48px; -webkit-text-stroke: 2px #1a0e04; letter-spacing: .05em; }
+.fx-band.compact .fx-band-s { font-size: 18px; }
 .fx-pop { font-weight: 900; letter-spacing: .06em; white-space: nowrap; -webkit-text-stroke: 3px #1a0e04; paint-order: stroke fill; text-shadow: 0 0 22px currentColor, 0 5px 0 rgba(0,0,0,.45); }
-@media (prefers-reduced-motion: reduce) { .plate.turn { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .plate.turn, .my-hand.cue::before { animation: none; } }
 
 /* ── 룰 가이드(헤더 버튼으로 여는 4탭 오버레이) ── */
 .hdr-guide { border-color: rgba(242,196,90,.55); color: var(--gold); }
