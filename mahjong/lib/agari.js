@@ -441,7 +441,7 @@ function evalStandard(ctx, d, interp, melds, menzen, all) {
   addCommonYakuman(ctx, all, ym);
   if (ym.length > 0) {
     const n = ym.reduce((a, y) => a + y.yakuman, 0);
-    return { han: 0, fu: 0, yaku: ym, yakuman: n, shape: 'standard' };
+    return { han: 0, fu: 0, yaku: ym, yakuman: n, shape: 'standard', layout: { pair, sets: d.sets, win: interp.group } };
   }
 
   const y = [];
@@ -521,7 +521,7 @@ function evalStandard(ctx, d, interp, melds, menzen, all) {
     if (!menzen) fu = Math.max(30, fu);
   }
   const han = y.reduce((a, v) => a + v.han, 0);
-  return { han, fu, yaku: y, yakuman: 0, shape: 'standard' };
+  return { han, fu, yaku: y, yakuman: 0, shape: 'standard', layout: { pair, sets: d.sets, win: interp.group } };
 }
 
 /**
@@ -569,14 +569,15 @@ export function evaluateHand(rawCtx) {
   }
 
   if (melds.length === 0 && isChiitoi(counts)) {
+    const chiitoiLayout = { pairs: counts.map((n, k) => (n === 2 ? k : -1)).filter((k) => k >= 0) };
     const ym = [];
     addCommonYakuman(ctx, all, ym);
     if (ym.length > 0) {
-      consider({ han: 0, fu: 0, yaku: ym, yakuman: ym.reduce((a, v) => a + v.yakuman, 0), shape: 'chiitoi' });
+      consider({ han: 0, fu: 0, yaku: ym, yakuman: ym.reduce((a, v) => a + v.yakuman, 0), shape: 'chiitoi', layout: chiitoiLayout });
     } else {
       const y = [{ name: '치또이츠', han: 2, hl: expandKinds(all) }];
       addCommonYaku(ctx, true, all, y);
-      consider({ han: y.reduce((a, v) => a + v.han, 0), fu: 25, yaku: y, yakuman: 0, shape: 'chiitoi' });
+      consider({ han: y.reduce((a, v) => a + v.han, 0), fu: 25, yaku: y, yakuman: 0, shape: 'chiitoi', layout: chiitoiLayout });
     }
   }
 
@@ -588,7 +589,7 @@ export function evaluateHand(rawCtx) {
   }
   if (!best) return null;
 
-  const result = { han: best.han, fu: best.fu, yaku: best.yaku.slice(), yakuman: best.yakuman, shape: best.shape };
+  const result = { han: best.han, fu: best.fu, yaku: best.yaku.slice(), yakuman: best.yakuman, shape: best.shape, layout: best.layout || null };
   if (result.yakuman === 0) {
     if (ctx.dora > 0) { result.yaku.push({ name: '도라', han: ctx.dora }); result.han += ctx.dora; }
     if (ctx.aka > 0) { result.yaku.push({ name: '적도라', han: ctx.aka }); result.han += ctx.aka; }

@@ -193,3 +193,14 @@ test('hl: 역패·부로 포함 손에서도 손 안의 패만 가리킨다', ()
   assertHlWithin(r, counts, melds);
   assert.deepEqual(r.yaku.find((y) => y.name === '역패 백').hl, [31, 31, 31]);
 });
+
+test('화료 결과에 묶음 분해(layout)가 담긴다: 표준형은 면자+머리+화료 묶음, 치또이츠는 쌍 목록', () => {
+  const std = evaluateHand({ ...BASE, counts: parse('234m456p678s34p55s' + '5p'), winKind: kind('5p'), riichi: 1 });
+  assert.equal(std.shape, 'standard');
+  assert.equal(std.layout.pair, kind('5s'));
+  assert.equal(std.layout.sets.length, 4);
+  assert.ok(std.layout.win === 'pair' || Number.isInteger(std.layout.win));
+  const chi = evaluateHand({ ...BASE, counts: parse('1122m3344p5566s77z'), winKind: kind('7z'), riichi: 1 });
+  assert.equal(chi.shape, 'chiitoi');
+  assert.equal(chi.layout.pairs.length, 7);
+});

@@ -757,6 +757,49 @@ function setResUi({ focus = S.resFocus, tip = S.resTip } = {}) {
   applyResUi();
 }
 
+/**
+ * 화료 손을 서버가 준 분해(w.layout)대로 묶음(순쯔·커쯔·머리/또이츠)으로 나눠 패 id를 배정한다.
+ * 화료패는 자기가 완성한 묶음에 먼저 넣는다. 배정이 안 맞으면 null(평평한 손패로 대체).
+ * @returns {{ids:number[], cap:string, cls:string}[]|null}
+ */
+function winGroups(w) {
+  const L = w.layout;
+  if (!L) return null;
+  const pool = new Map();
+  for (const id of [...w.concealed, w.winTile]) {
+    const k = id >> 2;
+    if (!pool.has(k)) pool.set(k, []);
+    pool.get(k).push(id);
+  }
+  const defs = L.pairs
+    ? L.pairs.map((k) => ({ kinds: [k, k], cap: '또이츠', cls: 'pair', win: k === w.winTile >> 2 }))
+    : [...L.sets.map((s, i) => (s.t === 'seq'
+      ? { kinds: [s.k, s.k + 1, s.k + 2], cap: '순쯔', cls: 'seq', win: L.win === i }
+      : { kinds: [s.k, s.k, s.k], cap: '커쯔', cls: 'tri', win: L.win === i })),
+    { kinds: [L.pair, L.pair], cap: '머리', cls: 'pair', win: L.win === 'pair' }];
+  let winSeen = false;
+  for (const d of defs) { if (d.win && !winSeen) winSeen = true; else d.win = false; }
+  const take = (k, prefer) => {
+    const a = pool.get(k);
+    if (!a?.length) return null;
+    const i = prefer != null ? a.indexOf(prefer) : -1;
+    return a.splice(i >= 0 ? i : 0, 1)[0];
+  };
+  // 화료패를 먼저 예약해 같은 종류 다른 패가 그 자리를 차지하지 않게 한다.
+  for (const d of defs) {
+    d.ids = [];
+    if (d.win) d.ids.push(take(w.winTile >> 2, w.winTile));
+  }
+  for (const d of defs) {
+    const rest = d.win ? [...d.kinds] : d.kinds.slice();
+    if (d.win) rest.splice(rest.indexOf(w.winTile >> 2), 1);
+    for (const k of rest) d.ids.push(take(k));
+    if (d.ids.includes(null)) return null;
+    d.ids.sort((a, b) => (a >> 2) - (b >> 2) || a - b);
+  }
+  return defs;
+}
+
 function resultHtml(v) {
   const r = v.result;
   const waiting = v.waitingOn.length;
@@ -775,7 +818,14 @@ function resultHtml(v) {
     body = r.winners.map((w) => {
       const info = seatInfo(w.seat);
       const wi = r.winners.indexOf(w);
-      const concealed = w.concealed.map((id) => tileHtml(code(id), 't-res', '', '', { id })).join('');
+      const groups = winGroups(w);
+      const tileOf = (id) => tileHtml(code(id), 't-res', id === w.winTile ? 'win' : '', '', { id });
+      const concealed = groups
+        ? groups.map((g) => `<div class="grp ${g.cls}"><div class="grp-tiles">${g.ids.map(tileOf).join('')}</div><div class="grp-cap">${g.cap}</div></div>`).join('')
+        : w.concealed.map((id) => tileHtml(code(id), 't-res', '', '', { id })).join('');
+      const shapeNote = !groups ? '' : w.layout.pairs
+        ? '이긴 모양: 같은 패 2장짜리 7쌍 (치또이츠)'
+        : `이긴 모양: 3장 묶음 4개 + 같은 패 2장(머리) 1개, 그리고 족보(역) 1개 이상${w.melds.length ? ' · 울린 패(오른쪽)도 묶음 1개로 세요' : ''}`;
       const melds = w.melds.map((m) => meldHtml({ ...m, called: m.tiles[0] }, w.seat, 't-meld', true)).join('');
       const rows = w.yaku.map((y, i) => ({ y, html: yakuRow(y, wi, i) }));
       const main = rows.filter((r) => !BONUS_YAKU.has(r.y.name)).map((r) => r.html).join('');
@@ -788,7 +838,8 @@ function resultHtml(v) {
       const isDealer = w.seat === v.dealer;
       return `<div class="res-win" data-w="${wi}">
         <div class="res-head"><h2>${w.tsumo ? '쯔모' : '론'}</h2><span>${esc(info.name)} (${WIND_KO[v.players[w.seat].wind]}가${isDealer ? ' · 친' : ''}) 화료 · ${from}${isDealer ? infoBtn(`dealer:${wi}`, '친') : ''}</span>${w.limit ? `<span class="limit">${w.limit}</span>` : ''}${isDealer ? tipBox(`dealer:${wi}`, TERM_INFO.dealer) : ''}</div>
-        <div class="res-hand">${concealed}${tileHtml(code(w.winTile), 't-res', 'win', '', { id: w.winTile })}${melds ? `<div class="melds">${melds}</div>` : ''}</div>
+        ${shapeNote ? `<div class="res-shape">${shapeNote}</div>` : ''}
+        <div class="res-hand${groups ? ' grouped' : ''}">${concealed}${groups ? '' : tileHtml(code(w.winTile), 't-res', 'win', '', { id: w.winTile })}${melds ? `<div class="melds">${melds}</div>` : ''}</div>
         <div class="res-body"><div>
           <div class="res-dora"><div>도라 ${r.dora.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>${w.riichi ? `<div>뒷도라 ${r.ura.map((id) => tileHtml(code(id), 't-mini')).join('')}</div>` : ''}</div>
           <div class="yaku">${yaku}</div>

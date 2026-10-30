@@ -699,6 +699,8 @@ export class MahjongGame {
         yaku: ev.yaku,
         yakuman: ev.yakuman,
         limit: ev.limit,
+        shape: ev.shape,
+        layout: ev.layout,
         points: gain,
         concealed: sortTiles(tsumo ? h.hands[w].filter((id) => id !== tileId) : h.hands[w]),
         melds: h.melds[w].map((m) => ({ type: m.type, k: m.k, tiles: m.tiles.slice(), from: m.from })),
