@@ -589,6 +589,24 @@ function callText(c) {
   return dot([verdict, speed, c.opens ? '문전이 깨져 리치를 못 해요' : '']);
 }
 
+const KAN_WHY = {
+  worse: '깡하면 모양이 나빠져요',
+  'riichi-keep': '대기가 그대로라 도라만 늘어요',
+  'riichi-danger': '리치한 사람이 있어요. 새 도라가 상대에게도 유리할 수 있어요',
+  'waits-drop': '깡하면 기다리는 패가 줄어요',
+  ankan: '문전을 지킨 채 도라가 늘고 점수도 올라요',
+  kakan: '도라가 늘고 점수가 올라요 (상대가 론하는 창깡만 조심해요)',
+  'dai-yakuhai': '역패는 퐁으로도 충분해요. 깡하면 도라가 늘어 상대에게도 유리해요',
+  'dai-open': '문전이 깨지고 상대 도라도 늘어요',
+  'dai-opened': '이미 울었다면 도라는 늘지만 위험도 같이 커져요',
+};
+const KAN_VERDICT = { yes: ['👍 깡해요', 'go'], maybe: ['🤔 상황 봐서', 'maybe'], no: ['✋ 깡 비추천', 'stop'] };
+
+function kanText(c, name = '') {
+  const [label, cls] = KAN_VERDICT[c?.advice] || [];
+  return label ? `${name ? `깡 <b>${esc(name)}</b> ` : '깡 '}<b class="verdict ${cls}">${label}</b> ${esc(KAN_WHY[c.why] || '')}` : '';
+}
+
 function hintStrip(v, legal) {
   const h = S.st.hints;
   const vis = visibleCounts(v);
@@ -604,8 +622,8 @@ function hintStrip(v, legal) {
   if (legal?.kind === 'reaction') {
     const tile = legal.tile;
     const who = `${esc(seatInfo(legal.from).name)}(${WIND_KO[v.players[legal.from].wind]}가)`;
-    const label = legal.ron ? '론 가능' : legal.pon ? '퐁 가능' : legal.chi ? '치 가능' : '깡 가능';
-    const info = S.assist && h ? dot([h.call ? callText(h.call) : '', h.note ? `<b>${esc(h.note)}</b>` : '']) : '';
+    const label = legal.ron ? '론 가능' : legal.pon ? (legal.daiminkan ? '퐁·깡 가능' : '퐁 가능') : legal.chi ? '치 가능' : '깡 가능';
+    const info = S.assist && h ? dot([h.call ? callText(h.call) : '', h.callKan ? kanText(h.callKan) : '', h.note ? `<b>${esc(h.note)}</b>` : '']) : '';
     return `<span class="k">${label}</span>${who}의 버림패 ${miniTiles([tile >> 2])}${info ? ` · ${info}` : ''}`;
   }
   if (!S.assist || !h) return '';
@@ -615,7 +633,8 @@ function hintStrip(v, legal) {
     const e = bestK != null ? h.discards[bestK] : null;
     const state = h.shanten === 0 ? '버리면 텐파이!' : h.shanten > 0 ? shantenText(h.shanten) : '';
     const lead = h.note ? warnSpan(esc(h.note)) : '';
-    if (!e) return `<span class="k">도우미</span>${dot([lead, state])}`;
+    const kans = Object.entries(h.kan || {}).map(([k, c]) => kanText(c, kindName(+k)));
+    if (!e) return `<span class="k">도우미</span>${dot([lead, state, ...kans])}`;
     let why = '';
     if (h.bestWhy === 'fold') why = `리치한 ${esc(riichiNames)}님이 있고 아직 멀어서, 이미 나온 안전패를 골랐어요`;
     else if (h.bestWhy === 'tenpai' && e.waits?.length) why = dot([waitsText(e.waits), warnSpan(yakuText(e.yaku, h.fixable))]);
@@ -624,6 +643,7 @@ function hintStrip(v, legal) {
       lead, state, `추천 버림 <b>${kindName(bestK)}</b>`, why,
       h.bestSavedDora ? '도라는 남겨 뒀어요' : '',
       h.bestRisky ? warnSpan(`⚠ 리치한 ${esc(riichiNames)}님에게 위험한 패예요`) : '',
+      ...kans,
     ])}`;
   }
   if (h.waits?.length) {

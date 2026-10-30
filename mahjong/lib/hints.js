@@ -43,6 +43,8 @@ const YAKU_ORDER = { ok: 0, partial: 1, tsumo: 2, none: 3 };
  * - best: 추천 버림 종류(0~1개), bestWhy: 'fold'|'tenpai'|'speed', bestRisky, bestSavedDora
  * - safe: 리치한 상대에게 안전한 패 종류
  * - call: 퐁·치 반응 창일 때 {type, before, after, opens, yakuAfter, advice, why} (advice: yes·maybe·no)
+ * - kan: 내 차례의 암깡·가깡 판정 {깡할 종류: {advice, why}}
+ * - callKan: 대명깡 반응 창일 때 {advice, why}
  * - note: 한 줄 안내(쯔모 가능, 역 없음, 역패 퐁)
  */
 export function computeHints(view) {
@@ -61,8 +63,9 @@ export function computeHints(view) {
   const doraKinds = new Set((view.dora || []).map((id) => doraFromIndicator(kindOf(id))));
   const hints = {
     shanten: null, waits: [], yaku: null, fixable, discards: {}, best: [], bestWhy: null,
-    bestRisky: false, bestSavedDora: false, safe: [], call: null, note: null,
+    bestRisky: false, bestSavedDora: false, safe: [], call: null, kan: {}, callKan: null, note: null,
   };
+  const isYakuhai = (k) => isDragon(k) || k === seatWind || k === roundWind;
 
   // 리치한 상대 기준 안전패(현물)
   const riichiOpp = view.players.filter((p) => p.seat !== view.me && p.riichi);
@@ -134,6 +137,10 @@ export function computeHints(view) {
         && pool.some((k) => k !== w && penalty(k) > 0 && keyOf(k).slice(0, 3).join() === kw.slice(0, 3).join());
     }
 
+    if (view.legal?.kind === 'turn' && hints.shanten >= 0) {
+      for (const k of view.legal.ankan || []) hints.kan[k] = adviseKan('ankan', k);
+      for (const id of view.legal.kakan || []) hints.kan[kindOf(id)] = adviseKan('kakan', kindOf(id));
+    }
     if (view.legal?.kind === 'turn' && view.legal.tsumo) hints.note = '쯔모 화료가 가능해요!';
     else if (hints.shanten === -1) hints.note = '모양은 완성됐지만 역이 없어서 화료할 수 없어요. 역이 생기도록 패를 바꿔 보세요.';
   } else if (hand.length % 3 === 1) {
@@ -160,8 +167,40 @@ export function computeHints(view) {
       }
     }
     if (hand.length % 3 === 1 && (lg.pon || lg.chi)) hints.call = callHint(lg, tk);
+    if (hand.length % 3 === 1 && lg.daiminkan && hints.shanten >= 0) hints.callKan = adviseDaiminkan(tk);
   }
   return hints;
+
+  /**
+   * 암깡·가깡을 해도 되는지 판정한다(초보 기준). 모양이 나빠지지 않고 위험이 없을 때만 권한다.
+   * @param {'ankan'|'kakan'} type
+   * @param {number} k 깡할 패 종류
+   * @returns {{advice:'yes'|'maybe'|'no', why:string}} why: worse·riichi-keep·riichi-danger·waits-drop·ankan·kakan
+   */
+  function adviseKan(type, k) {
+    const c = counts.slice();
+    c[k] -= type === 'ankan' ? 4 : 1;
+    const after = shanten(c, type === 'ankan' ? mc + 1 : mc);
+    if (after > hints.shanten) return { advice: 'no', why: 'worse' };
+    if (me.riichi) return { advice: 'yes', why: 'riichi-keep' };
+    if (riichiOpp.length > 0) return { advice: 'maybe', why: 'riichi-danger' };
+    if (hints.shanten === 0 && after === 0) {
+      const rem = (ws) => ws.reduce((a, w) => a + w.remaining, 0);
+      const kanRem = rem(waitInfo(c, type === 'ankan' ? [{ type: 'ankan', k }] : []));
+      const bestRem = Math.max(0, ...Object.values(hints.discards).filter((e) => e.s === 0).map((e) => rem(e.waits)));
+      if (kanRem < bestRem) return { advice: 'maybe', why: 'waits-drop' };
+    }
+    return { advice: 'yes', why: type };
+  }
+
+  /** 대명깡(남이 버린 패로 깡) 판정. 문전이 깨지고 상대 도라도 늘어서 초보에겐 대개 권하지 않는다. */
+  function adviseDaiminkan(tk) {
+    const c = counts.slice();
+    c[tk] -= 3;
+    if (shanten(c, mc + 1) > hints.shanten) return { advice: 'no', why: 'worse' };
+    if (isYakuhai(tk)) return { advice: 'maybe', why: 'dai-yakuhai' };
+    return fixable ? { advice: 'no', why: 'dai-open' } : { advice: 'maybe', why: 'dai-opened' };
+  }
 
   /** 퐁·치를 했을 때의 변화: 향청수, 문전 상실, 텐파이가 된다면 역 유무 */
   function callHint(lg, tk) {
@@ -177,7 +216,6 @@ export function computeHints(view) {
       const low = Math.min(tk, ...o.ids.map(kindOf));
       opts.push({ type: 'chi', meld: { type: 'chi', k: low }, c, ban: o.ban || [tk] });
     }
-    const isYakuhai = (k) => isDragon(k) || k === seatWind || k === roundWind;
     const isSimpleMeld = (m) => m.k < 27 && (m.type === 'chi' ? m.k % 9 >= 1 && m.k % 9 <= 5 : !isTerminal(m.k));
     for (const o of opts) {
       o.after = shanten(o.c, mc + 1);

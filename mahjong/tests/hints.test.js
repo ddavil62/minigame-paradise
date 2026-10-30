@@ -183,6 +183,34 @@ test('치 반응 창: 속도가 안 빨라지거나 역이 보장되지 않으�
   if (hints.call.after >= hints.call.before) assert.equal(hints.call.advice, 'no');
 });
 
+test('암깡: 모양이 나빠지지 않으면 권하고, 리치한 상대가 있으면 상황 봐서로 낮춘다', () => {
+  const spec = { hands: { 0: '111m234p567s11z99s' }, drawn: { seat: 0, kind: 0 } };
+  const g = setup(spec);
+  const v = g.viewFor(0);
+  assert.deepEqual(v.legal.ankan, [0]);
+  const hints = computeHints(v);
+  assert.equal(hints.kan[0].advice, 'yes');
+  assert.equal(hints.kan[0].why, 'ankan');
+
+  const r = setup({ ...spec, discards: { 1: '9p' }, riichi: [1] });
+  const again = computeHints(r.viewFor(0));
+  assert.equal(again.kan[0].advice, 'maybe');
+  assert.equal(again.kan[0].why, 'riichi-danger');
+});
+
+test('대명깡: 역패가 아닌 문전 깡은 비추천한다', () => {
+  const g = setup({
+    hands: { 0: '1357m1357p135s24z', 1: '333z123m456p789s2z', 2: '2468m2468p2468s7z', 3: '3579m3579p3579s1z' },
+    drawn: { seat: 0, kind: 29 },
+  });
+  assert.ok(g.act(0, { type: 'discard', id: g.h.drawn }).ok);
+  const v = g.viewFor(1);
+  assert.ok(v.legal.daiminkan);
+  const hints = computeHints(v);
+  assert.equal(hints.callKan.advice, 'no');
+  assert.equal(hints.callKan.why, 'dai-open');
+});
+
 test('힌트는 상대 손패를 쓰지 않는다: 같은 뷰면 상대 손이 달라도 결과가 같다', () => {
   const a = setup({ hands: { 0: '123m456p23p789s11z', 1: '4444m5555m6666m7m' }, drawn: { seat: 0, kind: 33 } });
   const b = setup({ hands: { 0: '123m456p23p789s11z', 1: '5555m6666m7777m4m' }, drawn: { seat: 0, kind: 33 } });
