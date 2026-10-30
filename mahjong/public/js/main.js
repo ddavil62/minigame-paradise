@@ -391,7 +391,7 @@ function playEvents(events, view, prev) {
         break;
       case 'resume':
         sounds.play('resume');
-        fx.banner('재개!', { color: '#9fe8b0', sub: ev.auto ? '시간이 지나 자동으로 이어져요' : `${ev.name}님이 이어 갔어요`, y: 330, dur: 1000 });
+        fx.banner('재개!', { color: '#9fe8b0', sub: `${ev.name}님이 이어 갔어요`, y: 330, dur: 1000 });
         break;
       case 'agari': {
         sounds.play('win');
@@ -611,7 +611,7 @@ function pauseHtml(p) {
     <div class="pause-title">⏸ 일시정지</div>
     <div class="pause-who"><b>${esc(p.name)}</b>님이 멈췄어요. 누구든 이어 갈 수 있어요.</div>
     <button class="act" data-do="resume" type="button">▶ 재개 (P)</button>
-    <div class="pause-auto">자동 재개까지 <b id="pause-left">${fmtClock(p.autoAt - (Date.now() + S.offset))}</b></div>
+    <div class="pause-auto">멈춘 지 <b id="pause-elapsed">${fmtClock(Date.now() + S.offset - p.at)}</b></div>
   </div></div>`;
 }
 
@@ -1018,8 +1018,8 @@ function updateTimers() {
   const timerEl = $('my-timer');
   const bar = $('call-bar');
   const pause = S.st.pause;
-  const pl = $('pause-left');
-  if (pl && pause) pl.textContent = fmtClock(pause.autoAt - (Date.now() + S.offset));
+  const pl = $('pause-elapsed');
+  if (pl && pause) pl.textContent = fmtClock(Date.now() + S.offset - pause.at);
   if (!t) { S.tickSec = null; return; }
   // 일시정지 중에는 멈춘 시각 기준으로 남은 시간을 고정해 보여 준다.
   const left = Math.max(0, t.deadline - (pause ? pause.at : Date.now() + S.offset));

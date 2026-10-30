@@ -311,8 +311,8 @@ test('일시정지: 타이머와 행동이 멈추고, 아무나 재개하면 남
   srv.close();
 });
 
-test('일시정지: 횟수 제한을 넘으면 거절되고, 시간이 지나면 자동으로 재개된다', async (t) => {
-  const srv = await boot({ ...FAST, baseMs: 5000, bankMs: 0, pauseLimit: 1, pauseMaxMs: 250 });
+test('일시정지: 시간 제한 없이 재개할 때까지 멈춰 있고, 횟수 제한을 넘으면 거절된다', async (t) => {
+  const srv = await boot({ ...FAST, baseMs: 5000, bankMs: 0, pauseLimit: 1 });
   t.after(srv.close);
   const a = client(srv.port, { key: 'kq1', name: '가', play: false }, t);
   await until(() => a.room);
@@ -320,8 +320,13 @@ test('일시정지: 횟수 제한을 넘으면 거절되고, 시간이 지나면
   await until(() => a.state?.view.legal?.kind === 'turn');
   a.send({ type: 'PAUSE' });
   await until(() => a.state.pause);
-  await until(() => !a.state.pause, 2000);
-  assert.ok(a.events.some((e) => e.t === 'resume' && e.auto), '자동 재개');
+  // 오래 지나도(여기서는 1.2초) 자동으로 풀리지 않는다.
+  await new Promise((r) => setTimeout(r, 1200));
+  assert.ok(a.state.pause, '자동 재개 없음');
+  assert.ok(!a.events.some((e) => e.t === 'resume'));
+  a.send({ type: 'RESUME' });
+  await until(() => !a.state.pause);
+  assert.ok(a.events.some((e) => e.t === 'resume' && e.name === '가'));
   a.send({ type: 'PAUSE' });
   await until(() => a.errors.some((e) => e.code === 'pause_limit'));
   assert.equal(a.state.pause, null);

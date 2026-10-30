@@ -47,7 +47,6 @@ export const DEFAULT_TIMING = Object.freeze({
   lobbyGraceMs: 8000,
   emptyResetMs: 90000,
   pauseLimit: 3, // 사람당 한 판에 일시정지할 수 있는 횟수
-  pauseMaxMs: 180000, // 이 시간이 지나면 자동으로 재개한다(멈춘 사람이 자리를 비워도 방이 멈추지 않게)
 });
 
 /** @param {unknown} name 입력 이름 @returns {string} 안전한 표시 이름 */
@@ -103,8 +102,7 @@ export function createApp(opts = {}) {
     /** @type {MahjongGame|null} */ game: null,
     pendingRef: null,
     seatTimers: {},
-    pause: null, // 일시정지 중이면 {seat, name, at, autoAt}
-    pauseTimer: null,
+    pause: null, // 일시정지 중이면 {seat, name, at}. 시간 제한은 없고 누구든 재개할 때까지 멈춘다
     pauseUsed: {}, // 세션키 → 이번 판에 쓴 일시정지 횟수
     lobbyTimers: new Map(),
     emptyTimer: null,
@@ -150,8 +148,6 @@ export function createApp(opts = {}) {
   }
 
   function clearPause() {
-    clearTimeout(room.pauseTimer);
-    room.pauseTimer = null;
     room.pause = null;
   }
 
@@ -353,14 +349,12 @@ export function createApp(opts = {}) {
       t.handle = null;
       t.remaining = Math.max(0, t.at + t.ms - now);
     }
-    room.pause = { seat: slot.seat, name: slot.name, at: now, autoAt: now + T.pauseMaxMs };
-    room.pauseTimer = setTimeout(() => resumeGame(null), T.pauseMaxMs);
-    room.pauseTimer.unref?.();
+    room.pause = { seat: slot.seat, name: slot.name, at: now };
     broadcastState([{ t: 'pause', seat: slot.seat, name: slot.name }]);
     return { ok: true };
   }
 
-  /** 재개: 멈춘 시간만큼 여유 시간 계산을 미루고 남은 시간부터 타이머를 이어 간다. by가 null이면 자동 재개. */
+  /** 재개: 멈춘 시간만큼 여유 시간 계산을 미루고 남은 시간부터 타이머를 이어 간다. */
   function resumeGame(by) {
     if (!room.pause) return { ok: false, error: 'not_paused' };
     const now = Date.now();
@@ -377,7 +371,7 @@ export function createApp(opts = {}) {
       t.handle.unref?.();
     }
     scheduleSeats();
-    broadcastState([{ t: 'resume', seat: by ? by.seat : -1, name: by ? by.name : '', auto: !by }]);
+    broadcastState([{ t: 'resume', seat: by.seat, name: by.name }]);
     return { ok: true };
   }
 
