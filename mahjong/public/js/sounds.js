@@ -173,11 +173,14 @@ export function createSounds() {
   const SOUNDS = {
     discard: () => clack(0.4),
     land: () => { clack(0.55); tone(120, 0, 0.12, 'sine', 0.2); },
-    // 리치 중 버림: 낮은 쾅 + 음높이가 떨어지는 쿵-쿵. p(1~1.6)가 클수록 묵직하다(리치한 사람이 많거나 선언패).
+    // 리치 중 버림: 짧고 밝은 짝! 팍!(꼬리 없는 타격 두 번). p(1~1.6)가 클수록 묵직하다(리치한 사람이 많거나 선언패).
     landRiichi: (p = 1) => {
-      clack(Math.min(0.9, 0.55 * p), null, 1100, 0.09, 'bandpass'); // 낮은 '쾅' 표면음
-      thud(190, 42, 0.38, Math.min(0.95, 0.7 * p)); // 쿵
-      thud(130, 36, 0.46, Math.min(0.8, 0.5 * p), 0.17); // 한 박 뒤 더 낮은 쿵
+      // 짝! 팍! — 밝고 짧은 때리는 소리 두 번(꼬리 없이 끊어서 심장 박동처럼 들리지 않게 한다)
+      clack(Math.min(1, 0.85 * p), null, 3400, 0.05, 'bandpass'); // 짝: 높은 찰싹
+      clack(Math.min(0.8, 0.5 * p), null, 7000, 0.035, 'highpass'); // 짝: 날카로운 끝
+      thud(260, 95, 0.07, Math.min(0.7, 0.45 * p)); // 짝: 짧은 몸통
+      clack(Math.min(0.9, 0.7 * p), null, 2000, 0.06, 'bandpass', 0.085); // 팍: 한 톤 낮고 둔한 타격
+      thud(180, 70, 0.09, Math.min(0.6, 0.38 * p), 0.085);
     },
     draw: () => clack(0.18),
     deal: () => { clack(0.25); setTimeout(() => ctx && clack(0.25), 90); },
