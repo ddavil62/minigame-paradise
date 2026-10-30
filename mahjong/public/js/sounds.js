@@ -177,6 +177,8 @@ export function createSounds() {
     // 제한 시간 5초 전부터 1초마다: 째깍(높은 틱)·똑(0.5초 뒤 낮은 틱). 마지막 2초는 삐 소리가 더해진다.
     tick: () => { clack(0.42, null, 2800, 0.025); clack(0.28, null, 1700, 0.03, 'bandpass', 0.5); },
     tickLast: () => { clack(0.5, null, 2800, 0.025); tone(1568, 0, 0.09, 'square', 0.05); clack(0.32, null, 1700, 0.03, 'bandpass', 0.5); },
+    pause: () => { tone(660, 0, 0.14, 'triangle', 0.12); tone(440, 0.1, 0.22, 'triangle', 0.12); },
+    resume: () => { tone(440, 0, 0.14, 'triangle', 0.12); tone(660, 0.1, 0.14, 'triangle', 0.12); tone(880, 0.2, 0.22, 'triangle', 0.12); },
     nudge: () => { tone(988, 0, 0.12, 'sine', 0.1); tone(988, 0.15, 0.12, 'sine', 0.1); },
     over: () => [392, 523, 659, 784].forEach((f, i) => tone(f, i * 0.14, 0.4, 'triangle', 0.12)),
     error: () => tone(180, 0, 0.18, 'square', 0.06),

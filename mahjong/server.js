@@ -46,6 +46,8 @@ export const DEFAULT_TIMING = Object.freeze({
   riichiAutoMs: 900,
   lobbyGraceMs: 8000,
   emptyResetMs: 90000,
+  pauseLimit: 3, // 사람당 한 판에 일시정지할 수 있는 횟수
+  pauseMaxMs: 180000, // 이 시간이 지나면 자동으로 재개한다(멈춘 사람이 자리를 비워도 방이 멈추지 않게)
 });
 
 /** @param {unknown} name 입력 이름 @returns {string} 안전한 표시 이름 */
@@ -101,6 +103,9 @@ export function createApp(opts = {}) {
     /** @type {MahjongGame|null} */ game: null,
     pendingRef: null,
     seatTimers: {},
+    pause: null, // 일시정지 중이면 {seat, name, at, autoAt}
+    pauseTimer: null,
+    pauseUsed: {}, // 세션키 → 이번 판에 쓴 일시정지 횟수
     lobbyTimers: new Map(),
     emptyTimer: null,
   };
@@ -144,8 +149,15 @@ export function createApp(opts = {}) {
     room.seatTimers = {};
   }
 
+  function clearPause() {
+    clearTimeout(room.pauseTimer);
+    room.pauseTimer = null;
+    room.pause = null;
+  }
+
   function resetToLobby() {
     clearSeatTimers();
+    clearPause();
     room.game = null;
     room.pendingRef = null;
     room.phase = 'lobby';
@@ -160,6 +172,7 @@ export function createApp(opts = {}) {
     room.emptyTimer = setTimeout(() => {
       if (connectedHumans().length > 0) return;
       clearSeatTimers();
+      clearPause();
       room.game = null;
       room.phase = 'lobby';
       room.slots = [null, null, null, null];
@@ -206,6 +219,8 @@ export function createApp(opts = {}) {
         view,
         seats: seatsPublic(),
         timers,
+        pause: room.pause,
+        pausesLeft: Math.max(0, T.pauseLimit - (room.pauseUsed[slot.key] || 0)),
         bank: slot.bank,
         assist: !!slot.assist,
         hints: slot.assist ? computeHints(view) : null,
@@ -227,6 +242,7 @@ export function createApp(opts = {}) {
   function applyAction(seat, action) {
     const g = room.game;
     if (!g || room.phase !== 'playing') return { ok: false, error: 'not_playing' };
+    if (room.pause) return { ok: false, error: 'paused' };
     const res = g.act(seat, action);
     if (res.ok) afterChange();
     return res;
@@ -250,7 +266,7 @@ export function createApp(opts = {}) {
 
   function runAuto(seat, token, kind) {
     const g = room.game;
-    if (!g || room.phase !== 'playing' || room.pendingRef !== g.pending) return;
+    if (!g || room.phase !== 'playing' || room.pause || room.pendingRef !== g.pending) return;
     const t = room.seatTimers[seat];
     if (!t || t.token !== token) return;
     delete room.seatTimers[seat];
@@ -280,6 +296,7 @@ export function createApp(opts = {}) {
 
   let tokenSeq = 0;
   function scheduleSeats() {
+    if (room.pause) return; // 일시정지 중에는 타이머를 새로 만들지 않는다(재개할 때 다시 호출)
     const g = room.game;
     if (!g || !g.pending) { clearSeatTimers(); room.pendingRef = null; return; }
     const p = g.pending;
@@ -320,11 +337,53 @@ export function createApp(opts = {}) {
       }
       const handle = setTimeout(() => runAuto(seat, token, kind), ms);
       handle.unref?.();
-      room.seatTimers[seat] = { handle, token, deadline: kind === 'timeout' ? now + ms : 0, total, base };
+      room.seatTimers[seat] = { handle, token, kind, at: now, ms, deadline: kind === 'timeout' ? now + ms : 0, total, base };
     }
   }
 
+  /** 일시정지: 모든 좌석 타이머를 멈추고 남은 시간을 기억한다. 누구든 재개할 수 있다. */
+  function pauseGame(slot) {
+    if (room.phase !== 'playing' || !room.game || room.pause) return { ok: false, error: 'not_pausable' };
+    const used = room.pauseUsed[slot.key] || 0;
+    if (used >= T.pauseLimit) return { ok: false, error: 'pause_limit' };
+    room.pauseUsed[slot.key] = used + 1;
+    const now = Date.now();
+    for (const t of Object.values(room.seatTimers)) {
+      clearTimeout(t.handle);
+      t.handle = null;
+      t.remaining = Math.max(0, t.at + t.ms - now);
+    }
+    room.pause = { seat: slot.seat, name: slot.name, at: now, autoAt: now + T.pauseMaxMs };
+    room.pauseTimer = setTimeout(() => resumeGame(null), T.pauseMaxMs);
+    room.pauseTimer.unref?.();
+    broadcastState([{ t: 'pause', seat: slot.seat, name: slot.name }]);
+    return { ok: true };
+  }
+
+  /** 재개: 멈춘 시간만큼 여유 시간 계산을 미루고 남은 시간부터 타이머를 이어 간다. by가 null이면 자동 재개. */
+  function resumeGame(by) {
+    if (!room.pause) return { ok: false, error: 'not_paused' };
+    const now = Date.now();
+    const dur = now - room.pause.at;
+    clearPause();
+    for (const s of humans()) if (s.turnStart) s.turnStart += dur;
+    for (const [seat, t] of Object.entries(room.seatTimers)) {
+      const ms = t.remaining ?? t.ms;
+      delete t.remaining;
+      t.at = now;
+      t.ms = ms;
+      if (t.deadline) t.deadline = now + ms;
+      t.handle = setTimeout(() => runAuto(Number(seat), t.token, t.kind), ms);
+      t.handle.unref?.();
+    }
+    scheduleSeats();
+    broadcastState([{ t: 'resume', seat: by ? by.seat : -1, name: by ? by.name : '', auto: !by }]);
+    return { ok: true };
+  }
+
   function startGame() {
+    clearPause();
+    room.pauseUsed = {};
     // 빈 자리를 AI로 채운다.
     const used = new Set(room.slots.filter((s) => s && s.type === 'ai').map((s) => s.name));
     const names = AI_NAMES.filter((n) => !used.has(n));
@@ -401,6 +460,7 @@ export function createApp(opts = {}) {
     const idx = room.slots.indexOf(slot);
     if (idx < 0) return;
     if (room.phase === 'playing') {
+      dropSeatTimer(idx);
       room.slots[idx] = { seat: idx, type: 'ai', name: `${slot.name}(대리)`, level: room.settings.aiLevel };
     } else {
       room.slots[idx] = null;
@@ -473,11 +533,19 @@ export function createApp(opts = {}) {
               if (over > 0) slot.bank = Math.max(0, slot.bank - over);
             }
           } else {
-            send(ws, { type: 'ERROR', code: res.error || 'illegal', message: '지금은 할 수 없는 행동입니다.' });
+            send(ws, { type: 'ERROR', code: res.error || 'illegal', message: res.error === 'paused' ? '일시정지 중이에요. 재개하면 이어서 할 수 있어요.' : '지금은 할 수 없는 행동입니다.' });
             broadcastState();
           }
           break;
         }
+        case 'PAUSE': {
+          const res = pauseGame(slot);
+          if (res.error === 'pause_limit') send(ws, { type: 'ERROR', code: 'pause_limit', message: `일시정지는 한 판에 ${T.pauseLimit}번까지 쓸 수 있어요.` });
+          break;
+        }
+        case 'RESUME':
+          if (room.pause) resumeGame(slot);
+          break;
         case 'ASSIST':
           slot.assist = !!msg.on;
           if (room.game) broadcastState();
@@ -522,6 +590,7 @@ export function createApp(opts = {}) {
 
   function close() {
     clearSeatTimers();
+    clearPause();
     clearTimeout(room.emptyTimer);
     for (const h of room.lobbyTimers.values()) clearTimeout(h);
     for (const c of wss.clients) { try { c.terminate(); } catch { /* noop */ } }

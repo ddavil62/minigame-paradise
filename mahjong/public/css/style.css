@@ -320,6 +320,14 @@ button { font: inherit; cursor: pointer; }
 .err-toast { position: absolute; left: 50%; top: 96px; z-index: 30; transform: translateX(-50%); padding: 8px 16px; border-radius: 6px; background: #7d1a14; color: #fff1d6; font-size: 14px; font-weight: 800; }
 .connecting { position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; font-weight: 900; color: var(--accent); }
 
+/* ── 일시정지: 패와 도우미는 그대로 보이고, 클릭만 막는 옅은 막 + 가운데 작은 카드 ── */
+.pause-layer { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(8,12,20,.28); }
+.pause-card { display: grid; gap: 8px; justify-items: center; min-width: 320px; padding: 18px 30px 16px; border: 2px solid #ff8a3d; border-radius: 16px; background: rgba(18,16,28,.94); box-shadow: 0 0 40px rgba(255,138,61,.35); text-align: center; }
+.pause-title { color: #ffa766; font-size: 26px; font-weight: 900; letter-spacing: .06em; }
+.pause-who { color: #f1ecdc; font-size: 15px; font-weight: 700; }
+.pause-auto { color: var(--ui-muted); font-size: 12px; font-weight: 700; }
+.pause-auto b { color: #f1ecdc; font-variant-numeric: tabular-nums; }
+
 /* ── 연출 레이어(fx.js) ── */
 #fx { position: absolute; inset: 0; z-index: 40; overflow: hidden; pointer-events: none; }
 #fx > * { position: absolute; pointer-events: none; }
@@ -337,6 +345,10 @@ button { font: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .plate.turn, .my-hand.cue::before { animation: none; } }
 
 /* ── 룰 가이드(헤더 버튼으로 여는 4탭 오버레이) ── */
+.hdr-pause { border-color: rgba(255,150,80,.6); color: #ffa766; }
+.hdr-pause:hover { background: #2a1d16; }
+.hdr-pause.on { border-color: #ff8a3d; background: #ff8a3d; color: #231203; }
+.hdr-pause:disabled { opacity: .45; cursor: not-allowed; }
 .hdr-guide { border-color: rgba(242,196,90,.55); color: var(--gold); }
 .hdr-guide:hover { background: #222033; }
 .hdr-guide.on { border-color: var(--gold); background: var(--gold); color: #1d1608; }

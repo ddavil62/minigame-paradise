@@ -49,6 +49,7 @@ mahjong/
 | C→S | `START` / `REMATCH` / `LEAVE` | 호스트 시작 / 호스트 다시 하기(방 설정 복귀) / 나가기 |
 | C→S | `ACT {action}` | `discard{id,riichi?}` `tsumo` `ankan{kind}` `kakan{id}` `kyuushu` `ron` `pon` `daiminkan` `chi{ids}` `pass` `next` |
 | C→S | `ASSIST {on}` | 본인에게만 도우미 힌트 전송 켜기/끄기 |
+| C→S | `PAUSE` / `RESUME` | 대국 일시정지 / 재개(누구든 재개할 수 있다) |
 | S→C | `JOINED` `ROOM` `STATE` `ERROR` | 좌석·방 설정·대국 뷰(`view`, `seats`, `timers`, `hints`, `events`) |
 
 `STATE.view.legal`은 지금 내가 할 수 있는 행동 목록이며 클라이언트는 이것만 신뢰한다. `events`는 효과음·콜아웃용이다.
@@ -66,6 +67,7 @@ mahjong/
 - 버림 15초 + 대국 전체 여유 20초, 론/울기 응답 10초. 초과하면 쯔모기리/패스로 자동 진행한다(치·퐁 직후처럼 뽑은 패가 없으면 도우미 추천 패, `hints.js`의 `fallbackDiscard`). **국 결과 확인은 시간 제한이 없다**: 접속 중인 사람이 모두 직접 "다음 국"을 눌러야 넘어간다(AI는 잠시 뒤 자동 확인, 접속이 끊겼거나 자리 비움이면 0.5초 뒤 자동 확인).
 - 내 버림 타이머(`#my-timer`)가 빨개지는 5초 전부터 `tickTimer()`(main.js)가 초가 바뀔 때마다 째깍(+0.5초 뒤 똑) 소리를 내고 마지막 2초는 삐 소리를 더한다. 서버 `timers`에는 `deadline`이 있는 진짜 시간 제한만 들어오므로 리치 자동 쯔모기리·자리 비움에는 울리지 않는다. 론/울기 응답 막대(`#call-bar`)에는 아직 소리가 없다.
 - 연속 2회 시간 초과하거나 접속이 끊긴 사람은 자동 진행(자리 비움)이 되며 행동하면 해제된다. 리치 후 쯔모·깡 선택지가 없으면 서버가 0.9초 뒤 쯔모기리한다.
+- 일시정지(`pauseGame`/`resumeGame`, server.js): 사람이면 누구나 `PAUSE`할 수 있고 **누구든 `RESUME`**할 수 있다(스타크래프트식). 사람당 한 판 3번(`pauseLimit`, 센 횟수는 세션키 기준)이고 3분(`pauseMaxMs`)이 지나면 자동 재개한다. 멈추면 모든 좌석 타이머(AI 대기 포함)가 남은 시간을 기억하고 멈추며, 재개하면 남은 시간부터 이어 가고 여유 시간(`turnStart`)은 멈춘 만큼 미룬다. 멈춘 동안 `ACT`는 서버가 거절(`paused`)하고 `scheduleSeats`/`runAuto`도 아무것도 하지 않는다. `STATE`에 `pause`(`{seat,name,at,autoAt}`)와 `pausesLeft`가 실리고 `events`에 `pause`/`resume`이 간다. 클라이언트는 헤더 `#btn-pause`(대국 중에만 보임, 멈추면 `▶ 재개`)·P 키·가운데 카드(`pauseHtml`)로 조작하며, 패와 도우미는 일부러 가리지 않는다(클릭만 막음). 멈춘 동안 `updateTimers`는 `pause.at` 기준으로 남은 시간을 고정하고 째깍·재촉 알림은 울리지 않는다.
 - 대국 중 입장은 거절(`in_progress`)된다. 접속자가 0명이 되면 90초 후 방이 초기화된다.
 
 ## AI

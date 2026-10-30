@@ -312,7 +312,7 @@ function armMyTurnNudges(token, i = 0) {
   const wait = NUDGE_AFTER_MS[i] - (i ? NUDGE_AFTER_MS[i - 1] : 0);
   S.cueTimer = setTimeout(() => {
     if (S.cueToken !== token || !isDecideTurn(S.st?.view)) return;
-    myTurnCue({ loud: false, banner: false });
+    if (!S.st.pause) myTurnCue({ loud: false, banner: false });
     armMyTurnNudges(token, i + 1);
   }, wait);
 }
@@ -385,6 +385,14 @@ function playEvents(events, view, prev) {
         addAnim(450, (el) => riichiStick(rel, el));
         break;
       }
+      case 'pause':
+        sounds.play('pause');
+        fx.banner('일시정지', { color: '#ffa766', sub: `${ev.name}님이 멈췄어요`, y: 330, dur: 1100 });
+        break;
+      case 'resume':
+        sounds.play('resume');
+        fx.banner('재개!', { color: '#9fe8b0', sub: ev.auto ? '시간이 지나 자동으로 이어져요' : `${ev.name}님이 이어 갔어요`, y: 330, dur: 1000 });
+        break;
       case 'agari': {
         sounds.play('win');
         const n = ev.winners.length;
@@ -597,6 +605,21 @@ function handHtml(v, legal) {
   return `<div class="my-hand${canAct ? ' can' : ''}${isDecideTurn(v) ? ' cue' : ''}">${tiles}${drawn}${melds ? `<div class="melds">${melds}</div>` : ''}</div>`;
 }
 
+/** 일시정지 카드: 패·도우미는 그대로 보이고 클릭만 막는다. 누구든 재개할 수 있다. */
+function pauseHtml(p) {
+  return `<div class="pause-layer"><div class="pause-card">
+    <div class="pause-title">⏸ 일시정지</div>
+    <div class="pause-who"><b>${esc(p.name)}</b>님이 멈췄어요. 누구든 이어 갈 수 있어요.</div>
+    <button class="act" data-do="resume" type="button">▶ 재개 (P)</button>
+    <div class="pause-auto">자동 재개까지 <b id="pause-left">${fmtClock(p.autoAt - (Date.now() + S.offset))}</b></div>
+  </div></div>`;
+}
+
+function fmtClock(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 function opponentHands(v) {
   let html = '';
   for (const p of v.players) {
@@ -778,6 +801,7 @@ function renderGame() {
   }
   if (v.phase === 'ack' && v.result) html += resultHtml(v);
   if (v.phase === 'over' && v.final) html += finalHtml(v);
+  if (S.st.pause) html += pauseHtml(S.st.pause);
   stage.innerHTML = `<div id="content">${html}</div>`;
   fx.attach();
   fx.rehide();
@@ -993,14 +1017,18 @@ function updateTimers() {
   const t = S.st.timers.find((x) => x.seat === S.seat);
   const timerEl = $('my-timer');
   const bar = $('call-bar');
+  const pause = S.st.pause;
+  const pl = $('pause-left');
+  if (pl && pause) pl.textContent = fmtClock(pause.autoAt - (Date.now() + S.offset));
   if (!t) { S.tickSec = null; return; }
-  const left = Math.max(0, t.deadline - (Date.now() + S.offset));
+  // 일시정지 중에는 멈춘 시각 기준으로 남은 시간을 고정해 보여 준다.
+  const left = Math.max(0, t.deadline - (pause ? pause.at : Date.now() + S.offset));
   const pct = Math.min(100, (left / t.total) * 100);
   if (timerEl) {
     timerEl.querySelector('span').textContent = Math.ceil(left / 1000);
     timerEl.style.background = `conic-gradient(var(--turn) ${pct}%, rgba(255,255,255,.12) 0)`;
     timerEl.classList.toggle('low', left < 5000);
-    tickTimer(left);
+    if (!pause) tickTimer(left);
   } else S.tickSec = null;
   if (bar) bar.style.width = `${pct}%`;
 }
@@ -1014,6 +1042,22 @@ function render() {
   guide.attach();
   document.getElementById('btn-assist').classList.toggle('on', S.assist);
   document.getElementById('btn-names').classList.toggle('on', S.showNames);
+  paintPause();
+}
+
+/** 헤더 일시정지 버튼: 대국 중에만 보이고, 멈춘 동안은 '재개'로 바뀐다. */
+function paintPause() {
+  const btn = $('btn-pause');
+  const st = S.st;
+  const visible = !!st && !!S.room && S.room.phase !== 'lobby' && st.view.phase !== 'over';
+  btn.classList.toggle('hidden', !visible);
+  if (!visible) return;
+  const paused = !!st.pause;
+  const left = st.pausesLeft ?? 0;
+  btn.classList.toggle('on', paused);
+  btn.disabled = !paused && left <= 0;
+  btn.textContent = paused ? '▶ 재개' : `⏸ 일시정지 (${left})`;
+  btn.title = paused ? '대국을 이어 가요 (P)' : `대국을 잠시 멈춰요. 누구든 다시 시작할 수 있어요. 한 판에 ${left}번 더 쓸 수 있어요 (P)`;
 }
 
 // ── 입력 ───────────────────────────────────────────────────
@@ -1117,6 +1161,7 @@ function onAction(btn) {
     case 'riichi-cancel': S.riichiMode = false; S.selected = null; render(); break;
     case 'riichi-ok': if (S.selected != null) act({ type: 'discard', id: S.selected, riichi: true }); break;
     case 'next': act({ type: 'next' }); break;
+    case 'resume': send({ type: 'RESUME' }); break;
     case 'rematch': send({ type: 'REMATCH' }); break;
     case 'leave': leave(); break;
     case 'leave-ask': S.leaveAsk = true; render(); break;
@@ -1137,15 +1182,22 @@ $('btn-back').addEventListener('click', () => {
   leave();
 });
 $('btn-guide').addEventListener('click', () => guide.toggle());
+$('btn-pause').addEventListener('click', () => send({ type: S.st?.pause ? 'RESUME' : 'PAUSE' }));
+// P 키로 일시정지/재개(입력창에 글자를 치는 중이면 무시)
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() !== 'p' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) return;
+  const btn = $('btn-pause');
+  if (!btn.classList.contains('hidden') && !btn.disabled) btn.click();
+});
 $('btn-assist').addEventListener('click', toggleAssist);
 $('btn-names').addEventListener('click', toggleNames);
 const soundBtn = $('btn-sound');
-soundBtn.textContent = sounds.isMuted() ? '🔇' : '🔊';
-soundBtn.classList.toggle('on', !sounds.isMuted());
+const paintSound = () => { soundBtn.classList.toggle('on', !sounds.isMuted()); soundBtn.textContent = sounds.isMuted() ? '🔇 효과음 꺼짐' : '🔊 효과음'; };
+paintSound();
 soundBtn.addEventListener('click', () => {
   sounds.setMuted(!sounds.isMuted());
-  soundBtn.textContent = sounds.isMuted() ? '🔇' : '🔊';
-  soundBtn.classList.toggle('on', !sounds.isMuted());
+  paintSound();
   sounds.unlock();
 });
 const bgmBtn = $('btn-bgm');

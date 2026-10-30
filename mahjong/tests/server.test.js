@@ -275,3 +275,57 @@ test('다시 하기: 방장이 누르면 게스트도 연결과 자리를 유지
   assert.equal(b.room.isHost, false);
   assert.deepEqual(b.errors, []);
 });
+
+test('일시정지: 타이머와 행동이 멈추고, 아무나 재개하면 남은 시간부터 이어진다', async (t) => {
+  const srv = await boot({ ...FAST, baseMs: 600, bankMs: 0, aiTurnMs: [0, 3], pauseLimit: 2, pauseMaxMs: 60000 });
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'kp1', name: '가', play: false }, t);
+  const b = client(srv.port, { key: 'kp2', name: '나', play: false }, t);
+  await until(() => a.room && b.room && a.room.seats[2].type === 'human');
+  a.send({ type: 'START' });
+  await until(() => a.state && b.state);
+  // 동(좌석 0) 차례: 시간 제한이 돌고 있다.
+  await until(() => a.state.view.legal?.kind === 'turn');
+  a.send({ type: 'PAUSE' });
+  await until(() => a.state.pause && b.state.pause);
+  assert.equal(a.state.pause.name, '가');
+  assert.equal(a.state.pausesLeft, 1);
+  assert.equal(b.state.pausesLeft, 2, '횟수는 사람마다 센다');
+  const handBefore = a.state.view.myHand.join();
+  const discardsBefore = a.state.view.players[0].discards.length;
+  const id = a.state.view.legal.discard[0];
+  a.send({ type: 'ACT', action: { type: 'discard', id } });
+  await until(() => a.errors.some((e) => e.code === 'paused'));
+  // 제한 시간(600ms)보다 오래 기다려도 자동 버림이 일어나지 않는다.
+  await new Promise((r) => setTimeout(r, 900));
+  assert.equal(a.state.view.players[0].discards.length, discardsBefore);
+  assert.equal(a.state.view.myHand.join(), handBefore);
+  // 상대가 재개할 수 있다.
+  b.send({ type: 'RESUME' });
+  await until(() => !a.state.pause && !b.state.pause);
+  assert.ok(a.events.some((e) => e.t === 'resume' && e.name === '나' && !e.auto));
+  // 재개 뒤에는 남은 시간이 지나면 다시 자동 진행한다.
+  await until(() => a.state.view.players[0].discards.length > discardsBefore, 3000);
+  a.ws.close();
+  b.ws.close();
+  srv.close();
+});
+
+test('일시정지: 횟수 제한을 넘으면 거절되고, 시간이 지나면 자동으로 재개된다', async (t) => {
+  const srv = await boot({ ...FAST, baseMs: 5000, bankMs: 0, pauseLimit: 1, pauseMaxMs: 250 });
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'kq1', name: '가', play: false }, t);
+  await until(() => a.room);
+  a.send({ type: 'START' });
+  await until(() => a.state?.view.legal?.kind === 'turn');
+  a.send({ type: 'PAUSE' });
+  await until(() => a.state.pause);
+  await until(() => !a.state.pause, 2000);
+  assert.ok(a.events.some((e) => e.t === 'resume' && e.auto), '자동 재개');
+  a.send({ type: 'PAUSE' });
+  await until(() => a.errors.some((e) => e.code === 'pause_limit'));
+  assert.equal(a.state.pause, null);
+  assert.equal(a.state.pausesLeft, 0);
+  a.ws.close();
+  srv.close();
+});
