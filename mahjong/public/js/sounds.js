@@ -174,6 +174,9 @@ export function createSounds() {
     dora: () => tone(880, 0, 0.2, 'sine', 0.08),
     // 내 차례 알림(띠-리-링)과 한동안 안 눌렀을 때의 재촉
     myturn: () => [[659, 0], [880, 0.09], [1319, 0.18]].forEach(([f, t]) => tone(f, t, 0.28, 'triangle', 0.13)),
+    // 제한 시간 5초 전부터 1초마다: 째깍(높은 틱)·똑(0.5초 뒤 낮은 틱). 마지막 2초는 삐 소리가 더해진다.
+    tick: () => { clack(0.42, null, 2800, 0.025); clack(0.28, null, 1700, 0.03, 'bandpass', 0.5); },
+    tickLast: () => { clack(0.5, null, 2800, 0.025); tone(1568, 0, 0.09, 'square', 0.05); clack(0.32, null, 1700, 0.03, 'bandpass', 0.5); },
     nudge: () => { tone(988, 0, 0.12, 'sine', 0.1); tone(988, 0.15, 0.12, 'sine', 0.1); },
     over: () => [392, 523, 659, 784].forEach((f, i) => tone(f, i * 0.14, 0.4, 'triangle', 0.12)),
     error: () => tone(180, 0, 0.18, 'square', 0.06),

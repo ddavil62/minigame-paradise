@@ -979,19 +979,29 @@ function finalHtml(v) {
 }
 
 // ── 타이머 ─────────────────────────────────────────────────
+/** 내 제한 시간이 5초 아래(타이머가 빨개지는 구간)면 초가 바뀔 때마다 째깍 소리를 낸다. */
+function tickTimer(left) {
+  if (left >= 5000 || left <= 0) { S.tickSec = null; return; }
+  const sec = Math.ceil(left / 1000);
+  if (sec === S.tickSec) return;
+  S.tickSec = sec;
+  sounds.play(sec <= 2 ? 'tickLast' : 'tick');
+}
+
 function updateTimers() {
   if (!S.st) return;
   const t = S.st.timers.find((x) => x.seat === S.seat);
   const timerEl = $('my-timer');
   const bar = $('call-bar');
-  if (!t) return;
+  if (!t) { S.tickSec = null; return; }
   const left = Math.max(0, t.deadline - (Date.now() + S.offset));
   const pct = Math.min(100, (left / t.total) * 100);
   if (timerEl) {
     timerEl.querySelector('span').textContent = Math.ceil(left / 1000);
     timerEl.style.background = `conic-gradient(var(--turn) ${pct}%, rgba(255,255,255,.12) 0)`;
     timerEl.classList.toggle('low', left < 5000);
-  }
+    tickTimer(left);
+  } else S.tickSec = null;
   if (bar) bar.style.width = `${pct}%`;
 }
 setInterval(updateTimers, 250);
