@@ -32,6 +32,70 @@ function aggregate(waits) {
 const YAKU_ORDER = { ok: 0, partial: 1, tsumo: 2, none: 3 };
 
 /**
+ * 손패를 향청수가 가장 낮은 방식으로 묶는다(일반형만. 치또이츠·국사 모양은 다루지 않는다).
+ * 해석이 여러 개면 완성 면자가 많은 쪽 → 머리가 있는 쪽을 고른다.
+ * @param {number[]} counts 부로를 뺀 손패 개수
+ * @param {number} fixed 부로 수
+ * @param {number[]} vis 보이는 패 개수(남은 장수 계산용)
+ * @returns {{s:number, groups:{t:'seq'|'tri'|'pair'|'ta', kinds:number[], need:{k:number, left:number}[]}[]}}
+ */
+export function bestGrouping(counts, fixed, vis) {
+  const c = counts.slice();
+  const cur = [];
+  let best = null;
+  let mentsu = fixed;
+  let pair = 0;
+  const left = (k) => Math.max(0, 4 - vis[k]);
+  const need = (...ks) => ks.map((k) => ({ k, left: left(k) }));
+  const leaf = () => {
+    // 면자+탈락 후보가 4개를 넘으면 넘치는 후보는 쓸모없는 패로 본다.
+    let room = 4 - mentsu;
+    const groups = [];
+    for (const g of cur) {
+      if (g.t === 'ta') { if (room <= 0) continue; room--; }
+      groups.push(g);
+    }
+    const s = 8 - 2 * mentsu - groups.filter((g) => g.t === 'ta').length - pair;
+    if (!best || s < best.s || (s === best.s && (mentsu > best.m || (mentsu === best.m && pair > best.p)))) {
+      best = { s, m: mentsu, p: pair, groups };
+    }
+  };
+  const dfs = (start) => {
+    let i = start;
+    while (i < 34 && c[i] === 0) i++;
+    if (i >= 34) { leaf(); return; }
+    const suit = i < 27;
+    const take = (ks, g, nextStart, onSet) => {
+      ks.forEach((k) => { c[k]--; });
+      cur.push(g);
+      if (onSet) mentsu++;
+      dfs(nextStart);
+      if (onSet) mentsu--;
+      cur.pop();
+      ks.forEach((k) => { c[k]++; });
+    };
+    if (c[i] >= 3) take([i, i, i], { t: 'tri', kinds: [i, i, i], need: [] }, i, true);
+    if (suit && i % 9 <= 6 && c[i + 1] > 0 && c[i + 2] > 0) take([i, i + 1, i + 2], { t: 'seq', kinds: [i, i + 1, i + 2], need: [] }, i, true);
+    if (c[i] >= 2) {
+      if (!pair) { pair = 1; take([i, i], { t: 'pair', kinds: [i, i], need: [] }, i, false); pair = 0; }
+      take([i, i], { t: 'ta', kinds: [i, i], need: need(i) }, i, false);
+    }
+    if (suit && i % 9 <= 7 && c[i + 1] > 0) {
+      const n = [];
+      if (i % 9 >= 1) n.push(i - 1);
+      if (i % 9 <= 6) n.push(i + 2);
+      take([i, i + 1], { t: 'ta', kinds: [i, i + 1], need: need(...n) }, i, false);
+    }
+    if (suit && i % 9 <= 6 && c[i + 2] > 0) take([i, i + 2], { t: 'ta', kinds: [i, i + 2], need: need(i + 1) }, i, false);
+    c[i]--;
+    dfs(i);
+    c[i]++;
+  };
+  dfs(0);
+  return { s: best.s, groups: best.groups };
+}
+
+/**
  * @param {object} view `MahjongGame#viewFor` 결과
  * @returns {object|null} 힌트(없으면 null)
  *
@@ -46,6 +110,7 @@ const YAKU_ORDER = { ok: 0, partial: 1, tsumo: 2, none: 3 };
  * - kan: 내 차례의 암깡·가깡 판정 {깡할 종류: {advice, why}}
  * - callKan: 대명깡 반응 창일 때 {advice, why}
  * - note: 한 줄 안내(쯔모 가능, 역 없음, 역패 퐁)
+ * - groups: 손패 묶음 [{t:'seq'|'tri'|'pair'|'ta', kinds, need:[{k, left}]}] (ta=한 장 더 오면 묶음이 되는 후보). 일반형이 최선이 아니면 null
  */
 export function computeHints(view) {
   if (!view || !view.myHand || view.phase === 'over' || view.phase === 'ack') return null;
@@ -63,7 +128,7 @@ export function computeHints(view) {
   const doraKinds = new Set((view.dora || []).map((id) => doraFromIndicator(kindOf(id))));
   const hints = {
     shanten: null, waits: [], yaku: null, fixable, discards: {}, best: [], bestWhy: null,
-    bestRisky: false, bestSavedDora: false, safe: [], call: null, kan: {}, callKan: null, note: null,
+    bestRisky: false, bestSavedDora: false, safe: [], call: null, kan: {}, callKan: null, note: null, groups: null,
   };
   const isYakuhai = (k) => isDragon(k) || k === seatWind || k === roundWind;
 
@@ -149,6 +214,12 @@ export function computeHints(view) {
       hints.waits = waitInfo(counts);
       hints.yaku = aggregate(hints.waits);
     }
+  }
+
+  // 손패 묶음 표시: 일반형이 최선일 때만(치또이츠·국사 모양이 더 가까우면 생략)
+  if (hand.length % 3 !== 0) {
+    const gp = bestGrouping(counts, mc, vis);
+    if (gp.s <= shanten(counts, mc)) hints.groups = gp.groups;
   }
 
   if (view.legal?.kind === 'reaction') {

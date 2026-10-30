@@ -216,3 +216,27 @@ test('힌트는 상대 손패를 쓰지 않는다: 같은 뷰면 상대 손이 �
   const b = setup({ hands: { 0: '123m456p23p789s11z', 1: '5555m6666m7777m4m' }, drawn: { seat: 0, kind: 33 } });
   assert.deepEqual(computeHints(a.viewFor(0)), computeHints(b.viewFor(0)));
 });
+
+test('손패 묶음: 순쯔·머리·후보를 나누고 후보에는 필요한 패와 남은 장수가 붙는다', () => {
+  // 123m 순쯔, 99p 머리, 45m 양면 후보(3m·6m 대기), 나머지는 고립
+  const hints = hintsFor13({ hands: { 0: '12345m99p17s5z' } });
+  assert.ok(hints.groups);
+  const by = (t) => hints.groups.filter((g) => g.t === t);
+  assert.deepEqual(by('seq').map((g) => g.kinds), [[0, 1, 2]]);
+  assert.deepEqual(by('pair').map((g) => g.kinds), [[17, 17]]);
+  const ta = by('ta').find((g) => g.kinds.join() === '3,4');
+  assert.ok(ta);
+  assert.deepEqual(ta.need.map((n) => n.k).sort(), [2, 5]);
+  assert.ok(ta.need.every((n) => n.left >= 0 && n.left <= 4));
+});
+
+test('손패 묶음: 완성 면자가 많은 해석을 우선한다(3455 → 345 + 5)', () => {
+  const hints = hintsFor13({ hands: { 0: '3455m123p456s111z' } });
+  const seqs = hints.groups.filter((g) => g.t === 'seq').map((g) => g.kinds.join());
+  assert.ok(seqs.includes('2,3,4'));
+});
+
+test('손패 묶음: 치또이츠가 더 가까우면 생략한다', () => {
+  const hints = hintsFor13({ hands: { 0: '1133m5577p9988s1z' } });
+  assert.equal(hints.groups, null);
+});

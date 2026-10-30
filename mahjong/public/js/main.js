@@ -484,6 +484,12 @@ function pondHtml(p, v) {
   }).join('');
 }
 
+/** 후보 밑줄(점선)에 호버했을 때 보여 줄 필요한 패와 남은 장수 */
+function groupTip(g) {
+  const need = g.need.map((n) => `${kindName(n.k)} ${n.left}장`).join(', ');
+  return `${need} 남음 — 한 장 더 오면 묶음이 돼요`;
+}
+
 function handHtml(v, legal) {
   const hints = S.st.hints;
   const canAct = legal?.kind === 'turn';
@@ -498,10 +504,25 @@ function handHtml(v, legal) {
     const ids = [...v.myHand, ...(v.myDrawn != null ? [v.myDrawn] : [])].filter((id) => best.has(id >> 2) && discardIds.includes(id));
     bestId = ids.find((id) => !isRed(id)) ?? ids[0] ?? null;
   }
+  // 도우미 묶음 밑줄: 같은 종류 패는 손패 순서대로 묶음에 하나씩 나눠 준다.
+  const underline = new Map();
+  if (S.assist && hints?.groups) {
+    const pool = {};
+    for (const id of [...v.myHand, ...(v.myDrawn != null ? [v.myDrawn] : [])]) (pool[id >> 2] ||= []).push(id);
+    const seen = {};
+    hints.groups.forEach((g) => {
+      const alt = (seen[g.t] = (seen[g.t] ?? -1) + 1) % 2 ? ' alt' : '';
+      const tip = g.t === 'ta' ? groupTip(g) : '';
+      g.kinds.forEach((k) => {
+        const id = pool[k]?.shift();
+        if (id != null) underline.set(id, `<span class="grp ${g.t}${alt}"${tip ? ` title="${esc(tip)}"` : ''}></span>`);
+      });
+    });
+  }
   const mk = (id, extra = '') => {
     const k = id >> 2;
     let cls = `hand ${extra}`;
-    let inner = '';
+    let inner = underline.get(id) || '';
     if (S.selected === id) cls += ' lift';
     if (S.riichiMode) { if (!riichiIds.includes(id)) cls += ' dim'; }
     else if (canAct && !discardIds.includes(id)) cls += ' forbid';

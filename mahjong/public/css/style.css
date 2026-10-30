@@ -80,6 +80,15 @@ button { font: inherit; cursor: pointer; }
 .meld-g { display: flex; align-items: flex-end; gap: 1px; }
 .tile .cap { position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%); color: var(--ui-muted); font-size: 11px; font-weight: 800; white-space: nowrap; }
 .tile .tag { position: absolute; top: -10px; left: 50%; z-index: 2; transform: translateX(-50%); padding: 1px 5px; border-radius: 99px; font-size: 9.5px; font-weight: 900; white-space: nowrap; }
+/* 도우미 묶음 밑줄: 파랑=순쯔 주황=커쯔 분홍=머리 점선=한 장 더 오면 묶음 */
+.tile .grp { position: absolute; left: 1px; right: 1px; bottom: -13px; height: 5px; border-radius: 3px; z-index: 1; }
+.grp.seq { background: #4aa3ff; }
+.grp.seq.alt { background: #8cc6ff; }
+.grp.tri { background: #ff8a3d; }
+.grp.tri.alt { background: #ffb27d; }
+.grp.pair { background: #ff7eb6; }
+.grp.ta { box-sizing: border-box; height: 6px; border-top: 3px dashed #d7dfec; border-radius: 0; background: none; bottom: -14px; }
+.grp.ta.alt { border-top-color: #9fb0c8; }
 .tag.safe { background: #2f7d6d; color: #fff; }
 .tag.warn { background: #e2574c; color: #fff; }
 .tag.best { background: #f2a93b; color: #1a1405; }
