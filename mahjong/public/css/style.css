@@ -248,6 +248,25 @@ button { font: inherit; cursor: pointer; }
 .delta .plus { color: #34d399; } .delta .minus { color: #f87171; }
 .delta.mine { border-color: var(--accent); }
 .res-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 14px; color: var(--ui-muted); font-size: 12px; font-weight: 700; }
+.result { position: relative; }
+.res-actions.between { justify-content: space-between; align-items: flex-end; }
+.act.exit { min-width: 0; padding: 10px 14px; font-size: 14px; opacity: .8; }
+.act.exit:hover { opacity: 1; }
+/* 게스트의 "방장 대기 중": 방장의 "다시 하기" 자리에 두는 눌리지 않는 버튼 */
+.wait-box { text-align: right; }
+.act.wait, .act.wait:disabled { min-width: 210px; border: 2px dashed rgba(233,196,106,.55); background: rgba(0,0,0,.35); color: var(--accent); box-shadow: none; opacity: 1; cursor: default; filter: none; }
+.wait-cap { margin-top: 6px; color: var(--ui-muted); font-size: 12px; font-weight: 700; }
+.wait-cap b { color: var(--accent); }
+.dots span { display: inline-block; animation: dot-blink 1.2s infinite; }
+.dots span:nth-child(2) { animation-delay: .2s; }
+.dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes dot-blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+.result .confirm { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; border-radius: 6px; background: rgba(0,0,0,.55); }
+.confirm .box { width: 420px; padding: 20px 22px; border: 2px solid var(--accent); border-radius: 8px; background: #0b1f15; text-align: center; }
+.confirm h3 { color: var(--accent); font-size: 20px; font-weight: 900; }
+.confirm p { margin: 8px 0 16px; color: var(--ui-muted); font-size: 13px; font-weight: 700; line-height: 1.6; }
+.confirm p b { color: var(--accent); }
+.confirm .row { display: flex; justify-content: center; gap: 12px; }
 .tenpai-list { display: grid; gap: 8px; margin-top: 10px; }
 .tenpai-row { display: flex; align-items: center; gap: 10px; font-weight: 800; }
 .tenpai-row .st { min-width: 56px; color: var(--accent); }

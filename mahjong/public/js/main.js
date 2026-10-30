@@ -56,6 +56,7 @@ const S = {
   shown: null, // 결과/종료 화면 연출을 이미 시작한 키
   resFocus: null, // 결과 화면에서 강조 중인 역 '화료자:역' (재렌더에도 유지)
   resTip: null, // 결과 화면에서 펼친 ⓘ 설명 키
+  leaveAsk: false, // 종료 화면에서 게스트의 "홈으로 나가기" 확인창이 열려 있는가
 };
 
 // ── 접속 ────────────────────────────────────────────────────
@@ -724,6 +725,7 @@ function renderGame() {
   fx.attach();
   fx.rehide();
   const overKey = v.phase === 'ack' && v.result ? `r${v.handNo}` : (v.phase === 'over' && v.final ? 'final' : null);
+  if (overKey !== 'final') S.leaveAsk = false;
   if (overKey && S.shown !== overKey) {
     S.shown = overKey;
     S.resFocus = null;
@@ -904,10 +906,18 @@ function finalHtml(v) {
       <span class="pts">${r.score.toLocaleString()}</span><span class="d ${r.delta >= 0 ? 'plus' : 'minus'}" style="color:${r.delta >= 0 ? '#34d399' : '#f87171'}">${r.delta >= 0 ? '+' : ''}${r.delta.toLocaleString()}</span></div>`;
   }).join('');
   const isHost = S.room?.isHost;
+  // 방장과 같은 자리에 "다시 하기"(게스트는 대기 상태)를 두고, 나가기는 작게 낮춘다. 게스트의 나가기는 확인을 거친다.
+  const hostName = S.st?.seats?.find((x) => x?.host)?.name || '방장';
+  const wait = `<div class="wait-box"><button class="act wait" disabled>방장 대기 중<span class="dots"><span>.</span><span>.</span><span>.</span></span></button>
+      <div class="wait-cap">${esc(hostName)}님이 누르면 <b>같은 자리</b>로 방 설정에 돌아가요</div></div>`;
+  const confirm = !isHost && S.leaveAsk ? `<div class="confirm"><div class="box"><h3>홈으로 나갈까요?</h3>
+      <p>나가면 이 방의 <b>다시 하기</b>에 참여할 수 없어요.<br>방장이 시작할 때까지 기다리면 같은 자리에서 이어서 할 수 있어요.</p>
+      <div class="row"><button class="act" data-do="stay">계속 기다리기</button><button class="act ghost" data-do="leave">나가기</button></div></div></div>` : '';
   return `<div class="overlay"><div class="result" style="width:640px">
     <div class="res-head"><h2>대국 종료</h2><span>${OVER_REASON[f.reason] || ''}</span></div>
     <div class="rank-list">${rows}</div>
-    <div class="res-actions"><button class="act ghost" data-do="leave">게임 선택</button>${isHost ? '<button class="act" data-do="rematch">다시 하기</button>' : '<span>방장이 다시 시작할 수 있어요</span>'}</div>
+    <div class="res-actions between"><button class="act ghost exit" data-do="${isHost ? 'leave' : 'leave-ask'}">홈으로 나가기</button>${isHost ? '<button class="act" data-do="rematch">다시 하기</button>' : wait}</div>
+    ${confirm}
   </div></div>`;
 }
 
@@ -1042,6 +1052,8 @@ function onAction(btn) {
     case 'next': act({ type: 'next' }); break;
     case 'rematch': send({ type: 'REMATCH' }); break;
     case 'leave': leave(); break;
+    case 'leave-ask': S.leaveAsk = true; render(); break;
+    case 'stay': S.leaveAsk = false; render(); break;
     default: break;
   }
 }
@@ -1051,7 +1063,12 @@ function leave() {
   location.href = '/';
 }
 
-$('btn-back').addEventListener('click', leave);
+// 종료 화면에서 게스트가 헤더의 나가기를 눌러도 같은 확인을 거친다(방장의 다시 하기를 놓치지 않게).
+$('btn-back').addEventListener('click', () => {
+  const v = S.st?.view;
+  if (v?.phase === 'over' && v.final && !S.room?.isHost && !S.leaveAsk) { S.leaveAsk = true; render(); return; }
+  leave();
+});
 $('btn-guide').addEventListener('click', () => guide.toggle());
 $('btn-assist').addEventListener('click', toggleAssist);
 $('btn-names').addEventListener('click', toggleNames);
