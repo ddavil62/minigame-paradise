@@ -22,7 +22,7 @@ const BGM_CHORDS = [
 ];
 const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
-/** @returns {{play:(name:string)=>void, setMuted:(m:boolean)=>void, isMuted:()=>boolean, setBgm:(on:boolean)=>void, isBgm:()=>boolean, unlock:()=>void}} */
+/** @returns {{play:(name:string, arg?:number)=>void, setMuted:(m:boolean)=>void, isMuted:()=>boolean, setBgm:(on:boolean)=>void, isBgm:()=>boolean, unlock:()=>void}} */
 export function createSounds() {
   let ctx = null;
   let muted = false;
@@ -156,6 +156,8 @@ export function createSounds() {
   const SOUNDS = {
     discard: () => clack(0.4),
     land: () => { clack(0.55); tone(120, 0, 0.12, 'sine', 0.2); },
+    // 리치 중 버림: 착 + 낮은 심장 박동(쿵-쿵). p(1~1.6)가 클수록 묵직하다(리치한 사람이 많거나 선언패).
+    landRiichi: (p = 1) => { clack(Math.min(0.8, 0.5 * p)); tone(76, 0, 0.18, 'sine', Math.min(0.5, 0.3 * p)); tone(58, 0.17, 0.26, 'sine', Math.min(0.4, 0.22 * p)); },
     draw: () => clack(0.18),
     deal: () => { clack(0.25); setTimeout(() => ctx && clack(0.25), 90); },
     // 패 섞기(세이판): 짧은 클릭을 촘촘히 겹쳐 잘그락거리고, 끝에 패를 쌓는 소리를 낸다.
@@ -185,10 +187,10 @@ export function createSounds() {
   };
 
   return {
-    play(name) {
+    play(name, arg) {
       if (muted) return;
       if (!ensure()) return;
-      try { SOUNDS[name]?.(); } catch { /* 오디오 실패는 무시 */ }
+      try { SOUNDS[name]?.(arg); } catch { /* 오디오 실패는 무시 */ }
     },
     setMuted(m) {
       muted = !!m;

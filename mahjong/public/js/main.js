@@ -340,8 +340,13 @@ function playEvents(events, view, prev) {
       case 'discard': {
         const rel = relOf(ev.seat);
         const src = rel === 0 ? prev.hand.get(ev.id) : prev.opp[rel];
-        const flying = fx.flyDiscard(ev.id, src, POND_ANGLE[rel], { riichi: ev.riichi, onLand: () => sounds.play('land') });
-        if (!flying) sounds.play('discard');
+        // 리치 중인 사람의 매 버림(쯔모기리)은 한 단계 강화한다. 리치한 사람이 많을수록 더 묵직하다.
+        const riichiCount = view.players.filter((p) => p.riichi).length;
+        const inRiichi = !ev.riichi && !!view.players[ev.seat]?.riichi;
+        const power = inRiichi ? Math.min(1.5, 1 + 0.25 * (riichiCount - 1)) : 0;
+        const landSound = () => (ev.riichi ? sounds.play('landRiichi', 1.6) : inRiichi ? sounds.play('landRiichi', power) : sounds.play('land'));
+        const flying = fx.flyDiscard(ev.id, src, POND_ANGLE[rel], { riichi: ev.riichi, power, onLand: landSound });
+        if (!flying) (ev.riichi || inRiichi ? landSound() : sounds.play('discard'));
         break;
       }
       case 'draw':
