@@ -564,18 +564,29 @@ const warnSpan = (text) => (text ? `<span class="warn">${text}</span>` : '');
 const dot = (parts) => parts.filter(Boolean).join(' · ');
 
 /** 퐁·치를 했을 때 도우미가 알려 주는 변화(h.call) */
+const CALL_WHY = {
+  slower: '울면 오히려 멀어져요',
+  same: '울어도 빨라지지 않고 문전만 깨져요',
+  'yaku-gain': '지금은 역이 없는데 울면 역이 생겨요',
+  'no-yaku': '울고 텐파이가 돼도 역이 없어서 화료할 수 없어요',
+  'tenpai-yaku': '울면 역이 있는 텐파이가 돼요',
+  'tsumo-only': '텐파이는 되지만 쯔모로만 이길 수 있어요',
+  partial: '텐파이는 되지만 일부 대기는 역이 없어요',
+  'yaku-sure': '빨라지고 역도 확실해요',
+  'closed-no-yaku': '역이 보장되지 않아요. 문전을 지키고 리치하는 게 좋아요',
+  'open-no-yaku': '빨라지지만 역이 보장되지 않아요',
+};
+const CALL_VERDICT = { yes: ['👍 울어요', 'go'], maybe: ['🤔 상황 봐서', 'maybe'], no: ['✋ 패스 추천', 'stop'] };
+
 function callText(c) {
+  const [label, cls] = CALL_VERDICT[c.advice] || [];
+  const verdict = label ? `<b class="verdict ${cls}">${label}</b> ${esc(CALL_WHY[c.why] || '')}` : '';
   const speed = c.after < c.before
     ? (c.after === 0 ? '울면 텐파이가 돼요' : `울면 ${c.before}향청 → ${c.after}향청으로 빨라져요`)
     : c.after === c.before
       ? (c.before === 0 ? '이미 텐파이라 울어도 같아요' : '울어도 속도는 그대로예요')
       : '울면 오히려 멀어져요';
-  return dot([
-    speed,
-    c.opens ? '문전이 깨져 리치를 못 해요' : '',
-    c.yakuAfter === 'none' ? '<span class="warn">⚠ 울고 텐파이가 돼도 역이 없어요</span>' : '',
-    c.yakuAfter === 'partial' ? '<span class="warn">⚠ 일부 대기는 역이 없어요</span>' : '',
-  ]);
+  return dot([verdict, speed, c.opens ? '문전이 깨져 리치를 못 해요' : '']);
 }
 
 function hintStrip(v, legal) {

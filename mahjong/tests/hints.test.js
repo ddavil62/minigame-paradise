@@ -163,7 +163,24 @@ test('퐁 반응 창: 울기 전후 향청수·문전 상실·역 유무를 알�
   assert.equal(hints.call.after, 0);
   assert.equal(hints.call.opens, true);
   assert.equal(hints.call.yakuAfter, 'ok');
+  assert.equal(hints.call.advice, 'yes');
+  assert.equal(hints.call.why, 'yaku-gain');
   assert.match(hints.note, /역패/);
+});
+
+test('치 반응 창: 속도가 안 빨라지거나 역이 보장되지 않으면 울지 말라고 판정한다', () => {
+  // 내 손(좌석 1): 2-3m 두 장으로 치 가능, 1m 버림(좌석 0 → 하가). 좌석 1이 상가(下家)다.
+  const g = setup({
+    hands: { 0: '1m13579p13579s1z', 1: '34m1379p1379s246z', 2: '2468m2468p2468s7z', 3: '3579m3579p3579s1z' },
+    drawn: { seat: 0, kind: 1 },
+  });
+  assert.ok(g.act(0, { type: 'discard', id: g.h.drawn }).ok);
+  const v = g.viewFor(1);
+  assert.ok(v.legal.chi, "치가 가능해야 한다");
+  const hints = computeHints(v);
+  assert.ok(['yes', 'maybe', 'no'].includes(hints.call.advice));
+  assert.ok(hints.call.why);
+  if (hints.call.after >= hints.call.before) assert.equal(hints.call.advice, 'no');
 });
 
 test('힌트는 상대 손패를 쓰지 않는다: 같은 뷰면 상대 손이 달라도 결과가 같다', () => {

@@ -42,7 +42,7 @@ const YAKU_ORDER = { ok: 0, partial: 1, tsumo: 2, none: 3 };
  * - discards[종류]: {s, u, waits, yaku} 버렸을 때의 평가
  * - best: 추천 버림 종류(0~1개), bestWhy: 'fold'|'tenpai'|'speed', bestRisky, bestSavedDora
  * - safe: 리치한 상대에게 안전한 패 종류
- * - call: 퐁·치 반응 창일 때 {type, before, after, opens, yakuAfter}
+ * - call: 퐁·치 반응 창일 때 {type, before, after, opens, yakuAfter, advice, why} (advice: yes·maybe·no)
  * - note: 한 줄 안내(쯔모 가능, 역 없음, 역패 퐁)
  */
 export function computeHints(view) {
@@ -177,24 +177,59 @@ export function computeHints(view) {
       const low = Math.min(tk, ...o.ids.map(kindOf));
       opts.push({ type: 'chi', meld: { type: 'chi', k: low }, c, ban: o.ban || [tk] });
     }
-    let pick = null;
+    const isYakuhai = (k) => isDragon(k) || k === seatWind || k === roundWind;
+    const isSimpleMeld = (m) => m.k < 27 && (m.type === 'chi' ? m.k % 9 >= 1 && m.k % 9 <= 5 : !isTerminal(m.k));
     for (const o of opts) {
       o.after = shanten(o.c, mc + 1);
-      if (!pick || o.after < pick.after) pick = o;
-    }
-    let yakuAfter = null;
-    if (pick.after === 0) {
-      // 울고 나서 버릴 패를 골라 텐파이가 될 때 가장 좋은 역 상태
-      for (let k2 = 0; k2 < 34; k2++) {
-        if (pick.c[k2] <= 0 || pick.ban.includes(k2)) continue;
-        pick.c[k2]--;
-        if (shanten(pick.c, mc + 1) === 0) {
-          const ag = aggregate(waitInfo(pick.c, [pick.meld]));
-          if (ag && (yakuAfter === null || YAKU_ORDER[ag] < YAKU_ORDER[yakuAfter])) yakuAfter = ag;
+      o.yakuAfter = null;
+      if (o.after === 0) {
+        // 울고 나서 버릴 패를 골라 텐파이가 될 때 가장 좋은 역 상태
+        for (let k2 = 0; k2 < 34; k2++) {
+          if (o.c[k2] <= 0 || o.ban.includes(k2)) continue;
+          o.c[k2]--;
+          if (shanten(o.c, mc + 1) === 0) {
+            const ag = aggregate(waitInfo(o.c, [o.meld]));
+            if (ag && (o.yakuAfter === null || YAKU_ORDER[ag] < YAKU_ORDER[o.yakuAfter])) o.yakuAfter = ag;
+          }
+          o.c[k2]++;
         }
-        pick.c[k2]++;
       }
+      // 울고 나서 역이 거의 확실한가: 역패 퐁이 있거나, 쿠이탕 on에 전부 2~8 수패
+      const all = [...melds, o.meld];
+      const yakuhai = all.some((m) => m.type !== 'chi' && isYakuhai(m.k));
+      const tanyao = rules.kuitan && all.every(isSimpleMeld)
+        && o.c.every((n, k) => n === 0 || (k < 27 && !isTerminal(k)));
+      o.sure = yakuhai || tanyao;
+      Object.assign(o, adviseCall(o));
     }
-    return { type: pick.type, before: hints.shanten, after: pick.after, opens: fixable, yakuAfter };
+    const RANK = { yes: 0, maybe: 1, no: 2 };
+    const pick = opts.reduce((a, o) => (!a || RANK[o.advice] < RANK[a.advice]
+      || (o.advice === a.advice && o.after < a.after) ? o : a), null);
+    return {
+      type: pick.type, before: hints.shanten, after: pick.after, opens: fixable, yakuAfter: pick.yakuAfter,
+      advice: pick.advice, why: pick.why,
+    };
+  }
+
+  /**
+   * 울어도 되는지 판정한다(초보 기준). 속도가 빨라지고 역이 확실할 때만 권한다.
+   * @returns {{advice:'yes'|'maybe'|'no', why:string}} why: slower·same·yaku-gain·no-yaku·tenpai-yaku·tsumo-only·partial·yaku-sure·closed-no-yaku·open-no-yaku
+   */
+  function adviseCall(o) {
+    const before = hints.shanten;
+    const yk = o.yakuAfter;
+    if (o.after > before) return { advice: 'no', why: 'slower' };
+    if (o.after === before) {
+      // 이미 텐파이: 지금 역이 없는데 울면 역이 생길 때만 의미가 있다
+      if (before === 0 && yk === 'ok' && hints.yaku && hints.yaku !== 'ok') return { advice: 'yes', why: 'yaku-gain' };
+      return { advice: 'no', why: 'same' };
+    }
+    if (o.after === 0) {
+      if (yk === 'ok') return { advice: 'yes', why: 'tenpai-yaku' };
+      if (yk === 'none') return { advice: 'no', why: 'no-yaku' };
+      return { advice: 'maybe', why: yk === 'tsumo' ? 'tsumo-only' : 'partial' };
+    }
+    if (o.sure) return { advice: 'yes', why: 'yaku-sure' };
+    return fixable ? { advice: 'no', why: 'closed-no-yaku' } : { advice: 'maybe', why: 'open-no-yaku' };
   }
 }
