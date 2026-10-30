@@ -191,7 +191,7 @@ export function createFx(stage) {
     const s0 = Math.min(2.2, Math.max(0.8, s.w / w));
     const spin = rand(-40, 40);
     const tier = riichi ? 2 : power > 0 ? 1 : 0; // 0 일반 · 1 리치 중 매 버림 · 2 리치 선언패
-    const lift = [70, 100, 120][tier];
+    const lift = [70, 150, 170][tier];
     const T = (x, y2, rot, sc) => `translate(${x}px,${y2}px) rotate(${rot}deg) scale(${sc})`;
     const a = clone.animate([
       { transform: T(dx, dy, angle + spin, s0), filter: 'drop-shadow(0 6px 4px rgba(0,0,0,.25))' },
@@ -199,16 +199,17 @@ export function createFx(stage) {
       { transform: T(0, 0, angle, bs), filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))', offset: 0.82 },
       { transform: `${T(0, 2, angle, bs)} scale(1.16,.84)`, offset: 0.9 },
       { transform: T(0, 0, angle, bs), offset: 1 },
-    ], { duration: [400, 460, 520][tier], easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'forwards' });
+    ], { duration: [400, 480, 540][tier], easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'forwards' });
     a.onfinish = () => {
       clone.remove();
       flights.delete(id);
       const real = pondEl(id);
       if (real) real.style.visibility = '';
-      ring(d.x, d.y, { r: [36, 56, 70][tier], color: tier ? '#ff6a5a' : '#ffffff', dur: tier === 1 ? 480 : 420, width: [3, 4, 5][tier] });
-      if (tier === 1) ring(d.x, d.y, { r: 34, color: '#ffe27a', dur: 380, width: 2, delay: 90 }); // 리치 중에는 안쪽에 두 번째 링이 한 박 늦게 번진다
-      sparks(d.x, d.y, { n: [6, 9, 12][tier], dist: [30, 44, 56][tier], size: 4, colors: tier ? ['#ff6a5a', '#ffe27a', '#fff'] : ['#fff', '#ffe27a'], dur: 420 });
-      shake(tier === 2 ? 5 : tier === 1 ? 3.4 * power : 2.5, [160, 220, 260][tier]);
+      ring(d.x, d.y, { r: [36, 112, 140][tier], color: tier ? '#ff6a5a' : '#ffffff', dur: tier === 1 ? 480 : 420, width: [3, 4, 5][tier] });
+      if (tier === 1) ring(d.x, d.y, { r: 68, color: '#ffe27a', dur: 420, width: 3, delay: 90 }); // 리치 중에는 안쪽에 두 번째 링이 한 박 늦게 번진다
+      sparks(d.x, d.y, { n: [6, 18, 24][tier], dist: [30, 88, 110][tier], size: 4, colors: tier ? ['#ff6a5a', '#ffe27a', '#fff'] : ['#fff', '#ffe27a'], dur: 420 });
+      if (tier) flash('#ff4a3a', tier === 2 ? 0.2 : 0.1 * power, 240); // 붉은 번쩍임
+      shake(tier === 2 ? 14 : tier === 1 ? 7 * power : 2.5, [160, 300, 340][tier]);
       onLand?.();
     };
     return true;

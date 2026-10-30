@@ -52,6 +52,23 @@ export function createSounds() {
     o.stop(c.currentTime + start + dur + 0.02);
   }
 
+  // 음높이가 뚝 떨어지는 묵직한 쿵(f0 → f1 Hz). 킥 드럼처럼 앞이 높고 끝이 낮다.
+  function thud(f0, f1, dur, gain, start = 0) {
+    const c = ctx;
+    const t = c.currentTime + start;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.55);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(c.destination);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+
   function clack(gain = 0.35, dest = null, freq = 1800, dur = 0.06, type = 'bandpass', startAt = 0) {
     const c = ctx;
     const len = Math.floor(c.sampleRate * dur);
@@ -156,8 +173,12 @@ export function createSounds() {
   const SOUNDS = {
     discard: () => clack(0.4),
     land: () => { clack(0.55); tone(120, 0, 0.12, 'sine', 0.2); },
-    // 리치 중 버림: 착 + 낮은 심장 박동(쿵-쿵). p(1~1.6)가 클수록 묵직하다(리치한 사람이 많거나 선언패).
-    landRiichi: (p = 1) => { clack(Math.min(0.8, 0.5 * p)); tone(76, 0, 0.18, 'sine', Math.min(0.5, 0.3 * p)); tone(58, 0.17, 0.26, 'sine', Math.min(0.4, 0.22 * p)); },
+    // 리치 중 버림: 낮은 쾅 + 음높이가 떨어지는 쿵-쿵. p(1~1.6)가 클수록 묵직하다(리치한 사람이 많거나 선언패).
+    landRiichi: (p = 1) => {
+      clack(Math.min(0.9, 0.55 * p), null, 1100, 0.09, 'bandpass'); // 낮은 '쾅' 표면음
+      thud(190, 42, 0.38, Math.min(0.95, 0.7 * p)); // 쿵
+      thud(130, 36, 0.46, Math.min(0.8, 0.5 * p), 0.17); // 한 박 뒤 더 낮은 쿵
+    },
     draw: () => clack(0.18),
     deal: () => { clack(0.25); setTimeout(() => ctx && clack(0.25), 90); },
     // 패 섞기(세이판): 짧은 클릭을 촘촘히 겹쳐 잘그락거리고, 끝에 패를 쌓는 소리를 낸다.
