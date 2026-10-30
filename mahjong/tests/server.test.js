@@ -253,3 +253,25 @@ test('정적 파일과 경로 탈출 방어', async (t) => {
   assert.equal(await get('/nope.html'), 404);
   srv.close();
 });
+
+test('다시 하기: 방장이 누르면 게스트도 연결과 자리를 유지한 채 방 설정으로 돌아온다', async (t) => {
+  const srv = await boot();
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'rm-a', name: '방장', role: 'p1' }, t);
+  await until(() => a.room);
+  const b = client(srv.port, { key: 'rm-b', name: '손님' }, t);
+  await until(() => b.room && b.room.seats.filter((s) => s.type === 'human').length === 2);
+  let closed = null;
+  b.ws.on('close', (code, reason) => { closed = { code, reason: reason.toString() }; });
+  a.send({ type: 'CONFIG', settings: { length: 'east' } });
+  a.send({ type: 'START' });
+  await until(() => a.state && b.state);
+  await until(() => a.state.view.final && b.state.view.final, 90000);
+  a.send({ type: 'REMATCH' });
+  await until(() => a.room.phase === 'lobby' && b.room.phase === 'lobby');
+  assert.equal(closed, null, '게스트 연결이 끊기면 안 된다');
+  assert.equal(b.ws.readyState, WebSocket.OPEN);
+  assert.equal(b.room.seats.filter((s) => s.type === 'human').length, 2);
+  assert.equal(b.room.isHost, false);
+  assert.deepEqual(b.errors, []);
+});
