@@ -121,6 +121,8 @@ function onMessage(m) {
       const prev = captureRects();
       S.st = m;
       S.recvAt = Date.now();
+      // 서버가 아는 도우미 상태가 내 설정과 다르면(재접속·재시작 등) 바로 맞춘다. 안 맞으면 버튼만 켜진 채 힌트가 사라진다.
+      if (m.assist !== S.assist) send({ type: 'ASSIST', on: S.assist });
       S.offset = m.serverNow - Date.now();
       S.busy = false;
       if (!m.view.legal || m.view.legal.kind !== 'turn') { S.riichiMode = false; S.kanPick = false; }
