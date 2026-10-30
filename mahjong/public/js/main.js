@@ -804,10 +804,23 @@ function resultHtml(v) {
   const r = v.result;
   const waiting = v.waitingOn.length;
   const mineDone = !v.legal;
+  /** 점수 변동의 이유: 이긴 사람 / 낸 사람(론이면 버린 사람, 쯔모면 전원) / 상관없는 사람 */
+  const reasonOf = (s) => {
+    if (r.kind !== 'agari') return null;
+    const win = r.winners.find((x) => x.seat === s);
+    if (win) {
+      const stick = s === r.winners[0].seat && r.sticks ? ` · 공탁 +${(r.sticks * 1000).toLocaleString()}` : '';
+      return { cls: 'win', text: `${win.tsumo ? '쯔모' : '론'} 화료${stick}` };
+    }
+    const to = r.winners.filter((x) => x.tsumo || x.from === s).map((x) => `${seatInfo(x.seat).name}님`);
+    if (!to.length) return { cls: 'none', text: '지불 없음' };
+    return { cls: 'pay', text: r.winners.some((x) => !x.tsumo && x.from === s) ? `${to.join('·')}에게 론당함 (버린 패)` : `${to.join('·')} 쯔모 지불` };
+  };
   const deltaRows = [0, 1, 2, 3].map((s) => {
     const info = seatInfo(s);
     const d = r.deltas[s];
-    return `<div class="delta${s === v.me ? ' mine' : ''}"><div class="avatar ${avatarClass(info, s)}">${esc(avatarChar(info))}</div>${esc(info.name)}
+    const why = reasonOf(s);
+    return `<div class="delta${s === v.me ? ' mine' : ''}"><div class="avatar ${avatarClass(info, s)}">${esc(avatarChar(info))}</div><span class="dwho">${esc(info.name)}${why ? `<small class="dtag ${why.cls}">${esc(why.text)}</small>` : ''}</span>
       <span class="v">${r.after[s].toLocaleString()} <span class="${d > 0 ? 'plus' : d < 0 ? 'minus' : ''}">(${d > 0 ? '+' : ''}${d.toLocaleString()})</span></span></div>`;
   }).join('');
   const nextBtn = mineDone

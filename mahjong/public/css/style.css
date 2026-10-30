@@ -231,6 +231,10 @@ button { font: inherit; cursor: pointer; }
 .deltas { display: grid; gap: 8px; align-content: start; }
 .delta { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--plate-border); border-radius: 6px; font-weight: 800; font-size: 14px; }
 .delta .avatar { width: 30px; height: 30px; font-size: 14px; }
+.dwho { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dtag { font-size: 11px; font-weight: 700; color: var(--ui-muted); }
+.dtag.win { color: #34d399; }
+.dtag.pay { color: #f87171; }
 .delta .v { margin-left: auto; font-variant-numeric: tabular-nums; }
 .delta .plus { color: #34d399; } .delta .minus { color: #f87171; }
 .delta.mine { border-color: var(--accent); }
