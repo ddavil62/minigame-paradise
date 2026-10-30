@@ -117,11 +117,18 @@ export function createFx(stage) {
     run(e, [{ opacity: 0 }, { opacity: peak, offset: 0.15 }, { opacity: 0 }], { duration: dur });
   }
 
-  /** 화면 가운데를 가로지르는 큰 글씨 배너 */
-  function banner(text, { color = '#ffe27a', sub = '', y = 330, dur = 1500, compact = false } = {}) {
+  /** 화면을 잠깐 어둡게 눌렀다 푼다(히트 스톱: 터뜨리기 직전의 정적). */
+  function dim(dur = 200, peak = 0.45) {
+    if (REDUCED) return;
+    const e = mk('fx-dim');
+    run(e, [{ opacity: 0 }, { opacity: peak, offset: 0.2 }, { opacity: peak, offset: 0.75 }, { opacity: 0 }], { duration: dur });
+  }
+
+  /** 화면 가운데를 가로지르는 큰 글씨 배너. size로 글자 크기(px)를 줄여 긴 문구를 담는다. */
+  function banner(text, { color = '#ffe27a', sub = '', y = 330, dur = 1500, compact = false, size = 0 } = {}) {
     if (REDUCED) return;
     const band = mk(compact ? 'fx-band compact' : 'fx-band', { top: `${y - (compact ? 40 : 80)}px` });
-    band.innerHTML = `<span class="fx-band-t" style="color:${color}">${text}</span>${sub ? `<span class="fx-band-s">${sub}</span>` : ''}`;
+    band.innerHTML = `<span class="fx-band-t" style="color:${color}${size ? `;font-size:${size}px` : ''}">${text}</span>${sub ? `<span class="fx-band-s">${sub}</span>` : ''}`;
     run(band, [
       { opacity: 0, transform: 'scaleY(.1)' },
       { opacity: 1, transform: 'scaleY(1)', offset: 0.1 },
@@ -230,6 +237,6 @@ export function createFx(stage) {
 
   return {
     layer, attach, rehide, toStage, pondEl, flyDiscard,
-    ring, sparks, confetti, confettiRain, shake, flash, banner, pop, stagger, countUp, seek,
+    ring, sparks, confetti, confettiRain, shake, flash, dim, banner, pop, stagger, countUp, seek,
   };
 }

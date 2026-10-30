@@ -275,6 +275,44 @@ function overlayIn(elapsed, { late = 0, final = false } = {}) {
   });
 }
 
+/**
+ * 화료 연출 등급(0 일반 · 1 만관 · 2 하네만 · 3 배만 · 4 삼배만 · 5 역만). 클라이언트가 결과의 limit 이름으로 정한다.
+ * stop: 터뜨리기 직전 히트 스톱(ms), late: 결과창이 뜨기까지의 지연(stop 포함).
+ */
+const GRADES = [
+  { color: '#ffd23f', flash: 0.7, shake: 11, confetti: 46, rain: 36, dur: 1500, stop: 120, late: 1370, rings: 3 },
+  { color: '#ffd23f', flash: 0.75, shake: 14, confetti: 70, rain: 60, dur: 1700, stop: 170, late: 1620, rings: 4 },
+  { color: '#ff9f43', flash: 0.8, shake: 17, confetti: 90, rain: 80, dur: 1900, stop: 210, late: 1860, rings: 5 },
+  { color: '#ff6a5a', flash: 0.85, shake: 20, confetti: 120, rain: 100, dur: 2100, stop: 250, late: 2100, rings: 6 },
+  { color: '#ff4d8d', flash: 0.9, shake: 23, confetti: 150, rain: 120, dur: 2300, stop: 290, late: 2340, rings: 7 },
+  { color: '#d99bff', flash: 0.9, shake: 26, confetti: 190, rain: 150, dur: 2600, stop: 340, late: 2740, rings: 8 },
+];
+
+function limitGrade(limit) {
+  if (!limit) return 0;
+  if (limit === '만관') return 1;
+  if (limit === '하네만') return 2;
+  if (limit === '배만') return 3;
+  if (limit === '삼배만') return 4;
+  return 5; // 역만·N배 역만·헤아림 역만
+}
+
+/** 이번 국 화료자 중 가장 높은 등급 */
+function resultGrade(v) {
+  const r = v?.result;
+  if (!r || r.kind !== 'agari') return 0;
+  return Math.max(...r.winners.map((w) => limitGrade(w.limit)));
+}
+
+/** 강조할 화료패 id: 론이면 버려진 패, 쯔모면 내가 이겼을 때 내가 뽑은 패(남의 쯔모패는 안 보이므로 null) */
+function winTileId(v) {
+  const r = v?.phase === 'ack' ? v.result : null;
+  if (!r || r.kind !== 'agari') return null;
+  const w = r.winners[0];
+  if (w.tsumo) return w.seat === v.me ? w.winTile : null;
+  return w.winTile;
+}
+
 /** 지금 내가 버릴 패를 골라야 하는 차례인가(리치 후 자동 쯔모기리처럼 고를 게 없으면 아님) */
 function isDecideTurn(v) {
   const l = v?.legal;
@@ -399,20 +437,46 @@ function playEvents(events, view, prev) {
         fx.banner('재개!', { color: '#9fe8b0', sub: `${ev.name}님이 이어 갔어요`, y: 330, dur: 1000 });
         break;
       case 'agari': {
-        sounds.play('win');
+        const g = resultGrade(view);
+        const f = GRADES[g];
         const n = ev.winners.length;
-        const label = n > 1 ? `${n === 2 ? '더블' : '트리플'} 론!` : (ev.tsumo ? '쯔모!' : '론!');
-        fx.flash('#fff', 0.7, 700);
-        fx.banner(label, { color: '#ffd23f', sub: ev.winners.map((w) => seatInfo(w).name).join(' · '), y: 330, dur: 1500 });
-        fx.shake(11, 520);
-        ev.winners.forEach((w) => {
-          const [x, y] = anchorOf(w);
-          fx.ring(x, y, { r: 190, color: '#ffd23f', width: 8 });
-          fx.ring(x, y, { r: 130, color: '#ff6a3d', width: 5, delay: 140 });
-          fx.ring(x, y, { r: 80, color: '#fff', width: 3, delay: 260 });
-          fx.confetti(x, y, { n: 46, up: 260, fall: 360 });
-        });
-        fx.confettiRain(36);
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const stop = reduced ? 0 : f.stop;
+        // ④ 히트 스톱: 터뜨리기 직전에 화면이 잠깐 어두워지며 멈춘다. 이 사이에 ③ 화료패가 먼저 빛난다.
+        fx.dim(stop + 80, 0.5);
+        const tileId = winTileId(view);
+        const tileEl = tileId != null ? stage.querySelector(`.pond [data-id="${tileId}"], .my-hand [data-id="${tileId}"]`) : null;
+        if (tileEl) {
+          const p = fx.toStage(tileEl.getBoundingClientRect());
+          fx.ring(p.x, p.y, { r: 46, color: '#ffe27a', width: 4, dur: 520 });
+          fx.ring(p.x, p.y, { r: 70, color: '#ffffff', width: 3, dur: 560, delay: 110 });
+          fx.sparks(p.x, p.y, { n: 10, dist: 60, size: 5, colors: ['#ffe27a', '#fff'] });
+        }
+        const burst = () => {
+          // ① 등급별 차등: 만관 이상은 한도 이름이 배너 주인공이 된다.
+          const kindShort = n > 1 ? `${n === 2 ? '더블' : '트리플'} 론` : (ev.tsumo ? '쯔모' : '론');
+          const names = ev.winners.map((w) => seatInfo(w).name).join(' · ');
+          const top = g > 0 ? view.result.winners.find((w) => limitGrade(w.limit) === g)?.limit : null;
+          const title = top ? `${top}!` : `${kindShort}!`;
+          sounds.play(g > 0 ? 'winBig' : 'win', g);
+          fx.flash('#fff', f.flash, 700);
+          if (g >= 2) setTimeout(() => fx.flash(f.color, 0.45, 600), 220);
+          fx.banner(title, { color: f.color, sub: top ? `${kindShort} · ${names}` : names, y: 330, dur: f.dur, size: title.length > 6 ? 72 : title.length > 4 ? 88 : 0 });
+          fx.shake(f.shake, 520);
+          if (g >= 3) setTimeout(() => fx.shake(f.shake * 0.7, 420), 380);
+          const rings = [
+            { r: 190, c: f.color, w: 8, d: 0 }, { r: 130, c: '#ff6a3d', w: 5, d: 140 }, { r: 80, c: '#fff', w: 3, d: 260 },
+            { r: 260, c: f.color, w: 6, d: 380 }, { r: 330, c: '#fff', w: 4, d: 500 }, { r: 400, c: f.color, w: 6, d: 620 },
+            { r: 470, c: '#ff6a3d', w: 4, d: 740 }, { r: 540, c: '#fff', w: 3, d: 860 },
+          ].slice(0, f.rings);
+          ev.winners.forEach((w) => {
+            const [x, y] = anchorOf(w);
+            rings.forEach((rg) => fx.ring(x, y, { r: rg.r, color: rg.c, width: rg.w, delay: rg.d }));
+            fx.confetti(x, y, { n: f.confetti, up: 260, fall: 360 });
+          });
+          fx.confettiRain(f.rain);
+        };
+        if (stop) setTimeout(burst, stop); else burst();
         break;
       }
       case 'ryuukyoku':
@@ -535,21 +599,24 @@ function plateHtml(seat, v, posCls) {
   const turn = v.waitingOn.includes(seat) && v.phase !== 'ack' && v.phase !== 'over';
   let badge = isMe ? '<span class="badge me">YOU</span>' : (info.type === 'human' ? '<span class="badge human">친구</span>' : '<span class="badge ai">AI</span>');
   if (p.riichi) badge += '<span class="badge riichi">리치</span>';
+  const winner = v.phase === 'ack' && v.result?.kind === 'agari' && v.result.winners.some((w) => w.seat === seat);
+  if (winner) badge += '<span class="badge win">화료!</span>';
   if (isMe && v.furiten) badge += '<span class="badge furiten">후리텐</span>';
   if (info.away) badge += '<span class="badge away">자동</span>';
   let sub = `${p.score.toLocaleString()}점`;
   if (info.type === 'ai' && info.level) sub += ` · ${LEVEL_KO[info.level]}`;
   if (info.type === 'human' && !isMe) sub = `<span class="${info.connected ? 'dot-online' : 'dot-offline'}"></span>${info.connected ? '접속 중' : '끊김'} · ${sub}`;
   const timer = isMe && turn ? '<div class="timer" id="my-timer"><span>-</span></div>' : '';
-  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${info.away ? ' away' : ''}">
+  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${info.away ? ' away' : ''}${winner ? ' winner' : ''}">
     <div class="avatar ${avatarClass(info, seat)}">${esc(avatarChar(info))}<span class="wind">${WIND_KANJI[p.wind]}</span>${seat === v.dealer ? '<span class="dealer">親</span>' : ''}</div>
     <div><div class="name">${esc(info.name)}${badge}</div><div class="sub">${sub}</div></div>${timer}</div>`;
 }
 
 function pondHtml(p, v) {
+  const winId = winTileId(v);
   return p.discards.map((d) => {
     const isLast = v.lastDiscard && v.lastDiscard.id === d.id && (v.phase === 'reaction');
-    const cls = `${isLast ? 'last' : ''}${d.called ? ' taken' : ''}`.trim();
+    const cls = `${isLast ? 'last' : ''}${d.called ? ' taken' : ''}${d.id === winId ? ' agari-tile' : ''}`.trim();
     if (d.riichi) return sideHtml(code(d.id), 't-pond', cls, '', { id: d.id });
     return tileHtml(code(d.id), 't-pond', cls, '', { id: d.id });
   }).join('');
@@ -577,6 +644,7 @@ function handHtml(v, legal) {
   }
   // 도우미 묶음 밑줄: 같은 종류 패는 손패 순서대로 묶음에 하나씩 나눠 준다.
   const underline = new Map();
+  const winId = winTileId(v);
   if (S.assist && hints?.groups) {
     const pool = {};
     for (const id of [...v.myHand, ...(v.myDrawn != null ? [v.myDrawn] : [])]) (pool[id >> 2] ||= []).push(id);
@@ -592,7 +660,7 @@ function handHtml(v, legal) {
   }
   const mk = (id, extra = '') => {
     const k = id >> 2;
-    let cls = `hand ${extra}`;
+    let cls = `hand ${extra}${id === winId ? ' agari-tile' : ''}`;
     let inner = underline.get(id) || '';
     if (S.selected === id) cls += ' lift';
     if (S.riichiMode) { if (!riichiIds.includes(id)) cls += ' dim'; }
@@ -816,7 +884,7 @@ function renderGame() {
     S.shown = overKey;
     S.resFocus = null;
     S.resTip = null;
-    const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? 1250 : 350);
+    const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? GRADES[resultGrade(v)].late : 350);
     S.anims.push({ at: performance.now(), ttl: late + 3500, run: (el) => overlayIn(el, { late, final: overKey === 'final' }) });
   }
   applyResUi();

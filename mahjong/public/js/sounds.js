@@ -174,6 +174,17 @@ export function createSounds() {
     riichi: () => { tone(330, 0, 0.18, 'sawtooth', 0.08); tone(495, 0.12, 0.18, 'sawtooth', 0.08); tone(660, 0.24, 0.3, 'sawtooth', 0.08); },
     win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.35, 'triangle', 0.13)),
     dora: () => tone(880, 0, 0.2, 'sine', 0.08),
+    // 만관 이상 화료: 등급(1~5)이 높을수록 아르페지오가 길어지고 북 롤·긴 화음이 붙는다.
+    winBig: (g = 1) => {
+      const notes = [523, 659, 784, 1047, 1319, 1568, 2093];
+      const n = Math.min(notes.length, 3 + g);
+      notes.slice(0, n).forEach((f, i) => tone(f, i * 0.09, 0.4, 'triangle', 0.13));
+      tone(98, 0, 0.5, 'sine', 0.35);
+      const end = n * 0.09;
+      [523, 659, 784].forEach((f) => tone(f, end, 0.8, 'sawtooth', 0.05));
+      if (g >= 3) for (let i = 0; i < 8; i++) clack(0.28, null, 900, 0.05, 'bandpass', i * 0.05);
+      if (g >= 5) [1047, 1319, 1568].forEach((f) => tone(f, end + 0.1, 1.3, 'triangle', 0.08));
+    },
     // 내 차례 알림(띠-리-링)과 한동안 안 눌렀을 때의 재촉
     myturn: () => [[659, 0], [880, 0.09], [1319, 0.18]].forEach(([f, t]) => tone(f, t, 0.28, 'triangle', 0.13)),
     // 제한 시간 5초 전부터 1초마다: 째깍(높은 틱)·똑(0.5초 뒤 낮은 틱). 마지막 2초는 삐 소리가 더해진다.
