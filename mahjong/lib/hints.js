@@ -105,6 +105,7 @@ export function bestGrouping(counts, fixed, vis) {
  * - fixable: 문전이고 아직 리치 전이라 리치로 역을 만들 수 있는가
  * - discards[종류]: {s, u, waits, yaku} 버렸을 때의 평가
  * - best: 추천 버림 종류(0~1개), bestWhy: 'fold'|'tenpai'|'speed', bestRisky, bestSavedDora
+ * - riichi: 리치할 수 있는 차례의 선언 후보 비교 {best: 추천 버림 종류, opts: {종류: {n: 안 보이는 대기패 장수, kinds: 대기 종류, furiten}}}
  * - safe: 리치한 상대에게 안전한 패 종류
  * - call: 퐁·치 반응 창일 때 {type, before, after, opens, yakuAfter, advice, why} (advice: yes·maybe·no)
  * - kan: 내 차례의 암깡·가깡 판정 {깡할 종류: {advice, why}}
@@ -128,7 +129,7 @@ export function computeHints(view) {
   const doraKinds = new Set((view.dora || []).map((id) => doraFromIndicator(kindOf(id))));
   const hints = {
     shanten: null, waits: [], yaku: null, fixable, discards: {}, best: [], bestWhy: null,
-    bestRisky: false, bestSavedDora: false, safe: [], call: null, kan: {}, callKan: null, note: null, groups: null,
+    bestRisky: false, bestSavedDora: false, riichi: null, safe: [], call: null, kan: {}, callKan: null, note: null, groups: null,
   };
   const isYakuhai = (k) => isDragon(k) || k === seatWind || k === roundWind;
 
@@ -200,6 +201,29 @@ export function computeHints(view) {
       const kw = keyOf(w);
       hints.bestSavedDora = !fold && penalty(w) === 0
         && pool.some((k) => k !== w && penalty(k) > 0 && keyOf(k).slice(0, 3).join() === kw.slice(0, 3).join());
+    }
+
+    // 리치 선언 후보 비교: 어떤 패를 버리고 리치할지(대기패 남은 장수 → 대기 종류 수 순, 후리텐이면 크게 깎는다)
+    const riichiKinds = view.legal?.kind === 'turn' ? [...new Set((view.legal.riichi || []).map(kindOf))] : [];
+    if (riichiKinds.length > 0) {
+      const mine = new Set(me.discards.map((d) => kindOf(d.id)));
+      const opts = {};
+      for (const k of riichiKinds) {
+        const e = evals[k];
+        if (!e || e.s !== 0 || e.waits.length === 0) continue;
+        const kindsW = e.waits.map((w) => w.kind);
+        // 내가 이미 버린 패(또는 지금 버릴 패)가 대기에 있으면 후리텐: 론이 안 되고 쯔모만 가능하다
+        opts[k] = { n: e.waits.reduce((a, w) => a + w.remaining, 0), kinds: kindsW, furiten: kindsW.some((w) => mine.has(w) || w === k) };
+      }
+      const ranked = Object.keys(opts).map(Number).sort((a, b) => {
+        const x = opts[a]; const y = opts[b];
+        const ex = x.furiten ? x.n * 0.3 : x.n;
+        const ey = y.furiten ? y.n * 0.3 : y.n;
+        const sx = riichiOpp.length > 0 && !hints.safe.includes(a) ? 1 : 0;
+        const sy = riichiOpp.length > 0 && !hints.safe.includes(b) ? 1 : 0;
+        return (ey - ex) || (y.kinds.length - x.kinds.length) || (penalty(a) - penalty(b)) || (sx - sy) || (usefulness(a) - usefulness(b)) || (a - b);
+      });
+      if (ranked.length > 0) hints.riichi = { best: ranked[0], opts };
     }
 
     if (view.legal?.kind === 'turn' && hints.shanten >= 0) {

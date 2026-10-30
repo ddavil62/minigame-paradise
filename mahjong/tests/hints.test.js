@@ -269,3 +269,33 @@ test('시간 초과 버림: 내 차례가 아니면 null', () => {
   v.legal = null;
   assert.equal(fallbackDiscard(v), null);
 });
+
+test('리치 후보 비교: 안 보이는 대기패가 가장 많은 버림을 추천하고 후리텐 후보는 깎는다', () => {
+  // 234m 567m 123p 55s 34s + 쯔모 9s: 9s를 버리면 2s·5s 양면, 5s를 버리면 9s 단기
+  const spec = { hands: { 0: '234m567m123p55s34s' }, drawn: { seat: 0, kind: 18 + 8 } };
+  const g = setup(spec);
+  const v = g.viewFor(0);
+  assert.ok(v.legal.riichi.length > 0);
+  const hints = computeHints(v);
+  assert.ok(hints.riichi, '리치 후보 비교가 있어야 한다');
+  const kindsInLegal = new Set(v.legal.riichi.map(kindOf));
+  for (const k of Object.keys(hints.riichi.opts)) assert.ok(kindsInLegal.has(+k), '합법 리치 패만 후보');
+  const { best, opts } = hints.riichi;
+  const eff = (o) => (o.furiten ? o.n * 0.3 : o.n);
+  for (const o of Object.values(opts)) assert.ok(eff(opts[best]) >= eff(o), '추천이 유효 장수 최대');
+});
+
+test('리치 후보 비교: 내가 이미 버린 패가 대기에 있으면 후리텐으로 표시한다', () => {
+  const g = setup({ hands: { 0: '234m567m123p55s34s' }, drawn: { seat: 0, kind: 18 + 8 }, discards: { 0: '2s' } });
+  const hints = computeHints(g.viewFor(0));
+  const o = hints.riichi.opts[18 + 8]; // 9s를 버리면 2s·5s 대기인데 2s를 이미 버렸다
+  assert.ok(o, '9s 버림은 리치 후보');
+  assert.equal(o.furiten, true);
+  assert.equal(hints.riichi.opts[18 + 4].furiten, false, '5s를 버려 9s 단기로 기다리면 후리텐이 아니다');
+  assert.equal(hints.riichi.best, 18 + 4, '후리텐인 양면보다 단기가 낫다');
+});
+
+test('리치할 수 없는 차례에는 리치 후보 비교가 없다', () => {
+  const g = setup({ hands: { 0: '1379m1469p258s14z' }, drawn: { seat: 0, kind: 9 + 7 } });
+  assert.equal(computeHints(g.viewFor(0)).riichi, null);
+});

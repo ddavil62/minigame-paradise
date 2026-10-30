@@ -666,6 +666,18 @@ function handHtml(v, legal) {
       });
     });
   }
+  // 리치 후보 태그: 종류마다 한 장에만(적도라가 아닌 쪽) 남은 대기패 장수를 붙이고 도우미 추천은 강조한다.
+  const riichiTag = new Map();
+  if (S.assist && S.riichiMode && hints?.riichi) {
+    const byKind = {};
+    for (const id of riichiIds) if (byKind[id >> 2] == null || (isRed(byKind[id >> 2]) && !isRed(id))) byKind[id >> 2] = id;
+    for (const [k, id] of Object.entries(byKind)) {
+      const o = hints.riichi.opts[k];
+      if (!o) continue;
+      const isBest = +k === hints.riichi.best;
+      riichiTag.set(id, o.furiten ? `<span class="tag warn">${isBest ? '추천 · ' : ''}후리텐 ${o.n}장</span>` : `<span class="tag ${isBest ? 'best' : 'cnt'}">${isBest ? '추천 · ' : ''}${o.n}장</span>`);
+    }
+  }
   const mk = (id, extra = '') => {
     const k = id >> 2;
     let cls = `hand ${extra}${id === winId ? ' agari-tile' : ''}`;
@@ -674,6 +686,7 @@ function handHtml(v, legal) {
     if (S.riichiMode) { if (!riichiIds.includes(id)) cls += ' dim'; }
     else if (canAct && !discardIds.includes(id)) cls += ' forbid';
     if (S.showNames) inner += `<span class="cap">${kindName(k)}</span>`;
+    if (S.assist && S.riichiMode && riichiTag.get(id)) inner += riichiTag.get(id);
     if (S.assist && canAct && !S.riichiMode) {
       if (id === bestId) inner += `<span class="tag best">${safe.has(k) ? '추천·안전' : '추천'}</span>`;
       else if (safe.has(k)) inner += '<span class="tag safe">안전</span>';
@@ -797,10 +810,23 @@ function hintStrip(v, legal) {
   const riichiNames = v.players.filter((p) => p.seat !== v.me && p.riichi).map((p) => seatInfo(p.seat).name).join(', ');
   const waitsText = (waits) => `대기 ${miniTiles(waits.map((w) => w.kind))} (안 보이는 패 ${waits.reduce((a, w) => a + w.remaining, 0)}장)`;
   if (S.riichiMode && legal?.kind === 'turn') {
-    if (S.selected == null) return '<span class="k">리치</span>리치할 패를 골라요 (밝게 보이는 패)';
+    const rc = S.assist ? h?.riichi : null;
+    const rcText = (k) => {
+      const o = rc?.opts[k];
+      return o ? `대기 ${miniTiles(o.kinds)} (안 보이는 패 ${o.n}장)` : '';
+    };
+    if (S.selected == null) {
+      if (!rc) return '<span class="k">리치</span>리치할 패를 골라요 (밝게 보이는 패)';
+      const o = rc.opts[rc.best];
+      return `<span class="k">리치</span>${dot([`도우미 추천 <b>${kindName(rc.best)}</b> 버리기`, rcText(rc.best), o.furiten ? warnSpan('⚠ 후리텐이라 론은 못 해요') : '', '숫자는 안 보이는 대기패 장수'])}`;
+    }
     const k = S.selected >> 2;
     const waits = legal.riichiWaits?.[k] || [];
-    return `<span class="k">리치</span><b>${kindName(k)}</b> 버리고 리치하면 대기 ${miniTiles(waits)} (안 보이는 패 ${remain(waits)}장)`;
+    const o = rc?.opts[k];
+    const advice = !rc || !o ? '' : k === rc.best ? '👍 도우미 추천 패예요'
+      : `추천은 <b>${kindName(rc.best)}</b>(${rc.opts[rc.best].furiten ? '후리텐 ' : ''}${rc.opts[rc.best].n}장)`;
+    const risk = o?.furiten ? warnSpan('⚠ 후리텐이라 론은 못 하고 쯔모로만 이겨요') : o && o.n <= 2 ? warnSpan('⚠ 남은 대기패가 거의 없어요') : '';
+    return `<span class="k">리치</span>${dot([`<b>${kindName(k)}</b> 버리고 리치하면 대기 ${miniTiles(waits)} (안 보이는 패 ${remain(waits)}장)`, risk, advice])}`;
   }
   if (legal?.kind === 'reaction') {
     const tile = legal.tile;

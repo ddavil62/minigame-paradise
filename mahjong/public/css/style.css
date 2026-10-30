@@ -95,6 +95,7 @@ button { font: inherit; cursor: pointer; }
 .tag.safe { background: #2f7d6d; color: #fff; }
 .tag.warn { background: #e2574c; color: #fff; }
 .tag.best { background: #f2a93b; color: #1a1405; }
+.tag.cnt { background: #2b3a52; color: #dbe7ff; }
 
 .top-hand { position: absolute; top: 18px; left: 50%; display: flex; align-items: flex-end; gap: 2px; transform: translateX(-50%); }
 .top-hand .melds { display: flex; gap: 8px; margin-left: 12px; }
