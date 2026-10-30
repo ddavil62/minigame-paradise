@@ -158,6 +158,16 @@ export function createSounds() {
     land: () => { clack(0.55); tone(120, 0, 0.12, 'sine', 0.2); },
     draw: () => clack(0.18),
     deal: () => { clack(0.25); setTimeout(() => ctx && clack(0.25), 90); },
+    // 패 섞기(세이판): 짧은 클릭을 촘촘히 겹쳐 잘그락거리고, 끝에 패를 쌓는 소리를 낸다.
+    shuffle: () => {
+      const N = 52;
+      const span = 1.0;
+      for (let i = 0; i < N; i++) {
+        const swell = Math.sin(Math.PI * (i + 0.5) / N);
+        clack((0.05 + Math.random() * 0.16) * (0.35 + swell * 0.65), null, 900 + Math.random() * 2600, 0.03 + Math.random() * 0.045, 'bandpass', span * (i / N) + Math.random() * 0.014);
+      }
+      [1.08, 1.17, 1.26].forEach((t) => clack(0.3, null, 1500, 0.06, 'bandpass', t));
+    },
     call: () => { tone(520, 0, 0.12, 'triangle'); tone(780, 0.08, 0.16, 'triangle'); },
     riichi: () => { tone(330, 0, 0.18, 'sawtooth', 0.08); tone(495, 0.12, 0.18, 'sawtooth', 0.08); tone(660, 0.24, 0.3, 'sawtooth', 0.08); },
     win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.35, 'triangle', 0.13)),

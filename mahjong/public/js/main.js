@@ -278,7 +278,7 @@ function playEvents(events, view, prev) {
   for (const ev of events) {
     switch (ev.t) {
       case 'hand_start':
-        sounds.play('deal');
+        sounds.play('shuffle');
         fx.banner(ev.label, { color: '#ffe27a', sub: ev.honba ? `${ev.honba}본장` : '', y: 330, dur: 1300 });
         addAnim(1500, dealIn);
         break;
