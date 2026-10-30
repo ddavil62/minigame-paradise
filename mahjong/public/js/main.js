@@ -260,7 +260,7 @@ function overlayIn(elapsed, { late = 0, final = false } = {}) {
   if (box) fx.stagger([box], [{ transform: 'scale(.6) translateY(60px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 520, delay: base, easing: 'cubic-bezier(.2,1.35,.4,1)', elapsed });
   const heads = ov.querySelectorAll('.res-head .limit, .res-head h2');
   fx.stagger([...heads], [{ transform: 'scale(3.2) rotate(-14deg)', opacity: 0 }, { transform: 'scale(1) rotate(0)', opacity: 1 }], { dur: 420, delay: base + 250, step: 220, easing: 'cubic-bezier(.2,1.6,.4,1)', elapsed });
-  fx.stagger([...ov.querySelectorAll('.yaku > .yrow')], [{ transform: 'translateX(-40px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 320, delay: base + 600, step: 90, easing: 'ease-out', elapsed });
+  fx.stagger([...ov.querySelectorAll('.yaku > .yrow, .yaku > .yaku-title')], [{ transform: 'translateX(-40px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 320, delay: base + 600, step: 90, easing: 'ease-out', elapsed });
   fx.stagger([...ov.querySelectorAll('.total, .tenpai-row')], [{ transform: 'scale(.6)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, delay: base + 900, step: 120, elapsed });
   fx.stagger([...ov.querySelectorAll('.delta, .rank-row')], [{ transform: 'translateX(60px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { dur: 380, delay: base + (final ? 350 : 1000), step: final ? 260 : 140, easing: 'cubic-bezier(.2,1.2,.4,1)', elapsed });
   ov.querySelectorAll('.delta .plus, .delta .minus').forEach((e, i) => {
@@ -725,8 +725,16 @@ function yakuRow(y, wi, i) {
   const key = `${wi}:${i}`;
   const info = YAKU_INFO[y.name];
   const han = y.yakuman ? `${y.yakuman >= 2 ? `${y.yakuman}배 ` : ''}역만` : `${y.han}판`;
-  return `<div class="yrow" data-yk="${key}" data-hl="${(y.hl || []).join(',')}"><div class="yline"><span class="yn">${esc(y.name)}${info ? infoBtn(`y:${key}`, y.name) : ''}</span><span class="yh">${han}</span></div>${info ? tipBox(`y:${key}`, info) : ''}</div>`;
+  const ids = y.hl || [];
+  // 구성 패는 항상 보여 준다. 손패 거의 전체(탕야오·핑후 등)는 패 대신 문구만 둔다.
+  const tiles = ids.length > 0 && ids.length <= 10 ? `<span class="ytiles">${ids.map((id) => tileHtml(code(id), 't-mini')).join('')}</span>` : '';
+  const brief = BONUS_YAKU.has(y.name) ? '' : (info?.match(/^.*?\.(?=\s|$)/)?.[0] || info || '');
+  const sub = tiles || brief ? `<div class="ysub">${tiles}${brief ? `<span class="ytext">${esc(brief)}</span>` : ''}</div>` : '';
+  return `<div class="yrow" data-yk="${key}" data-hl="${ids.join(',')}"><div class="yline"><span class="yn">${esc(y.name)}${info ? infoBtn(`y:${key}`, y.name) : ''}</span><span class="yh">${han}</span></div>${sub}${info ? tipBox(`y:${key}`, info) : ''}</div>`;
 }
+
+/** 역이 아니라 판수만 더하는 보너스. 결과창에서 족보와 따로 묶는다. */
+const BONUS_YAKU = new Set(['도라', '적도라', '뒷도라']);
 
 /** 결과 화면의 강조·설명 상태(S.resFocus/S.resTip)를 현재 DOM에 반영한다. 재렌더 후에도 호출한다. */
 function applyResUi() {
@@ -769,7 +777,10 @@ function resultHtml(v) {
       const wi = r.winners.indexOf(w);
       const concealed = w.concealed.map((id) => tileHtml(code(id), 't-res', '', '', { id })).join('');
       const melds = w.melds.map((m) => meldHtml({ ...m, called: m.tiles[0] }, w.seat, 't-meld', true)).join('');
-      const yaku = w.yaku.map((y, i) => yakuRow(y, wi, i)).join('');
+      const rows = w.yaku.map((y, i) => ({ y, html: yakuRow(y, wi, i) }));
+      const main = rows.filter((r) => !BONUS_YAKU.has(r.y.name)).map((r) => r.html).join('');
+      const bonus = rows.filter((r) => BONUS_YAKU.has(r.y.name)).map((r) => r.html).join('');
+      const yaku = `<div class="yaku-title">이긴 족보</div>${main}${bonus ? `<div class="yaku-title">보너스 <small>역은 아니고 판수만 더해져요</small></div>${bonus}` : ''}`;
       const total = w.yakuman ? `${w.limit}` : `${w.han}판 ${w.fu}부${w.limit ? ` · ${w.limit}` : ''}`;
       const first = w === r.winners[0];
       const scoreTip = w.yakuman ? limitInfo(w.limit) : `${TERM_INFO.score}${w.limit && limitInfo(w.limit) ? ` ${w.limit}: ${limitInfo(w.limit)}` : ''}`;

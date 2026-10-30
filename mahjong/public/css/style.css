@@ -196,6 +196,13 @@ button { font: inherit; cursor: pointer; }
 .res-dora { display: flex; gap: 18px; margin-bottom: 12px; color: var(--ui-muted); font-size: 12px; font-weight: 800; }
 .res-dora div { display: flex; align-items: center; gap: 6px; }
 .yaku { display: grid; gap: 2px; font-size: 16px; font-weight: 800; }
+.yaku-title { margin: 6px 8px 0; color: var(--ui-muted); font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+.yaku-title:first-child { margin-top: 0; }
+.yaku-title small { margin-left: 6px; font-weight: 600; letter-spacing: 0; opacity: .8; }
+.ysub { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; margin-top: 3px; }
+.ytiles { display: flex; gap: 2px; }
+.ytext { flex-basis: 100%; color: var(--ui-muted); font-size: 12px; font-weight: 600; line-height: 1.4; }
+.ytiles + .ytext { flex-basis: auto; flex: 1 1 140px; }
 .yrow { padding: 5px 8px; border-radius: 6px; transition: background .12s; }
 .yrow.on { background: rgba(233,196,106,.14); }
 .yline { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
