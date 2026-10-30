@@ -131,7 +131,8 @@ export function createFx(stage) {
     band.firstChild.animate([
       { transform: 'translateX(-260px) scale(2.8)', opacity: 0, filter: 'blur(10px)' },
       { transform: 'translateX(0) scale(1)', opacity: 1, filter: 'blur(0)', offset: 0.18, easing: 'cubic-bezier(.2,1.5,.4,1)' },
-      { transform: 'translateX(0) scale(1.07)', opacity: 1, offset: 0.82 },
+      // 유지 구간(0.82)에도 blur(0)을 명시해야 한다. 빼면 브라우저가 등장 직후부터 퇴장 블러까지 서서히 번지게 보간한다.
+      { transform: 'translateX(0) scale(1.07)', opacity: 1, filter: 'blur(0)', offset: 0.82 },
       { transform: 'translateX(260px) scale(1)', opacity: 0, filter: 'blur(6px)' },
     ], { duration: dur, fill: 'forwards' });
   }
