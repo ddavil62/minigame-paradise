@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>티추 - 미니게임 천국</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="sym-jade" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5a9.5 9.5 0 100 19 9.5 9.5 0 000-19zm0 5.6a3.9 3.9 0 110 7.8 3.9 3.9 0 010-7.8z"/></symbol>
+    <symbol id="sym-sword" viewBox="0 0 24 24"><path d="M12 1.5l3 4.2v8.3H9V5.7z"/><path d="M5.5 14.5h13v2.3h-13z"/><path d="M10.8 16.8h2.4V22h-2.4z"/></symbol>
+    <symbol id="sym-pagoda" viewBox="0 0 24 24"><path d="M12 1.5l3.6 3.7H8.4z"/><path d="M7 6.4h10l2.2 3.6H4.8z"/><path d="M5 11.2h14l2.6 4.2H2.4z"/><path d="M10.2 16.6h3.6V22h-3.6z"/></symbol>
+    <symbol id="sym-star" viewBox="0 0 24 24"><path d="M12 1.8l3 6.8 7.3.7-5.5 4.9 1.6 7.2L12 17.7l-6.4 3.7 1.6-7.2L1.7 9.3l7.3-.7z"/></symbol>
+    <symbol id="sym-cloud" viewBox="0 0 80 24"><path d="M2 20c6 0 8-6 14-6 4 0 5 3 9 3 5 0 5-8 12-8 5 0 6 4 10 4 5 0 5-6 11-6 6 0 7 5 10 9l-3 1c-2-3-3-6-6-6-4 0-4 6-11 6-5 0-6-4-10-4-5 0-5 8-12 8-5 0-6-3-9-3-5 0-8 6-14 6z"/></symbol>
+  </svg>
+  <header class="game-header">
+    <button id="btn-back" class="btn-back" type="button">← 게임 선택</button>
+    <h1>🐦 티추</h1>
+    <span class="spacer"></span>
+    <span id="conn" class="conn hidden">연결이 끊겼어요. 다시 연결 중…</span>
+    <button id="btn-pause" class="hdr-toggle hdr-pause hidden" type="button" title="대국을 잠시 멈춰요. 누구든 다시 시작할 수 있어요 (P)">⏸ 일시정지</button>
+    <button id="btn-guide" class="hdr-toggle hdr-guide" type="button" title="티추가 처음이라면 여기부터">📖 룰 가이드</button>
+    <button id="btn-assist" class="hdr-toggle" type="button" title="낼 수 있는 조합을 칩으로 보여 줘요">도우미</button>
+    <button id="btn-sound" class="hdr-toggle on" type="button" title="효과음 켜기/끄기">🔊 효과음</button>
+  </header>
+  <div class="rotate-hint">📱 가로 화면으로 돌리면 더 크게 볼 수 있어요.</div>
+  <div class="fit" id="fit">
+    <div class="fit-inner" id="fit-inner">
+      <div class="stage" id="stage"><div class="connecting">접속 중…</div></div>
+    </div>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

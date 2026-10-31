@@ -291,5 +291,28 @@
     "playersLabelEn": "1-4 players · AI fills seats",
     "botLabelKo": "쉬움·보통·어려움 AI",
     "botLabelEn": "Easy / Normal / Hard AI"
+  },
+  {
+    "id": "tichu",
+    "name": "티추",
+    "nameKo": "티추",
+    "nameEn": "Tichu",
+    "description": "맞은편 파트너와 2:2로 겨루는 카드 게임. 용·봉황·개·참새를 잘 쓰고 티추를 외쳐요. 빈자리는 AI가 채워요",
+    "descriptionKo": "맞은편 파트너와 2:2로 겨루는 카드 게임. 용·봉황·개·참새를 잘 쓰고 티추를 외쳐요. 빈자리는 AI가 채워요",
+    "descriptionEn": "A 2v2 partnership climbing card game. Play the Dragon, Phoenix, Dog and Sparrow, call Tichu, and let AI fill the empty seats",
+    "port": 3022,
+    "httpPath": "/tichu/",
+    "wsPath": "/tichu/ws",
+    "color": "#B8832B",
+    "emoji": "",
+    "keyArt": "/tichu/assets/key-art.webp",
+    "botAvailable": true,
+    "minPlayers": 1,
+    "maxPlayers": 4,
+    "aiFillTargetPlayers": 4,
+    "playersLabelKo": "1~4인 · 빈자리 AI",
+    "playersLabelEn": "1-4 players · AI fills seats",
+    "botLabelKo": "쉬움·보통·어려움 AI",
+    "botLabelEn": "Easy / Normal / Hard AI"
   }
 ]

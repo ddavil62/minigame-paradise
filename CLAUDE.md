@@ -53,7 +53,7 @@ node launcher/server.js
 - 게임 서버는 통합 모드와 단독 모드에서 모두 동작해야 한다.
 - AI 자식 프로세스는 사람 이탈, 게임 종료 정책과 서버 종료 시 정리되어야 한다.
 - 룸 정원, 준비 상태, 리디렉션 경로는 `games.json`의 인원 설정과 일치해야 한다.
-- 게임 서버가 방을 하나만 갖는 게임은 대기실을 거쳐 들어온 사람이 이전 판의 남은 방(예: 방 설정 화면에 멈춘 친구)에 합류하는 문제가 있다. 대기실이 시작될 때마다 `checkReady`가 방/매치 번호를 발급해 리디렉션 URL로 넘기고 게임 서버가 번호별로 방을 나누거나 정리하는 방식이 해법이다. 방을 번호별로 나누는 게임은 tetris-battle `roomId`, mahjong `room`이다. 그 밖의 게임은 `createApp()`이 `prepareMatch(matchId): boolean`을 export하면 런처가 자동으로 `matchId`를 발급·호출하고(진행 중이면 `game_busy`), 서버는 옛 접속자를 `4001`로 정리하며 번호가 다른 접속을 `4002`로 거절한다. 클라이언트는 페이지 URL의 `matchId`를 WS 쿼리로 넘기고 페이지를 다시 여는 이동(AI랑 시작 등)에서도 유지해야 한다. 새 게임이나 단일 방 게임을 손볼 때 같은 방식을 따른다. 통합 검증은 `node tests/launcher-match-prepare.integration.mjs`.
+- 게임 서버가 방을 하나만 갖는 게임은 대기실을 거쳐 들어온 사람이 이전 판의 남은 방(예: 방 설정 화면에 멈춘 친구)에 합류하는 문제가 있다. 대기실이 시작될 때마다 `checkReady`가 방/매치 번호를 발급해 리디렉션 URL로 넘기고 게임 서버가 번호별로 방을 나누거나 정리하는 방식이 해법이다. 방을 번호별로 나누는 게임은 tetris-battle `roomId`, mahjong·tichu `room`(런처 `ROOM_ID_GAME_IDS`)이다. 그 밖의 게임은 `createApp()`이 `prepareMatch(matchId): boolean`을 export하면 런처가 자동으로 `matchId`를 발급·호출하고(진행 중이면 `game_busy`), 서버는 옛 접속자를 `4001`로 정리하며 번호가 다른 접속을 `4002`로 거절한다. 클라이언트는 페이지 URL의 `matchId`를 WS 쿼리로 넘기고 페이지를 다시 여는 이동(AI랑 시작 등)에서도 유지해야 한다. 새 게임이나 단일 방 게임을 손볼 때 같은 방식을 따른다. 통합 검증은 `node tests/launcher-match-prepare.integration.mjs`.
 - 사용자 노출 텍스트를 바꾸면 한국어·영어 메타데이터와 관련 테스트를 함께 확인한다.
 
 ## 테스트

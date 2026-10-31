@@ -11,7 +11,7 @@ import fs from 'node:fs';
 
 const games = JSON.parse(fs.readFileSync(new URL('../launcher/public/games.json', import.meta.url), 'utf8'));
 const only = process.argv.slice(2);
-const targets = games.filter((g) => !['tetris-battle', 'mahjong'].includes(g.id) && (!only.length || only.includes(g.id)));
+const targets = games.filter((g) => !['tetris-battle', 'mahjong', 'tichu'].includes(g.id) && (!only.length || only.includes(g.id)));
 
 const reservePort = async () => {
   const s = http.createServer();

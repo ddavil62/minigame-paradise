@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-11-01] - 티추 추가
+
+- 4인 2:2 팀전 카드 게임 티추(`tichu/`)를 런처에 등록했다. 맞은편이 파트너이고, 사람 1~4명이 게임 안 방 설정 화면에서 모이며 빈자리는 서버 관리형 AI(쉬움·보통·어려움)가 채운다. 방 번호·방장·재접속·일시정지·AI 채움은 마작과 같은 규칙이다. `games.json`, `GAME_APPS`, `GAME_MANAGED_AI_IDS`와 방 번호 발급 대상(`ROOM_ID_GAME_IDS`: mahjong, tichu)을 함께 갱신했다.
+- 표준 규칙 전체: 그랜드 티추·카드 3장 교환·싱글/페어/트리플/풀하우스/스트레이트/연속 페어/폭탄(네 장·플러시)·봉황·개·용(상대에게 트릭 선물)·참새 소원·폭탄 끼어들기(대기 0~3초)·티추 콜·원투 피니시·꼴찌 정산·목표 점수 500/1000.
+- 특수 4장(참새·개·봉황·용)과 카드 뒷면은 GPT Image 일러스트다. 카드 이름은 원작 표기인 "참새"를 쓴다.
+- 서버·AI·브라우저가 같은 `lib/combos.js`·`lib/cards.js`를 쓴다(서버가 이 둘만 `/lib/`로 내보낸다). 규칙과 계약은 `tichu/CLAUDE.md`를 따른다.
+- 검증: `tichu`의 node:test(조합·시나리오·AI 퍼즈·서버 통합)와 Playwright UI 회귀, 격리 런처에서 대기실 → AI 채우기 → READY → 리디렉션 확인.
+
 ## [2026-10-31] - 런처 대기실 매치 번호를 모든 단일 방 게임에 적용
 
 - 대기실을 거쳐 들어온 사람이 이전 판의 대기 화면에 남은 접속자와 섞이거나 "방이 가득 찼다"로 거절되던 문제를 막았다. `prepareMatch(matchId)`를 export하는 게임(omok, matgo, venezia, hanabi, rummikub, davinci-code, codenames-duet, codenames, janggi, yahtzee, yutnori, sichuan-battle, starlight-mail-tower, moonlight-kitchen-express)은 런처가 대기실 시작마다 매치 번호를 발급해 REDIRECT URL로 넘기고, 게임 서버가 이전 접속자를 정리한 뒤 그 번호를 가진 사람만 받는다.

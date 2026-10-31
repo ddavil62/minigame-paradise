@@ -74,6 +74,7 @@ minigame-paradise/
   moonlight-kitchen-express/ # 달빛 주방열차 2인 협동 요리
   venezia/           # 베네치아 타이핑 배틀 2인 대전 타이핑
   mahjong/           # 4인 일본식 리치마작 (서버 관리형 AI)
+  tichu/             # 4인 2:2 팀전 티추 카드 게임 (서버 관리형 AI)
   tests/             # Playwright QA 테스트
   docs/              # 프로젝트 문서
 ```
@@ -97,6 +98,8 @@ minigame-paradise/
 | 달빛 주방열차 시뮬레이션 | `moonlight-kitchen-express/game/` | 30Hz 서버 권위 이동·아이템·조리·주문·열차 이벤트·점수 상태 관리 |
 | 달빛 주방열차 클라이언트 | `moonlight-kitchen-express/public/` | Canvas 플레이 화면, READY·HUD·결과·재접속 UI와 ko/en 제공 |
 | 마작 규칙 엔진·서버 | `mahjong/lib/`, `mahjong/server.js` | 서버 권위 리치마작(역·부수·점수·후리텐·유국), 사람 1~4명 + 서버 관리형 AI 3단계, 방 설정·재접속·자동 진행 |
+| 티추 규칙 엔진·서버 | `tichu/lib/`, `tichu/server.js` | 서버 권위 티추(그랜드 티추·교환·조합·봉황·소원·폭탄 끼어들기·용 선물·정산), 사람 1~4명 + 서버 관리형 AI 3단계, 마작과 같은 방 구조 |
+| 티추 클라이언트 | `tichu/public/` | 클래식 카드룸 UI(부채꼴 손패·교환 슬롯·결과·룰 가이드), 서버와 같은 `lib/combos.js`로 조합 판정 |
 
 ## 기능 목록
 
@@ -132,7 +135,7 @@ minigame-paradise/
 
 ## 알려진 제약사항
 
-- 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle, codenames, venezia, starlight-mail-tower, sichuan-battle, wordchain-battle, mahjong에서 지원한다. hanabi, codenames-duet, davinci-code, moonlight-kitchen-express는 AI를 지원하지 않는다.
+- 봇은 matgo, yutnori, yahtzee, rummikub, omok, janggi, tetris-battle, codenames, venezia, starlight-mail-tower, sichuan-battle, wordchain-battle, mahjong, tichu에서 지원한다. hanabi, codenames-duet, davinci-code, moonlight-kitchen-express는 AI를 지원하지 않는다.
 - 사천성 배틀은 LAN 1:1이며 AI 난이도는 보통 한 종류다. 3인 이상, 온라인 매치메이킹과 영구 전적은 지원하지 않는다.
 - 게임별 다인용 로직은 윷놀이만 2~4인 완료. 요트는 현재 2인 전용이며 루미큐브/하나비(Phase 1-D~E)의 다인용 확장은 미구현.
 - 윷놀이 3~4인 게임 중 1명 disconnect 시 게임 즉시 종료. 탈락 처리 후 계속 진행 미지원.

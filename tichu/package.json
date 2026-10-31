@@ -1,0 +1,20 @@
+{
+  "name": "tichu",
+  "version": "0.1.0",
+  "description": "LAN 4인 2:2 티추 (서버 권위, 서버 관리형 AI)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/combos.test.js tests/game.test.js tests/server.test.js"
+  },
+  "keywords": ["tichu", "card-game", "lan", "multiplayer", "websocket"],
+  "author": "Lazy Slime Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

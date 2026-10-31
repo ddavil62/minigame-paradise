@@ -45,6 +45,7 @@ import { createApp as createSichuanBattleApp } from '../sichuan-battle/server.js
 import { createApp as createWordchainBattleApp } from '../wordchain-battle/server.js';
 import { createApp as createSpotTheDifferenceApp } from '../spot-the-difference/server.js';
 import { createApp as createMahjongApp } from '../mahjong/server.js';
+import { createApp as createTichuApp } from '../tichu/server.js';
 
 // ── P0-A 안전망: WS 핸들러에서 빠져나온 예외가 런처 프로세스를 종료시키지 않게 한다.
 // 각 게임 server.js의 null guard(1차 방어)로 정상 경로는 차단되며,
@@ -184,6 +185,8 @@ const GAME_APPS = {
   'spot-the-difference': createSpotTheDifferenceApp(),
   // 마작 — 4인 일본식 리치마작. 사람 1~4명이 방 설정 화면에서 모이고 빈자리는 게임 서버가 AI로 채운다.
   'mahjong': createMahjongApp(),
+  // 티추 — 4인 2:2 팀전 카드 게임. 마작과 같은 방 구조(방 번호·방장·서버 관리형 AI)다.
+  'tichu': createTichuApp(),
 };
 
 // ── 게임 카탈로그 스냅샷 ───────────────────────────────────────
@@ -248,8 +251,11 @@ const presenceHub = createPresenceHub({
 // mode=ai 진입 시 자체적으로 room.id 기반 getBotUrl(room.id)을 호출해 봇을 spawn하는
 // 로직(server.js L476~486)을 갖추고 있으므로, 이 목록에 포함시켜 런처의 중복/불일치
 // 봇 spawn을 막고 게임 서버의 검증된 자체 로직을 그대로 재사용한다.
+// 대기실이 시작될 때마다 방 번호(`?room=`)를 발급해 게임 서버가 방을 번호별로 나누는 게임들.
+const ROOM_ID_GAME_IDS = new Set(['mahjong', 'tichu']);
+
 const GAME_MANAGED_AI_IDS = new Set([
-  'sichuan-battle', 'starlight-mail-tower', 'yutnori', 'tetris-battle', 'wordchain-battle', 'mahjong',
+  'sichuan-battle', 'starlight-mail-tower', 'yutnori', 'tetris-battle', 'wordchain-battle', 'mahjong', 'tichu',
 ]);
 
 /**
@@ -745,9 +751,9 @@ function checkReady(room, game) {
   // 새 매치 번호를 발급해 게임 서버가 이전 접속자를 정리하고 이 번호를 가진 사람만 받게 한다.
   // 진행 중인 판이 있으면 게임 서버가 거절하므로 동시에 한 판만 가능하다(game_busy).
   const matchId = typeof GAME_APPS[room.gameId]?.prepareMatch === 'function' ? crypto.randomUUID() : null;
-  // 마작은 게임 서버가 방 번호별로 방을 따로 둔다. 이전 판에서 방 설정 화면에 남아 있는 사람과 섞이지 않도록
+  // 마작·티추는 게임 서버가 방 번호별로 방을 따로 둔다. 이전 판에서 방 설정 화면에 남아 있는 사람과 섞이지 않도록
   // 대기실이 시작될 때마다 새 방 번호를 발급해 같은 대기실 멤버만 같은 방으로 보낸다.
-  const mahjongRoomId = room.gameId === 'mahjong' ? crypto.randomUUID() : null;
+  const mahjongRoomId = ROOM_ID_GAME_IDS.has(room.gameId) ? crypto.randomUUID() : null;
 
   // Room-is-full/Room-not-found 근본원인 4차 fix(2026-08-03): 런처가 발급한 roomId는
   // tetris-battle 서버의 roomMap에 등록된 적이 없어, 클라이언트/봇이 이 ID로 접속하면
