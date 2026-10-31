@@ -743,6 +743,9 @@ function checkReady(room, game) {
   const roomId = isTetrisBattle ? crypto.randomUUID() : null;
   const wordchainMatchId = room.gameId === 'wordchain-battle' ? crypto.randomUUID() : null;
   const spotDifferenceMatchId = room.gameId === 'spot-the-difference' ? crypto.randomUUID() : null;
+  // 마작은 게임 서버가 방 번호별로 방을 따로 둔다. 이전 판에서 방 설정 화면에 남아 있는 사람과 섞이지 않도록
+  // 대기실이 시작될 때마다 새 방 번호를 발급해 같은 대기실 멤버만 같은 방으로 보낸다.
+  const mahjongRoomId = room.gameId === 'mahjong' ? crypto.randomUUID() : null;
 
   // Room-is-full/Room-not-found 근본원인 4차 fix(2026-08-03): 런처가 발급한 roomId는
   // tetris-battle 서버의 roomMap에 등록된 적이 없어, 클라이언트/봇이 이 ID로 접속하면
@@ -811,7 +814,9 @@ function checkReady(room, game) {
       const matchId = wordchainMatchId || spotDifferenceMatchId;
       redirectPath = matchId
         ? `/${room.gameId}/?matchId=${encodeURIComponent(matchId)}`
-        : `/${room.gameId}/`;
+        : mahjongRoomId
+          ? `/${room.gameId}/?room=${mahjongRoomId}`
+          : `/${room.gameId}/`;
     }
 
     sendJson(ws, {

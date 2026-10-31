@@ -83,11 +83,12 @@ function sanitizeAction(a) {
 function between([min, max]) { return min + Math.random() * (max - min); }
 
 /**
- * 마작 앱 인스턴스를 만든다. 룸 상태는 closure로 격리된다.
- * @param {{testing?:boolean, timing?:object, rng?:() => number}} [opts] 옵션
- * @returns {{handleHttp:Function, handleUpgrade:Function, setHostUrl:Function, close:Function, _room:object}} 앱
+ * 방 하나의 엔진을 만든다. 룸 상태는 closure로 격리되고 WebSocket 서버도 방마다 따로 가진다.
+ * @param {{testing?:boolean, timing?:object, rng?:() => number}} opts 옵션
+ * @param {{onIdle?:() => void}} [hooks] onIdle: 접속자가 없어 방이 초기화됐을 때 호출(방 목록에서 치우라는 신호)
+ * @returns {{handleUpgrade:Function, close:Function, _room:object}} 방 엔진
  */
-export function createApp(opts = {}) {
+function createRoomEngine(opts, hooks = {}) {
   const T = { ...DEFAULT_TIMING, ...(opts.timing || {}) };
   const wss = new WebSocketServer({ noServer: true });
 
@@ -173,6 +174,7 @@ export function createApp(opts = {}) {
       room.hostKey = null;
       room.lobbyHostClaimed = false;
       room.settings = { length: 'east', aka: true, kuitan: true, aiLevel: 'normal' };
+      hooks.onIdle?.();
     }, T.emptyResetMs);
     room.emptyTimer.unref?.();
   }
@@ -475,6 +477,7 @@ export function createApp(opts = {}) {
     if (attached.error) {
       send(ws, { type: 'ERROR', code: attached.error, message: attached.message });
       ws.close(1000, attached.error);
+      armEmptyTimer(); // 입장에 실패한 채 비어 있는 새 방이 남지 않게 한다
       return;
     }
     const { slot } = attached;
@@ -553,6 +556,58 @@ export function createApp(opts = {}) {
     ws.on('error', () => { /* close 이벤트에서 정리 */ });
   });
 
+  function handleUpgrade(req, socket, head) {
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  }
+
+  function close() {
+    clearSeatTimers();
+    clearPause();
+    clearTimeout(room.emptyTimer);
+    for (const h of room.lobbyTimers.values()) clearTimeout(h);
+    for (const c of wss.clients) { try { c.terminate(); } catch { /* noop */ } }
+    wss.close();
+  }
+
+  return { handleUpgrade, close, _room: room };
+}
+
+/** 방 번호가 없는 접속(직접 접속·북마크·단독 실행)이 들어가는 기본 방 */
+const DEFAULT_ROOM_ID = 'default';
+const ROOM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * 마작 앱을 만든다. 방은 `?room=<id>`로 나뉘며, 런처 대기실이 시작할 때마다 새 방 번호를 발급한다.
+ * 그래서 이전 판에서 방 설정 화면에 남아 있던 사람이 있어도 새 대기실 멤버는 그 방에 합류하지 않는다.
+ * 방 번호가 없으면 기본 방을 쓴다(단독 실행·테스트).
+ * @param {{testing?:boolean, timing?:object, rng?:() => number}} [opts] 옵션
+ * @returns {{handleHttp:Function, handleUpgrade:Function, setHostUrl:Function, close:Function, _room:object, _rooms:Map}} 앱
+ */
+export function createApp(opts = {}) {
+  /** @type {Map<string, ReturnType<typeof createRoomEngine>>} */
+  const engines = new Map();
+
+  function getEngine(id) {
+    let engine = engines.get(id);
+    if (!engine) {
+      engine = createRoomEngine(opts, {
+        onIdle: () => {
+          // 기본 방은 남겨 두고, 발급된 방은 비면 치운다(같은 번호로 다시 오면 새로 만든다).
+          if (id === DEFAULT_ROOM_ID || engines.get(id) !== engine) return;
+          engines.delete(id);
+          engine.close();
+        },
+      });
+      engines.set(id, engine);
+    }
+    return engine;
+  }
+
+  function roomIdOf(url) {
+    const id = new URL(url || '/ws', 'http://localhost').searchParams.get('room');
+    return id && ROOM_ID_RE.test(id) ? id : DEFAULT_ROOM_ID;
+  }
+
   // ── HTTP ────────────────────────────────────────────────
   function handleHttp(req, res) {
     const reqPath = (req.url || '/').split('?')[0] || '/';
@@ -570,19 +625,19 @@ export function createApp(opts = {}) {
   }
 
   function handleUpgrade(req, socket, head) {
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+    getEngine(roomIdOf(req.url)).handleUpgrade(req, socket, head);
   }
 
   function close() {
-    clearSeatTimers();
-    clearPause();
-    clearTimeout(room.emptyTimer);
-    for (const h of room.lobbyTimers.values()) clearTimeout(h);
-    for (const c of wss.clients) { try { c.terminate(); } catch { /* noop */ } }
-    wss.close();
+    for (const engine of engines.values()) engine.close();
+    engines.clear();
   }
 
-  return { handleHttp, handleUpgrade, setHostUrl() {}, close, _room: room };
+  return {
+    handleHttp, handleUpgrade, setHostUrl() {}, close,
+    get _room() { return getEngine(DEFAULT_ROOM_ID)._room; },
+    _rooms: engines,
+  };
 }
 
 // ── 단독 실행 ───────────────────────────────────────────────

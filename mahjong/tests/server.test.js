@@ -29,8 +29,8 @@ async function boot(timing = FAST) {
 }
 
 /** 사람 대신 AI 로직으로 행동하는 테스트 클라이언트 */
-function client(port, { key, name, play = true, level = 'normal', role = '', holdAck = false }, t) {
-  const ws = new WebSocket(`ws://127.0.0.1:${port}/mahjong/ws?key=${key}&name=${encodeURIComponent(name)}${role ? `&role=${role}` : ''}`);
+function client(port, { key, name, play = true, level = 'normal', role = '', holdAck = false, room = '' }, t) {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/mahjong/ws?key=${key}&name=${encodeURIComponent(name)}${role ? `&role=${role}` : ''}${room ? `&room=${room}` : ''}`);
   const c = { ws, room: null, state: null, joined: null, errors: [], states: 0, hints: null, events: [] };
   let lastSig = '';
   c.send = (m) => ws.send(JSON.stringify(m));
@@ -335,4 +335,48 @@ test('일시정지: 시간·횟수 제한 없이 재개할 때까지 멈춰 있�
   assert.deepEqual(a.errors, []);
   a.ws.close();
   srv.close();
+});
+
+test('방 번호(room)가 다르면 방 설정 화면에 남은 사람과 섞이지 않고 각자 방장이 된다', async (t) => {
+  const srv = await boot({ ...FAST, emptyResetMs: 120, lobbyGraceMs: 60 });
+  t.after(srv.close);
+  // 김몽구는 이전 대기실에서 만든 방의 방 설정 화면에 멈춰 있다.
+  const old = client(srv.port, { key: 'kmg', name: '김몽구', play: false, role: 'p1', room: 'old-session' }, t);
+  await until(() => old.joined);
+  assert.equal(old.joined.host, true);
+  // 새 대기실에서 온 나는 다른 방 번호를 받는다.
+  const me = client(srv.port, { key: 'me', name: '나', play: false, role: 'p1', room: 'new-session' }, t);
+  await until(() => me.joined);
+  assert.equal(me.joined.host, true, '새 방에서는 내가 방장이다');
+  assert.equal(me.joined.seat, 0);
+  await until(() => me.room);
+  assert.equal(me.room.seats.filter((s) => s.type === 'human').length, 1, '새 방에는 나 혼자다');
+  assert.equal(old.room.seats.filter((s) => s.type === 'human').length, 1, '옛 방도 그대로 김몽구 혼자다');
+  assert.equal(srv.app._rooms.size, 2);
+});
+
+test('같은 방 번호로 들어오면 같은 방에 모이고, 방 번호가 없으면 기본 방으로 간다', async (t) => {
+  const srv = await boot();
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'a', name: 'A', play: false, role: 'p1', room: 'same' }, t);
+  await until(() => a.joined);
+  const b = client(srv.port, { key: 'b', name: 'B', play: false, role: 'p2', room: 'same' }, t);
+  await until(() => b.joined);
+  assert.equal(b.joined.host, false);
+  assert.equal(b.joined.seat, 2, '둘째 사람은 마주 보는 자리');
+  const d = client(srv.port, { key: 'd', name: 'D', play: false, room: 'bad id!' }, t); // 허용되지 않는 번호
+  await until(() => d.joined);
+  assert.equal(d.joined.host, true);
+  assert.ok(srv.app._rooms.has('default'));
+  assert.equal(srv.app._room.slots.filter((s) => s && s.type === 'human').length, 1);
+});
+
+test('발급된 방은 모두 나가 초기화되면 목록에서 치워진다', async (t) => {
+  const srv = await boot({ ...FAST, emptyResetMs: 80, lobbyGraceMs: 40 });
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'a', name: 'A', play: false, room: 'temp' }, t);
+  await until(() => a.joined);
+  assert.ok(srv.app._rooms.has('temp'));
+  a.ws.close();
+  await until(() => !srv.app._rooms.has('temp'), 3000);
 });

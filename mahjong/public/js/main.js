@@ -72,7 +72,7 @@ function playerName() {
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const seg = location.pathname.split('/').filter(Boolean)[0] || 'mahjong';
-  const url = `${proto}://${location.host}/${seg}/ws?key=${encodeURIComponent(playerKey())}&name=${encodeURIComponent(playerName())}${params.get('role') ? `&role=${encodeURIComponent(params.get('role'))}` : ''}`;
+  const url = `${proto}://${location.host}/${seg}/ws?key=${encodeURIComponent(playerKey())}&name=${encodeURIComponent(playerName())}${params.get('role') ? `&role=${encodeURIComponent(params.get('role'))}` : ''}${params.get('room') ? `&room=${encodeURIComponent(params.get('room'))}` : ''}`;
   const ws = new WebSocket(url);
   S.ws = ws;
   ws.addEventListener('open', () => {
