@@ -94,4 +94,6 @@ npm test
 npm run test:e2e
 ```
 
+런처 매치 번호 계약: 런처가 `prepareMatch(matchId)`로 방을 리셋(옛 접속자 `4001`, 봇 정리, 플레이 중이면 false)하고 REDIRECT URL의 `matchId`를 클라이언트가 WS 쿼리로 전달한다. 번호가 다르면 `invalid_match`/`4002`(봇 `mode=bot` 제외, 번호 미준비 단독 실행은 무제한). 테스트: `node tests/match-prepare.test.js` (격리 포트 3212).
+
 런처 통합 검증은 프로젝트 루트의 `tests/starlight-mail-tower-qa.spec.js`를 사용한다. 최종 QA 결과와 상세 재현 기록은 `../../.Codex/specs/2026-07-19-starlight-world-expansion-qa.md`에 있다.

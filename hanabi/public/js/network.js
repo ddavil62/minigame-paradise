@@ -42,7 +42,9 @@ export function createNetwork(handlers) {
       sessionStorage.setItem('hanabi:name', decodeURIComponent(urlName));
     }
 
-    const url = `${proto}://${location.host}${wsPath}`;
+    // 런처 대기실이 발급한 매치 번호. 서버가 옛 판의 접속자를 걸러내는 데 쓴다(재연결 포함).
+    const matchId = urlParams.get('matchId');
+    const url = `${proto}://${location.host}${wsPath}${matchId ? `?matchId=${encodeURIComponent(matchId)}` : ''}`;
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);
 

@@ -66,7 +66,7 @@ const SLOTS = [
  * @param {() => (string|null)} [options.getBotUrl] - 빈 슬롯을 채울 봇 WS URL 공급 함수.
  *   AI채우기(mode=ai 또는 FILL_WITH_AI) 시 빈 (팀,역할) 슬롯마다 봇을 spawn → mode=bot
  *   재접속해 Player.ws 점유. null/미공급이면 봇 spawn은 발생하지 않는다(휴먼 전용 보호).
- * @returns {{ handleHttp: Function, handleUpgrade: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, prepareMatch: Function }}
  */
 export function createApp(options = {}) {
   // AI채우기 시 봇이 접속할 WS URL을 공급하는 함수(통합 라우터/단독 실행이 주입).
@@ -111,7 +111,8 @@ export function createApp(options = {}) {
    */
   function spawnBotForSlot(team, role) {
     const slotKey = `${team}-${role}`;
-    botSpawnPending.delete(slotKey);
+    // 예약이 취소(killBot/killAllBots/prepareMatch)됐으면 spawn하지 않는다.
+    if (!botSpawnPending.delete(slotKey)) return;
     // 그새 사람이 자리를 선택했거나 봇이 이미 있으면 취소.
     const occupied = players.some((p) => p.team === team && p.role === role);
     if (occupied || botChildren.has(slotKey)) return;
@@ -131,7 +132,8 @@ export function createApp(options = {}) {
     botChildren.set(slotKey, child);
     child.on('exit', (code) => {
       console.log(`[codenames] 봇 종료: ${slotKey} (code=${code})`);
-      botChildren.delete(slotKey);
+      // 새 매치가 같은 슬롯에 띄운 봇 항목을 옛 프로세스의 종료 이벤트가 지우지 않게 한다.
+      if (botChildren.get(slotKey) === child) botChildren.delete(slotKey);
     });
   }
 
@@ -390,6 +392,45 @@ export function createApp(options = {}) {
     broadcastState();
   }
 
+  // ── 매치 준비 (런처 대기실 → 게임 입장) ───────────────────────────
+  // 런처가 REDIRECT 직전에 prepareMatch(id)를 호출하고 같은 id를 URL로 넘긴다. 이전 판에 남아 있던
+  // 접속자(예: 역할 선택 화면에 멈춘 사람)가 새 판에 섞이지 않도록 정리하고 이 id를 가진 사람만 받는다.
+  // 런처를 거치지 않는 단독 실행은 expectedMatchId가 null이라 기존처럼 id 없이 입장한다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
+
+  /**
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid codenames matchId');
+    // 진행 중 = 실제 플레이 단계(phase=playing)이고 열린 사람(비봇) 연결이 있다. role_select/over는 진행 중이 아님.
+    if (phase === 'playing' && game
+      && players.some((p) => p.mode !== 'bot' && p.ws && p.ws.readyState === WebSocket.OPEN)) return false;
+    expectedMatchId = matchId;
+    killAllBots(); // 서버가 띄운 봇 자식 프로세스와 spawn 예약 정리.
+    const stalePlayers = players;
+    players = [];
+    resetRoom();
+    lastFirstTeam = null;
+    for (const stale of stalePlayers) {
+      stale.ws._replaced = true;
+      sendJsonSafe(stale.ws, {
+        type: 'ERROR',
+        code: 'match_replaced',
+        message: '새 경기가 시작되어 이전 연결을 종료합니다.',
+      });
+      try { stale.ws.close(4001, 'MATCH_REPLACED'); } catch { /* 이미 닫힌 연결 */ }
+    }
+    return true;
+  }
+
+  function sendJsonSafe(ws, payload) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
@@ -398,6 +439,18 @@ export function createApp(options = {}) {
     const reqUrlObj = new URL(req && req.url ? req.url : '/', 'http://localhost');
     const wsMode = reqUrlObj.searchParams.get('mode') || 'human';
     const isBot = wsMode === 'bot';
+
+    // 런처가 준비한 매치 번호가 없거나 다른 사람(옛 판의 탭 등)은 입장시키지 않는다.
+    // 봇(mode=bot)은 서버/런처가 직접 띄우므로 번호 없이 통과한다.
+    if (!isBot && expectedMatchId !== null && reqUrlObj.searchParams.get('matchId') !== expectedMatchId) {
+      sendJsonSafe(ws, {
+        type: 'ERROR',
+        code: 'invalid_match',
+        message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.',
+      });
+      ws.close(4002, 'INVALID_MATCH');
+      return;
+    }
 
     // 사람(비봇)이 새로 연결될 때, 죽은(좀비) 슬롯만 선제 제거한다 (#13 패턴).
     // 살아있는(OPEN) 봇은 보존한다 — AI채우기 플로우에서 방금 매칭된 봇을 죽이지 않기 위함.
@@ -475,7 +528,7 @@ export function createApp(options = {}) {
           // role_select 단계에서만, 200ms 지연(사람 단독 등록 보장).
           if (wsMode === 'ai' && !isBot && phase === 'role_select') {
             setTimeout(() => {
-              if (phase === 'role_select') spawnBotsForEmptySlots();
+              if (phase === 'role_select' && !ws._replaced) spawnBotsForEmptySlots();
             }, 200);
           }
           // GAP-1: 봇이 team/role을 명시하지 않으면(런처 로비 제너릭 spawn) 자동 배정한다.
@@ -483,7 +536,7 @@ export function createApp(options = {}) {
           // 여전히 슬롯이 비어 있는(=제너릭) 봇만 빈 슬롯에 자동 배정한다.
           if (isBot && phase === 'role_select') {
             setTimeout(() => {
-              if (phase === 'role_select'
+              if (phase === 'role_select' && !ws._replaced
                   && player.ws && player.ws.readyState === WebSocket.OPEN
                   && !player.team && !player.role) {
                 autoAssignBotSlot(player);
@@ -605,6 +658,8 @@ export function createApp(options = {}) {
     // ── 연결 해제 ──
     ws.on('close', () => {
       console.log(`[codenames] ${player.id} 연결 해제 (mode=${player.mode})`);
+      // prepareMatch가 내보낸 옛 연결은 같은 id의 새 접속자/봇을 건드리지 않는다.
+      if (ws._replaced) return;
       players = players.filter((p) => p.id !== player.id);
       rematchPending.delete(player.id);
 
@@ -716,7 +771,7 @@ export function createApp(options = {}) {
     });
   }
 
-  return { handleHttp, handleUpgrade };
+  return { handleHttp, handleUpgrade, prepareMatch };
 }
 
 // ──────────────────────────────────────────────────────────────

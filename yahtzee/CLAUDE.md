@@ -50,8 +50,14 @@ yahtzee/
 └── tests/
     ├── smoke.test.js        # YACHT-001~012 + LIVE-001/002 (169건)
     ├── dice-render.test.js  # YACHT-LIVE-003/004 + YACHT-KEEP-001~008 (55건, DOM stub 노드 러너)
-    └── bot-smoke.test.js    # YACHT-BOT-001~005 (25건, 봇 시나리오 — 포트 3099)
+    ├── bot-smoke.test.js    # YACHT-BOT-001~005 (25건, 봇 시나리오 — 포트 3099)
+    └── match-prepare.test.js # matchId/prepareMatch 계약 (포트 3182)
 ```
+
+## 매치 번호 (matchId / prepareMatch)
+
+- 런처 대기실이 REDIRECT 직전에 `app.prepareMatch(id)`를 호출하고 URL에 `?matchId=<id>`를 붙인다. `network.js`가 WS 쿼리(재연결 포함)로, "AI랑 시작" 재진입도 같은 번호를 유지한다.
+- 서버는 `phase=playing` + 열린 사람 연결이 있으면 false(game_busy), 아니면 방(players/game/정원 `roomMaxPlayers`)을 초기화하고 옛 접속자를 `match_replaced`(4001)로 내보낸다. 이후 번호가 다른/없는 비봇 접속은 `invalid_match`(4002). 단독 실행은 번호 없이 입장.
 
 ## AI 봇 (2026-06-08 추가)
 
@@ -89,6 +95,7 @@ cd C:\LazySlimeStudio\minigames\yahtzee
 node tests/smoke.test.js        # 169건 (YACHT-001~012 + LIVE-001/002)
 node tests/dice-render.test.js  #  55건 (YACHT-LIVE-003/004 + YACHT-KEEP-001~008)
 node tests/bot-smoke.test.js    #  25건 (YACHT-BOT-001~005, 봇 시나리오)
+node tests/match-prepare.test.js # matchId/prepareMatch 계약 (포트 3182)
 # 시각 검증 (선택): node server.js --port 3097 띄운 뒤
 node tests/screenshot-live-keep.js  # 두 페이지 시점 캡처 (tests/screenshots/live-*.png)
 ```

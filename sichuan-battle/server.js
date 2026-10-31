@@ -29,7 +29,7 @@ function send(ws, payload) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.
 /**
  * 통합 런처 또는 독립 서버에서 사용할 앱 인스턴스를 생성한다.
  * @param {{hostUrl?:string,testing?:boolean,now?:()=>number,seed?:number,duration?:number,disconnectGraceMs?:number,getBotUrl?:()=>string|null,aiConfig?:object}} [options] 설정
- * @returns {{handleHttp:Function,handleUpgrade:Function,setHostUrl:Function,close:Function}}
+ * @returns {{handleHttp:Function,handleUpgrade:Function,setHostUrl:Function,close:Function,prepareMatch:Function}}
  */
 export function createApp(options = {}) {
   let hostUrl = options.hostUrl || ''; const wss = new WebSocketServer({ noServer: true });
@@ -39,6 +39,10 @@ export function createApp(options = {}) {
   /** @type {{slots:object[],game:SichuanGame|null,rematch:Set<string>,tick:NodeJS.Timeout|null}} */
   const room = { slots: [], game: null, rematch: new Set(), tick: null };
   let aiSession = null; let aiGeneration = 0;
+  // 런처 대기실이 발급한 매치 번호. 런처 없는 단독 실행은 null이라 번호 없이 기존처럼 입장한다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
 
   /** @param {string} base 기본 URL @param {string} token 서버 발급 토큰 @returns {string} 인증 URL */
   function makeBotUrl(base, token) { const url = new URL(base); url.searchParams.set('mode', 'bot'); url.searchParams.set('botToken', token); return url.toString(); }
@@ -51,6 +55,29 @@ export function createApp(options = {}) {
     for (const slot of room.slots.filter((entry) => entry.isBot)) { slot.disposed = true; try { slot.ws.close(1000, reason); } catch {} clearTimeout(slot.disconnectTimer); }
     room.slots = room.slots.filter((slot) => !slot.isBot);
     if (clearRoom) { clearInterval(room.tick); room.tick = null; room.slots.forEach((slot) => clearTimeout(slot.disconnectTimer)); room.slots = []; room.game = null; room.rematch.clear(); }
+  }
+
+  /**
+   * 런처가 REDIRECT 직전에 호출한다. 이전 판의 접속자·AI를 정리하고 이 번호를 가진 사람만 받는다.
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid sichuan matchId');
+    // 카운트다운·플레이 단계이고 열린 사람 연결이 있을 때만 진행 중으로 본다(대기·결과 화면은 제외).
+    const live = room.game && (room.game.phase === 'countdown' || room.game.phase === 'playing');
+    if (live && room.slots.some((slot) => !slot.isBot && slot.ws.readyState === WebSocket.OPEN)) return false;
+    expectedMatchId = matchId;
+    for (const slot of room.slots.filter((entry) => !entry.isBot)) {
+      slot.disposed = true; // 옛 소켓의 close 핸들러가 새 접속자의 방 상태를 건드리지 않게 한다.
+      send(slot.ws, { type: 'ERROR', code: 'match_replaced', message: '새 경기가 시작되어 이전 연결을 종료합니다.' });
+      try { slot.ws.close(4001, 'MATCH_REPLACED'); } catch {}
+    }
+    disposeAiSession('match replaced', true); // AI 자식 프로세스·봇 슬롯 정리
+    clearInterval(room.tick); room.tick = null;
+    room.slots.forEach((slot) => clearTimeout(slot.disconnectTimer));
+    room.slots = []; room.game = null; room.rematch.clear();
+    return true;
   }
 
   /** @param {object} requester 요청 슬롯 @returns {void} 서버 발급 토큰으로 AI를 생성한다. */
@@ -148,6 +175,7 @@ export function createApp(options = {}) {
   wss.on('connection', (ws, request) => {
     const url = new URL(request.url || '/', 'http://localhost'); const token = url.searchParams.get('sessionToken'); const botMode = url.searchParams.get('mode') === 'bot'; const lobbyReady = url.searchParams.get('lobbyReady') === '1';
     if (botMode && (!aiSession || aiSession.authorized || url.searchParams.get('botToken') !== aiSession.token)) { send(ws, { type: 'ERROR', code: 'BOT_UNAUTHORIZED' }); ws.close(1008, 'bot unauthorized'); return; }
+    if (!botMode && expectedMatchId !== null && url.searchParams.get('matchId') !== expectedMatchId) { send(ws, { type: 'ERROR', code: 'invalid_match', message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.' }); ws.close(4002, 'INVALID_MATCH'); return; }
     let slot = token ? room.slots.find((entry) => entry.token === token && entry.graceUntil > Date.now()) : null;
     const reconnected = Boolean(slot);
     if (!slot && room.slots.filter((entry) => entry.connected).length >= 2) { send(ws, { type: 'ERROR', code: 'ROOM_FULL' }); ws.close(); return; }
@@ -185,7 +213,7 @@ export function createApp(options = {}) {
 
   /** @param {http.IncomingMessage} request 요청 @param {import('node:stream').Duplex} socket 소켓 @param {Buffer} head 선행 데이터 @returns {void} */
   function handleUpgrade(request, socket, head) { wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request)); }
-  return { handleHttp, handleUpgrade, setHostUrl(value) { hostUrl = value; }, close() { disposeAiSession('server close', true); clearInterval(room.tick); room.slots.forEach((slot) => clearTimeout(slot.disconnectTimer)); wss.close(); } };
+  return { handleHttp, handleUpgrade, prepareMatch, setHostUrl(value) { hostUrl = value; }, close() { disposeAiSession('server close', true); clearInterval(room.tick); room.slots.forEach((slot) => clearTimeout(slot.disconnectTimer)); wss.close(); } };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

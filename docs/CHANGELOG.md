@@ -1,5 +1,14 @@
 # Changelog
 
+## [2026-10-31] - 런처 대기실 매치 번호를 모든 단일 방 게임에 적용
+
+- 대기실을 거쳐 들어온 사람이 이전 판의 대기 화면에 남은 접속자와 섞이거나 "방이 가득 찼다"로 거절되던 문제를 막았다. `prepareMatch(matchId)`를 export하는 게임(omok, matgo, venezia, hanabi, rummikub, davinci-code, codenames-duet, codenames, janggi, yahtzee, yutnori, sichuan-battle, starlight-mail-tower, moonlight-kitchen-express)은 런처가 대기실 시작마다 매치 번호를 발급해 REDIRECT URL로 넘기고, 게임 서버가 이전 접속자를 정리한 뒤 그 번호를 가진 사람만 받는다.
+- 진행 중인 판이 있으면 새 대기실은 `game_busy`로 막힌다(게임당 동시에 한 판). 동시 대국이 필요한 게임은 마작처럼 방 번호별 분리(A안)로 바꾸는 것이 정식 해법이며 아직 적용하지 않았다.
+- 런처의 매치 번호 처리는 `prepareMatch` 유무로 결정하도록 일반화했다.
+- 틀린그림찾기: 이전 접속자가 정리될 때 늦게 도착한 close가 새 매치 번호를 지워 새 접속자가 `INVALID_MATCH`로 거절되던 문제를 고쳤다.
+- "AI랑 시작" 버튼이 페이지를 다시 열 때 `matchId`를 유지한다(omok, matgo, rummikub, janggi, yahtzee, starlight-mail-tower).
+- 검증: 게임별 `tests/match-prepare.test.js`와 런처 통합 `node tests/launcher-match-prepare.integration.mjs`(대기실 → REDIRECT → 옛 접속자 4001 정리 → 새 접속자 입장).
+
 ## [2026-10-28] - 마작 추가
 
 - 4인 일본식 리치마작(`mahjong/`)을 런처에 등록했다. 사람 1~4명이 게임 안 방 설정 화면에서 모이고 빈자리는 서버 관리형 AI가 채운다. `games.json`, `GAME_APPS`, `GAME_MANAGED_AI_IDS`를 함께 갱신했다. 규칙과 계약은 `mahjong/CLAUDE.md`를 따른다.

@@ -104,6 +104,7 @@ export function createApp({ reloadCatalog = reloadPublishedStages } = {}) {
 
   function closeStalePlayers() {
     for (const player of players) {
+      player.ws._replaced = true;
       sendJson(player.ws, { type: 'ERROR', message: '새 경기가 시작되어 이전 연결을 종료해요.' });
       try { player.ws.close(4001, 'MATCH_REPLACED'); } catch { /* noop */ }
     }
@@ -253,6 +254,8 @@ export function createApp({ reloadCatalog = reloadPublishedStages } = {}) {
     });
 
     ws.on('close', () => {
+      // prepareMatch가 내보낸 옛 연결의 지연 close가 새 매치 번호를 지우지 않게 한다.
+      if (ws._replaced) return;
       players = players.filter((candidate) => candidate !== player);
       if (players.length) {
         broadcast({ type: 'CURSOR_LEAVE', playerId });

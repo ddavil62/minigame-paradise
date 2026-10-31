@@ -50,6 +50,9 @@ venezia/
 node venezia/server.js --port 3017
 ```
 
+- 런처 매치 계약 테스트: `node venezia/tests/match-prepare.test.js` (격리 포트 3110, 서버 불필요)
+- 런처 매치 계약: `createApp()`이 `prepareMatch(matchId): boolean`을 export한다. `playing` 단계에 열린 사람 연결이 있으면 `false`, 아니면 봇·타이머를 정리하고 옛 접속자를 `match_replaced`/4001로 내보낸 뒤 방을 초기화한다. 클라이언트는 URL `matchId`를 WS 쿼리(재연결 포함)로 넘기며 서버는 불일치를 `invalid_match`/4002로 거절한다. `mode=bot`은 번호 없이 통과하고 번호 미준비(단독 실행)면 제한 없다.
+
 ## 포트
 
 - 단독 실행: 3017 (충돌 시 +1 폴백)

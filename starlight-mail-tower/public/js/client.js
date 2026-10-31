@@ -119,6 +119,9 @@ function buildWebSocketUrl() {
   // freshEntry=true이면 서버에 신규 진입 신호를 보낸다 (유령 슬롯 정리용).
   // 최초 open 핸들러에서 false로 내려 자동 재연결에는 실리지 않는다.
   if (freshEntry) wsParams.set('fresh', '1');
+  // 런처 대기실이 발급한 매치 번호. 자동 재연결에도 항상 실어 서버가 옛 판의 접속자를 걸러내게 한다.
+  const matchId = parameters.get('matchId');
+  if (matchId) wsParams.set('matchId', matchId);
   const qs = wsParams.toString();
   return `${protocol}//${location.host}${basePath}ws${qs ? `?${qs}` : ''}`;
 }
@@ -375,6 +378,8 @@ function handleServerMessage(message) {
     // 서버가 ws.close(1008)을 함께 보내므로 close 이벤트가 발생하는데,
     // intentionalClose = true가 없으면 350ms 재연결이 무한 반복된다.
     if (message.code === 'ROOM_FULL') intentionalClose = true;
+    // 새 경기로 교체되었거나(match_replaced) 번호가 맞지 않으면(invalid_match) 재연결해도 소용없다.
+    if (message.code === 'match_replaced' || message.code === 'invalid_match') intentionalClose = true;
   }
 }
 
@@ -393,7 +398,7 @@ function connect() {
     freshEntry = false;
   });
   socket.addEventListener('message', (event) => { try { handleServerMessage(JSON.parse(event.data)); } catch { showToast(t('error.invalidMessage')); } });
-  socket.addEventListener('close', () => { connectionState = 'closed'; updateConnectionLabel(); if (!intentionalClose && !sessionEnded) window.setTimeout(connect, 350); });
+  socket.addEventListener('close', (event) => { if (event.code === 4001 || event.code === 4002) intentionalClose = true; connectionState = 'closed'; updateConnectionLabel(); if (!intentionalClose && !sessionEnded) window.setTimeout(connect, 350); });
 }
 
 /** @param {string} code 키 코드 @returns {keyof typeof input|null} */
@@ -436,7 +441,9 @@ if (aiStartButton) {
     send({ type: CLIENT_MESSAGE.LEAVE_GAME });
     window.setTimeout(() => {
       socket?.close();
-      location.href = `${location.pathname}?mode=ai&fresh=1`;
+      // 런처가 발급한 매치 번호를 유지해야 서버가 재접속을 같은 판으로 받는다.
+      const matchId = new URLSearchParams(location.search).get('matchId');
+      location.href = `${location.pathname}?mode=ai&fresh=1${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
     }, 120);
   });
 }

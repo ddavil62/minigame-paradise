@@ -51,7 +51,7 @@ const MIME = {
  * 모든 룸 상태(players/game)는 closure로 격리되어 다른 게임과 공유되지 않는다.
  *
  * @param {{ hostUrl?: string, botDelayMs?:number|(()=>number), chooseBotAction?:Function }} [opts]
- * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function, prepareMatch: Function }}
  */
 export function createApp(opts = {}) {
   // closure 변수: standalone listen 이후 setHostUrl로 갱신 가능.
@@ -249,10 +249,65 @@ export function createApp(opts = {}) {
     scheduleBotTurn();
   }
 
+  // ── 매치 준비 (런처 대기실 → 게임 입장) ───────────────────────────
+  // 런처가 REDIRECT 직전에 prepareMatch(id)를 호출하고 같은 id를 URL로 넘긴다. 이전 판에 남아 있던
+  // 접속자(예: 대기 화면에 멈춘 탭)가 새 판에 섞이지 않도록 정리하고 이 id를 가진 사람만 받는다.
+  // 런처를 거치지 않는 단독 실행은 expectedMatchId가 null이라 기존처럼 id 없이 입장한다.
+  // 하나비의 AI(botPlayer)는 WebSocket 없는 서버 내부 플레이어라 matchId 검사 대상이 아니다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
+
+  /**
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid hanabi matchId');
+    // 진행 중 = 게임이 playing 단계이고 열린 사람 연결이 있음. 대기·종료(ended) 화면은 아님.
+    if (game && game.phase === 'playing' && players.some((p) => p.ws.readyState === 1)) return false;
+    expectedMatchId = matchId;
+    cancelBotTurn();
+    game = null;
+    botPlayer = null;
+    gameMode = null;
+    readySet.clear();
+    const stalePlayers = players;
+    players = [];
+    for (const stale of stalePlayers) {
+      stale.ws._replaced = true;
+      if (stale.ws.readyState === 1) {
+        stale.ws.send(JSON.stringify({
+          type: 'ERROR',
+          code: 'match_replaced',
+          message: '새 경기가 시작되어 이전 연결을 종료합니다.',
+        }));
+      }
+      try { stale.ws.close(4001, 'MATCH_REPLACED'); } catch (e) { /* 이미 닫힌 연결 */ }
+    }
+    return true;
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+    // 런처가 준비한 매치 번호가 없거나 다른 사람(옛 판의 탭 등)은 입장시키지 않는다.
+    if (expectedMatchId !== null) {
+      const reqMatchId = new URL(req.url || '/', 'http://localhost').searchParams.get('matchId');
+      if (reqMatchId !== expectedMatchId) {
+        try {
+          ws.send(JSON.stringify({
+            type: 'ERROR',
+            code: 'invalid_match',
+            message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.',
+          }));
+        } catch (e) { /* 이미 닫힌 연결 */ }
+        ws.close(4002, 'INVALID_MATCH');
+        return;
+      }
+    }
+
     // 정원 초과 직전, 좀비 슬롯(끊겼지만 close 미발화) 청소 시도.
     if (players.length >= 2) {
       const before = players.length;
@@ -454,6 +509,8 @@ export function createApp(opts = {}) {
 
     // ── 연결 해제 ──
     ws.on('close', () => {
+      // prepareMatch가 내보낸 옛 연결은 같은 id의 새 접속자 상태를 건드리지 않는다.
+      if (ws._replaced) return;
       console.log(`[hanabi] ${player.id} 연결 해제`);
       const leftName = player.name || '(알 수 없음)';
       readySet.delete(player.id);
@@ -563,7 +620,7 @@ export function createApp(opts = {}) {
     HOST_URL = typeof url === 'string' ? url : '';
   }
 
-  return { handleHttp, handleUpgrade, setHostUrl };
+  return { handleHttp, handleUpgrade, setHostUrl, prepareMatch };
 }
 
 // ──────────────────────────────────────────────────────────────

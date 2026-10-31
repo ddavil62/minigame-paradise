@@ -5,7 +5,7 @@ export class GameNetwork extends EventTarget {
   /** @param {string} name 표시 이름 */
   constructor(name){
     super();this.name=name;this.socket=null;this.sequence=0;this.closed=false;this.reconnectTimer=null;this.socketGeneration=0;
-    const parameters=new URLSearchParams(location.search);this.lobbyReady=parameters.get('lobbyReady')==='1';
+    const parameters=new URLSearchParams(location.search);this.lobbyReady=parameters.get('lobbyReady')==='1';this.matchId=parameters.get('matchId')||'';
     if(parameters.get('fresh')==='1'){
       sessionStorage.removeItem('sichuan:token');parameters.delete('fresh');
       const search=parameters.toString();history.replaceState(history.state,'',`${location.pathname}${search?`?${search}`:''}${location.hash}`);
@@ -18,10 +18,10 @@ export class GameNetwork extends EventTarget {
     if(this.closed)return;
     clearTimeout(this.reconnectTimer);this.reconnectTimer=null;
     const protocol=location.protocol==='https:'?'wss':'ws';const token=sessionStorage.getItem('sichuan:token')||'';const generation=++this.socketGeneration;
-    const socket=new WebSocket(`${protocol}://${location.host}/sichuan-battle/ws?name=${encodeURIComponent(this.name)}&sessionToken=${encodeURIComponent(token)}&lobbyReady=${this.lobbyReady?'1':'0'}`);this.socket=socket;
+    const socket=new WebSocket(`${protocol}://${location.host}/sichuan-battle/ws?name=${encodeURIComponent(this.name)}&sessionToken=${encodeURIComponent(token)}&lobbyReady=${this.lobbyReady?'1':'0'}${this.matchId?`&matchId=${encodeURIComponent(this.matchId)}`:''}`);this.socket=socket;
     socket.addEventListener('open',()=>{if(this.socket===socket&&generation===this.socketGeneration)this.dispatchEvent(new CustomEvent('connectionstate',{detail:{connected:true,generation}}));});
     socket.addEventListener('message',(event)=>{if(this.socket!==socket||generation!==this.socketGeneration)return;let message;try{message=JSON.parse(event.data);}catch{return;}if(message.type==='JOINED')sessionStorage.setItem('sichuan:token',message.sessionToken);this.dispatchEvent(new CustomEvent('message',{detail:message}));});
-    socket.addEventListener('close',()=>{if(this.socket!==socket||generation!==this.socketGeneration)return;this.dispatchEvent(new CustomEvent('connectionstate',{detail:{connected:false,generation}}));if(!this.closed)this.reconnectTimer=setTimeout(()=>this.connect(),900);});
+    socket.addEventListener('close',(event)=>{if(this.socket!==socket||generation!==this.socketGeneration)return;if(event.code===4001||event.code===4002)this.closed=true;this.dispatchEvent(new CustomEvent('connectionstate',{detail:{connected:false,generation}}));if(!this.closed)this.reconnectTimer=setTimeout(()=>this.connect(),900);});
   }
 
   /** @param {object} payload 메시지 @returns {string|null} 실제 전송 성공 시 요청 ID */

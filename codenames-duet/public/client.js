@@ -138,7 +138,10 @@
       sessionStorage.setItem('codenames-duet:name', decodeURIComponent(urlName));
     }
 
-    ws = new WebSocket(`${proto}://${location.host}${wsPath}`);
+    // 런처 대기실이 발급한 매치 번호. 서버가 옛 판의 접속자를 걸러내는 데 쓴다.
+    const matchId = urlParams.get('matchId');
+    const wsQuery = matchId ? `?matchId=${encodeURIComponent(matchId)}` : '';
+    ws = new WebSocket(`${proto}://${location.host}${wsPath}${wsQuery}`);
     ws.addEventListener('open', () => {
       console.log('[client] 연결됨');
       reconnectAttempts = 0;
@@ -157,8 +160,10 @@
       try { msg = JSON.parse(ev.data); } catch { return; }
       handleMessage(msg);
     });
-    ws.addEventListener('close', () => {
+    ws.addEventListener('close', (ev) => {
       console.log('[client] 연결 종료');
+      // 새 경기로 교체됐거나 유효하지 않은 매치 번호면 같은 번호로 재접속해도 거절되므로 멈춘다.
+      if (ev.code === 4001 || ev.code === 4002) autoReconnect = false;
       if (!autoReconnect) return;
       // backoff: 1s → 2s → 4s → 최대 8s
       const delay = Math.min(8000, 1000 * Math.pow(2, reconnectAttempts));

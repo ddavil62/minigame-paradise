@@ -396,7 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
     els.btnStartAi.textContent = '🤖 AI 호출 중...';
     const name = sessionStorage.getItem('omok:name') || '';
     const base = location.pathname; // '/omok/' 또는 '/'
-    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+    // 런처가 발급한 매치 번호를 유지해야 서버가 재접속을 같은 판으로 받는다.
+    const matchId = new URLSearchParams(location.search).get('matchId');
+    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
   });
 
   // ── 준비 완료(READY) — 자동 READY로 대체, 버튼 핸들러 제거 ──

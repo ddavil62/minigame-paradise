@@ -50,7 +50,7 @@ const MIME = {
  *   봇이 접속할 WS URL을 반환하는 함수 (mode=ai 사용자 진입 시 호출).
  *   launcher 통합 모드에서는 launcher가 `ws://localhost:{PORT}/janggi/ws?mode=bot` 를 넘기고,
  *   standalone 모드에서는 listen 포트로 자동 구성.
- * @returns {{ handleHttp: Function, handleUpgrade: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, prepareMatch: Function }}
  */
 export function createApp(opts = {}) {
   const getBotUrl = opts.getBotUrl || (() => null);
@@ -250,12 +250,15 @@ export function createApp(opts = {}) {
   // ── 봇 자식 프로세스 관리 (mode=ai 사용자가 들어왔을 때 자동 spawn) ────
   /** @type {import('child_process').ChildProcess|null} */
   let botChild = null;
+  /** @type {NodeJS.Timeout|null} mode=ai 진입 후 봇 spawn 지연 타이머 (prepareMatch가 취소) */
+  let botSpawnTimer = null;
 
   /**
    * 봇 자식 프로세스를 spawn한다. 이미 실행 중이면 무시.
    * bot.js가 없으면 경고 출력 후 스킵.
    */
   function spawnBotChild() {
+    botSpawnTimer = null;
     const botPath = path.join(__dirname, 'bot.js');
     if (!fs.existsSync(botPath)) {
       console.warn('[janggi] bot.js 없음 — 봇 spawn 스킵');
@@ -292,6 +295,45 @@ export function createApp(opts = {}) {
     }
   }
 
+  // ── 매치 준비 (런처 대기실 → 게임 입장) ───────────────────────────
+  // 런처가 REDIRECT 직전에 prepareMatch(id)를 호출하고 같은 id를 URL로 넘긴다. 이전 판에 남아 있던
+  // 접속자(예: 대기 화면에 멈춘 사람, 끊긴 판의 빈 진영으로 재접속하려는 사람)가 새 판에 섞이지 않도록
+  // 정리하고 이 id를 가진 사람만 받는다. 런처를 거치지 않는 단독 실행은 expectedMatchId가 null이라
+  // 기존처럼 id 없이 입장한다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
+
+  /**
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판(playing 단계 + 열린 사람 연결)이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid janggi matchId');
+    if (game && game.phase === 'playing'
+      && players.some((p) => !p.ws._isBot && p.ws.readyState === WebSocket.OPEN)) return false;
+    expectedMatchId = matchId;
+    if (botSpawnTimer) { clearTimeout(botSpawnTimer); botSpawnTimer = null; }
+    killBotChild();
+    stopTickTimer();
+    clearSetupTimer();
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    const stalePlayers = players;
+    players = [];
+    game = null;
+    readySet = new Set();
+    for (const stale of stalePlayers) {
+      stale.ws._replaced = true;
+      sendTo(stale, {
+        type: 'ERROR',
+        code: 'match_replaced',
+        message: '새 경기가 시작되어 이전 연결을 종료합니다.',
+      });
+      try { stale.ws.close(4001, 'MATCH_REPLACED'); } catch (e) { /* 이미 닫힌 연결 */ }
+    }
+    return true;
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
@@ -304,6 +346,17 @@ export function createApp(opts = {}) {
     const isBot = wsMode === 'bot';
     ws._mode = wsMode;
     ws._isBot = isBot;
+
+    // 런처가 준비한 매치 번호가 없거나 다른 사람(옛 판의 탭 등)은 입장시키지 않는다. 봇은 서버가 직접 띄운다.
+    if (!isBot && expectedMatchId !== null && url.searchParams.get('matchId') !== expectedMatchId) {
+      sendTo({ ws }, {
+        type: 'ERROR',
+        code: 'invalid_match',
+        message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.',
+      });
+      ws.close(4002, 'INVALID_MATCH');
+      return;
+    }
 
     // 사람(비봇) 진입 시 죽은(좀비) 슬롯만 선제 정리 (살아있는 봇은 보존)
     if (!isBot) {
@@ -414,7 +467,8 @@ export function createApp(opts = {}) {
       // mode=ai 사용자가 혼자 들어왔다 → 봇 자동 spawn (자기 자식 프로세스).
       // 봇이 connect하면 READY 게이트를 통해 게임 시작.
       // 약간의 지연: 사용자가 JOINED를 받기 전 봇이 먼저 와서 side 충돌 가능성 회피.
-      setTimeout(() => spawnBotChild(), 200);
+      if (botSpawnTimer) clearTimeout(botSpawnTimer);
+      botSpawnTimer = setTimeout(() => spawnBotChild(), 200);
     }
 
     setupMessageHandler(ws, player);
@@ -610,6 +664,8 @@ export function createApp(opts = {}) {
     });
 
     ws.on('close', () => {
+      // prepareMatch가 내보낸 옛 연결은 같은 id의 새 접속자를 건드리지 않는다.
+      if (ws._replaced) return;
       console.log(`[janggi] ${player.id}(${player.side}) 연결 해제 (mode=${ws._mode})`);
       const disconnectedName = player.name || '(알 수 없음)';
       readySet.delete(player.id);
@@ -727,7 +783,7 @@ export function createApp(opts = {}) {
     });
   }
 
-  return { handleHttp, handleUpgrade };
+  return { handleHttp, handleUpgrade, prepareMatch };
 }
 
 // ──────────────────────────────────────────────────────────────

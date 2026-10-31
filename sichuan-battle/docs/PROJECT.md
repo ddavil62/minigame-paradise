@@ -79,6 +79,7 @@ sichuan-battle/
 | 다국어·접근성 | ko/en, 키보드 1/2/3, ARIA, 저감 모션 지원 | 완료 |
 | 커스텀 아트 | 고유 문양 타일 24종과 저대비 야간 정원 배경 적용 | 완료 |
 | 런처 통합 | 전용 HTTP/WS 경로, 2인·AI 채우기와 멱등 READY 승계 지원 | 완료 |
+| 매치 번호 | 런처가 `prepareMatch(matchId)`로 방을 리셋(옛 접속자 `4001`, AI 정리, 카운트다운·플레이 중이면 false)하고, 클라이언트는 URL `matchId`를 WS 쿼리로 보낸다. 번호가 다르면 `invalid_match`/`4002`(봇 제외, 번호 미준비 단독 실행은 무제한). `tests/match-prepare.test.js` | 완료 |
 
 ## 알려진 제약사항
 

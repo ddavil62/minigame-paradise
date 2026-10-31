@@ -478,7 +478,9 @@ document.addEventListener('DOMContentLoaded', () => {
     els.btnStartAi.textContent = '🤖 AI 호출 중...';
     const name = sessionStorage.getItem('yahtzee:name') || '';
     const base = location.pathname;
-    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+    // 페이지를 다시 열므로 매치 번호를 유지해야 서버가 입장을 허용한다.
+    const matchId = new URLSearchParams(location.search).get('matchId');
+    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
   });
 
   // ── 상대 이탈 배너 → 로비로 돌아가기 ─────────────────────────

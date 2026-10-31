@@ -44,6 +44,7 @@ codenames/
     ├── e2e.spec.js          # Playwright E2E (12건, 4 브라우저 컨텍스트)
     ├── bot-knowledge.test.js # 태그맵 단위 (22건, 590 커버리지 100%)
     ├── bot-smoke.test.js    # 봇 vs 봇 1판 완주 (23건)
+    ├── match-prepare.test.js # 런처 matchId/prepareMatch (포트 3158)
     └── screenshots/         # role-select / spymaster-view / operative-view 등
 ```
 
@@ -54,6 +55,8 @@ role_select  → 4인 입장(JOIN) + PICK_ROLE(팀/역할) + 호스트 START_GAM
 playing      → CLUE(스파이마스터) / GUESS·END_TURN(요원), 매 액션 후 역할별 STATE
 over         → GAME_OVER(키 전체 복기 공개) + REMATCH(선공 교체)
 ```
+
+런처 매치 계약: `createApp().prepareMatch(matchId): boolean`이 방을 초기화(봇 프로세스 정리, 옛 접속자 4001 `match_replaced`)하고 새 `matchId`만 받는다. 클라이언트는 페이지 URL의 `matchId`를 WS 쿼리로 전달하며, 사람 접속의 번호가 다르거나 없으면 4002 `invalid_match`. `mode=bot` 접속(AI 채우기 봇)은 번호 없이 통과. 진행 중(`phase==='playing'` + 열린 사람 연결)이면 false, `role_select`/`over`는 교체 가능. 단독 실행은 번호 불필요.
 
 ## 진행 상태
 

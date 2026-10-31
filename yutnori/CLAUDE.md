@@ -44,6 +44,7 @@
 
 - `mode=human`은 일반 게임, `mode=ai`는 사람 진입 후 봇 spawn, `mode=bot`은 자식 봇 전용이다.
 - `network.js`는 접속 모드를 `sessionStorage('yutnori:mode')`에 보존한다.
+- 런처 매치 번호: 대기실이 REDIRECT 직전에 `app.prepareMatch(id)`를 호출하고 URL에 `?matchId=<id>`를 붙인다. `network.js`가 WS 쿼리(재연결 포함)로 전달하며 "AI랑 시작"은 현재 URL 쿼리를 유지한다. 서버는 `started && !winner` + 열린 사람 연결이 있으면 false(game_busy), 아니면 방(players/game/정원 `roomMaxPlayers`)을 초기화하고 옛 접속자를 `match_replaced`(4001)로 내보낸다. 이후 번호가 다른/없는 비봇 접속은 `invalid_match`(4002). 단독 실행은 번호 없이 입장.
 - 내부 합성 분기값 `shortcut-top`과 `shortcut-bottom`은 서버 내부에서만 사용한다.
 
 ## 테스트
@@ -61,6 +62,7 @@ npx playwright test tests/e2e-scenarios.spec.js tests/redesign-hittest-qa.spec.j
 # 보조 smoke와 실제 봇 경로
 node tests/smoke.test.js --port 3088
 node tests/bot-smoke.test.js
+node tests/match-prepare.test.js   # matchId/prepareMatch 계약 (포트 3183)
 ```
 
 새 로직은 관련 룰북 시나리오를 추가한다. 정통 룰 변경으로 기존 기대값이 바뀌면 테스트 주석에 이유를 남기고 갱신할 수 있다.

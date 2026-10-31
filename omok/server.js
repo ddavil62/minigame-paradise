@@ -54,7 +54,7 @@ const MIME = {
  * @param {string} [opts.hostUrl] LAN 접속 URL (JOINED 메시지에 포함, 친구 안내용)
  * @param {() => string} [opts.getBotUrl]
  *   봇이 접속할 WS URL을 반환하는 함수 (mode=ai 사용자 진입 시 호출).
- * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, setHostUrl: Function, prepareMatch: Function }}
  */
 export function createApp(opts = {}) {
   // closure 변수: standalone listen 이후 setHostUrl로 갱신 가능.
@@ -258,6 +258,46 @@ export function createApp(opts = {}) {
     }
   }
 
+  // ── 매치 준비 (런처 대기실 → 게임 입장) ───────────────────────────
+  // 런처가 REDIRECT 직전에 prepareMatch(id)를 호출하고 같은 id를 URL로 넘긴다. 이전 판에 남아 있던
+  // 접속자(예: 대기 화면에 멈춘 사람)가 새 판에 섞이지 않도록 정리하고 이 id를 가진 사람만 받는다.
+  // 런처를 거치지 않는 단독 실행은 expectedMatchId가 null이라 기존처럼 id 없이 입장한다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
+
+  /**
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid omok matchId');
+    if (game && game.phase === 'playing'
+      && players.some((p) => !p.ws._isBot && p.ws.readyState === WebSocket.OPEN)) return false;
+    expectedMatchId = matchId;
+    killBotChild();
+    const stalePlayers = players;
+    players = [];
+    game = null;
+    lastGameResult = null;
+    rematchPending = new Set();
+    readySet = new Set();
+    for (const stale of stalePlayers) {
+      stale.ws._replaced = true;
+      sendJsonSafe(stale.ws, {
+        type: 'ERROR',
+        code: 'match_replaced',
+        message: '새 경기가 시작되어 이전 연결을 종료합니다.',
+      });
+      try { stale.ws.close(4001, 'MATCH_REPLACED'); } catch (e) { /* 이미 닫힌 연결 */ }
+    }
+    return true;
+  }
+
+  function sendJsonSafe(ws, payload) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
@@ -268,6 +308,17 @@ export function createApp(opts = {}) {
     const isBot = wsMode === 'bot';
     ws._mode = wsMode;
     ws._isBot = isBot;
+
+    // 런처가 준비한 매치 번호가 없거나 다른 사람(옛 판의 탭 등)은 입장시키지 않는다. 봇은 서버/런처가 직접 띄운다.
+    if (!isBot && expectedMatchId !== null && reqUrlObj.searchParams.get('matchId') !== expectedMatchId) {
+      sendJsonSafe(ws, {
+        type: 'ERROR',
+        code: 'invalid_match',
+        message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.',
+      });
+      ws.close(4002, 'INVALID_MATCH');
+      return;
+    }
 
     // 사람(비봇)이 새로 연결될 때, 정원 판정 직전에 "죽은/닫히는" 슬롯만 선제 정리한다 (#13 안전망).
     // 살아있는(OPEN) 봇은 보존한다 — AI채우기 플로우는 봇이 먼저 접속하므로 전체 sweep 금지.
@@ -481,6 +532,8 @@ export function createApp(opts = {}) {
     // ── 연결 해제 ──
     ws.on('close', () => {
       console.log(`[omok] ${player.id} 연결 해제 (mode=${ws._mode})`);
+      // prepareMatch가 내보낸 옛 연결은 같은 id의 새 접속자를 건드리지 않는다.
+      if (ws._replaced) return;
       players = players.filter((p) => p.id !== player.id);
       // 리매치/READY 동의 추적에서 제거(나간 사람은 동의 무효).
       rematchPending.delete(player.id);
@@ -589,7 +642,7 @@ export function createApp(opts = {}) {
     HOST_URL = typeof url === 'string' ? url : '';
   }
 
-  return { handleHttp, handleUpgrade, setHostUrl };
+  return { handleHttp, handleUpgrade, setHostUrl, prepareMatch };
 }
 
 // ──────────────────────────────────────────────────────────────

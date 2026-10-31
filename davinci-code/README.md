@@ -65,6 +65,7 @@ node server.js
 - pagehide 시 즉시 close → 좀비 슬롯 방지
 - 정원 2명 초과 거절
 - 서버 권위 게임 상태 (클라이언트는 입력+스냅샷만)
+- 런처 매치 계약: `createApp().prepareMatch(matchId): boolean`이 방을 초기화하고(옛 접속자는 4001 `match_replaced`) 새 `matchId`만 받는다. 클라이언트는 페이지 URL의 `matchId`를 WS 쿼리로 전달하며 다르거나 없으면 4002 `invalid_match`. 진행 중(`phase!=='won'` + 열린 연결)이면 false, 단독 실행은 번호 불필요. 테스트: `node tests/match-prepare.test.js` (포트 3156)
 
 ## 트러블슈팅
 

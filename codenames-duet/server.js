@@ -16,7 +16,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { createGame, submitClue, guessCard, passTurn, snapshotForPlayer } from './game.js';
 
 // ── 경로 + 설정 ───────────────────────────────────────────────────
@@ -39,7 +39,7 @@ const MIME = {
  * 코드네임 듀엣 게임 앱 인스턴스를 생성한다.
  * 모든 룸 상태(players/game)는 closure로 격리되어 다른 게임과 공유되지 않는다.
  *
- * @returns {{ handleHttp: Function, handleUpgrade: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, prepareMatch: Function }}
  */
 export function createApp() {
   // ── 룸 상태 (closure 격리, 2인 1룸 고정) ─────────────────────────
@@ -149,11 +149,63 @@ export function createApp() {
     return payload;
   }
 
+  // ── 매치 준비 (런처 대기실 → 게임 입장) ───────────────────────────
+  // 런처가 REDIRECT 직전에 prepareMatch(id)를 호출하고 같은 id를 URL로 넘긴다. 이전 판에 남아 있던
+  // 접속자(예: 대기 화면에 멈춘 사람)가 새 판에 섞이지 않도록 정리하고 이 id를 가진 사람만 받는다.
+  // 런처를 거치지 않는 단독 실행은 expectedMatchId가 null이라 기존처럼 id 없이 입장한다.
+  // 이 게임은 봇이 없으므로 모든 접속에 번호 검사를 적용한다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
+
+  /**
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid codenames-duet matchId');
+    if (game && game.phase === 'playing'
+      && players.some((p) => p.ws.readyState === WebSocket.OPEN)) return false;
+    expectedMatchId = matchId;
+    const stalePlayers = players;
+    players = [];
+    game = null;
+    readySet.clear();
+    for (const stale of stalePlayers) {
+      stale.ws._replaced = true;
+      sendJsonSafe(stale.ws, {
+        type: 'ERROR',
+        code: 'match_replaced',
+        message: '새 경기가 시작되어 이전 연결을 종료합니다.',
+      });
+      try { stale.ws.close(4001, 'MATCH_REPLACED'); } catch (e) { /* 이미 닫힌 연결 */ }
+    }
+    return true;
+  }
+
+  function sendJsonSafe(ws, payload) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
   // ── WebSocket 핸들러 ──────────────────────────────────────────────
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+    // 런처가 준비한 매치 번호가 없거나 다른 사람(옛 판의 탭 등)은 입장시키지 않는다.
+    if (expectedMatchId !== null) {
+      const reqUrlObj = new URL(req.url || '/', 'http://localhost');
+      if (reqUrlObj.searchParams.get('matchId') !== expectedMatchId) {
+        sendJsonSafe(ws, {
+          type: 'ERROR',
+          code: 'invalid_match',
+          message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.',
+        });
+        ws.close(4002, 'INVALID_MATCH');
+        return;
+      }
+    }
+
     // 정원 초과 직전, 좀비 슬롯(끊겼지만 close 이벤트 미발화) 즉시 청소 시도
     if (players.length >= 2) {
       const before = players.length;
@@ -302,6 +354,8 @@ export function createApp() {
     // ── 연결 해제 ──
     ws.on('close', () => {
       console.log(`[codenames] ${player.id} 연결 해제`);
+      // prepareMatch가 내보낸 옛 연결은 같은 id의 새 접속자를 건드리지 않는다.
+      if (ws._replaced) return;
       players = players.filter((p) => p.id !== player.id);
       readySet.delete(player.id);
       if (players.length === 0) {
@@ -380,7 +434,7 @@ export function createApp() {
     });
   }
 
-  return { handleHttp, handleUpgrade };
+  return { handleHttp, handleUpgrade, prepareMatch };
 }
 
 // ──────────────────────────────────────────────────────────────

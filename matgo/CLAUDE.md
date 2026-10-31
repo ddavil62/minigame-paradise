@@ -47,6 +47,7 @@ npx playwright test tests/e2e-scenarios.spec.js --reporter=list
 npx playwright test tests/reports-54-59-browser.spec.js tests/reports-63-64-browser.spec.js tests/qa-63-64-edge.spec.js tests/reports-65-browser.spec.js tests/reports-65-qa.spec.js --reporter=list
 ```
 
+- 런처 매치 계약 테스트: `node tests/match-prepare.test.js` (격리 포트 3109, 서버 불필요)
 - `POST /test/reset`으로 공유 룸을 테스트 전후에 초기화한다.
 - 상태가 필요한 시나리오는 `POST /test/inject`로 결정적으로 구성한다.
 - 오프닝 카드 이동이 끝난 뒤 조작하고, 일반 카드 선택은 `pickSafePlayCard` 같은 결정적 헬퍼를 사용한다.
@@ -54,6 +55,7 @@ npx playwright test tests/reports-54-59-browser.spec.js tests/reports-63-64-brow
 
 ## 변경 시 주의할 점
 
+- 런처 매치 계약: `createApp()`이 `prepareMatch(matchId): boolean`을 export한다. 진행 중인 라운드(`round_end`·`gameOver` 아님)에 열린 사람 연결이 있으면 `false`, 아니면 옛 접속자를 `match_replaced`/4001로 내보내고 방을 초기화한다. 클라이언트는 URL `matchId`를 WS 쿼리(재연결, "AI랑 시작" 재진입 포함)로 넘기며, 서버는 불일치를 `invalid_match`/4002로 거절한다. `mode=bot`은 번호 없이 통과하고 번호 미준비(단독 실행)면 제한 없다.
 - `pendingChoiceSrcCardId`는 바닥 선택 흐름에서 손 카드 출처를 식별하는 서버 기준값이다. 턴·라운드 경계에서 반드시 초기화한다.
 - `choiceFloorSrcCardId` 카드 이동은 행위자가 본인이면 `startFlyFromHand`, 상대면 `startFlyFromOppHand`를 사용한다.
 - 선택 카드가 전용 경로에서 처리됐으면 일반 상대 손 경로에서 제외해 이동 연출을 중복 등록하지 않는다.

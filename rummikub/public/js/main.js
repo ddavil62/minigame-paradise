@@ -701,7 +701,9 @@ document.addEventListener('DOMContentLoaded', () => {
     els.btnStartAi.textContent = '🤖 AI 호출 중...';
     const name = sessionStorage.getItem('rummikub:name') || '';
     const base = location.pathname;
-    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+    // 런처가 발급한 매치 번호를 유지해야 서버가 재접속을 같은 판으로 받는다.
+    const matchId = new URLSearchParams(location.search).get('matchId');
+    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
   });
 
   // ── 상대 이탈 배너 → 로비로 돌아가기 ─────────────────────────

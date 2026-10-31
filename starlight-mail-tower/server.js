@@ -34,7 +34,7 @@ export function hasRestartQuorum(slots, votes) {
 /**
  * 별빛 우편탑 앱 인스턴스를 만든다.
  * @param {{hostUrl?:string,testing?:boolean,reconnectGraceMs?:number}} [options] 통합 런처·테스트 옵션
- * @returns {{handleHttp:Function,handleUpgrade:Function,setHostUrl:Function,close:Function,getSimulation:Function}}
+ * @returns {{handleHttp:Function,handleUpgrade:Function,setHostUrl:Function,close:Function,getSimulation:Function,prepareMatch:Function}}
  */
 export function createApp(options = {}) {
   for (const level of LEVELS) {
@@ -60,6 +60,10 @@ export function createApp(options = {}) {
   let restartTimer = null;
   let resultTimer = null;
   let pauseState = null;
+  // 런처 대기실이 발급한 매치 번호. 런처 없는 단독 실행은 null이라 번호 없이 기존처럼 입장한다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
 
   /** @param {import('ws').WebSocket} ws 대상 소켓 @param {object} payload 메시지 @returns {void} */
   function send(ws, payload) { if (ws.readyState === 1) ws.send(JSON.stringify(payload)); }
@@ -327,6 +331,8 @@ export function createApp(options = {}) {
       handleMessage(ws, result.message);
     });
     ws.on('close', () => {
+      // prepareMatch가 내보낸 옛 연결은 새 판의 방 상태(슬롯·준비·봇)를 건드리지 않는다.
+      if (ws._replaced) return;
       clients.delete(ws);
       if (client.playerId) {
         restartVotes.delete(client.playerId);
@@ -414,11 +420,28 @@ export function createApp(options = {}) {
     fs.readFile(target, (error, data) => { if (error) { res.writeHead(404); res.end('Not Found'); return; } res.writeHead(200, { 'Content-Type': MIME[path.extname(target)] ?? 'application/octet-stream', 'Cache-Control': 'no-store' }); res.end(data); });
   }
 
+  /**
+   * 런처가 준비한 매치 번호가 없거나 다른 사람(옛 판의 탭 등)은 입장시키지 않는다. 봇(mode=bot)은 서버가 직접 띄운다.
+   * handleUpgrade의 fresh 정리·봇 spawn보다 먼저 호출해, 거절된 접속이 현재 판의 슬롯을 건드리지 못하게 한다.
+   * @param {http.IncomingMessage} req 요청 @param {import('stream').Duplex} socket 소켓 @param {Buffer} head 업그레이드 헤드
+   * @param {URL} requestUrl 요청 URL @param {string|null} mode mode 쿼리 @returns {boolean} 거절했으면 true
+   */
+  function rejectInvalidMatch(req, socket, head, requestUrl, mode) {
+    if (mode === 'bot' || expectedMatchId === null || requestUrl.searchParams.get('matchId') === expectedMatchId) return false;
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      send(ws, { type: SERVER_MESSAGE.ERROR, code: 'invalid_match', messageKey: 'error.invalidMatch' });
+      ws.close(4002, 'INVALID_MATCH');
+    });
+    return true;
+  }
+
   /** @param {http.IncomingMessage} req 요청 @param {import('stream').Duplex} socket 소켓 @param {Buffer} head 업그레이드 헤드 @returns {void} */
   function handleUpgrade(req, socket, head) {
     const requestUrl = new URL(req.url ?? '/', 'http://local');
     const mode = requestUrl.searchParams.get('mode');
     const fresh = requestUrl.searchParams.get('fresh');
+
+    if (rejectInvalidMatch(req, socket, head, requestUrl, mode)) return;
 
     // mode=ai & fresh=1 재진입 시 이전 세션의 잔존 슬롯을 강제 정리한다.
     // P-1 수정(LEAVE_GAME 전송)이 정상 동작하면 이 경로는 거의 실행되지 않지만,
@@ -473,13 +496,41 @@ export function createApp(options = {}) {
       if (mode === 'ai' && !botChild) spawnBot();
     });
   }
+  /**
+   * 런처가 REDIRECT 직전에 호출한다. 이전 판의 접속자·봇을 정리하고 이 번호를 가진 사람만 받는다.
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid starlight matchId');
+    // 플레이 중(또는 플레이 중 파트너 재접속 대기)이고 열린 사람 연결이 있을 때만 진행 중이다. 대기·결과·종료는 제외.
+    const playing = simulation.phase === 'playing' || (simulation.phase === 'paused' && pauseState?.previousPhase === 'playing');
+    if (playing && [...clients.values()].some((client) => client.playerId && !client.ws.isBot && client.ws.readyState === WebSocket.OPEN)) return false;
+    expectedMatchId = matchId;
+    killBot();
+    if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
+    cancelResultTransition();
+    for (const slot of slots.values()) if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer);
+    const stale = [...clients.keys()];
+    clients.clear();
+    for (const ws of stale) {
+      ws._replaced = true; // 옛 소켓의 close 핸들러가 같은 id의 새 접속자 상태를 건드리지 않게 한다.
+      send(ws, { type: SERVER_MESSAGE.ERROR, code: 'match_replaced', messageKey: 'error.invalidMatch' });
+      try { ws.close(4001, 'MATCH_REPLACED'); } catch { /* 이미 닫힌 연결 */ }
+    }
+    slots.clear(); expiredTokens.clear(); ready.clear(); restartVotes.clear(); resultVotes.clear();
+    pauseState = null;
+    selectedLevelId = DEFAULT_LEVEL_ID;
+    simulation = createSimulation(selectedLevelId);
+    return true;
+  }
   /** @param {string} value 호스트 주소 @returns {void} */
   function setHostUrl(value) { hostUrl = value; }
   /** @returns {void} */
   function close() { killBot(); clearInterval(timer); if (restartTimer) clearTimeout(restartTimer); if (resultTimer) clearTimeout(resultTimer); for (const slot of slots.values()) if (slot.disconnectTimer) clearTimeout(slot.disconnectTimer); for (const ws of clients.keys()) ws.terminate(); wss.close(); }
   /** @returns {object} */
   function getSimulation() { return simulation; }
-  return { handleHttp, handleUpgrade, setHostUrl, close, getSimulation };
+  return { handleHttp, handleUpgrade, setHostUrl, close, getSimulation, prepareMatch };
 }
 
 /** @returns {number} */

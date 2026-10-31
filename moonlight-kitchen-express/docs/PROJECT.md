@@ -22,6 +22,8 @@ AI마다 활성 주문 하나를 명시적으로 예약하며, 여러 AI가 존�
 
 ## 실행과 검증
 
+런처 매치 번호 계약: 런처가 `prepareMatch(matchId)`로 방을 리셋(옛 접속자 `4001`, 내부 AI 슬롯 정리, 플레이 중이면 false)하고 클라이언트는 URL `matchId`를 WS 쿼리로 보낸다. 번호가 다르면 `invalid_match`/`4002`(번호 미준비 단독 실행은 무제한). `node tests/match-prepare.test.js` (격리 포트 3213).
+
 ```bash
 npm install
 npm start

@@ -241,6 +241,9 @@ function connect() {
   const params = new URLSearchParams();
   if (querySide) params.set('side', querySide);
   params.set('mode', mode);
+  // 런처 대기실이 발급한 매치 번호. 서버가 옛 판의 접속자를 걸러내는 데 쓴다 (재연결 때도 유지).
+  const matchId = urlParams.get('matchId');
+  if (matchId) params.set('matchId', matchId);
   wsPath += `?${params.toString()}`;
 
   ws = new WebSocket(wsPath);
@@ -722,7 +725,9 @@ if (btnStartAiEl) {
     btnStartAiEl.textContent = '🤖 AI 호출 중...';
     const name = sessionStorage.getItem('janggi:name') || '';
     const base = location.pathname;
-    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+    // 'AI랑 시작'은 페이지를 다시 열므로 매치 번호를 유지해야 서버가 입장을 허용한다.
+    const matchId = urlParams.get('matchId');
+    location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
   });
 }
 

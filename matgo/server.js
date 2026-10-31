@@ -53,7 +53,7 @@ const MIME = {
  *   봇이 접속할 WS URL을 반환하는 함수 (mode=ai 사용자 진입 시 호출).
  *   launcher 통합 모드에서는 launcher가 `ws://localhost:{PORT}/matgo/ws?mode=bot` 를 넘기고,
  *   standalone 모드에서는 listen 포트로 자동 구성.
- * @returns {{ handleHttp: Function, handleUpgrade: Function, flushLogs: Function, close: Function }}
+ * @returns {{ handleHttp: Function, handleUpgrade: Function, flushLogs: Function, close: Function, prepareMatch: Function }}
  */
 export function createApp(opts = {}) {
   const getBotUrl = opts.getBotUrl || (() => null);
@@ -604,6 +604,51 @@ export function createApp(opts = {}) {
     }
   }
 
+  // ── 매치 준비 (런처 대기실 → 게임 입장) ───────────────────────────
+  // 런처가 REDIRECT 직전에 prepareMatch(id)를 호출하고 같은 id를 URL로 넘긴다. 이전 판에 남아 있던
+  // 접속자(예: 대기 화면에 멈춘 탭)가 새 판에 섞이지 않도록 정리하고 이 id를 가진 사람만 받는다.
+  // 런처를 거치지 않는 단독 실행은 expectedMatchId가 null이라 기존처럼 id 없이 입장한다.
+  const MATCH_ID_RE = /^[a-zA-Z0-9-]{8,64}$/;
+  /** @type {string|null} */
+  let expectedMatchId = null;
+
+  /**
+   * @param {string} matchId 런처가 발급한 매치 번호
+   * @returns {boolean} 진행 중인 판이 있어 거절하면 false
+   */
+  function prepareMatch(matchId) {
+    if (!MATCH_ID_RE.test(matchId || '')) throw new Error('invalid matgo matchId');
+    // 진행 중 = 라운드가 실제로 돌고 있고 열린 사람 연결이 있음. 대기(game=null)·라운드 종료 화면은 아님.
+    if (game && !game.gameOver && game.phase !== 'round_end'
+      && players.some((p) => !p.ws._isBot && p.ws.readyState === WebSocket.OPEN)) return false;
+    expectedMatchId = matchId;
+    killBotChild();
+    if (matchActive && game) {
+      void matchLogger.endMatch('interrupted', { reasonCode: 'MATCH_REPLACED' });
+    }
+    matchActive = false;
+    replaceGame(null, 'MATCH_REPLACED');
+    stepInProgress = false;
+    readySet = new Set();
+    previousLoggedPhase = null;
+    loggedRoundEnd = false;
+    loggedBatchIds.clear();
+    const stalePlayers = players;
+    players = [];
+    for (const stale of stalePlayers) {
+      stale.ws._replaced = true;
+      if (stale.ws.readyState === WebSocket.OPEN) {
+        stale.ws.send(JSON.stringify({
+          type: 'ERROR',
+          code: 'match_replaced',
+          message: '새 경기가 시작되어 이전 연결을 종료합니다.',
+        }));
+      }
+      try { stale.ws.close(4001, 'MATCH_REPLACED'); } catch (e) { /* 이미 닫힌 연결 */ }
+    }
+    return true;
+  }
+
   // ── WebSocket 서버 (noServer 모드) ─────────────────────────────
   const wss = new WebSocketServer({ noServer: true });
 
@@ -615,6 +660,19 @@ export function createApp(opts = {}) {
     const isBot = wsMode === 'bot';
     ws._mode = wsMode;
     ws._isBot = isBot;
+    // 런처가 준비한 매치 번호가 없거나 다른 사람(옛 판의 탭 등)은 입장시키지 않는다.
+    // 봇(mode=bot)은 서버/런처가 직접 띄우므로 번호 없이 통과한다.
+    if (!isBot && expectedMatchId !== null && urlObj.searchParams.get('matchId') !== expectedMatchId) {
+      try {
+        ws.send(JSON.stringify({
+          type: 'ERROR',
+          code: 'invalid_match',
+          message: '유효하지 않거나 종료된 경기입니다. 로비에서 다시 입장해 주세요.',
+        }));
+      } catch (e) { /* 이미 닫힌 연결 */ }
+      ws.close(4002, 'INVALID_MATCH');
+      return;
+    }
     // 사람(비봇) 진입 시 죽은(좀비) 슬롯만 선제 정리 (살아있는 봇은 보존)
     if (!isBot) {
       const dead = players.filter((p) => p.ws.readyState !== WebSocket.OPEN);
@@ -925,6 +983,8 @@ export function createApp(opts = {}) {
     });
 
     ws.on('close', (code, reason) => {
+      // prepareMatch가 내보낸 옛 연결은 같은 id의 새 접속자 상태를 건드리지 않는다.
+      if (ws._replaced) return;
       console.log(`[matgo] ${player.id} 연결 해제 (mode=${ws._mode} code=${code} reason="${reason?.toString() || ''}" phase=${game?.phase} turn=${game?.turn})`);
       // reset/zombie 정리에서 이미 명단에서 빠진 소켓의 지연 close는 새 게임을 건드리면 안 된다.
       const wasRegistered = players.includes(player);
@@ -1176,6 +1236,7 @@ export function createApp(opts = {}) {
     handleUpgrade,
     flushLogs: () => matchLogger.flush(),
     close: closeApp,
+    prepareMatch,
   };
 }
 

@@ -89,8 +89,9 @@ test('런처 FILL_WITH_AI는 사람 한 명을 실제 AI 경기 START까지 연�
   const redirect = await redirectPromise;
   assert.equal(redirect.mode, 'ai', 'AI 채우기인데 런처가 human 모드로 리다이렉트했다');
 
-  const gamePath = `${redirect.path.replace(/\/$/, '')}/ws`;
-  const game = new WebSocket(`ws://127.0.0.1:${port}${gamePath}?name=IndependentQA`);
+  // 런처는 prepareMatch로 매치 번호를 발급해 REDIRECT에 싣는다. 번호 없이는 입장할 수 없다.
+  const gamePath = `${redirect.path.split('?')[0].replace(/\/$/, '')}/ws`;
+  const game = new WebSocket(`ws://127.0.0.1:${port}${gamePath}?name=IndependentQA&matchId=${encodeURIComponent(redirect.matchId)}`);
   sockets.push(game);
   await waitFor(game, 'JOINED');
   const startPromise = waitFor(game, 'START', 8_000);

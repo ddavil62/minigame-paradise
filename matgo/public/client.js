@@ -733,7 +733,9 @@
     } else {
       mode = sessionStorage.getItem('matgo:mode') || 'human';
     }
-    const wsQuery = `?mode=${encodeURIComponent(mode)}`;
+    // 런처 대기실이 발급한 매치 번호. 서버가 옛 판의 접속자를 걸러내는 데 쓴다(재연결 포함).
+    const matchId = urlParams.get('matchId');
+    const wsQuery = `?mode=${encodeURIComponent(mode)}${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
     ws = new WebSocket(`${proto}://${location.host}${wsPath}${wsQuery}`);
     ws.addEventListener('open', () => {
       console.log('[client] 연결됨');
@@ -3210,7 +3212,9 @@
       btnStartAiEl.textContent = '🤖 AI 호출 중...';
       const name = sessionStorage.getItem('matgo:name') || '';
       const base = location.pathname; // '/matgo/' 또는 '/'
-      location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}`;
+      // 런처 매치 번호를 유지해야 서버가 AI 재접속을 옛 판 접속자로 오인해 거절하지 않는다.
+      const matchId = new URLSearchParams(location.search).get('matchId');
+      location.href = `${base}?mode=ai&name=${encodeURIComponent(name)}${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
     });
   }
 

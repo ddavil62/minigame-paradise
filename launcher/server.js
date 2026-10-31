@@ -741,8 +741,10 @@ function checkReady(room, game) {
   // roomId/ensureRoom은 봇 spawn·REDIRECT 브로드캐스트보다 먼저 처리해야 한다(아래 참조).
   const isTetrisBattle = room.gameId === 'tetris-battle';
   const roomId = isTetrisBattle ? crypto.randomUUID() : null;
-  const wordchainMatchId = room.gameId === 'wordchain-battle' ? crypto.randomUUID() : null;
-  const spotDifferenceMatchId = room.gameId === 'spot-the-difference' ? crypto.randomUUID() : null;
+  // prepareMatch를 가진 게임은 단일 방 구조라 이전 판에 남은 접속자와 섞이기 쉽다. 대기실이 시작될 때마다
+  // 새 매치 번호를 발급해 게임 서버가 이전 접속자를 정리하고 이 번호를 가진 사람만 받게 한다.
+  // 진행 중인 판이 있으면 게임 서버가 거절하므로 동시에 한 판만 가능하다(game_busy).
+  const matchId = typeof GAME_APPS[room.gameId]?.prepareMatch === 'function' ? crypto.randomUUID() : null;
   // 마작은 게임 서버가 방 번호별로 방을 따로 둔다. 이전 판에서 방 설정 화면에 남아 있는 사람과 섞이지 않도록
   // 대기실이 시작될 때마다 새 방 번호를 발급해 같은 대기실 멤버만 같은 방으로 보낸다.
   const mahjongRoomId = room.gameId === 'mahjong' ? crypto.randomUUID() : null;
@@ -754,30 +756,15 @@ function checkReady(room, game) {
   if (isTetrisBattle) {
     GAME_APPS['tetris-battle'].ensureRoom(roomId);
   }
-  if (wordchainMatchId) {
-    const prepared = GAME_APPS['wordchain-battle'].prepareMatch(wordchainMatchId);
+  if (matchId) {
+    const prepared = GAME_APPS[room.gameId].prepareMatch(matchId);
     if (!prepared) {
       for (const [client, meta] of room.clients) {
         meta.ready = false;
         sendJson(client, {
           type: 'ERROR',
           code: 'game_busy',
-          message: '현재 끝말잇기 경기가 진행 중입니다. 잠시 후 다시 준비해 주세요.',
-        });
-      }
-      broadcastRoomState(room);
-      return;
-    }
-  }
-  if (spotDifferenceMatchId) {
-    const prepared = GAME_APPS['spot-the-difference'].prepareMatch(spotDifferenceMatchId);
-    if (!prepared) {
-      for (const [client, meta] of room.clients) {
-        meta.ready = false;
-        sendJson(client, {
-          type: 'ERROR',
-          code: 'game_busy',
-          message: '현재 틀린그림찾기 경기가 진행 중입니다. 잠시 후 다시 준비해 주세요.',
+          message: `현재 ${game.name} 경기가 진행 중입니다. 잠시 후 다시 준비해 주세요.`,
         });
       }
       broadcastRoomState(room);
@@ -811,7 +798,6 @@ function checkReady(room, game) {
         : `/${room.gameId}/?room=${roomId}`;
     } else {
       mode = usesGameManagedAi ? 'ai' : 'human';
-      const matchId = wordchainMatchId || spotDifferenceMatchId;
       redirectPath = matchId
         ? `/${room.gameId}/?matchId=${encodeURIComponent(matchId)}`
         : mahjongRoomId
@@ -827,7 +813,7 @@ function checkReady(room, game) {
       playerCount,
       role: meta.id === 'p1' ? 'p1' : 'p2',
       roomId,
-      matchId: wordchainMatchId || spotDifferenceMatchId,
+      matchId,
       transitionMs: 300,
     });
   }

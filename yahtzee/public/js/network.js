@@ -37,7 +37,9 @@ export function createNetwork(handlers) {
     } else {
       mode = sessionStorage.getItem('yahtzee:mode') || 'human';
     }
-    const wsQuery = `?mode=${encodeURIComponent(mode)}`;
+    // 런처 대기실이 발급한 매치 번호. 서버가 옛 판의 접속자를 걸러내는 데 쓴다 (재연결 포함).
+    const matchId = urlParams.get('matchId');
+    const wsQuery = `?mode=${encodeURIComponent(mode)}${matchId ? `&matchId=${encodeURIComponent(matchId)}` : ''}`;
     const url = `${proto}://${location.host}${wsPath}${wsQuery}`;
     console.log('[net] 연결 시도:', url);
     ws = new WebSocket(url);

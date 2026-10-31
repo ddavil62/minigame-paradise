@@ -32,6 +32,10 @@
 
 위치 형식은 `{ kind:'hand', tileId }` 또는 `{ kind:'set', setId, tileId?, index? }`다. `TURN_RESULT.reason`은 클라이언트 UX와 테스트에서 계약으로 사용하므로 새 사유를 추가할 때 양쪽을 함께 갱신한다.
 
+## 런처 매치 계약
+
+- 런처 대기실을 거친 입장은 `createApp().prepareMatch(matchId): boolean`이 방을 초기화하고(옛 접속자는 4001 `match_replaced`로 퇴출) 새 `matchId`만 받는다. 클라이언트는 페이지 URL의 `matchId`를 WS 쿼리로 넘기며, 다르거나 없으면 4002 `invalid_match`다. 진행 중(`phase==='playing'` + 열린 사람 연결)이면 false. `mode=bot`은 번호 없이 통과하고 단독 실행(prepareMatch 미호출)은 번호가 필요 없다.
+
 ## AI 봇
 
 - 첫 등판 전에는 그룹·런 후보를 만들고 30점 이상 조합을 제한된 백트래킹으로 찾는다.
@@ -47,6 +51,7 @@
 cd C:\antigravity\minigame-paradise\rummikub
 node tests/smoke.test.js
 node tests/qa-pass4-sort.test.js
+node tests/match-prepare.test.js   # 런처 matchId/prepareMatch (포트 3155)
 
 # UI 정렬 버튼 변경 시
 npx playwright test tests/sort-buttons-qa.spec.js --config=playwright.config.js

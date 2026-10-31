@@ -63,7 +63,8 @@ hanabi/
     ├── rulebook-c8-e2e-browser.spec.js  # E2E 브라우저 입장·손패가림 2 (HR-C8)
     ├── rulebook-c9-e2e-actions.spec.js  # E2E 힌트/내기/버리기 클릭 3 (HR-C9)
     ├── rulebook-c10-e2e-gameover.spec.js # E2E 종료 오버레이 1 (HR-C10)
-    └── rulebook-c11-guide-slider.spec.js # 가이드 슬라이더 9 (HR-C11, E2E)
+    ├── rulebook-c11-guide-slider.spec.js # 가이드 슬라이더 9 (HR-C11, E2E)
+    └── match-prepare.test.js          # 런처 matchId/prepareMatch 계약 (node 스크립트, 격리 포트 3111)
 ```
 
 ## 테스트 실행법
@@ -86,6 +87,13 @@ npx playwright test tests/rulebook-c1-c5-unit.spec.js tests/rulebook-c6-ws.spec.
 기대: `61 passed` (유닛 31 + WS 7 + QA엣지 8 + E2E 6 + 가이드 슬라이더 9).
 
 > ⚠️ **E2E C8~C11은 `node server.js --port 3095` 사전 구동 필수.** 서버 미구동 시 ERR_CONNECTION_REFUSED로 FAIL(테스트 결함 아님). C11(가이드 슬라이더)도 브라우저 + PNG 정적 서빙을 확인하므로 서버 구동 필요.
+
+런처 매치 계약 테스트(Playwright 아님): `node tests/match-prepare.test.js`
+
+### 런처 매치 계약 (matchId / prepareMatch)
+
+- `createApp()`이 `prepareMatch(matchId): boolean`을 export한다. 런처가 대기실 시작 때 호출하며, playing 단계에 열린 사람 연결이 있으면 `false`(런처는 `game_busy`)다. 아니면 옛 접속자를 `match_replaced`/4001로 내보내고 방과 서버 내부 AI 상태를 초기화한다.
+- 클라이언트는 페이지 URL의 `matchId`를 WS 쿼리로 넘긴다. 서버는 준비된 번호와 다르면 `invalid_match`/4002로 거절하고, 런처 없는 단독 실행(번호 미준비)은 번호 없이 입장한다.
 
 ### 회귀 게이트 (변경 시 우선 실행)
 
