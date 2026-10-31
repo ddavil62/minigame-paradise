@@ -328,5 +328,6 @@ test('역 레이더: 내 손이 전부 2~8이면 탕야오 완성, 역패 쌍은
   const yh = pair.radar.me.find((c) => c.id === 'yh31');
   assert.ok(yh, '백 쌍은 역패 후보');
   assert.equal(yh.st, 'likely');
-  assert.match(yh.name, /2장$/);
+  assert.match(yh.name, /2\/3$/);
+  assert.match(yh.tip, /안 보이는 패 \d장/, '남은 장수는 설명에서 알려 준다');
 });

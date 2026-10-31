@@ -3,6 +3,7 @@
  * 이미 갖춘 역과 노릴 만한 역을 짚는다. 상대의 손패는 쓰지 않는다(viewFor가 주는 뷰만 사용).
  *
  * 칩 {id, name, st, tip}. st: done(이미 갖춤) · likely(노려 볼 만함/의심됨) · danger(위험) · info(참고)
+ * 상대 칩은 위협(빨강), 내 칩은 기회(초록)로 그려지므로 같은 st라도 의미가 반대다(클라이언트가 구분한다).
  */
 import { kindOf, isRedId, isHonor, isYaochuu, isDragon, isWind, suitOf, kindNameKo } from './tiles.js';
 
@@ -119,7 +120,8 @@ function myChips(view, counts, vis, doraKinds) {
     if (inMeld || counts[k] >= 3) add(`yh${k}`, `${label} ${kindNameKo(k)}`, 'done', `${kindNameKo(k)} 커쯔가 있어서 이미 역이 있어요.`);
     else if (counts[k] === 2) {
       const left = Math.max(0, 4 - vis[k]);
-      add(`yh${k}`, `${label} ${kindNameKo(k)} ${left}장`, left > 0 ? 'likely' : 'info', left > 0 ? `${kindNameKo(k)}가 2장 있어요. 퐁하거나 한 장 더 오면 역이 생겨요(안 보이는 패 ${left}장).` : `${kindNameKo(k)}는 남은 패가 없어서 역이 되기 어려워요.`);
+      // 이름의 2/3은 "커쯔까지 3장 중 2장 모음"이다(남은 장수는 설명에 둔다).
+      add(`yh${k}`, `${label} ${kindNameKo(k)} 2/3`, left > 0 ? 'likely' : 'info', left > 0 ? `${kindNameKo(k)}가 2장 있어요. 퐁하거나 한 장 더 오면 역이 생겨요(안 보이는 패 ${left}장).` : `${kindNameKo(k)}는 남은 패가 없어서 역이 되기 어려워요.`);
     }
   }
 
@@ -127,7 +129,7 @@ function myChips(view, counts, vis, doraKinds) {
   const yao = all.reduce((a, c, k) => a + (isYaochuu(k) ? c : 0), 0);
   if ((kuitan || closed) && total >= 11) {
     if (yao === 0) add('tanyao', '탕야오', 'done', '모든 패가 2~8이라 탕야오가 돼요.');
-    else if (yao <= 2) add('tanyao', `탕야오 ${yao}장`, 'likely', `1·9·자패 ${yao}장만 바꾸면 탕야오예요.`);
+    else if (yao <= 2) add('tanyao', `탕야오 · 걸리는 패 ${yao}장`, 'likely', `1·9·자패 ${yao}장만 바꾸면 탕야오예요.`);
   }
 
   // 물들이기

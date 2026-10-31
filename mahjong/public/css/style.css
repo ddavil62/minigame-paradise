@@ -138,6 +138,8 @@ button { font: inherit; cursor: pointer; }
 .plate.p-left { top: 112px; left: 22px; }
 .plate.p-right { top: 112px; right: 22px; flex-direction: row-reverse; text-align: right; padding: 8px 8px 8px 12px; }
 .plate.p-me { top: 644px; left: 18px; }
+/* 레이더에 위험 칩이 보이는 상대: 테두리만 붉게(리치·내 차례·화료 강조가 있으면 그쪽이 이긴다) */
+.plate.threat { border-color: #ff7a68; }
 .plate.turn { border-color: var(--turn); box-shadow: 0 0 0 2px var(--turn), 0 0 24px color-mix(in srgb, var(--turn) 45%, transparent); }
 .plate.away { opacity: .7; }
 .plate.riichi { border-color: #ff5a45; box-shadow: 0 0 0 1px #ff5a45, 0 0 22px rgba(255,90,69,.55); animation: riichi-pulse 1.4s ease-in-out var(--ph, 0ms) infinite; }
@@ -191,24 +193,40 @@ button { font: inherit; cursor: pointer; }
 .call-timer { position: absolute; right: 24px; top: 634px; width: 260px; height: 5px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.15); transform: scale(var(--act-scale, 1)); transform-origin: 100% 0; }
 .call-timer i { display: block; width: 100%; height: 100%; background: var(--accent-2); }
 
-/* 확대된 내 연못(3줄이면 y≈610까지)과 겹치지 않게 연못 왼쪽 빈 곳에 두고, 길면 위쪽으로 줄바꿈한다. 폭 380은 최소 무대 폭(1200)에서 연못 왼쪽 끝(x≈484) 안쪽 */
-.radar { position: absolute; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: 240px; }
+/* 상대 역 레이더: 이름판 아래 한 줄 요약(가장 위험한 칩 + 외 N)이고 올리거나 탭하면 설명 카드가 뜬다. 칩 행은 옆 AI의 패 줄(x 30~93) 안쪽에서 시작한다.
+   색의 뜻은 한 방향이다: 상대 = 위협(빨강, 확정은 실선·의심은 점선), 나 = 기회(초록), 금색 = 도라. */
+.radar { position: absolute; z-index: 3; max-width: 236px; cursor: help; }
+.radar:hover, .radar.open { z-index: 8; }
 .radar.r-top { top: 80px; left: calc(196px + var(--dx)); }
-.radar.r-left { top: 176px; left: 90px; }
-.radar.r-right { top: 176px; right: 90px; justify-content: flex-end; }
-.radar.r-me { left: 128px; bottom: 218px; max-width: 340px; }
-.radar .rl { color: var(--ui-muted); font-size: 10px; font-weight: 900; letter-spacing: .04em; }
-.rc { padding: 2px 8px; border: 1px solid transparent; border-radius: 99px; font-size: 11px; font-weight: 900; white-space: nowrap; cursor: help; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
-.rc.done { background: #f2a93b; color: #1a1405; }
-.rc.likely { background: #2b4f7a; border-color: #6fa8e8; color: #e4f1ff; }
-.rc.danger { background: #c0392b; border-color: #ff8a7a; color: #fff; }
-.rc.info { background: rgba(0,0,0,.5); border-color: rgba(255,255,255,.2); color: #d5dde3; }
-.strip { position: absolute; left: 84px; bottom: 124px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; max-width: 380px; padding: 9px 14px; border: 1px solid var(--plate-border); border-radius: 6px; background: var(--plate-bg); font-size: 13px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.radar.r-left { top: 176px; left: 96px; }
+.radar.r-right { top: 176px; right: 96px; }
+.radar .rsum { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.radar.r-right .rsum { justify-content: flex-end; }
+.rc { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 6px; border: 1.5px solid; border-radius: 99px; background: rgba(6,20,13,.88); font-size: 12.5px; font-weight: 900; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.rc .ic { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: currentColor; font-size: 10px; font-style: normal; font-weight: 900; line-height: 1; }
+.rc .ic b { color: #07160e; font: inherit; }
+.rc.t-danger { color: #ff7a68; border-color: #ff7a68; background: rgba(70,12,10,.92); }
+.rc.w-opp.t-done { color: #ff9a8a; border-color: #ff9a8a; background: rgba(60,16,12,.9); }
+.rc.w-opp.t-likely { color: #ffb4a8; border-color: rgba(255,154,138,.75); border-style: dashed; }
+.rc.w-me.t-done { color: #7ee8a0; border-color: #7ee8a0; background: rgba(8,52,30,.92); }
+.rc.w-me.t-likely { color: #a9f0c0; border-color: rgba(126,232,160,.75); border-style: dashed; }
+.rc.t-info { color: #ffd966; border-color: rgba(255,217,102,.7); background: rgba(44,34,8,.9); }
+.rc.t-more { padding: 3px 9px; border-color: rgba(255,255,255,.35); background: rgba(0,0,0,.6); color: #d5dde3; }
+.rcard { display: none; position: absolute; top: calc(100% + 6px); width: 300px; padding: 10px 12px; border: 1px solid #ff7a68; border-radius: 8px; background: rgba(12,22,16,.96); box-shadow: 0 10px 26px rgba(0,0,0,.5); font-size: 12.5px; line-height: 1.5; pointer-events: none; cursor: default; }
+.radar.r-right .rcard { right: 0; }
+.radar:hover .rcard, .radar.open .rcard { display: block; }
+.rcard h4 { margin: 0 0 6px; color: #ff9a8a; font-size: 12px; letter-spacing: .04em; }
+.rcard .rrow { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: start; padding: 5px 0; border-top: 1px dashed rgba(255,255,255,.14); }
+.rcard .rrow:first-of-type { border-top: 0; }
+.rcard .rrow small { grid-column: 1 / -1; color: #cdd8d0; font-size: 11.5px; font-weight: 700; }
+.strip { position: absolute; left: 168px; bottom: 124px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; max-width: 310px; padding: 9px 14px; border: 1px solid var(--plate-border); border-radius: 6px; background: var(--plate-bg); font-size: 13px; font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
 .strip b { color: #ffcf4a; }
 .strip .warn { color: #ff9a76; }
 .strip .verdict.go { color: #7ee08a; }
 .strip .verdict.maybe { color: #ffcf4a; }
 .strip .verdict.stop { color: #ff9a76; }
+.strip .rme { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 5px 6px; margin-top: 3px; padding-top: 7px; border-top: 1px dashed rgba(255,255,255,.2); }
+.strip .rme .lab { margin-right: 2px; color: #7ee8a0; font-size: 12px; font-weight: 900; }
 .strip .k { padding: 2px 7px; border-radius: 6px; background: var(--accent); color: #1a1405; font-size: 11px; font-weight: 900; white-space: nowrap; }
 .strip .mini-tiles { display: flex; gap: 2px; }
 .legend { position: absolute; right: 80px; top: 396px; width: 196px; padding: 10px 12px; border: 1px solid var(--plate-border); border-radius: 6px; background: var(--plate-bg); color: var(--ui-muted); font-size: 11.5px; line-height: 1.7; }

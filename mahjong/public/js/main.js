@@ -56,6 +56,7 @@ const S = {
   shown: null, // 결과/종료 화면 연출을 이미 시작한 키
   resFocus: null, // 결과 화면에서 강조 중인 역 '화료자:역' (재렌더에도 유지)
   resTip: null, // 결과 화면에서 펼친 ⓘ 설명 키
+  radarOpen: null, // 탭으로 펼쳐 둔 상대 역 레이더 카드의 좌석(호버는 CSS가 처리)
   leaveAsk: false, // 종료 화면에서 게스트의 "홈으로 나가기" 확인창이 열려 있는가
 };
 
@@ -615,7 +616,7 @@ function plateHtml(seat, v, posCls) {
   if (info.type === 'human' && !isMe) sub = `<span class="${info.connected ? 'dot-online' : 'dot-offline'}"></span>${info.connected ? '접속 중' : '끊김'} · ${sub}`;
   const timer = isMe && turn ? '<div class="timer" id="my-timer"><span>-</span></div>' : '';
   const phase = p.riichi ? ` style="--ph:-${Math.round(performance.now() % 1400)}ms"` : '';
-  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${info.away ? ' away' : ''}${winner ? ' winner' : ''}"${phase}>
+  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${!isMe && threatSeat(seat) ? ' threat' : ''}${info.away ? ' away' : ''}${winner ? ' winner' : ''}"${phase}>
     <div class="avatar ${avatarClass(info, seat)}">${esc(avatarChar(info))}<span class="wind">${WIND_KANJI[p.wind]}</span>${seat === v.dealer ? '<span class="dealer">親</span>' : ''}</div>
     <div><div class="name">${esc(info.name)}${badge}</div><div class="sub">${sub}</div></div>${timer}</div>`;
 }
@@ -890,18 +891,48 @@ function actionsHtml(v, legal) {
   return `<div class="actions${many}">${btns}</div>${legal.kind === 'reaction' ? '<div class="call-timer"><i id="call-bar"></i></div>' : ''}`;
 }
 
-/** 역 레이더 칩: 이름판 근처에 이미 갖춘 역·노릴 만한 역·위험을 띄운다(도우미 켠 때만, 공개 정보 기준) */
+/**
+ * 역 레이더 칩. 같은 st라도 상대는 위협(빨강), 나는 기회(초록)로 그려 색의 뜻이 한 방향이 되게 한다.
+ * 색만으로 구분하지 않도록 아이콘도 다르다(상대: ! 위험·역 확정·? 의심, 나: ✓ 갖춤·▸ 노림, 도라: ★).
+ */
+function radarChip(c, who) {
+  const ic = c.st === 'danger' ? '!' : c.st === 'info' ? '★' : who === 'opp' ? (c.st === 'done' ? '역' : '?') : (c.st === 'done' ? '✓' : '▸');
+  return `<span class="rc w-${who} t-${c.st}"><i class="ic"><b>${ic}</b></i>${esc(c.name)}</span>`;
+}
+
+/**
+ * 상대의 역 레이더: 이름판 아래에 가장 위험한 칩 하나와 `외 N`만 두고, 올리거나 탭하면 칩마다 설명이 있는 카드가 뜬다.
+ * 칩은 `top()`이 위험 > 확정 > 의심 > 참고 순으로 정렬해 주므로 맨 앞이 요약이다.
+ * 카드는 항상 그려 두고 :hover/.open으로 보이게 한다(매 STATE 재렌더에도 호버가 끊기지 않게). 탭 고정은 S.radarOpen.
+ */
 function radarHtml(v, order) {
   const r = S.assist ? S.st.hints?.radar : null;
   if (!r) return '';
-  const chip = (c) => `<span class="rc ${c.st}" title="${esc(c.tip)}">${esc(c.name)}</span>`;
   let html = '';
   for (const [rel, cls] of order) {
+    if (rel === 0) continue;
     const seat = (v.me + rel) % 4;
-    const chips = rel === 0 ? r.me : r.opp[seat];
-    if (chips?.length) html += `<div class="radar r-${cls}"><span class="rl">${rel === 0 ? '내 역' : '노림수'}</span>${chips.map(chip).join('')}</div>`;
+    const chips = r.opp[seat];
+    if (!chips?.length) continue;
+    const rows = chips.map((c) => `<div class="rrow">${radarChip(c, 'opp')}<small>${esc(c.tip)}</small></div>`).join('');
+    html += `<div class="radar r-${cls}${S.radarOpen === seat ? ' open' : ''}" data-radar="${seat}">
+      <div class="rsum">${radarChip(chips[0], 'opp')}${chips.length > 1 ? `<span class="rc t-more">외 ${chips.length - 1}</span>` : ''}</div>
+      <div class="rcard"><h4>${esc(seatInfo(seat).name)}의 노림수 · 공개된 정보만 봤어요</h4>${rows}</div></div>`;
   }
   return html;
+}
+
+/** 내 역: 도우미 띠 안의 한 줄(이름판 아래에 따로 띄우면 띠와 두 덩어리가 되어 산만하다) */
+function radarMeHtml() {
+  const chips = S.assist ? S.st.hints?.radar?.me : null;
+  if (!chips?.length) return '';
+  return `<div class="rme"><span class="lab">내 역</span>${chips.map((c) => `<span title="${esc(c.tip)}">${radarChip(c, 'me')}</span>`).join('')}</div>`;
+}
+
+/** 위험한 칩(삼원패·사희 등)이 보이는 상대의 이름판은 테두리를 붉게 한다 */
+function threatSeat(seat) {
+  const chips = S.assist ? S.st.hints?.radar?.opp?.[seat] : null;
+  return Boolean(chips?.some((c) => c.st === 'danger'));
 }
 
 function renderGame() {
@@ -915,7 +946,8 @@ function renderGame() {
   html += radarHtml(v, order);
   html += handHtml(v, legal);
   const strip = hintStrip(v, legal);
-  if (strip) html += `<div class="strip">${strip}</div>`;
+  const meLine = radarMeHtml();
+  if (strip || meLine) html += `<div class="strip">${strip}${meLine}</div>`;
   html += actionsHtml(v, legal);
   if (S.assist && S.st.hints?.safe?.length) {
     const rp = v.players.filter((p) => p.seat !== v.me && p.riichi).map((p) => seatInfo(p.seat).name);
@@ -1229,6 +1261,9 @@ function onResultTap(e) {
 stage.addEventListener('click', (e) => {
   sounds.unlock();
   if ((lastPointer !== 'mouse' || e.detail === 0) && onResultTap(e)) return;
+  const radar = e.target.closest('[data-radar]');
+  if (radar) { S.radarOpen = S.radarOpen === +radar.dataset.radar ? null : +radar.dataset.radar; render(); return; }
+  if (S.radarOpen != null) { S.radarOpen = null; render(); }
   const tile = e.target.closest('.tile.hand[data-id]');
   if (tile) { onTileClick(+tile.dataset.id); return; }
   const cfg = e.target.closest('[data-cfg]');
