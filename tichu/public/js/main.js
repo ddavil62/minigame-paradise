@@ -280,15 +280,30 @@ function plateHtml(rel, v) {
   return `<div class="plate pl-${POS[rel]} t-${us ? 'us' : 'them'}${turn ? ' turn' : ''}${away}" data-seat="${seat}"><div class="av">${esc(avatarChar(info))}</div><div><div class="nm">${esc(info.name)} ${tag}${badges.join('')}</div><div class="sub">${sub}</div></div>${timer}</div>`;
 }
 
+/** 상대 손패: 이름판 쪽을 축으로 펼친 부채꼴. 겹침 간격(STEP)과 호(ARC)는 CSS 변수로 카드마다 계산한다. */
 function backsHtml(v) {
   let h = '';
   for (const rel of [1, 2, 3]) {
     const seat = (S.seat + rel) % 4;
-    const n = Math.min(14, v.counts[seat]);
+    const total = v.counts[seat];
+    const n = Math.min(14, total);
     if (!n) continue;
-    h += rel === 2
-      ? `<div class="bk-top">${Array.from({ length: n }, () => backHtml('xs')).join('')}</div>`
-      : `<div class="bk-${POS[rel]}">${Array.from({ length: n }, () => backHtml('sx')).join('')}</div>`;
+    const pos = POS[rel];
+    const mid = (n - 1) / 2;
+    const step = n > 1 ? Math.min(24, 300 / (n - 1)) : 0;
+    const cards = Array.from({ length: n }, (_, j) => {
+      const d = j - mid;
+      const along = d * step;
+      const bow = 0.32 * d * d; // 가운데가 가장 멀리 나오는 호
+      const a = 2.4;
+      let x; let y; let r;
+      if (pos === 'top') { x = along; y = -bow; r = -d * a; }
+      else if (pos === 'left') { x = -bow; y = along; r = -90 + d * a; }
+      else { x = bow; y = along; r = 90 - d * a; }
+      return backHtml('op', '', `--x:${x.toFixed(1)}px;--y:${y.toFixed(1)}px;--r:${r.toFixed(2)}deg;z-index:${j}`);
+    }).join('');
+    const low = total <= 3 ? ' low' : '';
+    h += `<div class="bk bk-${pos}">${cards}<span class="cnt${low}">${total}</span></div>`;
   }
   return h;
 }
@@ -351,7 +366,7 @@ function handHtml(v) {
   const cards = ids.map((id, i) => {
     const sel = S.sel.includes(id);
     const dim = playable && !playable.has(id);
-    return cardHtml(id, { size: 'md', cls: `${sel ? 'sel' : ''} ${dim ? 'dim' : ''} ${received.has(id) ? 'recv' : ''}`, style: `--a:${((i - mid) * 3.1).toFixed(2)}deg;z-index:${i}` });
+    return cardHtml(id, { size: 'md', cls: `${sel ? 'sel' : ''} ${dim ? 'dim' : ''} ${received.has(id) ? 'recv' : ''}`, style: `--a:${((i - mid) * 2.5).toFixed(2)}deg;z-index:${i}` });
   }).join('');
   const mine = v.legal?.kind === 'turn';
   return `<div class="hand fan${mine ? ' my-turn' : ''}">${cards}</div>`;
@@ -379,11 +394,8 @@ function waitLeft(v) {
 function stripHtml(v) {
   const legal = v.legal;
   const parts = [];
-  if (v.phase === 'grand') return '';
-  if (v.phase === 'exchange') {
-    if (legal?.kind === 'exchange') parts.push('티추를 부를 거면 지금도 가능해요 <span class="lab">· 첫 카드를 내기 전까지</span>');
-    else return '';
-  } else if (v.phase === 'play') {
+  if (v.phase === 'grand' || v.phase === 'exchange') return '';
+  if (v.phase === 'play') {
     const info = selInfo(v);
     const wait = waitLeft(v);
     if (!legal) parts.push(v.out.includes(S.seat) ? '<span class="ok">나갔어요! 나머지 경기를 지켜봐요</span>' : '<span class="lab">잠시만요…</span>');

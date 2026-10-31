@@ -38,7 +38,7 @@ export function cardHtml(id, o = {}) {
 }
 
 /** @param {string} [size] @param {string} [cls] @returns {string} 카드 뒷면 */
-export const backHtml = (size = 'md', cls = '') => `<div class="card back ${size} ${cls}"></div>`;
+export const backHtml = (size = 'md', cls = '', style = '') => `<div class="card back ${size} ${cls}"${style ? ` style="${style}"` : ''}></div>`;
 
 /** @param {number[]} ids @param {string} [size] @returns {string} 카드 여러 장 */
 export const cardsHtml = (ids, size = 'sm') => ids.map((id) => cardHtml(id, { size, data: false })).join('');
