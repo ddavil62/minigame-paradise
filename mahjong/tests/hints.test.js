@@ -299,3 +299,34 @@ test('리치할 수 없는 차례에는 리치 후보 비교가 없다', () => {
   const g = setup({ hands: { 0: '1379m1469p258s14z' }, drawn: { seat: 0, kind: 9 + 7 } });
   assert.equal(computeHints(g.viewFor(0)).riichi, null);
 });
+
+test('역 레이더: 상대가 삼원패를 둘 울었으면 확정 역과 삼원패 위험을 알린다', () => {
+  const h = hintsFor13({
+    hands: { 0: '123m456p789s1122z' },
+    melds: { 1: [{ type: 'pon', k: 31, kinds: [31, 31, 31] }, { type: 'pon', k: 32, kinds: [32, 32, 32] }] },
+  });
+  const chips = h.radar.opp[1];
+  assert.ok(chips.some((c) => c.id === 'dragons' && c.st === 'danger'));
+  assert.equal(chips.filter((c) => c.st === 'done').length, 2);
+});
+
+test('역 레이더: 한 색 울음 둘이면 혼일색을 노리는 것으로 본다', () => {
+  const h = hintsFor13({
+    hands: { 0: '123m456p789s1122z' },
+    melds: { 1: [{ type: 'chi', k: 0, kinds: [0, 1, 2] }, { type: 'pon', k: 4, kinds: [4, 4, 4] }] },
+  });
+  const flush = h.radar.opp[1].find((c) => c.id === 'flush');
+  assert.ok(flush);
+  assert.match(flush.name, /혼일색\(만\)/);
+  assert.equal(h.radar.opp[2].length, 0, '울지 않은 상대는 칩이 없다');
+});
+
+test('역 레이더: 내 손이 전부 2~8이면 탕야오 완성, 역패 쌍은 남은 장수와 함께 보인다', () => {
+  const tanyao = hintsFor13({ hands: { 0: '234m567p345s66s78m' } });
+  assert.ok(tanyao.radar.me.some((c) => c.id === 'tanyao' && c.st === 'done'));
+  const pair = hintsFor13({ hands: { 0: '123m456p789s55z12m' } });
+  const yh = pair.radar.me.find((c) => c.id === 'yh31');
+  assert.ok(yh, '백 쌍은 역패 후보');
+  assert.equal(yh.st, 'likely');
+  assert.match(yh.name, /2장$/);
+});

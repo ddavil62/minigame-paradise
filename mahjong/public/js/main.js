@@ -890,6 +890,20 @@ function actionsHtml(v, legal) {
   return `<div class="actions${many}">${btns}</div>${legal.kind === 'reaction' ? '<div class="call-timer"><i id="call-bar"></i></div>' : ''}`;
 }
 
+/** 역 레이더 칩: 이름판 근처에 이미 갖춘 역·노릴 만한 역·위험을 띄운다(도우미 켠 때만, 공개 정보 기준) */
+function radarHtml(v, order) {
+  const r = S.assist ? S.st.hints?.radar : null;
+  if (!r) return '';
+  const chip = (c) => `<span class="rc ${c.st}" title="${esc(c.tip)}">${esc(c.name)}</span>`;
+  let html = '';
+  for (const [rel, cls] of order) {
+    const seat = (v.me + rel) % 4;
+    const chips = rel === 0 ? r.me : r.opp[seat];
+    if (chips?.length) html += `<div class="radar r-${cls}"><span class="rl">${rel === 0 ? '내 역' : '노림수'}</span>${chips.map(chip).join('')}</div>`;
+  }
+  return html;
+}
+
 function renderGame() {
   const v = S.st.view;
   const legal = v.phase === 'ack' || v.phase === 'over' ? null : v.legal;
@@ -898,6 +912,7 @@ function renderGame() {
   html += boardHtml(v);
   const order = [[0, 'me'], [1, 'right'], [2, 'top'], [3, 'left']];
   for (const [rel, cls] of order) html += plateHtml((v.me + rel) % 4, v, cls);
+  html += radarHtml(v, order);
   html += handHtml(v, legal);
   const strip = hintStrip(v, legal);
   if (strip) html += `<div class="strip">${strip}</div>`;

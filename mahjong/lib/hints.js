@@ -12,6 +12,7 @@
 import { kindOf, toCounts, isDragon, isRedId, isHonor, isTerminal, doraFromIndicator } from './tiles.js';
 import { shanten, getWaits, evaluateHand } from './agari.js';
 import { visibleCounts } from './ai.js';
+import { yakuRadar } from './radar.js';
 
 /** 낮을수록 먼저 버려도 되는 패: 자패 → 1·9 → 2·8 → 나머지 */
 const usefulness = (k) => (isHonor(k) ? 0 : isTerminal(k) ? 1 : (k % 9 === 1 || k % 9 === 7) ? 2 : 3);
@@ -105,6 +106,7 @@ export function bestGrouping(counts, fixed, vis) {
  * - fixable: 문전이고 아직 리치 전이라 리치로 역을 만들 수 있는가
  * - discards[종류]: {s, u, waits, yaku} 버렸을 때의 평가
  * - best: 추천 버림 종류(0~1개), bestWhy: 'fold'|'tenpai'|'speed', bestRisky, bestSavedDora
+ * - radar: 역 레이더 {me:[칩], opp:{좌석:[칩]}} (lib/radar.js: 공개 정보로 본 이미 갖춘 역·노릴 만한 역·위험)
  * - riichi: 리치할 수 있는 차례의 선언 후보 비교 {best: 추천 버림 종류, opts: {종류: {n: 안 보이는 대기패 장수, kinds: 대기 종류, furiten}}}
  * - safe: 리치한 상대에게 안전한 패 종류
  * - call: 퐁·치 반응 창일 때 {type, before, after, opens, yakuAfter, advice, why} (advice: yes·maybe·no)
@@ -129,7 +131,7 @@ export function computeHints(view) {
   const doraKinds = new Set((view.dora || []).map((id) => doraFromIndicator(kindOf(id))));
   const hints = {
     shanten: null, waits: [], yaku: null, fixable, discards: {}, best: [], bestWhy: null,
-    bestRisky: false, bestSavedDora: false, riichi: null, safe: [], call: null, kan: {}, callKan: null, note: null, groups: null,
+    bestRisky: false, bestSavedDora: false, riichi: null, radar: null, safe: [], call: null, kan: {}, callKan: null, note: null, groups: null,
   };
   const isYakuhai = (k) => isDragon(k) || k === seatWind || k === roundWind;
 
@@ -264,6 +266,7 @@ export function computeHints(view) {
     if (hand.length % 3 === 1 && (lg.pon || lg.chi)) hints.call = callHint(lg, tk);
     if (hand.length % 3 === 1 && lg.daiminkan && hints.shanten >= 0) hints.callKan = adviseDaiminkan(tk);
   }
+  hints.radar = yakuRadar(view, counts, vis, doraKinds);
   return hints;
 
   /**
