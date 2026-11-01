@@ -290,7 +290,7 @@ function backsHtml(v) {
     if (!n) continue;
     const pos = POS[rel];
     const mid = (n - 1) / 2;
-    const step = Math.min(rel === 2 ? 24 : 19, 300 / Math.max(1, n - 1));
+    const step = Math.min(rel === 2 ? 24 : 18, 300 / Math.max(1, n - 1));
     const cards = Array.from({ length: n }, (_, j) => {
       const d = j - mid;
       const along = d * step;
