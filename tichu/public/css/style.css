@@ -125,7 +125,7 @@ button { font: inherit; cursor: pointer; }
 .bk { position: absolute; width: 0; height: 0; z-index: 2; }
 .bk .card { position: absolute; left: calc(var(--cw) / -2); top: calc(var(--ch) / -2); transform: translate(var(--x), var(--y)) rotate(var(--r)); box-shadow: 0 1px 0 #8a8f8a, 0 5px 9px rgba(0,0,0,.4); }
 .bk-top { left: 50%; top: 126px; }
-.bk-left { left: 94px; top: 392px; } .bk-right { right: 94px; top: 392px; }
+.bk-left { left: 94px; top: 364px; } .bk-right { right: 94px; top: 364px; }
 .bk .cnt { position: absolute; display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 7px; border: 2px solid rgba(246,238,219,.9); border-radius: 99px; background: #0b2c1c; color: var(--accent); font: 800 15px/1 var(--font); transform: translate(-50%, -50%); z-index: 40; box-shadow: 0 3px 8px rgba(0,0,0,.45); }
 .bk-top .cnt { left: 214px; top: 4px; } .bk-left .cnt { left: 56px; top: 0; } .bk-right .cnt { left: -56px; top: 0; }
 .bk .cnt.low { background: #c0392b; border-color: #fff; color: #fff; animation: pulse 1.4s ease-in-out infinite; }
@@ -143,6 +143,7 @@ button { font: inherit; cursor: pointer; }
 .pp-left { left: 150px; top: 150px; } .pp-right { right: 150px; top: 150px; }
 .pp-top { left: 50%; top: 62px; transform: translateX(-50%); } .pp-me { left: 50%; bottom: 8px; transform: translateX(-50%); }
 .passtag { position: absolute; padding: 4px 14px; border: 1.5px dashed rgba(128,128,128,.6); border-radius: 99px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.passtag.pp-left, .passtag.pp-right { top: 96px; }
 .tinfo { position: absolute; left: 50%; top: 150px; width: 290px; text-align: center; transform: translateX(-50%); }
 .tinfo b { display: block; color: var(--accent); font-size: 26px; letter-spacing: -.02em; }
 .tinfo small { display: block; margin-top: 4px; color: var(--muted); font-size: 12.5px; font-weight: 600; line-height: 1.5; }
@@ -333,7 +334,7 @@ button { font: inherit; cursor: pointer; }
 .guide .gt tr td.cs:first-child { width: 70px; }
 
 /* 가운데 안내는 넓은 조합(풀하우스·스트레이트)과 겹치지 않게 아래쪽에 둔다 */
-.stage .tinfo { top: 238px; }
+.stage .tinfo { top: 262px; }
 
 /* 제목·큰 숫자만 명조, 나머지 UI는 고딕 */
 .modal h2, .tinfo b, .setup h1, .stage .pause h2, #fx .banner b, .result .fin div b, .pile .sum { font-family: var(--serif); }
