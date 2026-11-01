@@ -37,7 +37,9 @@ const MIME = {
 const SEAT_ORDER = [0, 2, 1, 3];
 const AI_NAMES = ['주작', '백호', '현무', '청룡'];
 const LEVELS = ['easy', 'normal', 'hard'];
-const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, bombWindowMs: 2000, aiLevel: 'normal' });
+const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, bombWindowMs: 2000, aiLevel: 'normal', decks: 1 });
+/** 벌 수별 목표 점수 선택지(2벌은 카드 점수 합이 200이라 두 배) */
+const TARGETS = { 1: [500, 1000], 2: [1000, 2000] };
 export const DEFAULT_TIMING = Object.freeze({
   baseMs: 25000, // 낼 차례 생각 시간
   bankMs: 30000, // 대국 전체 여유 시간
@@ -75,11 +77,15 @@ function sanitizeAction(a) {
   const ids = (list, max) => Array.isArray(list) && list.length <= max && list.every(isInt) ? list.slice() : null;
   switch (a.type) {
     case 'grand': out.on = !!a.on; break;
-    case 'exchange': out.give = ids(a.give, 3); if (!out.give) return null; break;
+    case 'exchange': out.give = ids(a.give, 6); if (!out.give) return null; break;
     case 'play':
-      out.ids = ids(a.ids, 14);
+      out.ids = ids(a.ids, 28);
       if (!out.ids) return null;
-      if (a.as !== undefined) { if (!isInt(a.as)) return null; out.as = a.as; }
+      if (a.as !== undefined) {
+        const ok = isInt(a.as) || (Array.isArray(a.as) && a.as.length === 2 && a.as.every(isInt)); // 봉황 두 장이면 숫자 두 개
+        if (!ok) return null;
+        out.as = a.as;
+      }
       if (a.wish !== undefined) { if (!isInt(a.wish)) return null; out.wish = a.wish; }
       break;
     case 'gift': if (!isInt(a.to)) return null; out.to = a.to; break;
@@ -408,8 +414,8 @@ function createRoomEngine(opts, hooks = {}) {
       }
     }
     for (const slot of humans()) { slot.bank = T.bankMs; slot.autoPlay = false; slot.timeouts = 0; }
-    const { target, grand, bombWindowMs } = room.settings;
-    room.game = new TichuGame({ settings: { target, grand, bombWindowMs }, rng: opts.rng });
+    const { target, grand, bombWindowMs, decks } = room.settings;
+    room.game = new TichuGame({ settings: { target, grand, bombWindowMs, decks }, rng: opts.rng });
     room.phase = 'playing';
     room.game.start();
     afterChange();
@@ -487,7 +493,11 @@ function createRoomEngine(opts, hooks = {}) {
   function applySettings(raw) {
     if (!raw || typeof raw !== 'object') return;
     const s = room.settings;
-    if (raw.target === 500 || raw.target === 1000) s.target = raw.target;
+    if ((raw.decks === 1 || raw.decks === 2) && raw.decks !== s.decks) {
+      s.target = raw.decks === 2 ? s.target * 2 : s.target / 2; // 벌 수를 바꾸면 목표 점수도 같은 비율로 옮긴다
+      s.decks = raw.decks;
+    }
+    if (TARGETS[s.decks].includes(raw.target)) s.target = raw.target;
     if (typeof raw.grand === 'boolean') s.grand = raw.grand;
     if ([0, 1000, 2000, 3000].includes(raw.bombWindowMs)) s.bombWindowMs = raw.bombWindowMs;
     if (LEVELS.includes(raw.aiLevel)) s.aiLevel = raw.aiLevel;

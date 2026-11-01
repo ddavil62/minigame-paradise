@@ -353,3 +353,43 @@ test('발급된 방은 모두 나가 초기화되면 목록에서 치워진다',
   a.ws.close();
   await until(() => !srv.app._rooms.has('temp'), 3000);
 });
+
+test('더블 티추: 방 설정으로 2벌을 고르면 목표 점수가 옮겨지고, 시작하면 16장 → 28장·6장 교환으로 끝까지 진행된다', async (t) => {
+  const srv = await boot(RELAXED);
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'kd', name: '나', play: false }, t);
+  await until(() => a.room);
+  assert.equal(a.room.settings.decks, 1);
+  a.send({ type: 'CONFIG', settings: { decks: 2 } });
+  await until(() => a.room.settings.decks === 2);
+  assert.equal(a.room.settings.target, 2000, '1000 → 2000');
+  a.send({ type: 'CONFIG', settings: { target: 500 } });
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(a.room.settings.target, 2000, '2벌에서 500은 거절');
+  a.send({ type: 'CONFIG', settings: { decks: 3 } });
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(a.room.settings.decks, 2, '잘못된 벌 수는 무시');
+  a.send({ type: 'CONFIG', settings: { target: 1000, bombWindowMs: 0 } });
+  await until(() => a.room.settings.target === 1000);
+  a.send({ type: 'START' });
+  await until(() => a.state);
+  assert.equal(a.state.view.hand.length, 16);
+  assert.equal(a.state.view.settings.decks, 2);
+  // 사람(나)도 봇과 같은 로직으로 진행한다
+  let lastSig = '';
+  a.ws.on('message', (raw) => {
+    const m = JSON.parse(raw.toString());
+    if (m.type !== 'STATE') return;
+    const v = m.view;
+    const sig = `${v.round}|${v.phase}|${v.pending?.seat}|${v.hand.join()}|${v.trick.plays.length}|${v.trick.passed.length}|${v.legal?.kind}`;
+    if (v.legal && sig !== lastSig) {
+      lastSig = sig;
+      const action = decide(v, { level: 'normal' });
+      if (action) a.send({ type: 'ACT', action });
+    }
+  });
+  await until(() => a.state.view.phase === 'exchange' || a.state.view.phase === 'play', 20000);
+  await until(() => a.state.view.final, 120000);
+  assert.ok(a.state.view.final.scores.some((s) => s >= 1000));
+  assert.deepEqual(a.errors, []);
+});

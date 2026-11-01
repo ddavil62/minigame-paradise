@@ -140,3 +140,32 @@ test('작은 화면(1024×640)에서도 무대가 가로 스크롤 없이 들어
   const box = await page.locator('#stage').boundingBox();
   expect(box.x + box.width).toBeLessThanOrEqual(1024 + 1);
 });
+
+test('더블 티추: 2벌을 고르면 16장 → 28장, 교환은 6칸이고 손패가 화면 폭 안에 들어간다', async ({ page }) => {
+  await page.goto(`${base}/?name=테스터`);
+  await page.locator('[data-cfg="decks"][data-val="2"]').click();
+  await expect(page.locator('.mini i.on', { hasText: '2벌' })).toBeVisible();
+  await expect(page.locator('.mini i.on', { hasText: '2000' })).toBeVisible();
+  await page.locator('[data-do="start"]').click();
+  await expect(page.locator('.modal h2')).toContainText('그랜드 티추');
+  await expect(page.locator('.modal')).toContainText('처음 16장');
+  await expect(page.locator('.hand .card')).toHaveCount(16);
+  await page.locator('[data-do="grand-no"]').click();
+  await expect(page.locator('.slots')).toBeVisible();
+  await expect(page.locator('.hand .card')).toHaveCount(28);
+  await expect(page.locator('.slot .box')).toHaveCount(6);
+  await expect(page.locator('.score')).toContainText('목표 2000점');
+  for (let i = 0; i < 6; i++) {
+    await page.locator('.hand .card').first().click({ position: { x: 6, y: 30 } }); // 겹친 카드는 보이는 왼쪽 띠를 누른다
+    await expect(page.locator('.slot .box.fill')).toHaveCount(i + 1);
+  }
+  await page.locator('[data-do="exchange"]').click();
+  await expect(page.locator('.hand .card')).toHaveCount(28);
+  await expect(page.locator('.card.su-undefined')).toHaveCount(0);
+  await expect(page.locator('.rinfo')).toContainText('카드 점수 합 200');
+  // 손패가 무대(1200px) 안에 있다
+  const box = await page.locator('.hand .card').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).reduce((m, r) => ({ l: Math.min(m.l, r.left), r: Math.max(m.r, r.right) }), { l: 1e9, r: -1e9 }));
+  const stage = await page.locator('#stage').boundingBox();
+  expect(box.l).toBeGreaterThanOrEqual(stage.x - 1);
+  expect(box.r).toBeLessThanOrEqual(stage.x + stage.width + 1);
+});

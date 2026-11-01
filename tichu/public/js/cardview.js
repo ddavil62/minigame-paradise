@@ -3,7 +3,7 @@
  * 모서리 숫자 + 중앙 메달리온, J·Q·K·A는 금박 이중 테두리, 5·10·K는 점수 칩, 특수 4장은 일러스트 + 이름 리본.
  */
 import {
-  DOG, MJ, PHX, DRG, rankOf, suitOf, SUIT_KEYS, pointsOf, rankLabel,
+  DOG, MJ, PHX, DRG, rankOf, suitOf, SUIT_KEYS, pointsOf, rankLabel, baseOf,
 } from '../lib/cards.js';
 
 const SPECIAL = {
@@ -24,7 +24,7 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&a
 export function cardHtml(id, o = {}) {
   const { size = 'md', cls = '', style = '', data = true } = o;
   const attr = `${data ? ` data-id="${id}"` : ''}${style ? ` style="${style}"` : ''}`;
-  const sp = SPECIAL[id];
+  const sp = SPECIAL[baseOf(id)]; // 2벌의 두 번째 벌(id + 56)도 같은 카드로 그린다
   if (sp) {
     return `<div class="card sp ${sp.cls} ${size} ${cls}"${attr}><img class="art" src="assets/${sp.cls}.webp" alt="" draggable="false"><i class="fr"></i><span class="ix"><i>${sp.rk}</i></span>${sp.pt ? `<em class="pt">${sp.pt}</em>` : ''}<span class="nm"><b>${sp.ko}</b> <b class="e">${sp.en}</b></span></div>`;
   }

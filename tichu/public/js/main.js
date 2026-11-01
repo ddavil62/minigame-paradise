@@ -9,8 +9,8 @@ import { cardHtml, backHtml, cardsHtml, esc } from './cardview.js';
 import { createSounds } from './sounds.js';
 import { createFx } from './fx.js';
 import { createGuide } from './guide.js';
-import { MJ, PHX, DRG, rankOf, rankLabel } from '../lib/cards.js';
-import { interpretations, pickCombo, enumeratePlays, phoenixChoices, label, beats } from '../lib/combos.js';
+import { rankOf, rankLabel, isMJ, isPhx } from '../lib/cards.js';
+import { interpretations, pickCombo, enumeratePlays, phoenixChoices, label, beats, samePhx } from '../lib/combos.js';
 
 const AI_CHAR = { 주작: '雀', 백호: '虎', 현무: '武', 청룡: '龍' };
 const LEVEL_KO = { easy: '쉬움', normal: '보통', hard: '어려움' };
@@ -43,7 +43,7 @@ const S = {
   offset: 0, // 서버 시계 − 내 시계
   sel: [], // 고른 카드 id
   phxAs: null, // 봉황이 대신할 숫자(애매할 때 고른 값)
-  picks: [null, null, null], // 교환 슬롯(왼쪽·파트너·오른쪽)
+  picks: [null, null, null], // 교환 슬롯(왼쪽·파트너·오른쪽 순으로 벌 수만큼씩)
   wish: null, // 참새를 낼 때 소원을 고르는 중이면 {ids, as}
   assist: store.get('tichu:assist') === '1',
   leaveAsk: false,
@@ -100,7 +100,7 @@ function onMessage(m) {
       break;
     case 'ROOM':
       S.room = m;
-      if (m.phase === 'lobby') { S.st = null; S.sel = []; S.picks = [null, null, null]; S.wish = null; }
+      if (m.phase === 'lobby') { S.st = null; S.sel = []; S.picks = emptyPicks(); S.wish = null; }
       render();
       break;
     case 'STATE': {
@@ -109,8 +109,8 @@ function onMessage(m) {
       S.offset = m.serverNow - Date.now();
       const v = m.view;
       S.sel = S.sel.filter((id) => v.hand.includes(id));
-      if (v.phase !== 'exchange') S.picks = [null, null, null];
-      else S.picks = S.picks.map((id) => (id !== null && v.hand.includes(id) ? id : null));
+      if (v.phase !== 'exchange') S.picks = emptyPicks();
+      else S.picks = Array.from({ length: 3 * decksOf() }, (_, i) => (S.picks[i] != null && v.hand.includes(S.picks[i]) ? S.picks[i] : null));
       if (!(v.legal && v.legal.kind === 'turn')) S.wish = null;
       render();
       playEvents(m.events || [], v);
@@ -146,17 +146,17 @@ function autoPlay(v) {
   if (!legal) return;
   const go = (a) => setTimeout(() => send({ type: 'ACT', action: a }), 60);
   if (legal.kind === 'grand') go({ type: 'grand', on: false });
-  else if (legal.kind === 'exchange') go({ type: 'exchange', give: v.hand.slice(0, 3) });
+  else if (legal.kind === 'exchange') go({ type: 'exchange', give: v.hand.slice(0, 3 * decksOf()) });
   else if (legal.kind === 'ack') setTimeout(() => send({ type: 'ACT', action: { type: 'next' } }), Math.max(1500, Number(params.get('auto')) * 5));
   else if (legal.kind === 'gift') go({ type: 'gift', to: legal.options[0] });
   else if (legal.kind === 'turn') {
     const plays = enumeratePlays(v.hand, v.trick.top).filter((c) => !c.bomb && c.type !== 'dog');
     let pick = plays.sort((a, b) => a.rank - b.rank || a.n - b.n)[0];
-    if (legal.wish) pick = plays.find((c) => c.ids.some((id) => id !== PHX && rankOf(id) === legal.wish)) || pick;
+    if (legal.wish) pick = plays.find((c) => c.ids.some((id) => !isPhx(id) && rankOf(id) === legal.wish)) || pick;
     if (pick && !(v.trick.top && !legal.wish && v.trick.topSeat === (S.seat + 2) % 4)) {
       const a = { type: 'play', ids: pick.ids };
       if (pick.phx && pick.ids.length > 1) a.as = pick.phx;
-      if (pick.ids.includes(MJ)) a.wish = 9;
+      if (!v.wishUsed && pick.ids.some(isMJ)) a.wish = 9;
       const wait = Math.max(0, v.openAt - (Date.now() + S.offset)) + 80;
       setTimeout(() => send({ type: 'ACT', action: a }), wait);
     } else if (legal.canPass) {
@@ -167,6 +167,12 @@ function autoPlay(v) {
 }
 
 // ── 공통 계산 ───────────────────────────────────────────────
+/** 지금 방의 벌 수(1 또는 2). 2벌이면 28장·교환 6장·점수 2배다. */
+const decksOf = () => S.st?.view?.settings?.decks || S.room?.settings?.decks || 1;
+const emptyPicks = () => Array(3 * decksOf()).fill(null);
+const phxText = (p) => (Array.isArray(p) ? p.map(rankLabel).join('·') : rankLabel(p));
+const phxJson = (p) => JSON.stringify(p);
+
 const relOf = (seat) => (seat - S.seat + 4) % 4;
 const teamOf = (seat) => seat % 2;
 const isUs = (seat) => teamOf(seat) === teamOf(S.seat);
@@ -177,7 +183,7 @@ const nameOf = (seat) => seatInfo(seat).name || `자리${seat + 1}`;
 function avatarChar(info) { return AI_CHAR[info.name] || (info.name || '?').slice(0, 1); }
 function roleOf(seat) { return seat === S.seat ? '우리 팀' : relOf(seat) === 2 ? '파트너' : '상대 팀'; }
 const needText = (top) => (top.bomb ? '더 강한 폭탄' : `더 높은 ${TYPE_KO[top.type] || ''}`);
-const comboLabel = (c) => `${label(c)}${c.phx && c.ids.length > 1 && c.ids.includes(PHX) ? ` (봉황=${rankLabel(c.phx)})` : ''}`;
+const comboLabel = (c) => `${label(c)}${c.phx && c.ids.length > 1 && c.ids.some(isPhx) ? ` (봉황=${phxText(c.phx)})` : ''}`;
 
 /** 내가 고른 카드의 해석: {combo, shape, mine, choices} */
 function selInfo(v) {
@@ -186,7 +192,7 @@ function selInfo(v) {
   const mine = v.legal.kind === 'turn';
   const top = v.trick.top;
   const choices = phoenixChoices(ids, top);
-  const as = S.phxAs !== null && choices.includes(S.phxAs) ? S.phxAs : undefined;
+  const as = S.phxAs !== null && choices.some((c) => samePhx(c, S.phxAs)) ? S.phxAs : undefined;
   const combo = pickCombo(ids, top, { as, outOfTurn: !mine });
   const shape = interpretations(ids, null)[0] || null;
   return { combo, shape, mine, choices, as: combo && combo.phx && ids.length > 1 ? combo.phx : undefined };
@@ -228,8 +234,9 @@ function renderLobby() {
     <h1>티추 방 설정 <small>4인 · 2:2 팀전</small></h1><p class="lead">${note}</p>
     <div class="sboard"><div class="link v"><span>파트너 · 같은 팀</span></div><div class="link h"><span>파트너 · 같은 팀</span></div>${seats}</div></div>
     <div class="sside"><h3>규칙</h3>
-      <div class="opt"><span>목표 점수</span>${seg('target', [[500, '500'], [1000, '1000']])}</div>
-      <div class="opt"><span>그랜드 티추<small>처음 8장만 보고 ±200</small></span>${toggle('grand')}</div>
+      <div class="opt"><span>카드 벌 수<small>${set.decks === 2 ? '더블 티추: 112장 · 28장씩 · 점수 2배' : '표준 티추: 56장 · 14장씩'}</small></span>${seg('decks', [[1, '1벌'], [2, '2벌(더블)']])}</div>
+      <div class="opt"><span>목표 점수</span>${seg('target', set.decks === 2 ? [[1000, '1000'], [2000, '2000']] : [[500, '500'], [1000, '1000']])}</div>
+      <div class="opt"><span>그랜드 티추<small>처음 ${8 * set.decks}장만 보고 ±${200 * set.decks}</small></span>${toggle('grand')}</div>
       <div class="opt"><span>폭탄 끼어들기 대기<small>낸 뒤 폭탄을 낼 시간</small></span>${seg('bombWindowMs', [[0, '없음'], [1000, '1초'], [2000, '2초'], [3000, '3초']])}</div>
       <div class="opt"><span>AI 난이도</span>${seg('aiLevel', [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']])}</div>
       <div class="opt"><span>낼 수 있는 조합 도우미<small>초보용 칩 표시(나만 보여요)</small></span><button class="toggle${S.assist ? '' : ' off'}" data-local="assist"></button></div>
@@ -252,7 +259,7 @@ function scoreHtml(v) {
 function rinfoHtml(v) {
   const bits = [];
   if (v.wish) bits.push(`<span class="wishb">소원 <b>${rankLabel(v.wish)}</b></span>`);
-  bits.push('<span>카드 점수 합 <b>100</b></span>');
+  bits.push(`<span>카드 점수 합 <b>${100 * v.settings.decks}</b></span>`);
   return `<div class="rinfo">${bits.join('')}</div>`;
 }
 
@@ -267,7 +274,7 @@ function plateHtml(rel, v) {
   if (seat === S.seat) tag = '<em class="tg you">YOU</em>';
   else if (info.type === 'ai') tag = '<em class="tg ai">AI</em>';
   const badges = [];
-  if (call) badges.push(`<em class="bd ${call === 'grand' ? 'grand' : ''}">${call === 'grand' ? '그랜드 200' : '티추 100'}</em>`);
+  if (call) badges.push(`<em class="bd ${call === 'grand' ? 'grand' : ''}">${call === 'grand' ? `그랜드 ${200 * v.settings.decks}` : `티추 ${100 * v.settings.decks}`}</em>`);
   if (place >= 0) badges.push(`<em class="bd ${place === 0 ? 'out' : 'stat'}">${place + 1}등</em>`);
   if (info.away) badges.push('<em class="bd stat">자리 비움</em>');
   let sub;
@@ -286,11 +293,11 @@ function backsHtml(v) {
   for (const rel of [1, 2, 3]) {
     const seat = (S.seat + rel) % 4;
     const total = v.counts[seat];
-    const n = Math.min(14, total);
+    const n = Math.min(v.settings.decks === 2 ? 20 : 14, total);
     if (!n) continue;
     const pos = POS[rel];
     const mid = (n - 1) / 2;
-    const step = Math.min(rel === 2 ? 24 : 18, 300 / Math.max(1, n - 1));
+    const step = Math.min(rel === 2 ? 24 : 18, (rel === 2 ? 300 : 228) / Math.max(1, n - 1)); // 장수가 많아도 좌우 열이 이름판·버튼과 겹치지 않게
     const cards = Array.from({ length: n }, (_, j) => {
       const d = j - mid;
       const along = d * step;
@@ -311,7 +318,7 @@ function backsHtml(v) {
 function zoneHtml(v) {
   const me = S.seat;
   if (v.phase === 'grand') {
-    return `<div class="zone"><div class="ring"></div><div class="tinfo"><b>그랜드 티추</b><small>처음 8장만 보고 1등으로 나간다고 선언할지 정해요<br>모두 정하면 6장을 더 받아요</small></div></div>`;
+    return `<div class="zone"><div class="ring"></div><div class="tinfo"><b>그랜드 티추</b><small>처음 ${8 * v.settings.decks}장만 보고 1등으로 나간다고 선언할지 정해요<br>모두 정하면 ${6 * v.settings.decks}장을 더 받아요</small></div></div>`;
   }
   if (v.phase === 'exchange') return exchangeHtml(v);
   const top = v.trick.top;
@@ -340,20 +347,37 @@ function zoneHtml(v) {
 }
 
 function exchangeHtml(v) {
+  const per = v.settings.decks; // 한 사람에게 보내는 장수(1벌 1장, 2벌 2장)
   const slotDefs = [['to-left', 1], ['to-top', 2], ['to-right', 3]];
-  const slots = slotDefs.map(([cls, rel], i) => {
+  const firstEmpty = S.picks.indexOf(null);
+  const slots = slotDefs.map(([cls, rel], g) => {
     const seat = (S.seat + rel) % 4;
-    const id = S.picks[i];
-    const first = id === null && S.picks.indexOf(null) === i;
-    const box = id !== null ? `<div class="box fill" data-slot="${i}">${cardHtml(id, { size: 'md', data: false })}</div>` : `<div class="box${first ? ' next' : ''}">＋</div>`;
-    return `<div class="slot ${cls}">${box}<span class="to">${esc(nameOf(seat))}${rel === 2 ? '(파트너)' : ''}에게</span></div>`;
+    const boxes = Array.from({ length: per }, (_, j) => {
+      const i = g * per + j;
+      const id = S.picks[i];
+      return id != null
+        ? `<div class="box fill" data-slot="${i}">${cardHtml(id, { size: 'md', data: false })}</div>`
+        : `<div class="box${firstEmpty === i ? ' next' : ''}">＋</div>`;
+    }).join('');
+    return `<div class="slot ${cls}${per > 1 ? ' multi' : ''}"><div class="boxes">${boxes}</div><span class="to">${esc(nameOf(seat))}${rel === 2 ? '(파트너)' : ''}에게</span></div>`;
   }).join('');
   const done = v.exchangeDone?.[S.seat];
-  const filled = S.picks.filter((x) => x !== null).length;
+  const filled = S.picks.filter((x) => x != null).length;
+  const total = 3 * per;
   const msg = done
     ? '내 선택은 끝났어요. 다른 사람을 기다려요…'
-    : `카드를 한 장씩 눌러 3칸을 채워요 (${filled}/3)<br><b style="color:var(--accent)">파트너에게는 도움이 될 카드, 상대에게는 약한 카드</b>를 보내요. 서로 동시에 교환해요.`;
+    : `카드를 한 장씩 눌러 ${total}칸을 채워요 (${filled}/${total})${per > 1 ? `<br>한 사람에게 ${per}장씩 보내요` : ''}<br><b style="color:var(--accent)">파트너에게는 도움이 될 카드, 상대에게는 약한 카드</b>를 보내요. 서로 동시에 교환해요.`;
   return `<div class="slots">${slots}<div class="msg">${msg}</div></div>`;
+}
+
+/** 손패 부채꼴: 장수가 많으면(2벌 28장) 카드를 줄이고 간격을 좁혀 화면 폭 안에 넣는다. */
+function handLayout(n) {
+  const R = 1300; // 부채 반지름(CSS transform-origin과 같다)
+  const big = n <= 16;
+  const cw = big ? 78 : 62;
+  const span = big ? 800 : 740; // 가장 바깥 카드 중심 사이 폭
+  const step = Math.min(big ? 56 : 40, n > 1 ? span / (n - 1) : 0);
+  return { cw, ch: Math.round(cw * 1.436), deg: (step / R) * (180 / Math.PI) };
 }
 
 function handHtml(v) {
@@ -361,15 +385,16 @@ function handHtml(v) {
   const exch = v.phase === 'exchange';
   if (exch) ids = ids.filter((id) => !S.picks.includes(id));
   const mid = (ids.length - 1) / 2;
+  const lay = handLayout(ids.length);
   const received = new Set(v.phase === 'play' && !v.started ? v.received.map((r) => r.id) : []);
   const playable = assistPlayable(v);
   const cards = ids.map((id, i) => {
     const sel = S.sel.includes(id);
     const dim = playable && !playable.has(id);
-    return cardHtml(id, { size: 'md', cls: `${sel ? 'sel' : ''} ${dim ? 'dim' : ''} ${received.has(id) ? 'recv' : ''}`, style: `--a:${((i - mid) * 2.5).toFixed(2)}deg;z-index:${i}` });
+    return cardHtml(id, { size: 'md', cls: `${sel ? 'sel' : ''} ${dim ? 'dim' : ''} ${received.has(id) ? 'recv' : ''}`, style: `--a:${((i - mid) * lay.deg).toFixed(2)}deg;z-index:${i}` });
   }).join('');
   const mine = v.legal?.kind === 'turn';
-  return `<div class="hand fan${mine ? ' my-turn' : ''}">${cards}</div>`;
+  return `<div class="hand fan${mine ? ' my-turn' : ''}" style="--hw:${lay.cw}px;--hh:${lay.ch}px">${cards}</div>`;
 }
 
 /** 도우미가 켜져 있고 내 차례면 낼 수 있는 조합에 들어가는 카드 id 집합(없으면 null). */
@@ -382,7 +407,7 @@ function assistPlayable(v) {
 
 function availablePlays(v) {
   let plays = enumeratePlays(v.hand, v.trick.top);
-  if (v.legal?.wish) plays = plays.filter((c) => c.ids.some((id) => id !== PHX && rankOf(id) === v.legal.wish));
+  if (v.legal?.wish) plays = plays.filter((c) => c.ids.some((id) => !isPhx(id) && rankOf(id) === v.legal.wish));
   return plays;
 }
 
@@ -405,7 +430,7 @@ function stripHtml(v) {
     else if (legal.kind === 'wait') parts.push(`<span class="lab">${esc(nameOf(v.pending?.seat ?? 0))}님 차례예요${legal.canBomb ? ' · <b>폭탄을 낼 수 있어요!</b>' : ''}</span>`);
     if (legal?.kind === 'turn' && legal.wish) parts.push(`<span class="warn">소원 <b>${rankLabel(legal.wish)}</b>을 낼 수 있으면 꼭 내야 해요</span>`);
     if (wait > 0) parts.push(`<span class="warn">폭탄 대기 <span data-wait>${(wait / 1000).toFixed(1)}</span>초</span>`);
-    if (info && info.choices.length > 1) parts.push(`<span class="lab">봉황 =</span>${info.choices.map((c) => `<span class="chip${(info.combo?.phx ?? null) === c ? ' on' : ''}" data-phx="${c}">${rankLabel(c)}</span>`).join('')}`);
+    if (info && info.choices.length > 1) parts.push(`<span class="lab">봉황 =</span>${info.choices.map((c) => `<span class="chip${samePhx(info.combo?.phx ?? null, c) ? ' on' : ''}" data-phx='${phxJson(c)}'>${phxText(c)}</span>`).join('')}`);
   }
   return parts.length ? `<div class="strip">${parts.join('')}</div>` : '';
 }
@@ -416,7 +441,7 @@ function selText(v, info) {
   const w = v.legal?.wish;
   if (combo) {
     if (!mine && !combo.bomb) return '<span class="warn">내 차례가 아니에요 (폭탄만 낼 수 있어요)</span>';
-    if (w && !combo.ids.some((id) => id !== PHX && rankOf(id) === w)) return `<span class="warn">소원 ${rankLabel(w)}이 들어간 조합을 내야 해요</span>`;
+    if (w && !combo.ids.some((id) => !isPhx(id) && rankOf(id) === w)) return `<span class="warn">소원 ${rankLabel(w)}이 들어간 조합을 내야 해요</span>`;
     return `선택: <b>${esc(comboLabel(combo))}</b> <span class="ok">✓ ${top ? `${esc(nameOf(v.trick.topSeat))}의 ${esc(label(top))}보다 ${combo.bomb && !top.bomb ? '강한 폭탄이에요' : '높아요'}` : '선으로 낼 수 있어요'}</span>`;
   }
   if (shape) {
@@ -431,7 +456,7 @@ function chipsHtml(v) {
   if (!plays.length) return '<span class="warn">낼 수 있는 조합이 없어요. 패스해요</span>';
   const byLow = plays.slice().sort((a, b) => a.rank - b.rank || a.n - b.n);
   const shown = byLow.slice(0, 7);
-  return `<span class="lab">낼 수 있는 조합</span>${shown.map((c) => `<span class="chip" data-chip="${c.ids.join(',')}" data-as="${c.phx && c.ids.length > 1 ? c.phx : ''}">${esc(label(c))}${c.phx && c.ids.length > 1 ? ' <small>봉황</small>' : ''}</span>`).join('')}${byLow.length > shown.length ? `<span class="lab">외 ${byLow.length - shown.length}</span>` : ''}`;
+  return `<span class="lab">낼 수 있는 조합</span>${shown.map((c) => `<span class="chip" data-chip="${c.ids.join(',')}" data-as='${c.phx && c.ids.length > 1 ? phxJson(c.phx) : ''}'>${esc(label(c))}${c.phx && c.ids.length > 1 ? ' <small>봉황</small>' : ''}</span>`).join('')}${byLow.length > shown.length ? `<span class="lab">외 ${byLow.length - shown.length}</span>` : ''}`;
 }
 
 function actionsHtml(v) {
@@ -439,16 +464,16 @@ function actionsHtml(v) {
   if (!legal || v.phase === 'grand') return '';
   const btns = [];
   if ((legal.kind === 'turn' || legal.kind === 'wait' || legal.kind === 'exchange' || legal.kind === 'exchangeDone') && legal.canTichu) {
-    btns.push('<button class="b tichu" data-do="tichu">티추 부르기<small>성공 +100 · 실패 −100</small></button>');
+    btns.push(`<button class="b tichu" data-do="tichu">티추 부르기<small>성공 +${100 * v.settings.decks} · 실패 −${100 * v.settings.decks}</small></button>`);
   }
   if (legal.kind === 'exchange') {
-    const ok = S.picks.every((x) => x !== null);
-    btns.push(`<button class="b go" data-do="exchange"${ok ? '' : ' disabled'}>교환 확정<small>${ok ? '이대로 보내요' : `${3 - S.picks.filter((x) => x !== null).length}장 더 골라요`}</small></button>`);
+    const ok = S.picks.every((x) => x != null);
+    btns.push(`<button class="b go" data-do="exchange"${ok ? '' : ' disabled'}>교환 확정<small>${ok ? '이대로 보내요' : `${S.picks.filter((x) => x == null).length}장 더 골라요`}</small></button>`);
   } else if (legal.kind === 'turn') {
     const info = selInfo(v);
     const wait = waitLeft(v);
     const w = legal.wish;
-    const okCombo = info?.combo && (!w || info.combo.ids.some((id) => id !== PHX && rankOf(id) === w));
+    const okCombo = info?.combo && (!w || info.combo.ids.some((id) => !isPhx(id) && rankOf(id) === w));
     if (legal.canPass) btns.push(`<button class="b" data-do="pass"${wait > 0 ? ' disabled' : ''}>패스${wait > 0 ? `<small><span data-wait>${(wait / 1000).toFixed(1)}</span>초 뒤</small>` : ''}</button>`);
     const canPlay = okCombo && (wait <= 0 || info.combo.bomb);
     btns.push(`<button class="b go" data-do="play"${canPlay ? '' : ' disabled'}>${info?.combo?.bomb ? '폭탄!' : '내기'}<small>${info?.combo ? esc(comboLabel(info.combo)) : '카드를 골라요'}</small></button>`);
@@ -462,7 +487,8 @@ function actionsHtml(v) {
 function modalHtml(v) {
   const legal = v.legal;
   if (v.phase === 'grand' && legal?.kind === 'grand') {
-    return `<div class="scrim upper"></div><div class="modal high"><h2>그랜드 티추를 <em>부를까요?</em></h2><p>지금 보이는 <b>처음 8장</b>만 보고, 내가 이번 라운드에 <b>1등으로 나간다</b>고 선언해요.<br>성공하면 <b>+200점</b>, 실패하면 <b>−200점</b>이에요.<br><small style="font-weight:600">패스해도 6장을 더 받은 뒤 일반 티추(±100점)를 부를 수 있어요.</small></p><div class="btns"><button class="b" data-do="grand-no">패스하고 6장 받기</button><button class="b go" data-do="grand-yes">그랜드 티추!<small>±200점</small></button></div></div>`;
+    const d = v.settings.decks;
+    return `<div class="scrim upper"></div><div class="modal high"><h2>그랜드 티추를 <em>부를까요?</em></h2><p>지금 보이는 <b>처음 ${8 * d}장</b>만 보고, 내가 이번 라운드에 <b>1등으로 나간다</b>고 선언해요.<br>성공하면 <b>+${200 * d}점</b>, 실패하면 <b>−${200 * d}점</b>이에요.<br><small style="font-weight:600">패스해도 ${6 * d}장을 더 받은 뒤 일반 티추(±${100 * d}점)를 부를 수 있어요.</small></p><div class="btns"><button class="b" data-do="grand-no">패스하고 ${6 * d}장 받기</button><button class="b go" data-do="grand-yes">그랜드 티추!<small>±${200 * d}점</small></button></div></div>`;
   }
   if (S.wish) {
     const ranks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
@@ -492,14 +518,14 @@ function resultHtml(v) {
     ? `<tr><td>원투 피니시 (카드 점수 대신)</td>${money(r.cardPts[us])}${money(r.cardPts[them])}</tr>`
     : `<tr><td>카드 점수</td>${money(r.cardPts[us])}${money(r.cardPts[them])}</tr>`;
   const tichuRows = r.tichu.map((t) => {
-    const val = (t.call === 'grand' ? 200 : 100) * (t.ok ? 1 : -1);
+    const val = (t.call === 'grand' ? 200 : 100) * v.settings.decks * (t.ok ? 1 : -1);
     const mineSide = teamOf(t.seat) === us;
     return `<tr><td>${esc(nameOf(t.seat))} ${t.call === 'grand' ? '그랜드 티추' : '티추'} ${t.ok ? '성공' : '실패'}</td>${mineSide ? `${money(val)}<td></td>` : `<td></td>${money(val)}`}</tr>`;
   }).join('');
   const prev = [r.scores[0] - r.total[0], r.scores[1] - r.total[1]];
   const head = r.oneTwo ? `라운드 ${r.round} 결과 <em>— 원투 피니시!</em>` : `라운드 ${r.round} 결과 <em>— ${esc(nameOf(r.order[0]))} 1등</em>`;
   const foot = r.oneTwo
-    ? '같은 팀이 1·2등으로 나가서 카드 점수 대신 <b style="color:var(--accent)">200점</b>이에요.'
+    ? `같은 팀이 1·2등으로 나가서 카드 점수 대신 <b style="color:var(--accent)">${200 * v.settings.decks}점</b>이에요.`
     : `꼴찌(${esc(nameOf(r.lastSeat))})가 딴 카드는 1등에게, 남은 손패(${r.lastHand.length}장)는 상대 팀에게 가요.`;
   const acks = v.ackDone ? v.ackDone.filter(Boolean).length : 0;
   const btn = v.legal?.kind === 'ack'
@@ -609,7 +635,7 @@ function playEvents(events, v) {
     const who = e.seat !== undefined ? nameOf(e.seat) : '';
     switch (e.t) {
       case 'deal': sounds.play('deal'); break;
-      case 'dealrest': sounds.play('deal'); fx.banner('6장을 더 받았어요', { cls: 'info', ms: 1100 }); break;
+      case 'dealrest': sounds.play('deal'); fx.banner(`${6 * v.settings.decks}장을 더 받았어요`, { cls: 'info', ms: 1100 }); break;
       case 'exchanged': sounds.play('deal'); fx.banner('카드 교환 완료', { cls: 'info', ms: 1000 }); break;
       case 'start': fx.banner(e.seat === S.seat ? '내가 참새를 가졌어요 — 선!' : `${who}님이 참새를 가졌어요`, { cls: 'info', ms: 1300 }); break;
       case 'play': {
@@ -617,8 +643,8 @@ function playEvents(events, v) {
         const c = e.combo;
         if (c.bomb) { sounds.play('bomb'); fx.flash('#ff7a50'); fx.shake(12); fx.banner('폭탄!', { cls: 'bomb', sub: `${who} · ${label(c)}`, ms: 1500 }); }
         else if (c.type === 'single' && c.rank === 15) { sounds.play('dragon'); fx.flash('#ffcf4a'); fx.banner('용!', { cls: 'dragon', sub: who, ms: 1400 }); }
-        else if (c.type === 'single' && c.ids[0] === PHX) { sounds.play('phoenix'); fx.banner('봉황', { cls: 'info', sub: who, ms: 900 }); }
-        else if (c.type === 'single' && c.ids[0] === MJ) { sounds.play('sparrow'); }
+        else if (c.type === 'single' && isPhx(c.ids[0])) { sounds.play('phoenix'); fx.banner('봉황', { cls: 'info', sub: who, ms: 900 }); }
+        else if (c.type === 'single' && isMJ(c.ids[0])) { sounds.play('sparrow'); }
         else if (c.type === 'dog') { sounds.play('dog'); }
         else sounds.play('play', c.n);
         break;
@@ -681,7 +707,7 @@ function doPlay(v) {
   if (!info?.combo) return;
   const a = { type: 'play', ids: info.combo.ids };
   if (info.as !== undefined) a.as = info.as;
-  if (info.combo.ids.includes(MJ)) {
+  if (!v.wishUsed && info.combo.ids.some(isMJ)) { // 소원은 처음 낸 참새로만 빌 수 있다
     S.wish = { a };
     render();
     return;
@@ -697,7 +723,7 @@ function onAction(btn) {
     case 'grand-yes': act({ type: 'grand', on: true }); break;
     case 'grand-no': act({ type: 'grand', on: false }); break;
     case 'tichu': act({ type: 'tichu' }); break;
-    case 'exchange': if (S.picks.every((x) => x !== null)) act({ type: 'exchange', give: S.picks.slice() }); break;
+    case 'exchange': if (S.picks.every((x) => x != null)) act({ type: 'exchange', give: S.picks.slice() }); break;
     case 'play': if (v) doPlay(v); break;
     case 'pass': act({ type: 'pass' }); break;
     case 'wish-cancel': S.wish = null; render(); break;
@@ -739,11 +765,11 @@ stage.addEventListener('click', (e) => {
   const slot = t.closest('[data-slot]');
   if (slot) { S.picks[Number(slot.dataset.slot)] = null; sounds.play('select'); render(); return; }
   const phx = t.closest('[data-phx]');
-  if (phx) { S.phxAs = Number(phx.dataset.phx); render(); return; }
+  if (phx) { S.phxAs = JSON.parse(phx.dataset.phx); render(); return; }
   const chip = t.closest('[data-chip]');
   if (chip) {
     S.sel = chip.dataset.chip.split(',').map(Number);
-    S.phxAs = chip.dataset.as ? Number(chip.dataset.as) : null;
+    S.phxAs = chip.dataset.as ? JSON.parse(chip.dataset.as) : null;
     sounds.play('select');
     render();
     return;

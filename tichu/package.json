@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/combos.test.js tests/game.test.js tests/server.test.js"
+    "test": "node --test tests/combos.test.js tests/game.test.js tests/double.test.js tests/server.test.js"
   },
   "keywords": ["tichu", "card-game", "lan", "multiplayer", "websocket"],
   "author": "Lazy Slime Studio",

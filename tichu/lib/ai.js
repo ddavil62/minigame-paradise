@@ -5,28 +5,31 @@
  * easy: 가끔 무작위로 패스하고 티추 콜·폭탄 끼어들기를 하지 않는다.
  * normal: 강한 손이면 티추를 부르고 상대가 곧 나갈 때 폭탄으로 끊는다. hard: 콜 기준이 더 엄격하고 특수 카드를 아낀다.
  */
-import { DOG, MJ, PHX, DRG, rankOf } from './cards.js';
+import { rankOf, isDog, isMJ, isPhx, isDrg, isSuited } from './cards.js';
 import { enumeratePlays, bombsIn } from './combos.js';
 
 const team = (s) => s % 2;
 
-/** @param {number[]} hand 손패(8장 또는 14장) @returns {number} 손의 강도 점수 */
-export function handStrength(hand) {
+/**
+ * @param {number[]} hand 손패(8장 또는 14장, 2벌이면 16장 또는 28장) @param {number} [decks] 벌 수(점수를 한 벌 기준으로 맞춘다)
+ * @returns {number} 손의 강도 점수
+ */
+export function handStrength(hand, decks = 1) {
   let s = 0;
   const cnt = new Map();
   for (const id of hand) {
-    if (id === DRG) s += 3;
-    else if (id === PHX) s += 2.5;
-    else if (id === DOG) s += 0.5;
-    else if (id !== MJ) {
+    if (isDrg(id)) s += 3;
+    else if (isPhx(id)) s += 2.5;
+    else if (isDog(id)) s += 0.5;
+    else if (!isMJ(id)) {
       const r = rankOf(id);
       cnt.set(r, (cnt.get(r) || 0) + 1);
       if (r === 14) s += 1.5;
       else if (r === 13) s += 0.6;
     }
   }
-  for (const c of cnt.values()) if (c === 4) s += 3;
-  return s;
+  for (const c of cnt.values()) if (c >= 4) s += 3;
+  return s / decks;
 }
 
 const CALL_THRESHOLD = {
@@ -36,32 +39,39 @@ const CALL_THRESHOLD = {
 
 /** 교환에서 내가 아끼는 정도: 높을수록 내 손에 둔다. */
 function keepValue(id, hand) {
-  if (id === DRG) return 100;
-  if (id === PHX) return 90;
-  if (id === DOG) return 6;
-  if (id === MJ) return 8;
+  if (isDrg(id)) return 100;
+  if (isPhx(id)) return 90;
+  if (isDog(id)) return 6;
+  if (isMJ(id)) return 8;
   const r = rankOf(id);
-  const same = hand.filter((x) => x < 52 && rankOf(x) === r).length;
-  return r + (same - 1) * 6 + (same === 4 ? 40 : 0);
+  const same = hand.filter((x) => isSuited(x) && rankOf(x) === r).length;
+  return r + (same - 1) * 6 + (same >= 4 ? 40 : 0);
 }
 
-function pickExchange(hand) {
+/**
+ * 교환 카드 고르기: 왼쪽 상대·파트너·오른쪽 상대 순으로 `per`장씩(한 벌 1장, 2벌 2장).
+ * @param {number[]} hand 손패 @param {number} [per] 한 사람에게 주는 장수
+ * @returns {number[]} 3 × per장
+ */
+function pickExchange(hand, per = 1) {
   const left = hand.slice().sort((a, b) => keepValue(a, hand) - keepValue(b, hand));
-  const [low1, low2, ...rest] = left;
+  const lows = left.slice(0, 2 * per);
+  const rest = left.slice(2 * per);
   // 파트너에게는 쓸모 있는 높은 카드(에이스 등)를 준다. 용·봉황은 내가 쓴다.
-  const gift = rest.filter((id) => id !== DRG && id !== PHX && id !== DOG && id !== MJ)
-    .sort((a, b) => rankOf(b) - rankOf(a))[0] ?? rest[rest.length - 1];
-  return [low1, gift, low2];
+  const plain = rest.filter((id) => isSuited(id)).sort((a, b) => rankOf(b) - rankOf(a));
+  const gifts = [...plain, ...rest.slice().reverse().filter((id) => !plain.includes(id))].slice(0, per);
+  return [...lows.slice(0, per), ...gifts, ...lows.slice(per, 2 * per)];
 }
 
 function pickWish(hand, rng) {
-  const mine = new Set(hand.filter((id) => id < 52).map(rankOf));
+  const mine = new Set(hand.filter(isSuited).map(rankOf));
   const options = [];
   for (let r = 5; r <= 13; r++) if (!mine.has(r)) options.push(r);
   return options.length ? options[Math.floor(rng() * options.length)] : undefined;
 }
 
-function usesSpecial(c) { return c.ids.includes(DRG) || c.ids.includes(PHX); }
+function usesSpecial(c) { return c.ids.some((id) => isDrg(id) || isPhx(id)); }
+const decksOf = (view) => view.settings?.decks || 1;
 
 /**
  * @param {object} view `game.viewFor(seat)`의 결과
@@ -79,7 +89,7 @@ export function decide(view, opts = {}) {
   switch (legal.kind) {
     case 'grand': {
       const t = CALL_THRESHOLD[level];
-      return { type: 'grand', on: !!t && handStrength(hand) >= t.grand };
+      return { type: 'grand', on: !!t && handStrength(hand, decksOf(view)) >= t.grand };
     }
     case 'ack': return { type: 'next' };
     case 'gift': {
@@ -88,7 +98,7 @@ export function decide(view, opts = {}) {
     }
     case 'exchange': {
       if (wantsTichu(view, level)) return { type: 'tichu' };
-      return { type: 'exchange', give: pickExchange(hand) };
+      return { type: 'exchange', give: pickExchange(hand, decksOf(view)) };
     }
     case 'turn': {
       if (legal.canTichu && wantsTichu(view, level)) return { type: 'tichu' };
@@ -102,8 +112,9 @@ function wantsTichu(view, level) {
   const t = CALL_THRESHOLD[level];
   if (!t || view.calls[view.seat] || !(view.legal && view.legal.canTichu)) return false;
   const mine = view.seat % 2;
-  if (view.scores[mine] - view.scores[1 - mine] > 300) return false; // 크게 앞서면 모험하지 않는다
-  return handStrength(view.hand) >= t.tichu;
+  const decks = decksOf(view);
+  if (view.scores[mine] - view.scores[1 - mine] > 300 * decks) return false; // 크게 앞서면 모험하지 않는다
+  return handStrength(view.hand, decks) >= t.tichu;
 }
 
 function decideTurn(view, legal, level, rng) {
@@ -112,13 +123,13 @@ function decideTurn(view, legal, level, rng) {
   const top = view.trick.top;
   const topSeat = view.trick.topSeat;
   let plays = enumeratePlays(hand, top);
-  if (legal.wish) plays = plays.filter((c) => c.ids.some((id) => id !== PHX && rankOf(id) === legal.wish));
+  if (legal.wish) plays = plays.filter((c) => c.ids.some((id) => !isPhx(id) && rankOf(id) === legal.wish));
   if (!plays.length) return { type: 'pass' };
 
   const act = (c) => {
     const a = { type: 'play', ids: c.ids };
     if (c.phx !== null && c.phx !== undefined && c.ids.length > 1) a.as = c.phx;
-    if (c.ids.includes(MJ)) { const w = pickWish(hand, rng); if (w) a.wish = w; }
+    if (!view.wishUsed && c.ids.some(isMJ)) { const w = pickWish(hand, rng); if (w) a.wish = w; }
     return a;
   };
 
@@ -146,7 +157,7 @@ function decideTurn(view, legal, level, rng) {
       if (multi.length) pool = multi;
       else return act(pool.slice().sort((a, b) => b.rank - a.rank)[0]);
     }
-    const score = (c) => c.rank - c.n * 2.2 + (c.ids.includes(PHX) ? 4 : 0) + (c.ids.includes(DRG) ? 9 : 0) + (c.bomb ? 20 : 0);
+    const score = (c) => c.rank - c.n * 2.2 + (c.ids.some(isPhx) ? 4 : 0) + (c.ids.some(isDrg) ? 9 : 0) + (c.bomb ? 20 : 0);
     pool.sort((a, b) => score(a) - score(b));
     return act(level === 'easy' && rng() < 0.2 ? pool[Math.floor(rng() * pool.length)] : pool[0]);
   }
@@ -160,7 +171,7 @@ function decideTurn(view, legal, level, rng) {
   let choice = null;
   if (cheap.length) choice = cheap.slice().sort((a, b) => a.rank - b.rank || a.n - b.n)[0];
   if (!choice) {
-    const special = nonBomb.filter((c) => !(c.ids.includes(DRG) && top.rank < 11 && !danger));
+    const special = nonBomb.filter((c) => !(c.ids.some(isDrg) && top.rank < 11 && !danger));
     const worthIt = danger || pts >= 20 || hand.length <= 4 || top.rank >= 12;
     if (special.length && (worthIt || level === 'easy')) choice = special.slice().sort((a, b) => a.rank - b.rank)[0];
   }
@@ -203,7 +214,7 @@ export function fallbackAction(view) {
     case 'grand': return { type: 'grand', on: false };
     case 'ack': return { type: 'next' };
     case 'gift': return { type: 'gift', to: legal.options.slice().sort((a, b) => view.counts[b] - view.counts[a])[0] };
-    case 'exchange': return { type: 'exchange', give: pickExchange(view.hand) };
+    case 'exchange': return { type: 'exchange', give: pickExchange(view.hand, decksOf(view)) };
     case 'turn': return decideTurn(view, legal, 'normal', () => 0.5);
     default: return null;
   }

@@ -6,13 +6,13 @@
 
 ```text
 tichu/
-├── lib/cards.js    # 카드 id(0~55)·점수·정렬·시드 난수 (서버·AI·브라우저 공용, Node 전용 API 금지)
+├── lib/cards.js    # 카드 id(0~55, 2벌이면 0~111)·점수·정렬·시드 난수 (서버·AI·브라우저 공용, Node 전용 API 금지)
 ├── lib/combos.js   # 조합 해석·비교·봉황 처리·낼 수 있는 조합 열거 (서버·AI·브라우저 공용 순수 함수)
-├── lib/game.js     # 대국 상태 머신(TichuGame) — 모든 규칙 판정과 라운드 진행·정산
+├── lib/game.js     # 대국 상태 머신(TichuGame, 1벌·2벌) — 모든 규칙 판정과 라운드 진행·정산
 ├── lib/ai.js       # AI(easy/normal/hard), 폭탄 끼어들기, 시간 초과 대체 행동. viewFor() 뷰만 사용한다
 ├── server.js       # WebSocket 룸, AI 스케줄러, 타이머, 정적 파일(+ /lib/cards.js·combos.js 공유)
 ├── public/         # index.html, css/style.css, js/{main,cardview,fx,sounds,guide}.js, assets/
-└── tests/          # node:test(combos·game·server) + Playwright UI(ui.spec.js)
+└── tests/          # node:test(combos·game·double·server) + Playwright UI(ui.spec.js)
 ```
 
 `lib/cards.js`·`lib/combos.js`만 `/lib/`로 브라우저에 내보낸다(서버가 화이트리스트로 제한, `game.js`·`ai.js`는 404). 클라이언트는 이 코드를 버튼 활성화·선택 문구·도우미 칩에만 쓰고 **최종 판정은 항상 서버**다.
@@ -32,6 +32,20 @@ tichu/
 - 라운드가 끝날 때 마지막 트릭은 마지막으로 낸 사람이 가져간다(용이면 선물 선택).
 - 미구현: 관전, 점수 기록 저장.
 
+## 더블 티추 (방 설정 "카드 벌 수 2벌", `settings.decks = 2`)
+
+유저 하우스 룰(메가 티추)이다. 기본은 1벌이고, 방 설정에서 고른다. 4인 전용이며 6인은 아직 없다. 표준 규칙에서 바뀌는 것만 적는다.
+
+- 112장(56장 × 2벌, 같은 카드 2장씩·특수 카드도 2장씩). **카드 id 56~111은 두 번째 벌**(`id + 56`)이고 카드의 정체는 항상 `baseOf(id)`로 본다(`isDog/isMJ/isPhx/isDrg/isSuited` 사용, `id === PHX` 같은 비교 금지).
+- 처음 **16장** → 그랜드 선택 → 12장 더(**28장**). 교환은 **6장**: `give`는 6개이고 `give[0..1]`은 왼쪽 상대(seat+1), `[2..3]`은 파트너, `[4..5]`는 오른쪽 상대에게 간다.
+- 점수는 전부 2배: 카드 점수 합 200·원투 400·티추 ±200·그랜드 ±400. 목표는 1000/2000(기본 2000). 벌 수를 바꾸면 서버가 목표 점수를 같은 비율로 옮긴다(`TARGETS`).
+- 참새가 두 장: 선은 첫 벌 참새(id 53)를 가진 사람. **소원은 라운드에서 처음 낸 참새로만** 빌 수 있다(`h.wishUsed`, 뷰의 `wishUsed`). 두 번째 참새는 소원이 없다(첫 사람이 "소원 없음"을 골라도 마찬가지).
+- 봉황이 두 장: 한 조합에 둘 다 쓸 수 있다. `phx`는 봉황 한 장이면 숫자, 두 장이면 오름차순 `[숫자, 숫자]`이고 `as`도 같은 모양이다(`samePhx`로 비교). 페어·트리플·풀하우스·연속 페어의 한 묶음은 **진짜 카드가 한 장은 있어야** 한다(봉황 둘만으로 페어 불가). 봉황 싱글 위에 봉황을 얹을 수 있지만 15.0이 되는 경우(A 위 봉황 위)는 막는다(용을 가로막지 않게).
+- 용은 용을 이기지 못한다(숫자가 같다). 폭탄만 끊는다.
+- 폭탄: 같은 숫자 **4~8장**(`bomb4`, 장수가 많으면 이기고 같으면 숫자) · 같은 무늬 스트레이트 플러시(길이 → 높이, 같은 숫자 폭탄보다 항상 강함). 참새(숫자 1)는 페어·폭탄에 못 쓴다.
+- 조합 해석은 `interpretations()`의 `fit()`이 "묶음 목록을 진짜 카드와 봉황 k장으로 채울 수 있는가"로 일반화해서 판정한다. 새 조합 종류는 거기에 묶음 목록만 추가한다.
+- 화면: 손패가 17장 이상이면 카드를 줄여(62×89) 부채꼴을 좁힌다(`handLayout`). 교환 칸은 6개, 상대 손패는 최대 20장까지 그린다.
+
 ## 게임 불변조건
 
 - 진행 대기 상태는 `game.pending`이 단일 기준이다: `grand`(그랜드 선택) · `exchange`(교환) · `turn`(낼 차례) · `gift`(용 선물) · `ack`(라운드 결과 확인) · null(종료). `waitingSeats()`가 지금 움직여야 하는 좌석이다.
@@ -47,9 +61,9 @@ tichu/
 
 | 방향 | 메시지 | 역할 |
 |---|---|---|
-| C→S | `CONFIG {settings}` | 호스트가 목표 점수(500/1000)·그랜드·폭탄 대기(0~3초)·AI 난이도 변경(방 설정 중) |
+| C→S | `CONFIG {settings}` | 호스트가 카드 벌 수(1/2)·목표 점수(1벌 500/1000, 2벌 1000/2000)·그랜드·폭탄 대기(0~3초)·AI 난이도 변경(방 설정 중) |
 | C→S | `START` / `REMATCH` / `LEAVE` | 호스트 시작 / 호스트 다시 하기 / 나가기 |
-| C→S | `ACT {action}` | `grand{on}` `exchange{give:[a,b,c]}` `tichu` `play{ids,as?,wish?}` `pass` `gift{to}` `next` |
+| C→S | `ACT {action}` | `grand{on}` `exchange{give:[3장, 2벌이면 6장]}` `tichu` `play{ids,as?,wish?}` `pass` `gift{to}` `next` (`as`: 봉황 숫자, 두 장이면 `[숫자, 숫자]`) |
 | C→S | `PAUSE` / `RESUME` | 일시정지 / 재개(누구든 재개) |
 | S→C | `JOINED` `ROOM` `STATE` `ERROR` | 좌석·방 설정·대국 뷰(`view`, `seats`, `timers`, `pause`, `events`, `serverNow`) |
 
@@ -74,14 +88,14 @@ tichu/
 - 무대는 1200×760 고정이고 `fit()`이 창에 맞춰 비율만 줄인다. 카드·이름판·모달·방 설정 CSS는 목업(`tichu-design-v2.html`)에서 가져왔다.
 - 선택한 카드의 판정은 `selInfo()`(`pickCombo`·`interpretations`·`phoenixChoices`)가 한다. 참새를 내려면 소원 모달(`S.wish`)을 거쳐 `play`에 `wish`를 싣는다. 폭탄 대기 카운트다운은 `[data-wait]` 요소를 `updateTimers()`가 갱신한다.
 - 도우미(`#btn-assist`, 로컬 설정 `tichu:assist`)를 켜면 내 차례에 낼 수 있는 조합 칩과 못 내는 카드 흐림을 보여 준다. 서버와 무관하다(`ASSIST` 메시지는 무시).
-- 룰 가이드(`guide.js`)는 4탭 오버레이이고 타이머·점수 같은 수치가 바뀌면 문구도 함께 고친다. 테스트 전용 `?auto=N`은 단순 전략으로 자동 진행한다.
+- 룰 가이드(`guide.js`)는 5탭(마지막이 더블 티추) 오버레이이고 타이머·점수 같은 수치가 바뀌면 문구도 함께 고친다. 테스트 전용 `?auto=N`은 단순 전략으로 자동 진행한다.
 - 효과음은 WebAudio 합성(`sounds.js`)이며 사용자 조작 전에는 오디오를 만들지 않는다. BGM은 아직 없다.
 
 ## 테스트
 
 ```powershell
 cd C:\antigravity\minigame-paradise\tichu
-node --test tests/combos.test.js tests/game.test.js tests/server.test.js
+node --test tests/combos.test.js tests/game.test.js tests/double.test.js tests/server.test.js
 npx playwright test --config=playwright.config.js   # UI 회귀(격리 포트에서 서버를 직접 기동)
 ```
 

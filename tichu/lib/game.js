@@ -2,22 +2,23 @@
  * @fileoverview 티추 대국 상태 머신. 모든 규칙 판정은 여기서만 일어난다(서버 권위).
  *
  * 좌석 0~3은 시계 방향이고 팀은 `seat % 2`(0·2 대 1·3)다. 맞은편이 파트너다.
+ * `settings.decks`가 2이면 더블 티추(112장): 28장씩 받고(그랜드는 처음 16장) 교환은 6장, 카드·콜·원투 점수와 목표 점수가 2배다.
  * 진행 대기 상태는 `pending`이 단일 기준이다:
  *   grand(그랜드 티추 선택) · exchange(카드 3장 교환) · turn(낼 차례) · gift(용 트릭 선물) · ack(라운드 결과 확인) · null(종료)
  * 모든 변경은 `act(seat, action)`으로만 일어나고 불법 행동은 `{ok:false, error}`로 거절된다.
  * 내 차례가 아니어도 낼 수 있는 행동은 폭탄(`play`)과 티추 콜(`tichu`)뿐이다.
  */
 import {
-  DOG, MJ, PHX, DRG, rankOf, pointsSum, sortHand, shuffle, fullDeck,
+  DOG, MJ, PHX, DRG, rankOf, pointsSum, sortHand, shuffle, fullDeck, isMJ, isPhx,
 } from './cards.js';
 import { pickCombo, enumeratePlays, bombsIn, phoenixChoices } from './combos.js';
 
-export const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, bombWindowMs: 2000 });
+export const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, bombWindowMs: 2000, decks: 1 });
 
 const team = (seat) => seat % 2;
 const partnerOf = (seat) => (seat + 2) % 4;
 const fail = (error) => ({ ok: false, error });
-const hasRealRank = (combo, r) => combo.ids.some((id) => id !== PHX && rankOf(id) === r);
+const hasRealRank = (combo, r) => combo.ids.some((id) => !isPhx(id) && rankOf(id) === r);
 
 export class TichuGame {
   /**
@@ -25,6 +26,12 @@ export class TichuGame {
    */
   constructor(opts = {}) {
     this.settings = { ...DEFAULT_SETTINGS, ...(opts.settings || {}) };
+    this.decks = this.settings.decks === 2 ? 2 : 1;
+    this.settings.decks = this.decks;
+    this.handSize = 14 * this.decks; // 한 사람이 받는 장수
+    this.grandSize = 8 * this.decks; // 그랜드 티추를 정하는 처음 장수
+    this.perSeat = this.decks; // 교환에서 한 사람에게 주는 장수(3명에게 각각)
+    this.scale = this.decks; // 카드 점수 합·콜·원투 점수 배수
     this.rng = opts.rng || Math.random;
     this.now = opts.now || (() => Date.now());
     this.roundNo = 0;
@@ -46,10 +53,11 @@ export class TichuGame {
   // ── 라운드 시작 ──────────────────────────────────────────
   startRound() {
     this.roundNo++;
-    const deck = shuffle(fullDeck(), this.rng);
+    const deck = shuffle(fullDeck(this.decks), this.rng);
+    const g = this.grandSize;
     this.h = {
-      hands: [0, 1, 2, 3].map((s) => sortHand(deck.slice(s * 8, s * 8 + 8))),
-      rest: deck.slice(32),
+      hands: [0, 1, 2, 3].map((s) => sortHand(deck.slice(s * g, s * g + g))),
+      rest: deck.slice(4 * g),
       won: [[], [], [], []],
       calls: [null, null, null, null],
       started: [false, false, false, false],
@@ -59,6 +67,7 @@ export class TichuGame {
       given: [[], [], [], []],
       trick: this.newTrick(),
       wish: null,
+      wishUsed: false, // 소원은 라운드에서 처음 낸 참새로 한 번만 빈다
       openAt: 0,
     };
     this.result = null;
@@ -75,7 +84,8 @@ export class TichuGame {
 
   dealRest() {
     const h = this.h;
-    for (let s = 0; s < 4; s++) h.hands[s] = sortHand([...h.hands[s], ...h.rest.slice(s * 6, s * 6 + 6)]);
+    const more = this.handSize - this.grandSize;
+    for (let s = 0; s < 4; s++) h.hands[s] = sortHand([...h.hands[s], ...h.rest.slice(s * more, s * more + more)]);
     h.rest = [];
     this.phase = 'exchange';
     this.pending = { type: 'exchange', done: {} };
@@ -118,7 +128,8 @@ export class TichuGame {
     const h = this.h;
     if (!p || p.type !== 'exchange' || p.done[seat]) return fail('not_allowed');
     const give = a.give;
-    if (!Array.isArray(give) || give.length !== 3 || new Set(give).size !== 3) return fail('bad_action');
+    const need = 3 * this.perSeat;
+    if (!Array.isArray(give) || give.length !== need || new Set(give).size !== need) return fail('bad_action');
     if (!give.every((id) => Number.isInteger(id) && h.hands[seat].includes(id))) return fail('illegal');
     h.picks[seat] = give.slice();
     p.done[seat] = true;
@@ -133,8 +144,9 @@ export class TichuGame {
       const to = [(g + 1) % 4, (g + 2) % 4, (g + 3) % 4];
       h.hands[g] = h.hands[g].filter((id) => !h.picks[g].includes(id));
       h.picks[g].forEach((id, i) => {
-        h.received[to[i]].push({ from: g, id });
-        h.given[g].push({ to: to[i], id });
+        const dest = to[Math.floor(i / this.perSeat)];
+        h.received[dest].push({ from: g, id });
+        h.given[g].push({ to: dest, id });
       });
     }
     for (let s = 0; s < 4; s++) {
@@ -151,7 +163,7 @@ export class TichuGame {
   actTichu(seat) {
     const h = this.h;
     if (!h || (this.phase !== 'exchange' && this.phase !== 'play')) return fail('not_allowed');
-    if (h.calls[seat] || h.started[seat] || h.hands[seat].length !== 14) return fail('not_allowed');
+    if (h.calls[seat] || h.started[seat] || h.hands[seat].length !== this.handSize) return fail('not_allowed');
     h.calls[seat] = 'tichu';
     this.emit({ t: 'call', seat, call: 'tichu' });
     return { ok: true };
@@ -190,7 +202,7 @@ export class TichuGame {
     const h = this.h;
     if (!h.wish) return null;
     const hand = h.hands[seat];
-    if (!hand.some((id) => id !== PHX && rankOf(id) === h.wish)) return null;
+    if (!hand.some((id) => !isPhx(id) && rankOf(id) === h.wish)) return null;
     return enumeratePlays(hand, h.trick.top).some((c) => hasRealRank(c, h.wish)) ? h.wish : null;
   }
 
@@ -216,7 +228,7 @@ export class TichuGame {
     this.emit({ t: 'play', seat, combo: summary(combo), outOfTurn: !mine });
 
     if (combo.type === 'dog') {
-      h.won[seat].push(DOG);
+      h.won[seat].push(ids[0]);
       const lead = this.dogTarget(seat);
       if (!h.hands[seat].length) this.goOut(seat);
       this.emit({ t: 'dog', seat, to: lead });
@@ -235,7 +247,8 @@ export class TichuGame {
     tr.pile.push(...ids);
     h.openAt = this.now() + this.settings.bombWindowMs;
 
-    if (combo.ids.includes(MJ)) {
+    if (!h.wishUsed && combo.ids.some(isMJ)) {
+      h.wishUsed = true; // 두 번째 참새는 소원을 못 빈다(처음 낸 사람 한 명만)
       const w = Number.isInteger(a.wish) && a.wish >= 2 && a.wish <= 14 ? a.wish : null;
       h.wish = w;
       if (w) this.emit({ t: 'wish', seat, rank: w });
@@ -327,7 +340,7 @@ export class TichuGame {
     let lastSeat = -1;
     let lastHand = [];
     if (oneTwo) {
-      cardPts[team(out[0])] = 200;
+      cardPts[team(out[0])] = 200 * this.scale;
     } else {
       lastSeat = [0, 1, 2, 3].find((s) => !out.includes(s));
       lastHand = h.hands[lastSeat].slice();
@@ -342,7 +355,7 @@ export class TichuGame {
       const c = h.calls[s];
       if (!c) continue;
       const ok = out[0] === s;
-      bonus[team(s)] += (c === 'grand' ? 200 : 100) * (ok ? 1 : -1);
+      bonus[team(s)] += (c === 'grand' ? 200 : 100) * this.scale * (ok ? 1 : -1);
       tichu.push({ seat: s, call: c, ok });
     }
     const total = [cardPts[0] + bonus[0], cardPts[1] + bonus[1]];
@@ -384,7 +397,7 @@ export class TichuGame {
   /** 티추 콜이 가능한가(첫 카드를 내기 전). */
   canCall(seat) {
     const h = this.h;
-    return (this.phase === 'exchange' || this.phase === 'play') && !h.calls[seat] && !h.started[seat] && h.hands[seat].length === 14;
+    return (this.phase === 'exchange' || this.phase === 'play') && !h.calls[seat] && !h.started[seat] && h.hands[seat].length === this.handSize;
   }
 
   /**
@@ -449,6 +462,7 @@ export class TichuGame {
         points: pointsSum(tr.pile),
       },
       wish: h.wish,
+      wishUsed: h.wishUsed,
       openAt: h.openAt,
       legal: this.legalFor(seat),
       result: this.phase === 'roundEnd' || this.phase === 'over' ? this.result : null,
