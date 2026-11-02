@@ -612,7 +612,7 @@ function finalHtml(v) {
 
 function pauseHtml(p) {
   const sec = Math.floor((nowMs() - p.at) / 1000);
-  return `<div class="pause"><div class="pbox"><h2>⏸ 일시정지</h2><p><b>${esc(p.name)}</b>님이 멈췄어요 (<span id="pause-clock">${fmtClock(sec * 1000)}</span>)<br>누구든 다시 시작할 수 있어요</p><button class="b go" data-do="resume">▶ 다시 시작</button></div></div>`;
+  return `<div class="pause"><div class="pbox"><h2>일시정지</h2><p><b>${esc(p.name)}</b>님이 멈췄어요 (<span id="pause-clock">${fmtClock(sec * 1000)}</span>)<br>누구든 다시 시작할 수 있어요</p><button class="b go" data-do="resume">다시 시작</button></div></div>`;
 }
 const fmtClock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
 
@@ -655,7 +655,7 @@ function paintPause() {
   if (!visible) return;
   const paused = !!st.pause;
   btn.classList.toggle('on', paused);
-  btn.textContent = paused ? '▶ 재개' : '⏸ 일시정지';
+  btn.textContent = paused ? '재개' : '일시정지';
 }
 
 // ── 타이머 ──────────────────────────────────────────────────
@@ -905,7 +905,7 @@ document.addEventListener('keydown', (e) => {
   if (!btn.classList.contains('hidden')) btn.click();
 });
 const soundBtn = $('btn-sound');
-const paintSound = () => { soundBtn.classList.toggle('on', !sounds.isMuted()); soundBtn.textContent = sounds.isMuted() ? '🔇 효과음 꺼짐' : '🔊 효과음'; };
+const paintSound = () => { soundBtn.classList.toggle('on', !sounds.isMuted()); soundBtn.textContent = sounds.isMuted() ? '효과음 꺼짐' : '효과음'; };
 paintSound();
 soundBtn.addEventListener('click', () => { sounds.setMuted(!sounds.isMuted()); paintSound(); sounds.unlock(); });
 

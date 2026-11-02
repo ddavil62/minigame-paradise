@@ -1,0 +1,124 @@
+/*
+ * 티추 스킨 — 옻칠 & 금박. style.css(구조·배치) 위에 얹는 외형 레이어다.
+ * 원칙: 얇은 선 남발 대신 깊이(안쪽 음영·그림자)와 질감으로 위계를 만들고, 금색은 중요한 곳에만 쓴다.
+ * 테이블은 생성 이미지(assets/table.webp: 옥색 펠트 + 검은 옻칠 테두리 + 가는 금 상감선)이고, 이미지가 틀을 맡는다.
+ * 이미지를 못 불러오면 --noise 질감을 얹은 단색 펠트로 보인다(--table의 뒤쪽 값).
+ */
+
+/* ── 토큰 ── */
+body {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #1d1611 0%, #0c0908 62%);
+}
+.stage {
+  border-radius: 20px;
+  --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --table: url("../assets/table.webp") center / 100% 100% no-repeat, var(--noise), #0f2e25;
+  --frame: 0 34px 80px rgba(0,0,0,.72), 0 0 0 1px rgba(0,0,0,.6);
+  --ui: #f4ecd9; --muted: #aebdb1; --accent: #dcb86c;
+  --panel: #0e1713;
+  --plate-bg: linear-gradient(180deg, rgba(22,31,27,.92), rgba(9,15,12,.94));
+  --plate-border: rgba(220,184,108,.3);
+  --foil: linear-gradient(140deg, rgba(246,224,164,.8), rgba(150,112,48,.32) 38%, rgba(246,224,164,.55) 68%, rgba(122,90,36,.34));
+  --btn-bg: linear-gradient(180deg, #f3dca0 0%, #d6b062 52%, #b48a3c 100%);
+  --btn-text: #2a1c06; --btn2-bg: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); --btn-border: rgba(244,236,217,.22);
+  --team-us: #8cc4ee; --team-them: #f0a08e;
+  --cface: linear-gradient(180deg, #fcf8ee 0%, #f4eddb 68%, #eadfc6 100%); --cborder: #cdc2a4;
+  --cshadow: 0 1px 0 rgba(0,0,0,.28), 0 7px 13px rgba(0,0,0,.42);
+  --c-jade: #1b8554; --c-sword: #23252b; --c-pagoda: #26549e; --c-star: #b5302a;
+}
+
+/* ── 헤더 ── */
+.game-header { background: #0a0807; border-bottom: 1px solid #2c2216; }
+.btn-back, .hdr-toggle { border: 1px solid #3a2e1f; border-radius: 7px; background: transparent; color: #cdc1a6; letter-spacing: .01em; }
+.btn-back:hover, .hdr-toggle:hover { background: #17120d; }
+.hdr-toggle.on { border-color: #dcb86c; background: rgba(220,184,108,.14); color: #f1d99a; }
+.game-header h1 { font-family: "Noto Serif KR", "Batang", serif; letter-spacing: .04em; color: #eadbb4; }
+
+/* ── 금박 테두리 패널: 얇은 선 대신 금속 광택의 가장자리 + 안쪽 음영 ── */
+.stage .score, .stage .plate, .stage .strip, .stage .sside, .stage .cpanel, .stage .modal,
+.stage .pause .pbox, .stage .rinfo span, .stage .sseat, .stage .result .fin div, .stage .tl .ti, .stage .waiting-note {
+  border: 1px solid transparent;
+  background: var(--plate-bg) padding-box, var(--foil) border-box;
+  box-shadow: 0 10px 26px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.stage .modal { border-radius: 14px; background: linear-gradient(180deg, #14201a, #0b1310) padding-box, var(--foil) border-box; box-shadow: 0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06); }
+.stage .score { border-radius: 12px; padding: 10px 13px; }
+.stage .plate { border-radius: 12px; }
+.stage .rinfo span { border-radius: 99px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.stage .sseat { border-style: solid; }
+.stage .sseat.me { background: var(--plate-bg) padding-box, linear-gradient(140deg, #f6e0a4, #b48a3c, #f6e0a4) border-box; }
+.stage .waiting-note { border-style: solid; }
+
+/* ── 점수 박스 ── */
+.stage .score .row { margin-bottom: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .02em; color: #d9d2bf; }
+.stage .score .row span { font: 700 15px/1 "Noto Serif KR", "Batang", serif; color: #f4ecd9; }
+.stage .score .bar { height: 4px; background: rgba(255,255,255,.1); }
+.stage .score .us .bar i { background: linear-gradient(90deg, #5f9fd0, var(--team-us)); }
+.stage .score .them .bar i { background: linear-gradient(90deg, #cf7664, var(--team-them)); }
+.stage .score small { letter-spacing: .02em; }
+.stage .score .rnd { border-top-color: rgba(220,184,108,.22); }
+.stage .score .rnd b { font-family: "Noto Serif KR", "Batang", serif; }
+
+/* ── 이름판 ── */
+.stage .plate::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0; background: var(--team); }
+.stage .plate .av { border: 1.5px solid color-mix(in srgb, var(--team) 75%, #000); background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--team) 42%, #2a3036), #10151a 78%); font-family: "Noto Serif KR", "Batang", serif; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.4); }
+.stage .plate .nm { letter-spacing: .01em; }
+.stage .plate.turn { background: linear-gradient(180deg, rgba(52,46,26,.95), rgba(20,21,12,.97)) padding-box, linear-gradient(140deg, #fff1c4, #d3a94d, #fff1c4) border-box; box-shadow: 0 0 0 1px rgba(255,241,196,.75), 0 0 36px rgba(220,184,108,.5), 0 10px 26px rgba(0,0,0,.45); }
+.stage .plate .tm { height: 3px; bottom: -7px; background: rgba(255,255,255,.12); }
+.stage .plate .tm i { background: linear-gradient(90deg, #b48a3c, #f1d99a); }
+.stage .tg { letter-spacing: .03em; font-weight: 700; }
+.stage .tg.you { background: linear-gradient(180deg, #f1d99a, #cfa957); }
+.stage .tg.hu { background: #3aa57c; color: #04201a; }
+.stage .bd { background: linear-gradient(180deg, #d2503f, #9f2e22); font-weight: 700; letter-spacing: .02em; }
+.stage .bd.grand { background: linear-gradient(180deg, #f1d99a, #cf9a45); }
+.stage .bk .cnt { border: 1px solid rgba(244,236,217,.75); background: linear-gradient(180deg, #17261f, #0a110e); font-family: "Noto Serif KR", "Batang", serif; }
+
+/* ── 테이블 중앙 ── */
+.stage .zone .ring { border: 1px solid rgba(220,184,108,.16); box-shadow: inset 0 0 70px rgba(0,0,0,.2), 0 0 0 7px rgba(0,0,0,.05); }
+.stage .play .lb, .stage .slot .to { background: rgba(8,14,11,.62); border: 1px solid rgba(220,184,108,.18); font-weight: 600; letter-spacing: .01em; }
+.stage .tinfo b { font-family: "Noto Serif KR", "Batang", serif; font-weight: 700; letter-spacing: .01em; text-shadow: 0 2px 12px rgba(0,0,0,.5); }
+.stage .passtag { border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.18); }
+.stage .slot .box { border: 1.5px dashed rgba(220,184,108,.4); background: rgba(0,0,0,.14); }
+
+/* ── 카드 ── */
+.card { border: 1px solid var(--cborder); }
+.card .fr { border-color: color-mix(in srgb, currentColor 30%, transparent); }
+.stage .card.sel { box-shadow: 0 0 0 2px var(--accent), 0 12px 20px rgba(0,0,0,.5); }
+.stage .hand.fan.my-turn::before { background: radial-gradient(ellipse, rgba(220,184,108,.2), transparent 70%); }
+
+/* ── 버튼 ── */
+.stage .b { border-radius: 9px; border: 1px solid var(--btn-border); background: var(--btn2-bg); letter-spacing: .02em; box-shadow: 0 3px 10px rgba(0,0,0,.25); }
+.stage .b.go { border-color: #f7e6b4; background: var(--btn-bg); box-shadow: 0 6px 16px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.65), inset 0 -2px 0 rgba(96,64,10,.35); text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+.stage .b.tichu { border-color: rgba(240,170,150,.45); background: linear-gradient(180deg, #7b2a22, #4a1612); color: #ffd9cf; }
+.stage .b[disabled] { background: rgba(0,0,0,.22); border-color: rgba(244,236,217,.1); box-shadow: none; text-shadow: none; }
+.stage .b.bombbtn { border-color: #f0a080; background: linear-gradient(180deg, #d4623c, #8f2a14); }
+.stage .start { border: 1px solid #f7e6b4; border-radius: 12px; background: var(--btn-bg); box-shadow: 0 10px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.65), inset 0 -3px 0 rgba(96,64,10,.35); font-family: "Noto Serif KR", "Batang", serif; letter-spacing: .06em; }
+.stage .chip { border: 1px solid rgba(220,184,108,.3); background: rgba(255,255,255,.05); }
+.stage .chip.on { background: linear-gradient(180deg, #f1d99a, #cfa957); }
+
+/* ── 모달·스크림 ── */
+.stage .scrim { background: radial-gradient(ellipse at 50% 42%, rgba(4,8,6,.55), rgba(2,4,3,.82)); }
+.stage .modal h2 { font-family: "Noto Serif KR", "Batang", serif; font-weight: 700; letter-spacing: .01em; }
+.stage .modal h2::after { content: ""; display: block; width: 46px; height: 2px; margin-top: 10px; background: linear-gradient(90deg, var(--accent), transparent); }
+.stage .modal .btns { margin-top: 20px; }
+.stage .wish button, .stage .gift button { border: 1px solid rgba(220,184,108,.3); background: rgba(255,255,255,.04); }
+.stage .wish button.on, .stage .wish button:hover, .stage .gift button:hover, .stage .gift button.rec { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.stage .result th, .stage .result td { border-bottom-color: rgba(220,184,108,.16); }
+.stage .xchg .xrow { background: rgba(255,255,255,.03); border-color: rgba(220,184,108,.2); }
+.stage .xchg .xrow.us { border-left: 3px solid var(--team-us); } .stage .xchg .xrow.them { border-left: 3px solid var(--team-them); }
+
+/* ── 방 설정 ── */
+.stage .setup h1 { font-family: "Noto Serif KR", "Batang", serif; letter-spacing: .02em; }
+.stage .sside .opt { border-bottom: 1px solid rgba(220,184,108,.14); }
+.stage .mini { border: 1px solid rgba(220,184,108,.3); border-radius: 8px; background: rgba(0,0,0,.2); }
+.stage .mini i.on { background: linear-gradient(180deg, #f1d99a, #cfa957); color: #2a1c06; }
+.stage .toggle { background: linear-gradient(180deg, #f1d99a, #cfa957); } .stage .toggle.off { background: rgba(255,255,255,.14); }
+.stage .link.v { border-left: 1px dashed rgba(140,196,238,.5); } .stage .link.h { border-top: 1px dashed rgba(240,160,142,.5); }
+
+/* ── 카운팅 패널 ── */
+.stage .cpanel { background: linear-gradient(180deg, rgba(14,24,19,.95), rgba(8,14,11,.96)) padding-box, var(--foil) border-box; }
+.stage .chead > b { font-family: "Noto Serif KR", "Batang", serif; letter-spacing: .02em; }
+
+/* ── 방 설정: 팀 연결 알약은 채도를 낮추고 작게 ── */
+.stage .link.v span { background: color-mix(in srgb, var(--team-us) 72%, #1b2530); color: #07131f; padding: 2px 11px; font-weight: 700; letter-spacing: .02em; }
+.stage .link.h span { background: color-mix(in srgb, var(--team-them) 72%, #2c1b19); color: #240c07; padding: 2px 11px; font-weight: 700; letter-spacing: .02em; }

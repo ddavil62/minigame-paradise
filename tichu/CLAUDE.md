@@ -1,6 +1,6 @@
 # 티추 — 프로젝트 작업 지침
 
-서버 권위 4인 2:2 팀전 티추다. 사람 1~4명이 방 설정 화면에서 모이고 호스트가 시작하면 빈자리를 서버 관리형 AI가 채운다. 맞은편이 파트너이며 사람이 2명이면 마주 보는 자리(파트너)에 앉는다. 방·방장·재접속·일시정지·AI 채움 규칙은 마작(`mahjong/`)과 같다. UI는 DOM/CSS이고 특수 카드 4장(`public/assets/{spr,dog,phx,drg}.webp`)과 뒷면(`back.webp`)만 GPT Image 일러스트다(`key-art.webp`는 런처 카드 전용). 개발 포트 3022. 목업 원본: `studio-mockup/minigame-paradise/tichu-design-v2.html`(시안 A 클래식 카드룸 채택).
+서버 권위 4인 2:2 팀전 티추다. 사람 1~4명이 방 설정 화면에서 모이고 호스트가 시작하면 빈자리를 서버 관리형 AI가 채운다. 맞은편이 파트너이며 사람이 2명이면 마주 보는 자리(파트너)에 앉는다. 방·방장·재접속·일시정지·AI 채움 규칙은 마작(`mahjong/`)과 같다. UI는 DOM/CSS이고 특수 카드 4장(`public/assets/{spr,dog,phx,drg}.webp`)·뒷면(`back.webp`)·테이블(`table.webp`: 옥색 펠트 + 검은 옻칠 테두리 + 가는 금 상감선)만 GPT Image 이미지다(`key-art.webp`는 런처 카드 전용). 개발 포트 3022. 목업 원본: `studio-mockup/minigame-paradise/tichu-design-v2.html`(시안 A 클래식 카드룸 채택).
 
 ## 핵심 구조
 
@@ -11,7 +11,7 @@ tichu/
 ├── lib/game.js     # 대국 상태 머신(TichuGame, 1벌·2벌) — 모든 규칙 판정과 라운드 진행·정산
 ├── lib/ai.js       # AI(easy/normal/hard), 폭탄 끼어들기, 시간 초과 대체 행동. viewFor() 뷰만 사용한다
 ├── server.js       # WebSocket 룸, AI 스케줄러, 타이머, 정적 파일(+ /lib/cards.js·combos.js 공유)
-├── public/         # index.html, css/style.css, js/{main,cardview,fx,sounds,guide}.js, assets/
+├── public/         # index.html, css/{style,theme}.css, js/{main,cardview,fx,sounds,guide}.js, assets/
 └── tests/          # node:test(combos·game·double·server) + Playwright UI(ui.spec.js)
 ```
 
@@ -85,6 +85,7 @@ tichu/
 ## 클라이언트(public/js/main.js) 요령
 
 - 매 STATE마다 `#content` 전체를 다시 그린다. 선택·교환 슬롯·소원 모달 같은 상태는 `S`에만 둔다(DOM에 의존 금지). 연출(배너·번쩍임)은 재렌더로 지워지지 않는 `#fx` 레이어(`fx.js`)에 그린다(새 배너가 오면 이전 배너를 치운다).
+- 외형은 두 겹이다: `css/style.css`가 구조·배치, `css/theme.css`가 스킨(옻칠 & 금박)이다. 색·질감·그림자·버튼 모양을 바꿀 때는 `theme.css`만 고친다. 원칙: 얇은 선을 남발하지 않고 깊이(안쪽 음영·그림자)와 질감으로 위계를 만들며, 금색은 내 차례·주요 버튼·제목 같은 중요한 곳에만 쓴다. 테이블 틀은 `table.webp`가 맡고(CSS 틀은 그림자뿐), 이미지가 없으면 노이즈 펠트 단색으로 보인다. 헤더·버튼에는 이모지를 쓰지 않는다. 새 생성 이미지는 장식이 늘어 조잡해지지 않도록 가운데를 비우고 저대비로 만든다.
 - 무대는 1200×760 고정이고 `fit()`이 창에 맞춰 비율만 줄인다. 카드·이름판·모달·방 설정 CSS는 목업(`tichu-design-v2.html`)에서 가져왔다.
 - 선택한 카드의 판정은 `selInfo()`(`pickCombo`·`interpretations`·`phoenixChoices`)가 한다. 참새를 내려면 소원 모달(`S.wish`)을 거쳐 `play`에 `wish`를 싣는다. 폭탄 대기 카운트다운은 `[data-wait]` 요소를 `updateTimers()`가 갱신한다.
 - 특수 카드 연출: 용·봉황·참새를 싱글로 내면 `play` 이벤트에서, 개는 `dog` 이벤트에서 `fx.special(kind, {card, name, sub, from, to})`가 중앙에 카드를 크게 띄운다(`fromVec(seat)`: 낸 사람 방향에서 날아오고 개는 선을 넘겨받는 사람 쪽으로 빠진다). 새 연출이 오면 이전 것을 치운다. 참새는 같은 묶음의 `wish` 이벤트를 문구에 합치고 별도 소원 배너를 생략한다. `?auto=N` 테스트 모드에서만 `window.__fx`로 직접 띄워 볼 수 있다.
