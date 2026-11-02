@@ -372,3 +372,8 @@ button { font: inherit; cursor: pointer; }
 .clegend i.m { background: #e9a800; box-shadow: 0 0 0 1.5px #7a5400; }
 .clegend i.p { background: transparent; box-shadow: inset 0 0 0 1.5px #cfe2d3; }
 .clegend i.g { width: 12px; height: 3px; border-radius: 0; background: #e9a800; }
+.caxis { display: flex; align-items: center; gap: 6px; margin: 0 0 3px 49px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.caxis i { position: relative; flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(207,226,211,.25), var(--accent)); }
+.caxis i::after { content: ""; position: absolute; right: -1px; top: -3px; border: 4px solid transparent; border-left: 6px solid var(--accent); border-right: 0; }
+.caxis span:last-child { color: var(--accent); }
+.clegend em { margin-left: auto; font-style: normal; color: var(--ui); opacity: .8; }
