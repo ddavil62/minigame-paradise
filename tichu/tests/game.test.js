@@ -116,18 +116,50 @@ test('내 차례가 아닌데 맨 앞(트릭 없음)에서 폭탄은 낼 수 없
   assert.equal(play(g, 3, '5j 5s 5p 5t').error, 'not_turn');
 });
 
-test('폭탄 끼어들기 대기: 낸 직후에는 다음 사람이 일반 조합을 못 내지만 폭탄은 된다', () => {
+/** 폭탄(같은 숫자 네 장·같은 무늬 5연속)이 전혀 없는 14장 손패 네 벌(좌석 0~3). */
+const NO_BOMB = [
+  '9j 2j 2s 3p 3t 4j 4s 6p 6t 7j 7s 8p 8t 10s',
+  'Kj 2p 2t 3j 3s 4p 4t 6j 6s 7p 7t 8j 8s 10p',
+  'Jj Js 5j 5s 9s 9p 10t Qj Qp Ks Kp Aj As Ap',
+  '5p 5t Jp Jt Qs Qt Kt At 9t 10j DOG MJ PHX DRG',
+];
+
+function waitGame() {
   let t = 1000;
   const g = new TichuGame({ settings: { grand: false, bombWindowMs: 2000 }, rng: seededRng(1), now: () => t });
   g.start();
   for (let s = 0; s < 4; s++) g.act(s, { type: 'exchange', give: g.h.hands[s].slice(0, 3) });
-  g.h.hands = [`9j ${FILL}`, `Kj ${FILL}`, FILL, FILL].map(ids);
+  g.h.hands = NO_BOMB.map(ids);
   g.pending = { type: 'turn', seat: 0 };
-  play(g, 0, '9j');
+  return { g, tick: (ms) => { t += ms; } };
+}
+
+test('폭탄 끼어들기 대기: 이길 폭탄을 든 사람이 없으면 기다리지 않는다', () => {
+  const { g } = waitGame();
+  assert.ok(play(g, 0, '9j').ok);
+  assert.equal(g.h.openAt, 0);
+  assert.ok(play(g, 1, 'Kj').ok, '대기 없이 바로 낼 수 있다');
+  assert.ok(g.act(2, { type: 'pass' }).ok, '패스도 바로 된다');
+});
+
+test('폭탄 끼어들기 대기: 이길 폭탄을 든 사람이 있으면 낸 직후 일반 조합·패스를 막고 폭탄은 허용한다', () => {
+  const { g, tick } = waitGame();
+  g.h.hands[3] = ids('5j 5s 5p 5t DOG MJ PHX DRG');
+  assert.ok(play(g, 0, '9j').ok);
+  assert.ok(g.h.openAt > 0);
   assert.equal(play(g, 1, 'Kj').error, 'wait');
   assert.equal(g.act(1, { type: 'pass' }).error, 'wait');
-  t += 2100;
+  tick(2100);
   assert.ok(play(g, 1, 'Kj').ok);
+});
+
+test('폭탄 끼어들기 대기: 폭탄이 있어도 낸 조합보다 약하면 대기하지 않는다', () => {
+  const { g } = waitGame();
+  g.h.hands[3] = ids('5j 5s 5p 5t DOG MJ PHX DRG');
+  g.h.hands[0] = ids('9j 9s 9p 9t 2j 2s 3p 3t 4j 4s 6p 6t 7j 7s');
+  assert.ok(play(g, 0, '9j 9s 9p 9t').ok);
+  assert.equal(g.h.openAt, 0, '5 네 장은 9 네 장을 이기지 못한다');
+  assert.equal(g.bombThreat(g.h.trick.top, 0), false);
 });
 
 test('용: 가장 높은 싱글이고, 이기면 상대 팀 한 명에게 트릭을 선물해야 한다', () => {

@@ -245,7 +245,7 @@ export class TichuGame {
     tr.topSeat = seat;
     tr.passed.clear();
     tr.pile.push(...ids);
-    h.openAt = this.now() + this.settings.bombWindowMs;
+    h.openAt = this.bombThreat(tr.top, seat) ? this.now() + this.settings.bombWindowMs : 0; // 이길 폭탄을 든 사람이 없으면 기다리지 않는다
 
     if (!h.wishUsed && combo.ids.some(isMJ)) {
       h.wishUsed = true; // 두 번째 참새는 소원을 못 빈다(처음 낸 사람 한 명만)
@@ -259,6 +259,14 @@ export class TichuGame {
     if (this.roundOver()) { this.resolveTrick(); return { ok: true }; }
     this.pending = { type: 'turn', seat: this.nextActive(seat) };
     return { ok: true };
+  }
+
+  /**
+   * 방금 낸 조합(top)을 폭탄으로 끊을 수 있는 사람이 있는가(낸 사람 제외, 아직 나가지 않은 사람).
+   * 대기 시간을 쓸지 정하는 용도다. 있으면 대기가 걸리므로 "누군가 폭탄을 들었다"는 사실이 드러난다(합의된 절충).
+   */
+  bombThreat(top, from) {
+    return [0, 1, 2, 3].some((s) => s !== from && this.active(s) && bombsIn(this.h.hands[s], top).length > 0);
   }
 
   /** 개를 낸 사람 다음에 선이 되는 좌석: 파트너, 파트너가 나갔으면 파트너 다음 사람. */
