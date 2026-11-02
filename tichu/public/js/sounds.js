@@ -3,8 +3,27 @@
  */
 
 const MUTE_KEY = 'tichu:muted';
+const BGM_KEY = 'tichu:bgm';
 
-/** @returns {{play:(name:string, arg?:number)=>void, setMuted:(m:boolean)=>void, isMuted:()=>boolean, unlock:()=>void}} */
+// ── BGM 악보(8분음표 8칸 = 1마디, MIDI 번호, 0은 쉼표) ──
+// A·B 두 구간(8마디씩) = 16마디 루프(약 31초). 코드: A = G D Em C G D C D, B = C G Am D C G D G
+const BGM_BPM = 124;
+const mel = (s) => s.trim().split(/\s+/).map(Number);
+const BGM_MELODY = [
+  ...['79 0 74 79 83 0 81 79', '78 0 74 78 81 0 78 74', '76 0 79 76 83 0 79 76', '79 0 76 79 84 0 83 81',
+    '79 0 74 79 83 0 81 79', '78 0 81 78 74 0 78 81', '84 0 79 0 76 79 84 79', '81 0 78 0 74 78 81 0'],
+  ...['76 0 79 84 79 0 76 79', '83 0 79 0 74 79 83 79', '81 0 76 81 84 0 81 76', '78 0 81 0 78 74 78 81',
+    '84 0 79 84 83 0 79 76', '83 0 79 83 86 0 83 79', '81 0 78 74 78 0 81 78', '79 0 83 79 74 0 79 0'],
+].map(mel);
+const BGM_BASS = [43, 50, 52, 48, 43, 50, 48, 50, 48, 43, 45, 50, 48, 43, 50, 43];
+const BGM_CHORDS = [
+  [59, 62, 67], [57, 62, 66], [59, 64, 67], [60, 64, 67], [59, 62, 67], [57, 62, 66], [60, 64, 67], [57, 62, 66],
+  [60, 64, 67], [59, 62, 67], [57, 60, 64], [57, 62, 66], [60, 64, 67], [59, 62, 67], [57, 62, 66], [59, 62, 67],
+];
+const BGM_VOL = 0.27; // 효과음(0.05~0.5)보다 한참 작게 깔린다
+const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+/** @returns {{play:(name:string, arg?:number)=>void, setMuted:(m:boolean)=>void, isMuted:()=>boolean, setBgm:(on:boolean)=>void, isBgm:()=>boolean, unlock:()=>void}} */
 export function createSounds() {
   let ctx = null;
   let muted = false;
@@ -93,14 +112,131 @@ export function createSounds() {
     error() { tone(160, 0, 0.14, 'square', 0.07); },
   };
 
+  // ── BGM: 외부 음원 없이 합성하는 경쾌한 루프. 앞서 예약하는 스케줄러로 박자를 유지한다 ──
+  let bgmOn = true;
+  try { bgmOn = localStorage.getItem(BGM_KEY) !== '0'; } catch { /* noop */ }
+  let bgmBus = null;
+  let bgmTimer = null;
+  let bgmStep = 0;
+  let bgmNext = 0;
+  let noiseBuf = null;
+  const STEP = 60 / BGM_BPM / 2;
+
+  function bgmNote(t, midi, dur, type, gain) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(midiHz(midi), t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(bgmBus);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+
+  function bgmKick(t) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.frequency.setValueAtTime(125, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    g.gain.setValueAtTime(0.36, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g).connect(bgmBus);
+    o.start(t);
+    o.stop(t + 0.18);
+  }
+
+  /** 하이햇·브러시 같은 짧은 노이즈. */
+  function bgmHat(t, gain, hp, dur) {
+    if (!noiseBuf) {
+      noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = hp;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(bgmBus);
+    src.start(t);
+    src.stop(t + dur + 0.02);
+  }
+
+  function bgmSchedule(step, t) {
+    const bar = Math.floor(step / 8) % BGM_MELODY.length;
+    const k = step % 8;
+    const m = BGM_MELODY[bar][k];
+    if (m) bgmNote(t, m, STEP * 1.6, 'triangle', 0.15);
+    const root = BGM_BASS[bar];
+    if (k === 0) bgmNote(t, root, STEP * 2.2, 'sine', 0.3);
+    else if (k === 3 || k === 7) bgmNote(t, root + 12, STEP * 0.9, 'sine', 0.2);
+    else if (k === 4) bgmNote(t, root + 7, STEP * 1.6, 'sine', 0.26);
+    if (k === 2 || k === 5) BGM_CHORDS[bar].forEach((n) => bgmNote(t, n, STEP * 0.8, 'square', 0.02));
+    if (k === 0 || k === 4) bgmKick(t);
+    if (k === 2 || k === 6) bgmHat(t, 0.1, 2200, 0.09); // 가벼운 백비트
+    if (k % 2) bgmHat(t, 0.045, 7000, 0.04);
+  }
+
+  function bgmTick() {
+    if (!ctx) return;
+    while (bgmNext < ctx.currentTime + 0.5) {
+      bgmSchedule(bgmStep, bgmNext);
+      bgmNext += STEP;
+      bgmStep = (bgmStep + 1) % (BGM_MELODY.length * 8);
+    }
+  }
+
+  function bgmStart() {
+    if (bgmTimer || muted || !bgmOn || !unlocked || document.hidden) return;
+    if (!ensure()) return;
+    bgmBus = ctx.createGain();
+    bgmBus.gain.setValueAtTime(0.0001, ctx.currentTime);
+    bgmBus.gain.exponentialRampToValueAtTime(BGM_VOL, ctx.currentTime + 1.2);
+    bgmBus.connect(ctx.destination);
+    bgmNext = ctx.currentTime + 0.1;
+    bgmStep = 0;
+    bgmTick();
+    bgmTimer = setInterval(bgmTick, 120);
+  }
+
+  function bgmStop() {
+    if (!bgmTimer) return;
+    clearInterval(bgmTimer);
+    bgmTimer = null;
+    const bus = bgmBus;
+    bgmBus = null;
+    bus.gain.cancelScheduledValues(ctx.currentTime);
+    bus.gain.setValueAtTime(Math.max(bus.gain.value, 0.0001), ctx.currentTime);
+    bus.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+    setTimeout(() => bus.disconnect(), 600);
+  }
+
+  document.addEventListener('visibilitychange', () => (document.hidden ? bgmStop() : bgmStart()));
+
   return {
     play(name, arg) {
       if (muted || !unlocked) return;
       if (!ensure()) return;
+      bgmStart(); // 첫 조작 직후 효과음이 먼저 나와도 BGM이 이어서 시작되게 한다
       try { SFX[name]?.(arg); } catch { /* 소리 실패는 게임에 영향을 주지 않는다 */ }
     },
-    setMuted(m) { muted = !!m; try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch { /* noop */ } },
+    setMuted(m) {
+      muted = !!m;
+      try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch { /* noop */ }
+      if (muted) bgmStop(); else bgmStart();
+    },
     isMuted: () => muted,
-    unlock() { unlocked = true; ensure(); },
+    setBgm(on) {
+      bgmOn = !!on;
+      try { localStorage.setItem(BGM_KEY, bgmOn ? '1' : '0'); } catch { /* noop */ }
+      if (bgmOn) bgmStart(); else bgmStop();
+    },
+    isBgm: () => bgmOn,
+    unlock() { unlocked = true; ensure(); bgmStart(); },
   };
 }

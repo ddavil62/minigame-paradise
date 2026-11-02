@@ -148,6 +148,20 @@ test('특수 카드 연출: 용·봉황·개·참새를 내면 중앙에 카드�
   }
 });
 
+test('BGM: 헤더 버튼으로 켜고 끄며 설정을 기억한다', async ({ page }) => {
+  await page.goto(`${base}/?name=테스터`);
+  const btn = page.locator('#btn-bgm');
+  await expect(btn).toHaveText('BGM');
+  await btn.click();
+  await expect(btn).toHaveText('BGM 꺼짐');
+  expect(await page.evaluate(() => localStorage.getItem('tichu:bgm'))).toBe('0');
+  await page.reload();
+  await expect(page.locator('#btn-bgm')).toHaveText('BGM 꺼짐');
+  await page.locator('#btn-bgm').click();
+  await expect(page.locator('#btn-bgm')).toHaveText('BGM');
+  expect(await page.evaluate(() => localStorage.getItem('tichu:bgm'))).toBe('1');
+});
+
 test('룰 가이드: 열고 탭을 바꾸고 닫는다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
   await page.locator('#btn-guide').click();

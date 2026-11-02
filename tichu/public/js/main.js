@@ -908,6 +908,10 @@ const soundBtn = $('btn-sound');
 const paintSound = () => { soundBtn.classList.toggle('on', !sounds.isMuted()); soundBtn.textContent = sounds.isMuted() ? '효과음 꺼짐' : '효과음'; };
 paintSound();
 soundBtn.addEventListener('click', () => { sounds.setMuted(!sounds.isMuted()); paintSound(); sounds.unlock(); });
+const bgmBtn = $('btn-bgm');
+const paintBgm = () => { bgmBtn.classList.toggle('on', sounds.isBgm()); bgmBtn.textContent = sounds.isBgm() ? 'BGM' : 'BGM 꺼짐'; };
+paintBgm();
+bgmBtn.addEventListener('click', () => { sounds.unlock(); sounds.setBgm(!sounds.isBgm()); paintBgm(); });
 
 // ── 화면 비율 맞춤 ────────────────────────────────────────
 function fit() {
