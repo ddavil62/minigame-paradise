@@ -134,6 +134,21 @@ button { font: inherit; cursor: pointer; }
 
 /* ── 명패 ── */
 .plate { position: absolute; display: flex; align-items: center; gap: 10px; min-width: 196px; padding: 8px 12px 8px 8px; border: 1px solid var(--plate-border); border-radius: 6px; background: var(--plate-bg); box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+/* 대국 진행도(왼쪽 위): 끝난 국은 어둡게, 현재 국은 노랗게, 남은 국은 윤곽만. 연장 칸은 점선 */
+.progress { position: absolute; left: 22px; top: 14px; z-index: 3; width: 164px; padding: 7px 10px 6px; border: 1px solid var(--plate-border); border-radius: 10px; background: var(--plate-bg); }
+.pg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 5px; }
+.pg-head b { color: var(--ui-muted); font-size: 11px; font-weight: 800; }
+.pg-head span { color: var(--accent); font-size: 13px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.pg-chips { display: flex; align-items: center; gap: 2px; }
+.pg-chips em { flex: none; margin: 0 1px 0 3px; color: var(--accent); font-size: 10px; font-weight: 900; font-style: normal; }
+.pg-chips em:first-child { margin-left: 0; }
+.pg-chips i { flex: 1; min-width: 0; padding: 3px 0; border: 1px solid rgba(233,196,106,.35); border-radius: 4px; color: rgba(246,238,219,.55); font: 800 10px/1 var(--font, inherit); font-style: normal; text-align: center; white-space: nowrap; overflow: hidden; }
+.pg-chips i.done { border-color: transparent; background: rgba(255,255,255,.14); color: rgba(246,238,219,.5); }
+.pg-chips i.cur { border-color: var(--turn); background: var(--turn); color: #2a1c00; box-shadow: 0 0 10px rgba(255,207,74,.6); }
+.pg-chips i.ext { border-style: dashed; }
+.progress.dense .pg-chips i { padding: 3px 0; font-size: 0; } /* 칸이 8개를 넘으면 숫자가 겹치므로 현재 칸만 숫자를 보인다(나머지는 title) */
+.progress.dense .pg-chips i.cur { font-size: 8px; }
+.pg-foot { margin-top: 4px; color: var(--ui-muted); font-size: 10.5px; font-weight: 700; }
 .plate.p-top { top: 14px; left: calc(196px + var(--dx)); }
 .plate.p-left { top: 112px; left: 22px; }
 .plate.p-right { top: 112px; right: 22px; flex-direction: row-reverse; text-align: right; padding: 8px 8px 8px 12px; }

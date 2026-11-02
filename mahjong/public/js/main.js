@@ -747,6 +747,28 @@ function boardHtml(v) {
   return html;
 }
 
+/**
+ * 대국 진행도: 국마다 칸 하나(끝남·현재·남음). 연임·유국(본장)은 같은 국이 반복돼서 칸이 늘지 않으므로 "남은 국"은 최소값이다.
+ * 연장(서입·남입)에 들어가면 정규 국은 모두 끝남으로 치고 연장 칸을 점선으로 덧붙인다.
+ */
+function progressHtml(v) {
+  const regular = v.settings.length === 'half' ? 8 : 4;
+  const cur = v.roundWind * 4 + v.dealer; // 서버의 roundNum (roundWind는 0~3으로 잘려도 roundNum은 연장 포함 11을 넘지 않는다)
+  const ext = cur >= regular;
+  const total = Math.max(regular, cur + 1);
+  let chips = '';
+  for (let i = 0; i < total; i++) {
+    if (i % 4 === 0) chips += `<em>${WIND_KANJI[i / 4]}</em>`; // 장(東·南·西)마다 묶음 머리글자
+    const st = i < cur ? 'done' : i === cur ? 'cur' : 'todo';
+    chips += `<i class="${st}${i >= regular ? ' ext' : ''}" title="${WIND_KANJI[Math.floor(i / 4)]}${(i % 4) + 1}局">${(i % 4) + 1}</i>`;
+  }
+  const title = '친이 이기거나 유국이면 같은 국이 한 번 더 열려서(본장) 실제 판 수는 늘 수 있어요. 마지막 국이 끝났을 때 1위가 30,000점 미만이면 연장돼요.';
+  const head = ext ? `연장 ${cur - regular + 1}국째` : `${cur + 1} / ${regular}국째`;
+  const foot = ext ? `연장 최대 4국 · 남은 연장 ${regular + 3 - cur}국` : `끝난 국 ${cur} · 남은 국 ${regular - cur - 1}`;
+  return `<div class="progress${total > 8 ? ' dense' : ''}" title="${title}"><div class="pg-head"><b>${v.settings.length === 'half' ? '반장전' : '동풍전'}</b><span>${head}</span></div>
+    <div class="pg-chips">${chips}</div><div class="pg-foot">${foot}</div></div>`;
+}
+
 /** 향청수 → 도우미 문구. 용어를 몰라도 "몇 단계 남았는지"가 보이게 풀어 쓴다 */
 const shantenText = (n) => `텐파이까지 ${n}단계(${n}향청)`;
 
@@ -941,6 +963,7 @@ function renderGame() {
   let html = '';
   html += opponentHands(v);
   html += boardHtml(v);
+  html += progressHtml(v);
   const order = [[0, 'me'], [1, 'right'], [2, 'top'], [3, 'left']];
   for (const [rel, cls] of order) html += plateHtml((v.me + rel) % 4, v, cls);
   html += radarHtml(v, order);

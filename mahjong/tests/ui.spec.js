@@ -41,6 +41,23 @@ test('방 설정 → 시작 → 손패 13장 + 쯔모패, 상대 손패는 뒷�
   expect(await page.locator('.top-hand .tile.back').count()).toBeGreaterThanOrEqual(13);
 });
 
+test('대국 진행도: 동풍전은 4칸 중 현재 국, 반장전은 8칸', async ({ page }) => {
+  await page.goto(`${base}/?name=테스터`);
+  await page.locator('[data-do="start"]').click();
+  const pg = page.locator('.progress');
+  await expect(pg).toContainText('동풍전');
+  await expect(pg).toContainText('1 / 4국째');
+  await expect(pg).toContainText('끝난 국 0 · 남은 국 3');
+  await expect(pg.locator('.pg-chips i')).toHaveCount(4);
+  await expect(pg.locator('.pg-chips i.cur')).toHaveText('1');
+  const half = await page.context().newPage();
+  await half.goto(`${base}/?name=반장&room=half-progress`);
+  await half.locator('[data-cfg="length"][data-val="half"]').click();
+  await half.locator('[data-do="start"]').click();
+  await expect(half.locator('.progress')).toContainText('1 / 8국째');
+  await expect(half.locator('.progress .pg-chips i')).toHaveCount(8);
+});
+
 test('패를 한 번 누르면 선택, 두 번 누르면 버려진다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
   await page.locator('[data-do="start"]').click();
