@@ -380,3 +380,42 @@ button { font: inherit; cursor: pointer; }
 .cc.mine { background: #fff1c4; box-shadow: 0 0 0 2px #e9a800; }
 .cc.mine.pt { box-shadow: 0 0 0 2px #e9a800, inset 0 -3px 0 #e9a800; }
 .crow.sp .cc.mine > b { color: #3a2a00; }
+
+/* ── 특수 카드(용·봉황·개·참새) 중앙 연출 ── */
+#fx .special { position: absolute; left: 50%; top: 45%; width: 0; height: 0; --g1: rgba(255,200,60,.85); --g2: rgba(255,214,100,.4); }
+#fx .special.phx { --g1: rgba(255,96,50,.85); --g2: rgba(255,150,70,.38); }
+#fx .special.dog { --g1: rgba(140,230,200,.6); --g2: rgba(170,240,220,.28); }
+#fx .special.spr { --g1: rgba(255,240,170,.75); --g2: rgba(255,246,200,.35); }
+#fx .special .gl { position: absolute; left: -230px; top: -230px; width: 460px; height: 460px; border-radius: 50%; background: radial-gradient(circle, var(--g1) 0%, transparent 62%); animation: sp-glow var(--ms) ease-out both; }
+#fx .special .rays { position: absolute; left: -260px; top: -260px; width: 520px; height: 520px; border-radius: 50%; background: repeating-conic-gradient(var(--g2) 0 6deg, transparent 6deg 24deg); -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 68%); mask-image: radial-gradient(circle, #000 18%, transparent 68%); animation: sp-rays var(--ms) linear both; }
+#fx .special.dog .rays { display: none; }
+#fx .special .sc { position: absolute; left: -56px; top: -80px; width: 112px; height: 160px; animation: sp-in var(--ms) cubic-bezier(.2,.9,.3,1) both; filter: drop-shadow(0 14px 22px rgba(0,0,0,.6)); }
+#fx .special.dog .sc { animation-name: sp-dog; }
+#fx .special .sc .card { box-shadow: 0 0 0 3px rgba(255,236,170,.9), 0 0 36px var(--g1); }
+#fx .special .cap { position: absolute; left: -260px; top: 176px; width: 520px; text-align: center; animation: sp-cap var(--ms) ease-out both; }
+#fx .special .cap b { display: block; font: 900 56px/1.1 var(--serif); color: #fff3c9; text-shadow: 0 4px 0 #6b4a00, 0 0 30px var(--g1); }
+#fx .special.phx .cap b { color: #ffe1d2; text-shadow: 0 4px 0 #7a2200, 0 0 30px var(--g1); }
+#fx .special .cap small { display: block; margin-top: 4px; font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.85); }
+#fx .special u { position: absolute; left: 0; top: 0; width: var(--sz); height: var(--sz); border-radius: 50%; background: var(--g1); box-shadow: 0 0 10px var(--g1); opacity: 0; animation: sp-spark 1.1s ease-out var(--d) both; }
+@keyframes sp-in {
+  0% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(.45) rotate(-12deg); }
+  20% { opacity: 1; transform: translate(0, 0) scale(2.15) rotate(2deg); }
+  30% { transform: scale(1.85) rotate(0); }
+  76% { opacity: 1; transform: scale(1.9); }
+  100% { opacity: 0; transform: translate(var(--ex), var(--ey)) scale(2.05); }
+}
+@keyframes sp-dog {
+  0% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(.5) rotate(-14deg); }
+  22% { opacity: 1; transform: translate(0, 0) scale(1.9) rotate(4deg); }
+  34% { transform: scale(1.8) rotate(0); }
+  62% { opacity: 1; transform: translate(0, 0) scale(1.8); }
+  100% { opacity: 0; transform: translate(var(--ex), var(--ey)) scale(.6) rotate(10deg); }
+}
+@keyframes sp-glow { 0% { opacity: 0; transform: scale(.4); } 20% { opacity: 1; transform: scale(1.1); } 80% { opacity: .85; transform: scale(1); } 100% { opacity: 0; transform: scale(1.25); } }
+@keyframes sp-rays { 0% { opacity: 0; transform: rotate(0) scale(.6); } 20% { opacity: 1; } 80% { opacity: .8; } 100% { opacity: 0; transform: rotate(50deg) scale(1.15); } }
+@keyframes sp-cap { 0%, 18% { opacity: 0; transform: translateY(14px) scale(.85); } 30% { opacity: 1; transform: none; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes sp-spark { 0% { opacity: 0; transform: translate(var(--px), 90px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(var(--px) * 1.4), -260px); } }
+@media (prefers-reduced-motion: reduce) {
+  #fx .special .sc, #fx .special .rays, #fx .special u { animation: sp-cap var(--ms) ease-out both; }
+  #fx .special.dog .sc { animation-name: sp-cap; }
+}

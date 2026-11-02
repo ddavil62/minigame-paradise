@@ -128,6 +128,21 @@ test('카운팅: 대국 중에만 버튼이 보이고, 패널의 칸 수와 합�
   await expect(page.locator('.cpanel')).toHaveCount(0);
 });
 
+test('특수 카드 연출: 용·봉황·개·참새를 내면 중앙에 카드와 이름이 뜨고, 새 연출이 오면 이전 것을 치운다', async ({ page }) => {
+  await page.goto(`${base}/?name=테스터&auto=99999`); // auto는 테스트 전용 훅(window.__fx)을 연다. 대기실에서는 자동 진행하지 않는다
+  await expect(page.locator('.setup, .lobby, [data-do="start"]').first()).toBeVisible();
+  const kinds = { drg: [55, '용!'], phx: [54, '봉황'], dog: [52, '개'], spr: [53, '참새'] };
+  for (const [kind, [id, name]] of Object.entries(kinds)) {
+    await page.evaluate(async ([k, i, n]) => {
+      const { cardHtml } = await import('/js/cardview.js');
+      window.__fx.special(k, { card: cardHtml(i, { size: 'xl', data: false }), name: n, sub: '테스터', from: [0, 200], ms: 3000 });
+    }, [kind, id, name]);
+    await expect(page.locator(`#fx .special.${kind} .cap b`)).toHaveText(name);
+    await expect(page.locator('#fx .special')).toHaveCount(1); // 이전 연출은 치워진다
+    await expect(page.locator(`#fx .special.${kind} .sc .card`)).toBeVisible();
+  }
+});
+
 test('룰 가이드: 열고 탭을 바꾸고 닫는다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
   await page.locator('#btn-guide').click();

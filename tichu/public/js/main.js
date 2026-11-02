@@ -23,6 +23,7 @@ const $ = (id) => document.getElementById(id);
 const stage = $('stage');
 const sounds = createSounds();
 const fx = createFx(stage);
+if (new URLSearchParams(location.search).get('auto')) window.__fx = fx; // 테스트 전용: 연출을 직접 띄워 본다
 const guide = createGuide(stage, { onToggle: (open) => $('btn-guide').classList.toggle('on', open) });
 
 const params = new URLSearchParams(location.search);
@@ -668,7 +669,14 @@ function trackMyTurn(prev, v) {
   S.lastTurnKey = key;
 }
 
+/** 좌석이 앉은 방향의 화면 오프셋(px). 특수 카드 연출이 낸 사람 쪽에서 날아오고 개는 받는 사람 쪽으로 빠지게 한다. */
+function fromVec(seat) {
+  const rel = ((seat ?? S.seat) - S.seat + 4) % 4;
+  return [[0, 300], [-380, 0], [0, -240], [380, 0]][rel];
+}
+
 function playEvents(events, v) {
+  let sparrowShown = false; // 참새 연출이 소원 문구를 같이 보여 주면 소원 배너는 생략한다
   for (const e of events) {
     const who = e.seat !== undefined ? nameOf(e.seat) : '';
     switch (e.t) {
@@ -679,22 +687,34 @@ function playEvents(events, v) {
       case 'play': {
         S.freshSeat = e.seat;
         const c = e.combo;
+        const from = fromVec(e.seat);
         if (c.bomb) { sounds.play('bomb'); fx.flash('#ff7a50'); fx.shake(12); fx.banner('폭탄!', { cls: 'bomb', sub: `${who} · ${label(c)}`, ms: 1500 }); }
-        else if (c.type === 'single' && c.rank === 15) { sounds.play('dragon'); fx.flash('#ffcf4a'); fx.banner('용!', { cls: 'dragon', sub: who, ms: 1400 }); }
-        else if (c.type === 'single' && isPhx(c.ids[0])) { sounds.play('phoenix'); fx.banner('봉황', { cls: 'info', sub: who, ms: 900 }); }
-        else if (c.type === 'single' && isMJ(c.ids[0])) { sounds.play('sparrow'); }
-        else if (c.type === 'dog') { sounds.play('dog'); }
+        else if (c.type === 'single' && c.rank === 15) {
+          sounds.play('dragon'); fx.flash('#ffcf4a'); fx.shake(7);
+          fx.special('drg', { card: cardHtml(c.ids[0], { size: 'xl', data: false }), name: '용!', sub: who, from, ms: 1600 });
+        } else if (c.type === 'single' && isPhx(c.ids[0])) {
+          sounds.play('phoenix'); fx.flash('#ff8a5a');
+          fx.special('phx', { card: cardHtml(c.ids[0], { size: 'xl', data: false }), name: '봉황', sub: who, from, ms: 1500 });
+        } else if (c.type === 'single' && isMJ(c.ids[0])) {
+          sounds.play('sparrow');
+          const w = events.find((x) => x.t === 'wish');
+          sparrowShown = true;
+          fx.special('spr', { card: cardHtml(c.ids[0], { size: 'xl', data: false }), name: '참새', sub: `${who}${w ? ` · 소원: ${rankLabel(w.rank)}` : ''}`, from, ms: 1200 });
+        } else if (c.type === 'dog') { sounds.play('dog'); }
         else sounds.play('play', c.n);
         break;
       }
       case 'pass': sounds.play('pass'); break;
-      case 'dog': fx.banner('개', { cls: 'info', sub: `${nameOf(e.to)}님에게 선을 넘겨요`, ms: 1300 }); break;
+      case 'dog': {
+        fx.special('dog', { card: cardHtml(52, { size: 'xl', data: false }), name: '개', sub: `${who} → ${nameOf(e.to)}님에게 선을 넘겨요`, from: fromVec(e.seat), to: fromVec(e.to), ms: 1700 });
+        break;
+      }
       case 'call':
         sounds.play(e.call === 'grand' ? 'grand' : 'call');
         fx.flash(e.call === 'grand' ? '#ffcf4a' : '#ff7a68');
         fx.banner(e.call === 'grand' ? '그랜드 티추!' : '티추!', { cls: e.call === 'grand' ? 'grand' : 'call', sub: who, ms: 1500 });
         break;
-      case 'wish': fx.banner(`소원: ${rankLabel(e.rank)}`, { cls: 'info', sub: who, ms: 1500 }); break;
+      case 'wish': if (!sparrowShown) fx.banner(`소원: ${rankLabel(e.rank)}`, { cls: 'info', sub: who, ms: 1500 }); break;
       case 'wishdone': fx.banner('소원이 이뤄졌어요', { cls: 'info', ms: 900 }); break;
       case 'trickwin':
         sounds.play('trick');
