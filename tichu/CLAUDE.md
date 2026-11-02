@@ -88,6 +88,7 @@ tichu/
 - 무대는 1200×760 고정이고 `fit()`이 창에 맞춰 비율만 줄인다. 카드·이름판·모달·방 설정 CSS는 목업(`tichu-design-v2.html`)에서 가져왔다.
 - 선택한 카드의 판정은 `selInfo()`(`pickCombo`·`interpretations`·`phoenixChoices`)가 한다. 참새를 내려면 소원 모달(`S.wish`)을 거쳐 `play`에 `wish`를 싣는다. 폭탄 대기 카운트다운은 `[data-wait]` 요소를 `updateTimers()`가 갱신한다.
 - 도우미(`#btn-assist`, 로컬 설정 `tichu:assist`)를 켜면 내 차례에 낼 수 있는 조합 칩과 못 내는 카드 흐림을 보여 준다. 서버와 무관하다(`ASSIST` 메시지는 무시).
+- 카드 카운팅(`#btn-count`, 키 C, 로컬 설정 `tichu:count`)은 `countHtml()`이 `view.played`(트릭 진행 중 카드·개 포함)와 내 손패로 56×벌 수장을 나옴/내 손패/안 나옴으로 그린다. 점수 박스의 이번 라운드 점수는 `view.wonPts`(팀별 먹은 카드 점수, `publicTally()`)다. 둘 다 공개 정보뿐이라 `viewFor` 불변조건을 지킨다.
 - 룰 가이드(`guide.js`)는 5탭(마지막이 더블 티추) 오버레이이고 타이머·점수 같은 수치가 바뀌면 문구도 함께 고친다. 테스트 전용 `?auto=N`은 단순 전략으로 자동 진행한다.
 - 효과음은 WebAudio 합성(`sounds.js`)이며 사용자 조작 전에는 오디오를 만들지 않는다. BGM은 아직 없다.
 

@@ -9,7 +9,7 @@ import { cardHtml, backHtml, cardsHtml, esc } from './cardview.js';
 import { createSounds } from './sounds.js';
 import { createFx } from './fx.js';
 import { createGuide } from './guide.js';
-import { rankOf, rankLabel, isMJ, isPhx } from '../lib/cards.js';
+import { rankOf, rankLabel, isMJ, isPhx, pointsOf, SUIT_NAMES, SUIT_KEYS } from '../lib/cards.js';
 import { interpretations, pickCombo, enumeratePlays, phoenixChoices, label, beats, samePhx } from '../lib/combos.js';
 
 const AI_CHAR = { 주작: '雀', 백호: '虎', 현무: '武', 청룡: '龍' };
@@ -46,6 +46,7 @@ const S = {
   picks: [null, null, null], // 교환 슬롯(왼쪽·파트너·오른쪽 순으로 벌 수만큼씩)
   wish: null, // 참새를 낼 때 소원을 고르는 중이면 {ids, as}
   assist: store.get('tichu:assist') === '1',
+  count: store.get('tichu:count') === '1', // 카드 카운팅 패널(나만 보여요)
   leaveAsk: false,
   winRender: 0,
   lastTurnKey: '',
@@ -253,7 +254,34 @@ function scoreHtml(v) {
   const them = 1 - us;
   const t = v.settings.target;
   const row = (cls, name, val) => `<div class="row ${cls}"><b>${name}</b><div class="bar"><i style="width:${Math.max(0, Math.min(100, (val / t) * 100))}%"></i></div><span>${val}</span></div>`;
-  return `<div class="score">${row('us', '우리 팀', v.scores[us])}${row('them', '상대 팀', v.scores[them])}<small>목표 ${t}점 · 라운드 ${v.round}</small></div>`;
+  const live = v.phase === 'play';
+  const rest = 100 * v.settings.decks - v.wonPts[0] - v.wonPts[1];
+  const round = live
+    ? `<div class="rnd"><span>이번 라운드</span><b class="us">${v.wonPts[us]}</b><em>:</em><b class="them">${v.wonPts[them]}</b></div><small>남은 점수 ${rest} · 카드 점수 기준</small>`
+    : '';
+  return `<div class="score">${row('us', '우리 팀', v.scores[us])}${row('them', '상대 팀', v.scores[them])}<small>목표 ${t}점 · 라운드 ${v.round}</small>${round}</div>`;
+}
+
+/** 카드 카운팅: 모든 카드를 나온 것(흐림) · 내 손패(금색) · 아직 안 보인 것(진하게)으로 보여 준다. 공개 정보와 내 손패만 쓴다. */
+function countHtml(v) {
+  if (!S.count || v.phase !== 'play') return '';
+  const decks = v.settings.decks;
+  const played = new Set(v.played);
+  const mine = new Set(v.hand);
+  const unseen = 56 * decks - played.size - mine.size; // 다른 세 사람이 들고 있는 카드
+  const cell = (base, head, cls) => {
+    const ids = Array.from({ length: decks }, (_, d) => base + 56 * d);
+    const st = ids.map((id) => (played.has(id) ? 'p' : mine.has(id) ? 'm' : 'u'));
+    const left = st.filter((x) => x === 'u').length;
+    const pts = pointsOf(base) !== 0 ? ' pt' : '';
+    return `<div class="cc ${cls}${pts}${left === 0 ? ' gone' : ''}"><b>${head}</b><span>${st.map((x) => `<i class="${x}"></i>`).join('')}</span></div>`;
+  };
+  const suits = SUIT_KEYS.map((key, s) => {
+    const cells = Array.from({ length: 13 }, (_, r) => cell(s * 13 + r, rankLabel(r + 2), `su-${key}`)).join('');
+    return `<div class="crow"><em class="su-${key}"><svg><use href="#sym-${key}"/></svg>${SUIT_NAMES[s]}</em>${cells}</div>`;
+  }).join('');
+  const special = [[53, '참새', 'spc'], [52, '개', 'spc'], [54, '봉황', 'spc'], [55, '용', 'spc']].map(([b, n, c]) => cell(b, n, c)).join('');
+  return `<div class="cpanel"><div class="chead"><b>카드 카운팅</b><span>나온 카드 <b>${played.size}</b> · 내 손패 <b>${mine.size}</b> · 상대 쪽 <b>${unseen}</b>장</span><button type="button" data-do="count" aria-label="닫기">✕</button></div>${suits}<div class="crow sp"><em>특수</em>${special}</div><div class="clegend"><i class="u"></i>아직 안 나옴 <i class="m"></i>내 손패 <i class="p"></i>나옴 <i class="g"></i>점수 카드</div></div>`;
 }
 
 function rinfoHtml(v) {
@@ -565,7 +593,7 @@ const fmtClock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 100
 function renderGame() {
   const v = S.st.view;
   const order = [2, 1, 3, 0];
-  stage.innerHTML = `<div id="content">${scoreHtml(v)}${rinfoHtml(v)}${order.map((rel) => plateHtml(rel, v)).join('')}${backsHtml(v)}${zoneHtml(v)}${handHtml(v)}${stripHtml(v)}${actionsHtml(v)}${modalHtml(v)}${S.st.pause ? pauseHtml(S.st.pause) : ''}</div>`;
+  stage.innerHTML = `<div id="content">${scoreHtml(v)}${rinfoHtml(v)}${order.map((rel) => plateHtml(rel, v)).join('')}${backsHtml(v)}${zoneHtml(v)}${handHtml(v)}${countHtml(v)}${stripHtml(v)}${actionsHtml(v)}${modalHtml(v)}${S.st.pause ? pauseHtml(S.st.pause) : ''}</div>`;
   updateTimers();
 }
 
@@ -576,11 +604,20 @@ function render() {
   fx.attach();
   guide.attach();
   $('btn-assist').classList.toggle('on', S.assist);
+  paintCount();
   paintPause();
   clearTimeout(waitTimer);
   const v = S.st?.view;
   const wait = v ? waitLeft(v) : 0;
   if (wait > 0) waitTimer = setTimeout(render, wait + 30); // 폭탄 대기가 끝나면 버튼을 다시 켠다
+}
+
+/** 헤더 카운팅 버튼: 대국 중에만 보인다. */
+function paintCount() {
+  const btn = $('btn-count');
+  const playing = !!S.st && !!S.room && S.room.phase !== 'lobby' && S.st.view.phase === 'play';
+  btn.classList.toggle('hidden', !playing);
+  btn.classList.toggle('on', S.count);
 }
 
 /** 헤더 일시정지 버튼: 대국 중에만 보이고, 멈춘 동안은 '재개'로 바뀐다. */
@@ -728,6 +765,7 @@ function onAction(btn) {
     case 'pass': act({ type: 'pass' }); break;
     case 'wish-cancel': S.wish = null; render(); break;
     case 'next': act({ type: 'next' }); break;
+    case 'count': toggleCount(); break;
     case 'resume': send({ type: 'RESUME' }); break;
     case 'rematch': send({ type: 'REMATCH' }); break;
     case 'leave': leave(); break;
@@ -778,6 +816,12 @@ stage.addEventListener('click', (e) => {
   if (card) onCard(Number(card.dataset.id));
 });
 
+function toggleCount() {
+  S.count = !S.count;
+  store.set('tichu:count', S.count ? '1' : '0');
+  render();
+}
+
 function toggleAssist() {
   S.assist = !S.assist;
   store.set('tichu:assist', S.assist ? '1' : '0');
@@ -798,11 +842,19 @@ $('btn-back').addEventListener('click', () => {
 $('btn-guide').addEventListener('click', () => guide.toggle());
 $('btn-pause').addEventListener('click', () => send({ type: S.st?.pause ? 'RESUME' : 'PAUSE' }));
 $('btn-assist').addEventListener('click', toggleAssist);
+$('btn-count').addEventListener('click', toggleCount);
 // P 키로 일시정지/재개(입력창에 글자를 치는 중이면 무시)
 document.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() !== 'p' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) return;
   const btn = $('btn-pause');
+  if (!btn.classList.contains('hidden')) btn.click();
+});
+// C 키로 카드 카운팅 패널 열기/닫기
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() !== 'c' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '') || e.target?.isContentEditable) return;
+  const btn = $('btn-count');
   if (!btn.classList.contains('hidden')) btn.click();
 });
 const soundBtn = $('btn-sound');

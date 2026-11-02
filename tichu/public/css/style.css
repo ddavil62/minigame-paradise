@@ -344,3 +344,31 @@ button { font: inherit; cursor: pointer; }
 
 /* 펠트 질감(가장자리 어둡힘은 --table 그라데이션) */
 .stage::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: .16; mix-blend-mode: overlay; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.2'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>"); }
+
+/* ── 이번 라운드 먹은 점수 / 카드 카운팅 ── */
+.score .rnd { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.14); font-size: 12px; font-weight: 700; }
+.score .rnd span { flex: 1; width: auto; text-align: left; color: var(--muted); }
+.score .rnd b { font-size: 17px; font-variant-numeric: tabular-nums; } .score .rnd b.us { color: var(--team-us); } .score .rnd b.them { color: var(--team-them); } .score .rnd em { color: var(--muted); font-style: normal; }
+.cpanel { position: absolute; left: 50%; top: 80px; width: 640px; transform: translateX(-50%); padding: 7px 12px 7px; border: 1px solid var(--plate-border); border-radius: 12px; background: rgba(6,30,19,.9); box-shadow: 0 10px 30px rgba(0,0,0,.5); z-index: 8; }
+.chead { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; font-size: 13px; }
+.chead > b { font-size: 14px; color: var(--accent); } .chead span { flex: 1; color: var(--muted); font-weight: 600; } .chead span b { color: var(--ui); }
+.chead button { width: 24px; height: 24px; border: 1px solid var(--btn-border); border-radius: 6px; background: var(--btn2-bg); color: var(--ui); font-size: 12px; line-height: 1; }
+.crow { display: flex; align-items: stretch; gap: 3px; margin-bottom: 3px; }
+.crow > em { display: flex; align-items: center; gap: 3px; width: 46px; flex: none; font-size: 11px; font-style: normal; font-weight: 800; color: #fff; }
+.crow > em svg { width: 13px; height: 13px; fill: currentColor; }
+.crow > em.su-jade { color: #5fd391; } .crow > em.su-sword { color: #c5c9d6; } .crow > em.su-pagoda { color: #7db4ff; } .crow > em.su-star { color: #ff8f84; }
+.cc { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 30px; border-radius: 5px; background: #fffdf6; color: var(--suit, #333); }
+.cc > b { font: 900 13px/1 var(--cfont); }
+.cc > span { display: flex; gap: 3px; }
+.cc i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.cc i.m { background: #e9a800; box-shadow: 0 0 0 1.5px #7a5400; }
+.cc i.p { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, currentColor 45%, transparent); }
+.cc.pt { box-shadow: inset 0 -3px 0 #e9a800; }
+.cc.gone { opacity: .38; }
+.crow.sp .cc { height: 30px; } .crow.sp .cc > b { font: 800 13px/1 var(--font); color: #333; }
+.clegend { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.clegend i { width: 9px; height: 9px; margin-left: 8px; border-radius: 50%; background: #fffdf6; }
+.clegend i:first-child { margin-left: 0; }
+.clegend i.m { background: #e9a800; box-shadow: 0 0 0 1.5px #7a5400; }
+.clegend i.p { background: transparent; box-shadow: inset 0 0 0 1.5px #cfe2d3; }
+.clegend i.g { width: 12px; height: 3px; border-radius: 0; background: #e9a800; }

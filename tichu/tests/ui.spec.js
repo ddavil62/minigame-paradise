@@ -108,6 +108,24 @@ test('도우미: 켜면 낼 수 있는 조합 칩이 나오고 칩을 누르면 
   }
 });
 
+test('카운팅: 대국 중에만 버튼이 보이고, 패널의 칸 수와 합계가 맞으며, 점수 박스에 이번 라운드 점수가 뜬다', async ({ page }) => {
+  await page.goto(`${base}/?name=테스터`);
+  await expect(page.locator('#btn-count')).toBeHidden();
+  await page.locator('[data-cfg="bombWindowMs"][data-val="0"]').click();
+  await page.locator('[data-do="start"]').click();
+  await toPlay(page);
+  await expect(page.locator('#btn-count')).toBeVisible();
+  await expect(page.locator('.score .rnd')).toContainText('이번 라운드');
+  await page.locator('#btn-count').click();
+  await expect(page.locator('.cpanel')).toBeVisible();
+  await expect(page.locator('.cpanel .cc')).toHaveCount(56); // 4무늬 × 13 + 특수 4
+  await expect(page.locator('.cpanel .cc i.m')).toHaveCount(14); // 내 손패 14장
+  const total = await page.locator('.cpanel .cc i').count();
+  expect(total).toBe(56);
+  await page.locator('.cpanel [data-do="count"]').click();
+  await expect(page.locator('.cpanel')).toHaveCount(0);
+});
+
 test('룰 가이드: 열고 탭을 바꾸고 닫는다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
   await page.locator('#btn-guide').click();

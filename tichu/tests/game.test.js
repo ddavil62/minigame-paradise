@@ -278,6 +278,22 @@ test('뷰에는 상대 손패가 들어가지 않는다(상대 손패를 바꿔�
   assert.deepEqual(g.viewFor(0).counts, [14, 14, 14, 14]);
 });
 
+test('카운팅: 나온 카드와 팀별 먹은 점수는 공개 정보만으로 만들어진다', () => {
+  const g = setup([`5j 10s ${FILL}`, `Kp 7s ${FILL}`, `Kt 8s ${FILL}`, `9s 9p ${FILL}`], { turn: 0 });
+  assert.deepEqual(g.viewFor(2).played, []);
+  assert.ok(play(g, 0, '5j').ok);
+  assert.deepEqual(g.viewFor(2).played, ids('5j'), '트릭 진행 중인 카드도 나온 카드다');
+  assert.ok(play(g, 1, 'Kp').ok);
+  g.act(2, { type: 'pass' }); g.act(3, { type: 'pass' }); g.act(0, { type: 'pass' });
+  const v = g.viewFor(3);
+  assert.deepEqual(v.played.slice().sort((a, b) => a - b), ids('5j Kp').sort((a, b) => a - b));
+  assert.deepEqual(v.wonPts, [0, 15], '5+K=15점을 먹은 팀은 1번 좌석 팀');
+  assert.ok(v.played.every((id) => !g.h.hands.some((h) => h.includes(id))), '나온 카드는 누구 손에도 없다');
+  const before = JSON.stringify(g.viewFor(0));
+  g.h.hands[1] = g.h.hands[1].map((id) => (id + 20) % 56);
+  assert.equal(JSON.stringify(g.viewFor(0)), before, '상대 손패는 카운팅에 새지 않는다');
+});
+
 test('AI: 폭탄 끼어들기는 상대가 곧 나가거나 용을 낼 때만', () => {
   const bombHand = '5j 5s 5p 5t Kp 7t 7s 8s 8p 9t 9p 10t 10p Jt';
   let g = setup(['9j Aj', 'Kj 3j', '2j 6j', bombHand], { turn: 0 });

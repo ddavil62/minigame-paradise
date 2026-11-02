@@ -464,11 +464,25 @@ export class TichuGame {
       wish: h.wish,
       wishUsed: h.wishUsed,
       openAt: h.openAt,
+      ...this.publicTally(),
       legal: this.legalFor(seat),
       result: this.phase === 'roundEnd' || this.phase === 'over' ? this.result : null,
       final: this.final,
     };
     return view;
+  }
+
+  /**
+   * 모두에게 공개된 정보로만 만든 카운팅: 이번 라운드에 이미 나온 카드(트릭 진행 중인 카드와 개 포함)와
+   * 팀별로 이미 먹은 카드 점수(용 선물은 받은 팀 기준, 개는 0점). 정산 전이라 꼴찌의 남은 손패는 반영되지 않는다.
+   * @returns {{played:number[], wonPts:number[]}}
+   */
+  publicTally() {
+    const h = this.h;
+    if (this.phase !== 'play' && this.phase !== 'exchange') return { played: [], wonPts: [0, 0] };
+    const played = [...h.won.flat(), ...h.trick.pile];
+    const wonPts = [0, 1].map((t) => pointsSum(h.won.filter((_, s) => team(s) === t).flat()));
+    return { played, wonPts };
   }
 
   /** 클라이언트가 봉황 숫자를 고르게 할 때 쓰는 보조: 고른 카드의 봉황 해석 후보. */
