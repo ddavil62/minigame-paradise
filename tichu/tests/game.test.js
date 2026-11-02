@@ -9,7 +9,7 @@ const ids = (s) => (s ? s.split(/\s+/).map(idOf) : []);
 
 /** 교환까지 끝낸 뒤 손패를 시나리오대로 바꿔 놓은 대국(내 차례는 turn 좌석). */
 function setup(hands, { turn = 0, settings = {}, calls = null, wish = null } = {}) {
-  const g = new TichuGame({ settings: { grand: false, bombWindowMs: 0, ...settings }, rng: seededRng(1), now: () => 0 });
+  const g = new TichuGame({ settings: { grand: false, ...settings }, rng: seededRng(1), now: () => 0 });
   g.start();
   for (let s = 0; s < 4; s++) g.act(s, { type: 'exchange', give: g.h.hands[s].slice(0, 3) });
   assert.equal(g.phase, 'play');
@@ -114,20 +114,6 @@ test('폭탄은 내 차례가 아니어도 낼 수 있고, 일반 조합은 안 
 test('내 차례가 아닌데 맨 앞(트릭 없음)에서 폭탄은 낼 수 없다', () => {
   const g = setup([`9j ${FILL}`, FILL, FILL, `5j 5s 5p 5t ${FILL}`.replace('4t', '7t').replace('4s', '7s')]);
   assert.equal(play(g, 3, '5j 5s 5p 5t').error, 'not_turn');
-});
-
-test('폭탄 끼어들기 대기: 낸 직후에는 다음 사람이 일반 조합을 못 내지만 폭탄은 된다', () => {
-  let t = 1000;
-  const g = new TichuGame({ settings: { grand: false, bombWindowMs: 2000 }, rng: seededRng(1), now: () => t });
-  g.start();
-  for (let s = 0; s < 4; s++) g.act(s, { type: 'exchange', give: g.h.hands[s].slice(0, 3) });
-  g.h.hands = [`9j ${FILL}`, `Kj ${FILL}`, FILL, FILL].map(ids);
-  g.pending = { type: 'turn', seat: 0 };
-  play(g, 0, '9j');
-  assert.equal(play(g, 1, 'Kj').error, 'wait');
-  assert.equal(g.act(1, { type: 'pass' }).error, 'wait');
-  t += 2100;
-  assert.ok(play(g, 1, 'Kj').ok);
 });
 
 test('용: 가장 높은 싱글이고, 이기면 상대 팀 한 명에게 트릭을 선물해야 한다', () => {

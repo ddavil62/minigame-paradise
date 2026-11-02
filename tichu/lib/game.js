@@ -13,7 +13,7 @@ import {
 } from './cards.js';
 import { pickCombo, enumeratePlays, bombsIn, phoenixChoices } from './combos.js';
 
-export const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, bombWindowMs: 2000, decks: 1 });
+export const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, decks: 1 });
 
 const team = (seat) => seat % 2;
 const partnerOf = (seat) => (seat + 2) % 4;
@@ -68,7 +68,6 @@ export class TichuGame {
       trick: this.newTrick(),
       wish: null,
       wishUsed: false, // 소원은 라운드에서 처음 낸 참새로 한 번만 빈다
-      openAt: 0,
     };
     this.result = null;
     this.emit({ t: 'deal', round: this.roundNo });
@@ -220,7 +219,6 @@ export class TichuGame {
     if (mine) {
       const w = this.mustWish(seat);
       if (w && !hasRealRank(combo, w)) return fail('wish');
-      if (top && !combo.bomb && this.settings.bombWindowMs > 0 && this.now() < h.openAt) return fail('wait');
     }
 
     h.hands[seat] = h.hands[seat].filter((id) => !ids.includes(id));
@@ -235,7 +233,6 @@ export class TichuGame {
       if (this.roundOver()) { this.finishRound(); return { ok: true }; }
       h.trick = this.newTrick();
       this.pending = { type: 'turn', seat: lead };
-      h.openAt = 0;
       return { ok: true };
     }
 
@@ -245,7 +242,6 @@ export class TichuGame {
     tr.topSeat = seat;
     tr.passed.clear();
     tr.pile.push(...ids);
-    h.openAt = this.now() + this.settings.bombWindowMs;
 
     if (!h.wishUsed && combo.ids.some(isMJ)) {
       h.wishUsed = true; // 두 번째 참새는 소원을 못 빈다(처음 낸 사람 한 명만)
@@ -284,7 +280,6 @@ export class TichuGame {
     const tr = h.trick;
     if (!tr.top) return fail('must_lead');
     if (this.mustWish(seat)) return fail('wish');
-    if (this.settings.bombWindowMs > 0 && this.now() < h.openAt) return fail('wait');
     h.started[seat] = true;
     tr.passed.add(seat);
     this.emit({ t: 'pass', seat });
@@ -326,7 +321,6 @@ export class TichuGame {
     if (to !== winner) this.emit({ t: 'gift', seat: winner, to, points: pointsSum(pile) });
     h.won[to].push(...pile);
     h.trick = this.newTrick();
-    h.openAt = 0;
     if (this.roundOver()) { this.finishRound(); return; }
     this.pending = { type: 'turn', seat: this.active(winner) ? winner : this.nextActive(winner) };
   }
@@ -463,7 +457,6 @@ export class TichuGame {
       },
       wish: h.wish,
       wishUsed: h.wishUsed,
-      openAt: h.openAt,
       ...this.publicTally(),
       legal: this.legalFor(seat),
       result: this.phase === 'roundEnd' || this.phase === 'over' ? this.result : null,

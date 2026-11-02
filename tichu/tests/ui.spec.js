@@ -76,7 +76,6 @@ test('카드 교환: 3칸을 채워야 확정되고, 칸을 누르면 카드가 
 
 test('플레이: 카드를 고르면 조합 판정 문구가 뜨고, 낼 수 없으면 버튼이 꺼진다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
-  await page.locator('[data-cfg="bombWindowMs"][data-val="0"]').click();
   await page.locator('[data-do="start"]').click();
   await toPlay(page);
   await expect(page.locator('.hand.my-turn')).toBeVisible({ timeout: 30000 });
@@ -93,7 +92,6 @@ test('플레이: 카드를 고르면 조합 판정 문구가 뜨고, 낼 수 없
 
 test('도우미: 켜면 낼 수 있는 조합 칩이 나오고 칩을 누르면 카드가 선택된다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
-  await page.locator('[data-cfg="bombWindowMs"][data-val="0"]').click();
   await page.locator('[data-local="assist"]').click();
   await page.locator('[data-do="start"]').click();
   await toPlay(page);
@@ -111,7 +109,6 @@ test('도우미: 켜면 낼 수 있는 조합 칩이 나오고 칩을 누르면 
 test('카운팅: 대국 중에만 버튼이 보이고, 패널의 칸 수와 합계가 맞으며, 점수 박스에 이번 라운드 점수가 뜬다', async ({ page }) => {
   await page.goto(`${base}/?name=테스터`);
   await expect(page.locator('#btn-count')).toBeHidden();
-  await page.locator('[data-cfg="bombWindowMs"][data-val="0"]').click();
   await page.locator('[data-do="start"]').click();
   await toPlay(page);
   await expect(page.locator('#btn-count')).toBeVisible();
@@ -140,7 +137,6 @@ test('룰 가이드: 열고 탭을 바꾸고 닫는다', async ({ page }) => {
 
 test('자동 진행: 한 라운드가 끝나면 결과 화면이 뜨고 점수가 정리된다', async ({ page }) => {
   await page.goto(`${base}/?name=오토&auto=1`);
-  await page.locator('[data-cfg="bombWindowMs"][data-val="0"]').click();
   await page.locator('[data-cfg="target"][data-val="500"]').click();
   await page.locator('[data-do="start"]').click();
   await expect(page.locator('.modal.result')).toBeVisible({ timeout: 45000 });

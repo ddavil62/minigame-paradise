@@ -22,7 +22,7 @@ const combo = (s, top = null) => {
 
 /** 교환까지 끝낸 2벌 대국에 손패를 시나리오대로 놓는다. */
 function setup2(hands, { turn = 0, wishUsed = false, wish = null } = {}) {
-  const g = new TichuGame({ settings: { decks: 2, grand: false, bombWindowMs: 0 }, rng: seededRng(1), now: () => 0 });
+  const g = new TichuGame({ settings: { decks: 2, grand: false }, rng: seededRng(1), now: () => 0 });
   g.start();
   for (let s = 0; s < 4; s++) g.act(s, { type: 'exchange', give: g.h.hands[s].slice(0, 6) });
   assert.equal(g.phase, 'play');

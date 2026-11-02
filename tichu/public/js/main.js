@@ -158,11 +158,9 @@ function autoPlay(v) {
       const a = { type: 'play', ids: pick.ids };
       if (pick.phx && pick.ids.length > 1) a.as = pick.phx;
       if (!v.wishUsed && pick.ids.some(isMJ)) a.wish = 9;
-      const wait = Math.max(0, v.openAt - (Date.now() + S.offset)) + 80;
-      setTimeout(() => send({ type: 'ACT', action: a }), wait);
+      setTimeout(() => send({ type: 'ACT', action: a }), 80);
     } else if (legal.canPass) {
-      const wait = Math.max(0, v.openAt - (Date.now() + S.offset)) + 80;
-      setTimeout(() => send({ type: 'ACT', action: { type: 'pass' } }), wait);
+      setTimeout(() => send({ type: 'ACT', action: { type: 'pass' } }), 80);
     } else if (plays[0]) go({ type: 'play', ids: plays[0].ids });
   }
 }
@@ -238,7 +236,6 @@ function renderLobby() {
       <div class="opt"><span>카드 벌 수<small>${set.decks === 2 ? '더블 티추: 112장 · 28장씩 · 점수 2배' : '표준 티추: 56장 · 14장씩'}</small></span>${seg('decks', [[1, '1벌'], [2, '2벌(더블)']])}</div>
       <div class="opt"><span>목표 점수</span>${seg('target', set.decks === 2 ? [[1000, '1000'], [2000, '2000']] : [[500, '500'], [1000, '1000']])}</div>
       <div class="opt"><span>그랜드 티추<small>처음 ${8 * set.decks}장만 보고 ±${200 * set.decks}</small></span>${toggle('grand')}</div>
-      <div class="opt"><span>폭탄 끼어들기 대기<small>낸 뒤 폭탄을 낼 시간</small></span>${seg('bombWindowMs', [[0, '없음'], [1000, '1초'], [2000, '2초'], [3000, '3초']])}</div>
       <div class="opt"><span>AI 난이도</span>${seg('aiLevel', [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']])}</div>
       <div class="opt"><span>낼 수 있는 조합 도우미<small>초보용 칩 표시(나만 보여요)</small></span><button class="toggle${S.assist ? '' : ' off'}" data-local="assist"></button></div>
       <div class="rule-note">생각 시간 25초 + 여유 30초(대국 전체). 시간이 지나면 자동으로 진행해요.</div>
@@ -439,25 +436,18 @@ function availablePlays(v) {
   return plays;
 }
 
-function waitLeft(v) {
-  if (v.legal?.kind !== 'turn' || !v.trick.top) return 0;
-  return Math.max(0, v.openAt - nowMs());
-}
-
 function stripHtml(v) {
   const legal = v.legal;
   const parts = [];
   if (v.phase === 'grand' || v.phase === 'exchange') return '';
   if (v.phase === 'play') {
     const info = selInfo(v);
-    const wait = waitLeft(v);
     if (!legal) parts.push(v.out.includes(S.seat) ? '<span class="ok">나갔어요! 나머지 경기를 지켜봐요</span>' : '<span class="lab">잠시만요…</span>');
     else if (info) parts.push(selText(v, info));
     else if (S.assist && legal.kind === 'turn') parts.push(chipsHtml(v));
     else if (legal.kind === 'turn') parts.push(legal.lead ? '<b>내가 선이에요</b> · 카드를 골라 내요' : `<b>내 차례예요</b> · ${esc(needText(v.trick.top))}를 내거나 패스해요`);
     else if (legal.kind === 'wait') parts.push(`<span class="lab">${esc(nameOf(v.pending?.seat ?? 0))}님 차례예요${legal.canBomb ? ' · <b>폭탄을 낼 수 있어요!</b>' : ''}</span>`);
     if (legal?.kind === 'turn' && legal.wish) parts.push(`<span class="warn">소원 <b>${rankLabel(legal.wish)}</b>을 낼 수 있으면 꼭 내야 해요</span>`);
-    if (wait > 0) parts.push(`<span class="warn">폭탄 대기 <span data-wait>${(wait / 1000).toFixed(1)}</span>초</span>`);
     if (info && info.choices.length > 1) parts.push(`<span class="lab">봉황 =</span>${info.choices.map((c) => `<span class="chip${samePhx(info.combo?.phx ?? null, c) ? ' on' : ''}" data-phx='${phxJson(c)}'>${phxText(c)}</span>`).join('')}`);
   }
   return parts.length ? `<div class="strip">${parts.join('')}</div>` : '';
@@ -499,12 +489,10 @@ function actionsHtml(v) {
     btns.push(`<button class="b go" data-do="exchange"${ok ? '' : ' disabled'}>교환 확정<small>${ok ? '이대로 보내요' : `${S.picks.filter((x) => x == null).length}장 더 골라요`}</small></button>`);
   } else if (legal.kind === 'turn') {
     const info = selInfo(v);
-    const wait = waitLeft(v);
     const w = legal.wish;
     const okCombo = info?.combo && (!w || info.combo.ids.some((id) => !isPhx(id) && rankOf(id) === w));
-    if (legal.canPass) btns.push(`<button class="b" data-do="pass"${wait > 0 ? ' disabled' : ''}>패스${wait > 0 ? `<small><span data-wait>${(wait / 1000).toFixed(1)}</span>초 뒤</small>` : ''}</button>`);
-    const canPlay = okCombo && (wait <= 0 || info.combo.bomb);
-    btns.push(`<button class="b go" data-do="play"${canPlay ? '' : ' disabled'}>${info?.combo?.bomb ? '폭탄!' : '내기'}<small>${info?.combo ? esc(comboLabel(info.combo)) : '카드를 골라요'}</small></button>`);
+    if (legal.canPass) btns.push('<button class="b" data-do="pass">패스</button>');
+    btns.push(`<button class="b go" data-do="play"${okCombo ? '' : ' disabled'}>${info?.combo?.bomb ? '폭탄!' : '내기'}<small>${info?.combo ? esc(comboLabel(info.combo)) : '카드를 골라요'}</small></button>`);
   } else if (legal.kind === 'wait' && legal.canBomb) {
     const info = selInfo(v);
     btns.push(`<button class="b go bombbtn" data-do="play"${info?.combo?.bomb ? '' : ' disabled'}>폭탄 내기!<small>${info?.combo?.bomb ? esc(comboLabel(info.combo)) : '폭탄 카드를 골라요'}</small></button>`);
@@ -597,7 +585,6 @@ function renderGame() {
   updateTimers();
 }
 
-let waitTimer = null;
 function render() {
   if (S.st && S.room && S.room.phase !== 'lobby') renderGame();
   else renderLobby();
@@ -606,10 +593,6 @@ function render() {
   $('btn-assist').classList.toggle('on', S.assist);
   paintCount();
   paintPause();
-  clearTimeout(waitTimer);
-  const v = S.st?.view;
-  const wait = v ? waitLeft(v) : 0;
-  if (wait > 0) waitTimer = setTimeout(render, wait + 30); // 폭탄 대기가 끝나면 버튼을 다시 켠다
 }
 
 /** 헤더 카운팅 버튼: 대국 중에만 보인다. */
@@ -647,10 +630,6 @@ function updateTimers() {
       if (plate && st.view.pending?.type === 'turn') plate.innerHTML = `<b>내 차례</b> · ${sec}초`;
       if (sec <= 5 && sec > 0 && sec !== S.tickSec) { S.tickSec = sec; sounds.play('tick'); }
     }
-  }
-  if (st.view && !st.pause) {
-    const left = waitLeft(st.view);
-    for (const el of stage.querySelectorAll('[data-wait]')) el.textContent = (left / 1000).toFixed(1);
   }
   const clock = stage.querySelector('#pause-clock');
   if (clock && st.pause) clock.textContent = fmtClock(nowMs() - st.pause.at);
