@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 import { createApp } from '../server.js';
 
 const FAST = {
-  baseMs: 20000, bankMs: 20000, grandMs: 20000, exchangeMs: 20000, giftMs: 8000,
+  baseMs: 20000, bankMs: 20000, grandMs: 20000, exchangeMs: 20000, giftMs: 8000, reviewMs: 20000,
   aiTurnMs: [20, 60], aiPickMs: [20, 60], aiAckMs: [20, 60], awayMs: 5,
 };
 
@@ -37,6 +37,11 @@ async function toPlay(page) {
     await expect(page.locator('.slot .box.fill')).toHaveCount(i + 1);
   }
   await page.locator('[data-do="exchange"]').click();
+  await expect(page.locator('.modal.xchg')).toBeVisible(); // 교환 결과 확인 창
+  await expect(page.locator('.xchg .xc.got .card')).toHaveCount(3);
+  await expect(page.locator('.xchg .xc.gave .card')).toHaveCount(3);
+  await page.locator('[data-do="review-ok"]').click();
+  await expect(page.locator('.modal.xchg')).toHaveCount(0);
   await expect(page.locator('.hand .card')).toHaveCount(14);
 }
 

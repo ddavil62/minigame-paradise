@@ -312,6 +312,22 @@ test('폭탄 끼어들기 대기 시간은 STATE에 실리고, 방 설정으로 
   assert.equal(a.state.view.settings.bombWindowMs, 3000);
 });
 
+test('교환 결과 확인: 사람이 확인하지 않아도 reviewMs 뒤에 자동으로 시작한다', async (t) => {
+  const srv = await boot({ ...RELAXED, reviewMs: 300 });
+  t.after(srv.close);
+  const a = client(srv.port, { key: 'kr', name: '나', play: false }, t);
+  await until(() => a.room);
+  a.send({ type: 'CONFIG', settings: { grand: false } });
+  a.send({ type: 'START' });
+  await until(() => a.state?.view.phase === 'exchange');
+  a.send({ type: 'ACT', action: { type: 'exchange', give: a.state.view.hand.slice(0, 3) } });
+  await until(() => a.state.view.pending?.type === 'review');
+  assert.equal(a.state.view.legal.kind, 'review');
+  assert.equal(a.state.view.received.length, 3, '받은 카드가 보인다');
+  await until(() => a.state.view.pending?.type === 'turn', 4000);
+  assert.equal(a.state.view.phase, 'play');
+});
+
 test('방 번호(room)가 다르면 방 설정 화면에 남은 사람과 섞이지 않고 각자 방장이 된다', async (t) => {
   const srv = await boot({ ...FAST, emptyResetMs: 120, lobbyGraceMs: 60 });
   t.after(srv.close);

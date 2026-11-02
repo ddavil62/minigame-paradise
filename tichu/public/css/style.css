@@ -419,3 +419,17 @@ button { font: inherit; cursor: pointer; }
   #fx .special .sc, #fx .special .rays, #fx .special u { animation: sp-cap var(--ms) ease-out both; }
   #fx .special.dog .sc { animation-name: sp-cap; }
 }
+
+/* ── 교환 결과 확인 창 ── */
+.modal.xchg { width: 700px; }
+.xchg .xhead, .xchg .xrow { display: grid; grid-template-columns: 130px 1fr 74px 1fr; align-items: center; gap: 10px; }
+.xchg .xhead { margin: 10px 0 4px; color: var(--muted); font-size: 12px; font-weight: 700; text-align: center; }
+.xchg .xrow { margin-bottom: 8px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.04); }
+.xchg .xrow.us { border-color: color-mix(in srgb, var(--team-us) 55%, transparent); } .xchg .xrow.them { border-color: color-mix(in srgb, var(--team-them) 50%, transparent); }
+.xchg .xrow > b { font-size: 15px; } .xchg .xrow > b small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.xchg .xrow > i { color: var(--muted); font-size: 12px; font-style: normal; font-weight: 700; text-align: center; }
+.xchg .xc { display: flex; justify-content: center; gap: 6px; min-height: 66px; }
+.xchg .xc.gave .card { opacity: .72; }
+.xchg .xc.got .card { box-shadow: 0 0 0 2.5px #e9a800, 0 0 16px rgba(233,168,0,.55), var(--cshadow); }
+.xchg .xfoot { margin-top: 6px; font-size: 12.5px; }
+.xchg .xfoot b { color: var(--accent); }

@@ -154,7 +154,12 @@ export class TichuGame {
     }
     this.phase = 'play';
     this.emit({ t: 'exchanged' });
-    const leader = h.hands.findIndex((hand) => hand.includes(MJ));
+    this.pending = { type: 'review', acks: new Set() }; // 받은 카드를 확인하는 시간(전원 확인 또는 시간 초과)
+  }
+
+  /** 교환 결과 확인이 끝났다: 참새를 가진 사람이 선이 되어 플레이가 시작된다. */
+  beginPlay() {
+    const leader = this.h.hands.findIndex((hand) => hand.includes(MJ));
     this.pending = { type: 'turn', seat: leader };
     this.emit({ t: 'start', seat: leader });
   }
@@ -171,9 +176,10 @@ export class TichuGame {
 
   actNext(seat) {
     const p = this.pending;
-    if (!p || p.type !== 'ack' || p.acks.has(seat)) return fail('not_allowed');
+    if (!p || (p.type !== 'ack' && p.type !== 'review') || p.acks.has(seat)) return fail('not_allowed');
     p.acks.add(seat);
     if (p.acks.size < 4) return { ok: true };
+    if (p.type === 'review') { this.beginPlay(); return { ok: true }; }
     if (this.result.over) {
       this.phase = 'over';
       this.pending = null;
@@ -422,6 +428,7 @@ export class TichuGame {
       case 'exchange': return p.done[seat] ? { kind: 'exchangeDone', canTichu } : { kind: 'exchange', canTichu };
       case 'gift': return p.seat === seat ? { kind: 'gift', options: p.options.slice() } : null;
       case 'ack': return p.acks.has(seat) ? null : { kind: 'ack' };
+      case 'review': return { kind: p.acks.has(seat) ? 'reviewDone' : 'review', canTichu };
       default: break;
     }
     if (!this.active(seat)) return null;
@@ -458,7 +465,7 @@ export class TichuGame {
       pending: p ? { type: p.type, seat: p.seat } : null,
       grandDone: grandPhase ? [0, 1, 2, 3].map((s) => p.responses[s] !== undefined) : null,
       exchangeDone: this.phase === 'exchange' ? [0, 1, 2, 3].map((s) => !!p.done[s]) : null,
-      ackDone: p && p.type === 'ack' ? [0, 1, 2, 3].map((s) => p.acks.has(s)) : null,
+      ackDone: p && (p.type === 'ack' || p.type === 'review') ? [0, 1, 2, 3].map((s) => p.acks.has(s)) : null,
       received: this.phase === 'exchange' ? [] : h.received[seat].slice(),
       given: this.phase === 'exchange' ? [] : h.given[seat].slice(),
       myPicks: this.phase === 'exchange' && h.picks[seat] ? h.picks[seat].slice() : null,

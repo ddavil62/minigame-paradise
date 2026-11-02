@@ -46,6 +46,7 @@ export const DEFAULT_TIMING = Object.freeze({
   grandMs: 20000, // 그랜드 티추 선택
   exchangeMs: 45000, // 카드 3장 교환
   giftMs: 15000, // 용 트릭 선물
+  reviewMs: 8000, // 교환 결과 확인(시간이 지나면 자동으로 시작, 시간 초과로 세지 않는다)
   aiTurnMs: [800, 1600],
   aiPickMs: [900, 2200], // 그랜드·교환 선택
   aiAckMs: [600, 1200],
@@ -270,7 +271,7 @@ function createRoomEngine(opts, hooks = {}) {
     if (kind === 'ai') {
       action = decide(view, { level: slot.level, rng: opts.rng });
     } else {
-      if (kind === 'timeout' && slot.type === 'human') {
+      if (kind === 'timeout' && slot.type === 'human' && g.pending?.type !== 'review') {
         slot.timeouts = (slot.timeouts || 0) + 1;
         if (slot.timeouts >= 2) slot.autoPlay = true;
       }
@@ -323,7 +324,7 @@ function createRoomEngine(opts, hooks = {}) {
       if (slot.type === 'ai') {
         kind = 'ai';
         ms = p.type === 'turn' ? aiDelay(g, T.aiTurnMs)
-          : p.type === 'ack' ? between(T.aiAckMs)
+          : p.type === 'ack' || p.type === 'review' ? between(T.aiAckMs)
             : p.type === 'gift' ? between(T.aiTurnMs) : between(T.aiPickMs);
       } else if (!slot.connected || slot.autoPlay) {
         kind = 'away';
@@ -334,7 +335,7 @@ function createRoomEngine(opts, hooks = {}) {
       } else {
         kind = 'timeout';
         if (p.type === 'turn') { base = T.baseMs; total = T.baseMs + slot.bank; slot.turnStart = now; }
-        else { base = total = p.type === 'grand' ? T.grandMs : p.type === 'exchange' ? T.exchangeMs : T.giftMs; }
+        else { base = total = p.type === 'grand' ? T.grandMs : p.type === 'exchange' ? T.exchangeMs : p.type === 'review' ? T.reviewMs : T.giftMs; }
         ms = total;
       }
       const handle = setTimeout(() => runAuto(seat, token, kind), ms);
@@ -698,7 +699,7 @@ if (isDirectExecution() && !process.env.TICHU_NO_LISTEN) {
   // TICHU_FAST=1은 화면 검증용으로 AI 지연과 제한 시간을 줄인다.
   const fast = process.env.TICHU_FAST === '1';
   const app = createApp(fast ? {
-    timing: { aiTurnMs: [30, 90], aiPickMs: [40, 120], aiAckMs: [30, 80], baseMs: 8000, bankMs: 8000, grandMs: 6000, exchangeMs: 10000, giftMs: 6000 },
+    timing: { aiTurnMs: [30, 90], aiPickMs: [40, 120], aiAckMs: [30, 80], baseMs: 8000, bankMs: 8000, grandMs: 6000, exchangeMs: 10000, giftMs: 6000, reviewMs: 3000 },
   } : {});
   const server = http.createServer((req, res) => {
     // 단독 실행에서는 /tichu/ 접두어도 허용한다.

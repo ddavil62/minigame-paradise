@@ -149,6 +149,7 @@ function autoPlay(v) {
   const go = (a) => setTimeout(() => send({ type: 'ACT', action: a }), 60);
   if (legal.kind === 'grand') go({ type: 'grand', on: false });
   else if (legal.kind === 'exchange') go({ type: 'exchange', give: v.hand.slice(0, 3 * decksOf()) });
+  else if (legal.kind === 'review') go({ type: 'next' });
   else if (legal.kind === 'ack') setTimeout(() => send({ type: 'ACT', action: { type: 'next' } }), Math.max(1500, Number(params.get('auto')) * 5));
   else if (legal.kind === 'gift') go({ type: 'gift', to: legal.options[0] });
   else if (legal.kind === 'turn') {
@@ -311,6 +312,7 @@ function plateHtml(rel, v) {
   if (place >= 0) sub = `<b>${place + 1}등</b>으로 나갔어요`;
   else if (v.phase === 'grand') sub = v.grandDone?.[seat] ? '<b>✓ 선택 완료</b>' : '<b>선택 중…</b>';
   else if (v.phase === 'exchange') sub = v.exchangeDone?.[seat] ? '<b>✓ 교환 선택 완료</b>' : '<b>카드 고르는 중…</b>';
+  else if (v.pending?.type === 'review') sub = v.ackDone?.[seat] ? '<b>✓ 확인 완료</b>' : '<b>받은 카드 확인 중…</b>';
   else sub = `<b>${v.counts[seat]}</b>장 · ${roleOf(seat)}`;
   const timer = (S.st.timers || []).some((t) => t.seat === seat) ? '<div class="tm"><i style="width:0%"></i></div>' : '';
   const away = info.type === 'human' && !info.connected ? ' dc' : '';
@@ -514,8 +516,30 @@ function actionsHtml(v) {
   return btns.length ? `<div class="acts">${btns.join('')}</div>` : '';
 }
 
+/** 교환 결과 확인 창: 상대별로 내가 준 카드와 받은 카드를 보여 준다. 전원이 확인하거나 시간이 지나면 시작한다. */
+function reviewHtml(v) {
+  const rows = [2, 1, 3].map((rel) => {
+    const seat = (S.seat + rel) % 4;
+    const gave = v.given.filter((g) => g.to === seat).map((g) => g.id);
+    const got = v.received.filter((r) => r.from === seat).map((r) => r.id);
+    const role = rel === 2 ? '파트너' : rel === 1 ? '왼쪽 상대' : '오른쪽 상대';
+    return `<div class="xrow ${isUs(seat) ? 'us' : 'them'}"><b>${role}<small>${esc(nameOf(seat))}</small></b><div class="xc gave">${cardsHtml(gave, 'sm')}</div><i>⇄</i><div class="xc got">${cardsHtml(got, 'sm')}</div></div>`;
+  }).join('');
+  const mine = v.legal?.kind === 'review';
+  const acks = v.ackDone ? v.ackDone.filter(Boolean).length : 0;
+  const btn = mine
+    ? '<button class="b go" data-do="review-ok">확인 · 시작<small>모두 누르면 바로 시작해요</small></button>'
+    : `<button class="b" disabled>다른 사람을 기다려요 (${acks}/4)</button>`;
+  const tichu = v.legal?.canTichu ? `<button class="b tichu" data-do="tichu">티추 부르기<small>성공 +${100 * v.settings.decks} · 실패 −${100 * v.settings.decks}</small></button>` : '';
+  return `<div class="scrim"></div><div class="modal xchg"><h2>교환 결과 <em>— 받은 카드를 확인해요</em></h2>
+    <div class="xhead"><span></span><span>내가 준 카드</span><span></span><span>내가 받은 카드</span></div>${rows}
+    <p class="xfoot">받은 카드는 시작 후 손패에서 <b>'받음'</b> 표시가 붙어요 · <span data-rv></span></p>
+    <div class="btns">${tichu}${btn}</div></div>`;
+}
+
 function modalHtml(v) {
   const legal = v.legal;
+  if (v.pending?.type === 'review') return reviewHtml(v);
   if (v.phase === 'grand' && legal?.kind === 'grand') {
     const d = v.settings.decks;
     return `<div class="scrim upper"></div><div class="modal high"><h2>그랜드 티추를 <em>부를까요?</em></h2><p>지금 보이는 <b>처음 ${8 * d}장</b>만 보고, 내가 이번 라운드에 <b>1등으로 나간다</b>고 선언해요.<br>성공하면 <b>+${200 * d}점</b>, 실패하면 <b>−${200 * d}점</b>이에요.<br><small style="font-weight:600">패스해도 ${6 * d}장을 더 받은 뒤 일반 티추(±${100 * d}점)를 부를 수 있어요.</small></p><div class="btns"><button class="b" data-do="grand-no">패스하고 ${6 * d}장 받기</button><button class="b go" data-do="grand-yes">그랜드 티추!<small>±${200 * d}점</small></button></div></div>`;
@@ -647,7 +671,9 @@ function updateTimers() {
       const sec = Math.ceil(left / 1000);
       const plate = stage.querySelector(`.plate[data-seat="${t.seat}"] .sub`);
       if (plate && st.view.pending?.type === 'turn') plate.innerHTML = `<b>내 차례</b> · ${sec}초`;
-      if (sec <= 5 && sec > 0 && sec !== S.tickSec) { S.tickSec = sec; sounds.play('tick'); }
+      if (st.view.pending?.type === 'review') {
+        for (const el of stage.querySelectorAll('[data-rv]')) el.textContent = `${sec}초 뒤 자동으로 시작해요`;
+      } else if (sec <= 5 && sec > 0 && sec !== S.tickSec) { S.tickSec = sec; sounds.play('tick'); }
     }
   }
   if (st.view && !st.pause) {
@@ -785,7 +811,7 @@ function onAction(btn) {
     case 'play': if (v) doPlay(v); break;
     case 'pass': act({ type: 'pass' }); break;
     case 'wish-cancel': S.wish = null; render(); break;
-    case 'next': act({ type: 'next' }); break;
+    case 'next': case 'review-ok': act({ type: 'next' }); break;
     case 'count': toggleCount(); break;
     case 'resume': send({ type: 'RESUME' }); break;
     case 'rematch': send({ type: 'REMATCH' }); break;

@@ -56,7 +56,30 @@ test('카드 교환: 왼쪽·파트너·오른쪽에 한 장씩, 참새를 가�
   assert.ok(g.viewFor(2).received.some((r) => r.from === 0 && r.id === give[0][1]), '파트너에는 둘째 장');
   assert.ok(g.viewFor(3).received.some((r) => r.from === 0 && r.id === give[0][2]), '오른쪽에는 셋째 장');
   const holder = [0, 1, 2, 3].find((s) => g.viewFor(s).hand.includes(MJ));
+  assert.equal(g.pending.type, 'review', '교환 직후에는 받은 카드를 확인하는 단계');
+  for (let s = 0; s < 4; s++) assert.ok(g.act(s, { type: 'next' }).ok);
+  assert.equal(g.pending.type, 'turn');
   assert.equal(g.pending.seat, holder);
+});
+
+test('교환 결과 확인: 전원이 확인해야 시작하고, 확인 중에도 티추를 부를 수 있다', () => {
+  const g = new TichuGame({ settings: { grand: false }, rng: seededRng(5), now: () => 0 });
+  g.start();
+  for (let s = 0; s < 4; s++) g.act(s, { type: 'exchange', give: g.viewFor(s).hand.slice(0, 3) });
+  assert.equal(g.pending.type, 'review');
+  assert.deepEqual(g.waitingSeats(), [0, 1, 2, 3]);
+  assert.equal(g.viewFor(0).legal.kind, 'review');
+  assert.equal(g.viewFor(0).legal.canTichu, true);
+  assert.equal(g.viewFor(0).received.length, 3, '받은 카드가 뷰에 보인다');
+  assert.equal(play(g, g.h.hands.findIndex((h) => h.includes(MJ)), 'MJ').error, 'not_turn', '확인 중에는 카드를 낼 수 없다');
+  assert.ok(g.act(1, { type: 'tichu' }).ok, '받은 카드를 보고 티추를 부를 수 있다');
+  assert.ok(g.act(0, { type: 'next' }).ok);
+  assert.equal(g.viewFor(0).legal.kind, 'reviewDone');
+  assert.equal(g.act(0, { type: 'next' }).ok, false, '두 번 확인할 수 없다');
+  assert.deepEqual(g.viewFor(2).ackDone, [true, false, false, false]);
+  assert.deepEqual(g.waitingSeats(), [1, 2, 3]);
+  for (const s of [1, 2, 3]) g.act(s, { type: 'next' });
+  assert.equal(g.pending.type, 'turn');
 });
 
 test('트릭: 모두 패스하면 낸 사람이 가져가고 다시 선을 잡는다', () => {

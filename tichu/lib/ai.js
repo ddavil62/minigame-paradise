@@ -91,7 +91,7 @@ export function decide(view, opts = {}) {
       const t = CALL_THRESHOLD[level];
       return { type: 'grand', on: !!t && handStrength(hand, decksOf(view)) >= t.grand };
     }
-    case 'ack': return { type: 'next' };
+    case 'ack': case 'review': return { type: 'next' };
     case 'gift': {
       const opts2 = legal.options.slice().sort((a, b) => view.counts[b] - view.counts[a]);
       return { type: 'gift', to: opts2[0] };
@@ -212,7 +212,7 @@ export function fallbackAction(view) {
   if (!legal) return null;
   switch (legal.kind) {
     case 'grand': return { type: 'grand', on: false };
-    case 'ack': return { type: 'next' };
+    case 'ack': case 'review': return { type: 'next' };
     case 'gift': return { type: 'gift', to: legal.options.slice().sort((a, b) => view.counts[b] - view.counts[a])[0] };
     case 'exchange': return { type: 'exchange', give: pickExchange(view.hand, decksOf(view)) };
     case 'turn': return decideTurn(view, legal, 'normal', () => 0.5);
