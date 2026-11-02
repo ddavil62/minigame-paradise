@@ -273,15 +273,16 @@ function countHtml(v) {
     const ids = Array.from({ length: decks }, (_, d) => base + 56 * d);
     const st = ids.map((id) => (played.has(id) ? 'p' : mine.has(id) ? 'm' : 'u'));
     const left = st.filter((x) => x === 'u').length;
+    const has = st.includes('m');
     const pts = pointsOf(base) !== 0 ? ' pt' : '';
-    return `<div class="cc ${cls}${pts}${left === 0 ? ' gone' : ''}"><b>${head}</b><span>${st.map((x) => `<i class="${x}"></i>`).join('')}</span></div>`;
+    return `<div class="cc ${cls}${pts}${has ? ' mine' : ''}${left === 0 && !has ? ' gone' : ''}"><b>${head}</b><span>${st.map((x) => `<i class="${x}"></i>`).join('')}</span></div>`;
   };
   const suits = SUIT_KEYS.map((key, s) => {
     const cells = Array.from({ length: 13 }, (_, r) => cell(s * 13 + r, rankLabel(r + 2), `su-${key}`)).join('');
     return `<div class="crow"><em class="su-${key}"><svg><use href="#sym-${key}"/></svg>${SUIT_NAMES[s]}</em>${cells}</div>`;
   }).join('');
   const special = [[53, '참새', 'spc'], [52, '개', 'spc'], [54, '봉황', 'spc'], [55, '용', 'spc']].map(([b, n, c]) => cell(b, n, c)).join('');
-  return `<div class="cpanel"><div class="chead"><b>카드 카운팅</b><span>나온 카드 <b>${played.size}</b> · 내 손패 <b>${mine.size}</b> · 상대 쪽 <b>${unseen}</b>장</span><button type="button" data-do="count" aria-label="닫기">✕</button></div><div class="caxis"><span>약함</span><i></i><span>강함</span></div>${suits}<div class="crow sp"><em>특수</em>${special}</div><div class="clegend"><i class="u"></i>아직 안 나옴 <i class="m"></i>내 손패 <i class="p"></i>나옴 <i class="g"></i>점수 카드<em>무늬(옥·검·탑·별)는 강약이 같아요</em></div></div>`;
+  return `<div class="cpanel"><div class="chead"><b>카드 카운팅</b><span>나온 카드 <b>${played.size}</b> · 내 손패 <b>${mine.size}</b> · 상대 쪽 <b>${unseen}</b>장</span><button type="button" data-do="count" aria-label="닫기">✕</button></div><div class="caxis"><span>약함</span><i></i><span>강함</span></div>${suits}<div class="crow sp"><em>특수</em>${special}</div><div class="clegend"><i class="u"></i>아직 안 나옴 <i class="m"></i>내 손패(금색 테두리) <i class="p"></i>나옴 <i class="g"></i>점수 카드<em>무늬(옥·검·탑·별)는 강약이 같아요</em></div></div>`;
 }
 
 function rinfoHtml(v) {

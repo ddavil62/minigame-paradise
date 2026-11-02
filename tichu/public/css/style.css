@@ -377,3 +377,6 @@ button { font: inherit; cursor: pointer; }
 .caxis i::after { content: ""; position: absolute; right: -1px; top: -3px; border: 4px solid transparent; border-left: 6px solid var(--accent); border-right: 0; }
 .caxis span:last-child { color: var(--accent); }
 .clegend em { margin-left: auto; font-style: normal; color: var(--ui); opacity: .8; }
+.cc.mine { background: #fff1c4; box-shadow: 0 0 0 2px #e9a800; }
+.cc.mine.pt { box-shadow: 0 0 0 2px #e9a800, inset 0 -3px 0 #e9a800; }
+.crow.sp .cc.mine > b { color: #3a2a00; }

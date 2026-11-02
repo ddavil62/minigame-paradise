@@ -120,6 +120,8 @@ test('카운팅: 대국 중에만 버튼이 보이고, 패널의 칸 수와 합�
   await expect(page.locator('.cpanel')).toBeVisible();
   await expect(page.locator('.cpanel .cc')).toHaveCount(56); // 4무늬 × 13 + 특수 4
   await expect(page.locator('.cpanel .cc i.m')).toHaveCount(14); // 내 손패 14장
+  expect(await page.locator('.cpanel .cc.mine').count()).toBeGreaterThan(0); // 내 손패가 든 칸은 테두리로 구분
+  expect(await page.locator('.cpanel .cc.mine.gone').count()).toBe(0); // 내 손패 칸은 '나옴'처럼 흐려지지 않는다
   const total = await page.locator('.cpanel .cc i').count();
   expect(total).toBe(56);
   await page.locator('.cpanel [data-do="count"]').click();
