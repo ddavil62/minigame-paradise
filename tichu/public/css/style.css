@@ -118,14 +118,14 @@ button { font: inherit; cursor: pointer; }
 .plate .tm { position: absolute; left: 10px; right: 10px; bottom: -9px; height: 5px; overflow: hidden; border-radius: 9px; background: rgba(128,128,128,.35); }
 .plate .tm i { display: block; height: 100%; background: var(--accent); }
 .pl-top { left: 50%; top: 14px; transform: translateX(-50%); }
-.pl-left { left: 22px; top: 168px; } .pl-right { right: 22px; top: 168px; }
+.pl-left { left: 22px; top: 176px; } .pl-right { right: 22px; top: 150px; }
 .pl-me { left: 22px; bottom: 26px; }
 
 /* 상대 손패: 이름판 쪽을 축으로 펼친 부채꼴(카드마다 --x/--y/--r는 main.js가 계산) */
 .bk { position: absolute; width: 0; height: 0; z-index: 2; }
 .bk .card { position: absolute; left: calc(var(--cw) / -2); top: calc(var(--ch) / -2); transform: translate(var(--x), var(--y)) rotate(var(--r)); box-shadow: 0 1px 0 #8a8f8a, 0 5px 9px rgba(0,0,0,.4); }
 .bk-top { left: 50%; top: 126px; }
-.bk-left { left: 94px; top: 368px; } .bk-right { right: 94px; top: 368px; }
+.bk-left { left: 94px; top: 376px; } .bk-right { right: 94px; top: 358px; }
 .bk .cnt { position: absolute; display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 7px; border: 2px solid rgba(246,238,219,.9); border-radius: 99px; background: #0b2c1c; color: var(--accent); font: 800 15px/1 var(--font); transform: translate(-50%, -50%); z-index: 40; box-shadow: 0 3px 8px rgba(0,0,0,.45); }
 .bk-top .cnt { left: 214px; top: 4px; } .bk-left .cnt { left: 56px; top: 0; } .bk-right .cnt { left: -56px; top: 0; }
 .bk .cnt.low { background: #c0392b; border-color: #fff; color: #fff; animation: pulse 1.4s ease-in-out infinite; }
