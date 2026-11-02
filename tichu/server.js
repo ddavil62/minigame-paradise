@@ -37,9 +37,7 @@ const MIME = {
 const SEAT_ORDER = [0, 2, 1, 3];
 const AI_NAMES = ['주작', '백호', '현무', '청룡'];
 const LEVELS = ['easy', 'normal', 'hard'];
-const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, aiLevel: 'normal', decks: 1 });
-/** 내 차례가 아닌 AI가 폭탄으로 끼어들기까지의 반응 시간(ms 범위) */
-const IRQ_MS = [350, 900];
+const DEFAULT_SETTINGS = Object.freeze({ target: 1000, grand: true, bombWindowMs: 2000, aiLevel: 'normal', decks: 1 });
 /** 벌 수별 목표 점수 선택지(2벌은 카드 점수 합이 200이라 두 배) */
 const TARGETS = { 1: [500, 1000], 2: [1000, 2000] };
 export const DEFAULT_TIMING = Object.freeze({
@@ -284,12 +282,19 @@ function createRoomEngine(opts, hooks = {}) {
       res = fb ? g.act(seat, fb) : { ok: false };
     }
     if (res.ok) afterChange();
-    else scheduleSeats(); // 거절되면 곧 다시 시도한다
+    else scheduleSeats(); // 폭탄 대기 시간 등으로 거절되면 곧 다시 시도한다
   }
 
   function dropSeatTimer(seat) {
     const t = room.seatTimers[seat];
     if (t) { clearTimeout(t.handle); delete room.seatTimers[seat]; }
+  }
+
+  /** AI가 낼 차례일 때 폭탄 끼어들기 대기 시간(openAt)이 지난 뒤에 움직이도록 지연을 늘린다. */
+  function aiDelay(g, range) {
+    const ms = between(range);
+    if (g.pending?.type !== 'turn' || !g.h.trick.top) return ms;
+    return Math.max(ms, g.h.openAt - Date.now() + 120);
   }
 
   let tokenSeq = 0;
@@ -317,7 +322,7 @@ function createRoomEngine(opts, hooks = {}) {
       let base = 0;
       if (slot.type === 'ai') {
         kind = 'ai';
-        ms = p.type === 'turn' ? between(T.aiTurnMs)
+        ms = p.type === 'turn' ? aiDelay(g, T.aiTurnMs)
           : p.type === 'ack' ? between(T.aiAckMs)
             : p.type === 'gift' ? between(T.aiTurnMs) : between(T.aiPickMs);
       } else if (!slot.connected || slot.autoPlay) {
@@ -343,6 +348,7 @@ function createRoomEngine(opts, hooks = {}) {
     clearIrq();
     const g = room.game;
     if (room.pause || !g || room.phase !== 'playing' || g.pending?.type !== 'turn' || !g.h.trick.top) return;
+    const windowMs = Math.max(600, g.settings.bombWindowMs || 0);
     for (let seat = 0; seat < 4; seat++) {
       const slot = room.slots[seat];
       if (!slot || slot.type !== 'ai' || g.pending.seat === seat) continue;
@@ -353,7 +359,7 @@ function createRoomEngine(opts, hooks = {}) {
         if (room.pause || room.game !== g) return;
         const res = g.act(seat, action);
         if (res.ok) afterChange();
-      }, between(IRQ_MS));
+      }, between([350, windowMs - 200]));
       handle.unref?.();
       room.irqTimers[seat] = handle;
     }
@@ -374,13 +380,14 @@ function createRoomEngine(opts, hooks = {}) {
     return { ok: true };
   }
 
-  /** 재개: 멈춘 시간만큼 여유 시간 계산을 미루고 남은 시간부터 타이머를 이어 간다. */
+  /** 재개: 멈춘 시간만큼 여유 시간·폭탄 대기 계산을 미루고 남은 시간부터 타이머를 이어 간다. */
   function resumeGame(by) {
     if (!room.pause) return { ok: false, error: 'not_paused' };
     const now = Date.now();
     const dur = now - room.pause.at;
     clearPause();
     for (const s of humans()) if (s.turnStart) s.turnStart += dur;
+    if (room.game?.h?.openAt) room.game.h.openAt += dur;
     for (const [seat, t] of Object.entries(room.seatTimers)) {
       const ms = t.remaining ?? t.ms;
       delete t.remaining;
@@ -407,8 +414,8 @@ function createRoomEngine(opts, hooks = {}) {
       }
     }
     for (const slot of humans()) { slot.bank = T.bankMs; slot.autoPlay = false; slot.timeouts = 0; }
-    const { target, grand, decks } = room.settings;
-    room.game = new TichuGame({ settings: { target, grand, decks }, rng: opts.rng });
+    const { target, grand, bombWindowMs, decks } = room.settings;
+    room.game = new TichuGame({ settings: { target, grand, bombWindowMs, decks }, rng: opts.rng });
     room.phase = 'playing';
     room.game.start();
     afterChange();
@@ -492,11 +499,13 @@ function createRoomEngine(opts, hooks = {}) {
     }
     if (TARGETS[s.decks].includes(raw.target)) s.target = raw.target;
     if (typeof raw.grand === 'boolean') s.grand = raw.grand;
+    if ([0, 1000, 2000, 3000].includes(raw.bombWindowMs)) s.bombWindowMs = raw.bombWindowMs;
     if (LEVELS.includes(raw.aiLevel)) s.aiLevel = raw.aiLevel;
   }
 
   const ERROR_TEXT = {
     paused: '일시정지 중이에요. 재개하면 이어서 할 수 있어요.',
+    wait: '폭탄을 낼 시간을 잠깐 기다려요.',
     wish: '소원 숫자를 낼 수 있으면 꼭 내야 해요.',
     must_lead: '선은 패스할 수 없어요.',
     not_turn: '지금은 내 차례가 아니에요.',

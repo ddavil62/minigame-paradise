@@ -14,7 +14,7 @@ const FAST = {
   aiTurnMs: [0, 3], aiPickMs: [0, 3], aiAckMs: [0, 3], awayMs: 5,
   lobbyGraceMs: 150, emptyResetMs: 150,
 };
-const QUICK = { target: 500 };
+const QUICK = { target: 500, bombWindowMs: 0 };
 // 에러가 없어야 하는 테스트용: 사람 제한 시간이 봇의 응답보다 먼저 끝나 서버가 대신 진행하는 경쟁(→ 늦은 요청 거절)을 피한다.
 const RELAXED = { ...FAST, baseMs: 8000, bankMs: 8000, grandMs: 8000, exchangeMs: 8000, giftMs: 8000 };
 
@@ -294,22 +294,22 @@ test('일시정지: 시간·횟수 제한 없이 재개할 때까지 멈춰 있�
   assert.deepEqual(a.errors, []);
 });
 
-test('방 설정: 허용된 값만 받고, 폭탄 대기 같은 옛 설정은 무시한다', async (t) => {
+test('폭탄 끼어들기 대기 시간은 STATE에 실리고, 방 설정으로 바꿀 수 있다', async (t) => {
   const srv = await boot();
   t.after(srv.close);
   const a = client(srv.port, { key: 'kw', name: '나', play: false }, t);
   await until(() => a.room);
-  assert.equal(a.room.settings.bombWindowMs, undefined, '폭탄 대기 설정은 없다');
+  assert.equal(a.room.settings.bombWindowMs, 2000);
   assert.equal(a.room.settings.target, 1000);
   assert.equal(a.room.settings.grand, true);
   a.send({ type: 'CONFIG', settings: { bombWindowMs: 3000, target: 123, grand: false } });
-  await until(() => a.room.settings.grand === false);
+  await until(() => a.room.settings.bombWindowMs === 3000);
   assert.equal(a.room.settings.target, 1000, '허용된 값만 받는다');
-  assert.equal(a.room.settings.bombWindowMs, undefined, '옛 클라이언트가 보내도 무시한다');
+  assert.equal(a.room.settings.grand, false);
   a.send({ type: 'START' });
   await until(() => a.state);
   assert.equal(a.state.view.phase, 'exchange', '그랜드를 끄면 바로 교환 단계');
-  assert.equal(a.state.view.openAt, undefined);
+  assert.equal(a.state.view.settings.bombWindowMs, 3000);
 });
 
 test('방 번호(room)가 다르면 방 설정 화면에 남은 사람과 섞이지 않고 각자 방장이 된다', async (t) => {
@@ -369,7 +369,7 @@ test('더블 티추: 방 설정으로 2벌을 고르면 목표 점수가 옮겨�
   a.send({ type: 'CONFIG', settings: { decks: 3 } });
   await new Promise((r) => setTimeout(r, 60));
   assert.equal(a.room.settings.decks, 2, '잘못된 벌 수는 무시');
-  a.send({ type: 'CONFIG', settings: { target: 1000 } });
+  a.send({ type: 'CONFIG', settings: { target: 1000, bombWindowMs: 0 } });
   await until(() => a.room.settings.target === 1000);
   a.send({ type: 'START' });
   await until(() => a.state);

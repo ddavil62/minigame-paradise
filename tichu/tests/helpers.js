@@ -12,7 +12,7 @@ import { seededRng } from '../lib/cards.js';
  */
 export function playFullMatch(seed, opts = {}) {
   const rng = seededRng(seed);
-  const game = new TichuGame({ settings: { ...(opts.settings || {}) }, rng, now: () => 0 });
+  const game = new TichuGame({ settings: { bombWindowMs: 0, ...(opts.settings || {}) }, rng, now: () => 0 });
   const levels = opts.levels || ['normal', 'normal', 'normal', 'normal'];
   game.start();
   let steps = 0;
