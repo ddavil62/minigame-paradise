@@ -644,12 +644,14 @@ function handHtml(v, legal) {
   const discardIds = canAct ? legal.discard : [];
   const best = new Set(hints?.best || []);
   const safe = new Set(hints?.safe || []);
-  // 같은 종류가 여러 장이면 적도라가 아닌 패에 추천 태그를 붙인다.
+  // 같은 종류가 여러 장이면 적도라가 아닌 패, 그중에서도 방금 뽑은 패에 추천 태그를 붙인다
+  // (이미 묶음을 이룬 패가 아니라 새로 들어온 패를 버리라고 보여 주는 편이 자연스럽다).
   const isRed = (id) => id === 16 || id === 52 || id === 88;
+  const tagRank = (id) => (isRed(id) ? 2 : 0) + (id === v.myDrawn ? 0 : 1);
+  const pickTagId = (ids) => ids.reduce((a, id) => (a == null || tagRank(id) < tagRank(a) ? id : a), null);
   let bestId = null;
   if (S.assist && canAct && !S.riichiMode && best.size) {
-    const ids = [...v.myHand, ...(v.myDrawn != null ? [v.myDrawn] : [])].filter((id) => best.has(id >> 2) && discardIds.includes(id));
-    bestId = ids.find((id) => !isRed(id)) ?? ids[0] ?? null;
+    bestId = pickTagId([...v.myHand, ...(v.myDrawn != null ? [v.myDrawn] : [])].filter((id) => best.has(id >> 2) && discardIds.includes(id)));
   }
   // 도우미 묶음 밑줄: 같은 종류 패는 손패 순서대로 묶음에 하나씩 나눠 준다.
   const underline = new Map();
@@ -671,7 +673,7 @@ function handHtml(v, legal) {
   const riichiTag = new Map();
   if (S.assist && S.riichiMode && hints?.riichi) {
     const byKind = {};
-    for (const id of riichiIds) if (byKind[id >> 2] == null || (isRed(byKind[id >> 2]) && !isRed(id))) byKind[id >> 2] = id;
+    for (const id of riichiIds) if (byKind[id >> 2] == null || tagRank(id) < tagRank(byKind[id >> 2])) byKind[id >> 2] = id;
     for (const [k, id] of Object.entries(byKind)) {
       const o = hints.riichi.opts[k];
       if (!o) continue;
