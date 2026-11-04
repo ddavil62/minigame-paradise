@@ -864,8 +864,8 @@ function boardHtml(v) {
     ? tileHtml(codeOfKind(doraOf(v.dora[i] >> 2)), 't-mini', 'dora-real')
     : backHtml('t-mini', 'dora-off'))).join('');
   html += `<div class="center-info"><div class="round">${WIND_KANJI[v.roundWind]} ${v.dealer + 1}局</div>
-    <div class="round-sub">${v.honba}본장 · 공탁 ${v.kyotaku}</div><div class="dora-line"><span class="dora-cap">표시</span><div class="dora-row">${dora}</div></div>
-    <div class="dora-line"><span class="dora-cap real">도라</span><div class="dora-row">${real}</div></div>
+    <div class="round-sub">${v.honba}본장 · 공탁 ${v.kyotaku}</div><div class="dora-row" title="도라 표시패">${dora}</div>
+    <div class="dora-row" title="실제 도라">${real}</div>
     <div class="wall-left">残 ${v.wallLeft}</div></div></div>`;
   return html;
 }
