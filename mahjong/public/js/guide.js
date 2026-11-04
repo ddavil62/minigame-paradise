@@ -87,7 +87,7 @@ function bodyHtml() {
       <div class="btn-grid">
         <div class="btn-card"><button class="act pulse" type="button" tabindex="-1">쯔모<small>화료!</small></button><p><b>내가 뽑은 패로 완성됐을 때</b>누르면 이겨요. 나머지 3명이 점수를 나눠 내요.</p></div>
         <div class="btn-card"><button class="act pulse" type="button" tabindex="-1">론<small>화료!</small></button><p><b>남이 버린 패로 완성될 때</b>버린 사람이 점수를 혼자 내요.</p></div>
-        <div class="btn-card"><button class="act" type="button" tabindex="-1">리치</button><p><b>울지 않고 1장만 남았을 때</b>버릴 패를 고르고 "리치 확정". 1,000점을 걸고 역 1개 확보, 이후 손패는 고정돼요.</p></div>
+        <div class="btn-card"><button class="act" type="button" tabindex="-1">리치</button><p><b>울지 않고 1장만 남았을 때</b>버릴 패를 고르고 "리치 확정"(또는 같은 패를 한 번 더 누르기). 1,000점을 걸고 역 1개 확보, 이후 손패는 고정돼요.</p></div>
         <div class="btn-card"><button class="act" type="button" tabindex="-1">퐁<small>3삭 ×3</small></button><p><b>버린 패와 같은 패가 2장 있을 때</b>누가 버렸든 가져와 3장 세트를 만들어요.</p></div>
         <div class="btn-card"><button class="act" type="button" tabindex="-1">치<small>3·4·5</small></button><p><b>바로 앞 사람(왼쪽)이 버렸을 때만</b>연속 3장을 만들어요.</p></div>
         <div class="btn-card"><button class="act" type="button" tabindex="-1">깡<small>4장</small></button><p><b>같은 패 4장</b>보충패를 1장 더 뽑고 도라가 늘어요. 암깡·가깡도 같은 원리예요.</p></div>

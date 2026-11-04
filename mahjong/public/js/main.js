@@ -853,7 +853,7 @@ function hintStrip(v, legal) {
       return o ? `대기 ${miniTiles(o.kinds)} (안 보이는 패 ${o.n}장)` : '';
     };
     if (S.selected == null) {
-      if (!rc) return '<span class="k">리치</span>리치할 패를 골라요 (밝게 보이는 패)';
+      if (!rc) return '<span class="k">리치</span>리치할 패를 골라요 (밝게 보이는 패). 고른 패를 한 번 더 누르면 리치해요';
       const o = rc.opts[rc.best];
       return `<span class="k">리치</span>${dot([`도우미 추천 <b>${kindName(rc.best)}</b> 버리기`, rcText(rc.best), o.furiten ? warnSpan('⚠ 후리텐이라 론은 못 해요') : '', '숫자는 안 보이는 대기패 장수'])}`;
     }
@@ -1331,7 +1331,8 @@ function onTileClick(id) {
   if (!legal || legal.kind !== 'turn' || S.busy || v.phase !== 'turn') return;
   if (S.riichiMode) {
     if (!legal.riichi.includes(id)) return;
-    S.selected = S.selected === id ? null : id;
+    if (S.selected === id) { act({ type: 'discard', id, riichi: true }); return; } // 일반 버림처럼 고른 패를 다시 누르면 리치 확정
+    S.selected = id;
     sounds.play('draw');
     render();
     return;
