@@ -328,6 +328,48 @@ function winTileId(v) {
   return w.winTile;
 }
 
+/** 도라 표시패 종류 → 실제 도라 종류(lib/tiles.js의 doraFromIndicator와 같다) */
+function doraOf(k) {
+  if (k < 27) return Math.floor(k / 9) * 9 + ((k % 9) + 1) % 9;
+  if (k <= 30) return 27 + ((k - 27 + 1) % 4);
+  return 31 + ((k - 31 + 1) % 3);
+}
+
+/** 이 패가 도라 몇 장 몫인가: 표시패가 가리키는 횟수 + 적도라면 1(적도라 옵션이 켜진 판만) */
+function doraCount(v, id) {
+  const k = id >> 2;
+  const n = v.dora.reduce((a, ind) => a + (doraOf(ind >> 2) === k ? 1 : 0), 0);
+  return n + (v.settings?.aka && (id === 16 || id === 52 || id === 88) ? 1 : 0);
+}
+
+/** 내 역패 라벨(삼원패·자풍·장풍). 아니면 null. 자풍과 장풍이 같은 패면 둘을 함께 적는다. */
+function yakuhaiLabel(v, k) {
+  if (k < 27) return null;
+  if (k >= 31) return '역패';
+  const seatW = k === 27 + v.players[v.me].wind;
+  const roundW = k === 27 + v.roundWind;
+  return seatW && roundW ? '자·장풍' : seatW ? '자풍' : roundW ? '장풍' : null;
+}
+
+/** 방금 뽑은 패가 도라나 역패면 반짝이고 소리를 낸다(뽑는 연출이 끝나 자리를 잡은 뒤). */
+function drawHighlight(view) {
+  const id = view.myDrawn;
+  if (id == null) return;
+  const dora = doraCount(view, id) > 0;
+  const yaku = S.assist && yakuhaiLabel(view, id >> 2);
+  if (!dora && !yaku) return;
+  sounds.play('doraDraw');
+  setTimeout(() => {
+    const el = stage.querySelector(`.my-hand .tile.drawn[data-id="${id}"]`);
+    if (!el) return;
+    const p = fx.toStage(el.getBoundingClientRect());
+    const c = dora ? '#ffd23f' : '#a99bff';
+    fx.ring(p.x, p.y, { r: 46, color: c, width: 4, dur: 560 });
+    fx.ring(p.x, p.y, { r: 72, color: '#fff', width: 3, dur: 600, delay: 110 });
+    fx.sparks(p.x, p.y, { n: 12, dist: 66, size: 5, colors: [c, '#fff'] });
+  }, 300);
+}
+
 /** 내가 낸 패로 론당했는가(방총). 쯔모 화료는 해당 없다. */
 function isHouju(v) {
   const r = v?.result;
@@ -426,7 +468,7 @@ function playEvents(events, view, prev) {
         break;
       }
       case 'draw':
-        if (ev.seat === S.seat) { sounds.play('draw'); addAnim(320, drawIn); }
+        if (ev.seat === S.seat) { sounds.play('draw'); addAnim(320, drawIn); drawHighlight(view); }
         break;
       case 'dora': {
         sounds.play('dora');
@@ -753,6 +795,9 @@ function handHtml(v, legal) {
     const k = id >> 2;
     let cls = `hand ${extra}${id === winId ? ' agari-tile' : ''}`;
     let inner = underline.get(id) || '';
+    // 도도라 별(★): 도우미와 무관하게 항상. 같은 종류 도라가 겹치면 ★2처럼 장수를 적는다.
+    const dn = doraCount(v, id);
+    if (dn > 0) { cls += ' is-dora'; inner += `<span class="dm" title="도라 ${dn}장 몫">★${dn > 1 ? dn : ''}</span>`; }
     if (S.selected === id) cls += ' lift';
     if (S.riichiMode) { if (!riichiIds.includes(id)) cls += ' dim'; }
     else if (canAct && !discardIds.includes(id)) cls += ' forbid';
@@ -762,6 +807,9 @@ function handHtml(v, legal) {
       if (id === bestId) inner += `<span class="tag best">${safe.has(k) ? '추천·안전' : '추천'}</span>`;
       else if (safe.has(k)) inner += '<span class="tag safe">안전</span>';
     } else if (S.assist && safe.has(k)) inner += '<span class="tag safe">안전</span>';
+    // 역패 태그: 도우미를 켰을 때, 한 장만 쥐고 있어도 달아서 퐁·치로 이어 갈 수 있게 한다. 다른 태그가 있으면 그 위에 쌓는다.
+    const yk = S.assist ? yakuhaiLabel(v, k) : null;
+    if (yk) inner += `<span class="tag yaku${inner.includes('class="tag ') ? ' up' : ''}">${yk}</span>`;
     return tileHtml(code(id), 't-hand', cls, inner, { id });
   };
   const tiles = v.myHand.map((id) => mk(id)).join('');
@@ -811,8 +859,13 @@ function boardHtml(v) {
     html += `<div class="pond">${pondHtml(p, v)}</div></div>`;
   }
   const dora = Array.from({ length: 5 }, (_, i) => (i < v.dora.length ? tileHtml(code(v.dora[i]), 't-mini') : backHtml('t-mini'))).join('');
+  // 표시패를 머릿속으로 바꾸지 않아도 되게, 바로 아래에 실제 도라를 금빛으로 한 줄 더 보여 준다.
+  const real = Array.from({ length: 5 }, (_, i) => (i < v.dora.length
+    ? tileHtml(codeOfKind(doraOf(v.dora[i] >> 2)), 't-mini', 'dora-real')
+    : backHtml('t-mini', 'dora-off'))).join('');
   html += `<div class="center-info"><div class="round">${WIND_KANJI[v.roundWind]} ${v.dealer + 1}局</div>
-    <div class="round-sub">${v.honba}본장 · 공탁 ${v.kyotaku}</div><div class="dora-row">${dora}</div>
+    <div class="round-sub">${v.honba}본장 · 공탁 ${v.kyotaku}</div><div class="dora-line"><span class="dora-cap">표시</span><div class="dora-row">${dora}</div></div>
+    <div class="dora-line"><span class="dora-cap real">도라</span><div class="dora-row">${real}</div></div>
     <div class="wall-left">残 ${v.wallLeft}</div></div></div>`;
   return html;
 }

@@ -210,6 +210,8 @@ export function createSounds() {
     riichi: () => { tone(330, 0, 0.18, 'sawtooth', 0.08); tone(495, 0.12, 0.18, 'sawtooth', 0.08); tone(660, 0.24, 0.3, 'sawtooth', 0.08); },
     win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.35, 'triangle', 0.13)),
     dora: () => tone(880, 0, 0.2, 'sine', 0.08),
+    // 도라·역패를 뽑았을 때: 밝은 두 음의 짧은 딩-동
+    doraDraw: () => { tone(1318, 0, 0.16, 'sine', 0.1); tone(1760, 0.08, 0.3, 'sine', 0.09); },
     // 방총 직전의 정적(sec초): BGM이 잦아들고 낮은 심장 박동 두 번과 깔리는 저음만 남는다.
     houjuLock: (sec = 0.6) => {
       duckBgm(sec);
