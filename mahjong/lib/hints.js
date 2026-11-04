@@ -109,7 +109,8 @@ export function bestGrouping(counts, fixed, vis) {
  * - radar: 역 레이더 {me:[칩], opp:{좌석:[칩]}} (lib/radar.js: 공개 정보로 본 이미 갖춘 역·노릴 만한 역·위험)
  * - riichi: 리치할 수 있는 차례의 선언 후보 비교 {best: 추천 버림 종류, opts: {종류: {n: 안 보이는 대기패 장수, kinds: 대기 종류, furiten}}}
  * - safe: 리치한 상대에게 안전한 패 종류
- * - call: 퐁·치 반응 창일 때 {type, before, after, opens, yakuAfter, advice, why} (advice: yes·maybe·no)
+ * - call: 퐁·치 반응 창일 때 가장 좋은 선택지 {type, idx(치 번호, 퐁이면 null), before, after, opens, yakuAfter, advice, why}
+ *   (advice: yes·maybe·no)와 선택지별 판정 opts[{type, idx, after, yakuAfter, advice, why}], 추천 위치 pick
  * - kan: 내 차례의 암깡·가깡 판정 {깡할 종류: {advice, why}}
  * - callKan: 대명깡 반응 창일 때 {advice, why}
  * - note: 한 줄 안내(쯔모 가능, 역 없음, 역패 퐁)
@@ -306,14 +307,14 @@ export function computeHints(view) {
     if (lg.pon) {
       const c = counts.slice();
       c[tk] -= 2;
-      opts.push({ type: 'pon', meld: { type: 'pon', k: tk }, c, ban: [tk] });
+      opts.push({ type: 'pon', idx: null, meld: { type: 'pon', k: tk }, c, ban: [tk] });
     }
-    for (const o of lg.chi || []) {
+    (lg.chi || []).forEach((o, idx) => {
       const c = counts.slice();
       o.ids.forEach((id) => { c[kindOf(id)]--; });
       const low = Math.min(tk, ...o.ids.map(kindOf));
-      opts.push({ type: 'chi', meld: { type: 'chi', k: low }, c, ban: o.ban || [tk] });
-    }
+      opts.push({ type: 'chi', idx, meld: { type: 'chi', k: low }, c, ban: o.ban || [tk] });
+    });
     const isSimpleMeld = (m) => m.k < 27 && (m.type === 'chi' ? m.k % 9 >= 1 && m.k % 9 <= 5 : !isTerminal(m.k));
     for (const o of opts) {
       o.after = shanten(o.c, mc + 1);
@@ -338,12 +339,16 @@ export function computeHints(view) {
       o.sure = yakuhai || tanyao;
       Object.assign(o, adviseCall(o));
     }
+    // 선택지가 여럿이면 판정 → 향청수 → 텐파이 후 역 상태 순으로 가장 좋은 쪽을 고른다(같으면 앞쪽).
     const RANK = { yes: 0, maybe: 1, no: 2 };
-    const pick = opts.reduce((a, o) => (!a || RANK[o.advice] < RANK[a.advice]
-      || (o.advice === a.advice && o.after < a.after) ? o : a), null);
+    const yRank = (o) => (o.yakuAfter == null ? 4 : YAKU_ORDER[o.yakuAfter]);
+    const better = (o, a) => RANK[o.advice] - RANK[a.advice] || o.after - a.after || yRank(o) - yRank(a);
+    const pick = opts.reduce((a, o) => (!a || better(o, a) < 0 ? o : a), null);
     return {
-      type: pick.type, before: hints.shanten, after: pick.after, opens: fixable, yakuAfter: pick.yakuAfter,
+      type: pick.type, idx: pick.idx, before: hints.shanten, after: pick.after, opens: fixable, yakuAfter: pick.yakuAfter,
       advice: pick.advice, why: pick.why,
+      pick: opts.indexOf(pick),
+      opts: opts.map((o) => ({ type: o.type, idx: o.idx, after: o.after, yakuAfter: o.yakuAfter, advice: o.advice, why: o.why })),
     };
   }
 

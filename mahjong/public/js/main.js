@@ -797,15 +797,29 @@ const CALL_WHY = {
 };
 const CALL_VERDICT = { yes: ['👍 울어요', 'go'], maybe: ['🤔 상황 봐서', 'maybe'], no: ['✋ 패스 추천', 'stop'] };
 
-function callText(c) {
+/** 선택지가 여럿일 때 추천 선택지 이름(예: "치 3·4·5") */
+function callName(c, legal) {
+  if (c.opts.length < 2) return '';
+  if (c.type === 'pon') return '퐁';
+  const ch = legal.chi?.[c.idx];
+  if (!ch) return '치';
+  const ks = [...ch.ids, legal.tile].map((id) => id >> 2).sort((a, b) => a - b);
+  return `치 ${ks.map((k) => (k % 9) + 1).join('·')}`;
+}
+
+function callText(c, legal) {
   const [label, cls] = CALL_VERDICT[c.advice] || [];
+  const name = c.advice === 'no' ? '' : callName(c, legal);
+  const lead = c.opts.length > 1
+    ? (c.advice === 'no' ? '선택지가 여럿이지만 모두 별로예요' : `추천 <b>${esc(name)}</b>`)
+    : '';
   const verdict = label ? `<b class="verdict ${cls}">${label}</b> ${esc(CALL_WHY[c.why] || '')}` : '';
   const speed = c.after < c.before
     ? (c.after === 0 ? '울면 텐파이가 돼요' : `울면 ${c.before}향청 → ${c.after}향청으로 빨라져요`)
     : c.after === c.before
       ? (c.before === 0 ? '이미 텐파이라 울어도 같아요' : '울어도 속도는 그대로예요')
       : '울면 오히려 멀어져요';
-  return dot([verdict, speed, c.opens ? '문전이 깨져 리치를 못 해요' : '']);
+  return dot([lead, verdict, speed, c.opens ? '문전이 깨져 리치를 못 해요' : '']);
 }
 
 const KAN_WHY = {
@@ -855,7 +869,7 @@ function hintStrip(v, legal) {
     const tile = legal.tile;
     const who = `${esc(seatInfo(legal.from).name)}(${WIND_KO[v.players[legal.from].wind]}가)`;
     const label = legal.ron ? '론 가능' : legal.pon ? (legal.daiminkan ? '퐁·깡 가능' : '퐁 가능') : legal.chi ? '치 가능' : '깡 가능';
-    const info = S.assist && h ? dot([h.call ? callText(h.call) : '', h.callKan ? kanText(h.callKan) : '', h.note ? `<b>${esc(h.note)}</b>` : '']) : '';
+    const info = S.assist && h ? dot([h.call ? callText(h.call, legal) : '', h.callKan ? kanText(h.callKan) : '', h.note ? `<b>${esc(h.note)}</b>` : '']) : '';
     return `<span class="k">${label}</span>${who}의 버림패 ${miniTiles([tile >> 2])}${info ? ` · ${info}` : ''}`;
   }
   if (!S.assist || !h) return '';
@@ -901,13 +915,22 @@ function actionsHtml(v, legal) {
     }
   } else if (legal.kind === 'reaction') {
     if (legal.ron) btns += '<button class="act pulse" data-do="ron">론<small>화료!</small></button>';
-    if (legal.pon) btns += `<button class="act${legal.ron ? '' : ' pulse'}" data-do="pon">퐁<small>${kindName(legal.tile >> 2)} ×3</small></button>`;
+    // 도우미: 퐁·치 선택지가 여럿이면 가장 좋은 쪽에 추천 표시를 달고, 다 별로면 패스에 단다.
+    const call = S.assist ? S.st.hints?.call : null;
+    const multi = call && call.opts.length > 1;
+    const picked = multi ? call.opts[call.pick] : null;
+    const recTag = (o) => (multi && o === picked && o.advice !== 'no' ? '<em class="rec">추천</em>' : '');
+    const recCls = (o) => (multi && o === picked && o.advice !== 'no' ? ' rec' : '');
+    const ponOpt = multi ? call.opts.find((o) => o.type === 'pon') : null;
+    if (legal.pon) btns += `<button class="act${legal.ron ? '' : ' pulse'}${recCls(ponOpt)}" data-do="pon">${recTag(ponOpt)}퐁<small>${kindName(legal.tile >> 2)} ×3</small></button>`;
     if (legal.daiminkan) btns += '<button class="act" data-do="kan">깡<small>4장</small></button>';
     (legal.chi || []).forEach((c, i) => {
       const ks = [...c.ids, legal.tile].map((id) => id >> 2).sort((a, b) => a - b);
-      btns += `<button class="act" data-do="chi" data-idx="${i}">치<small>${ks.map((k) => (k % 9) + 1).join('·')}</small></button>`;
+      const opt = multi ? call.opts.find((o) => o.type === 'chi' && o.idx === i) : null;
+      btns += `<button class="act${recCls(opt)}" data-do="chi" data-idx="${i}">${recTag(opt)}치<small>${ks.map((k) => (k % 9) + 1).join('·')}</small></button>`;
     });
-    btns += '<button class="act ghost" data-do="pass">패스</button>';
+    const passRec = multi && !legal.ron && picked.advice === 'no';
+    btns += `<button class="act ghost${passRec ? ' rec' : ''}" data-do="pass">${passRec ? '<em class="rec">추천</em>' : ''}패스</button>`;
   }
   const many = (btns.match(/<button/g) || []).length >= 4 ? ' many' : '';
   return `<div class="actions${many}">${btns}</div>${legal.kind === 'reaction' ? '<div class="call-timer"><i id="call-bar"></i></div>' : ''}`;

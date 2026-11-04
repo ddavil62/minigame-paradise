@@ -183,6 +183,25 @@ test('치 반응 창: 속도가 안 빨라지거나 역이 보장되지 않으�
   if (hints.call.after >= hints.call.before) assert.equal(hints.call.advice, 'no');
 });
 
+test('치·퐁 선택지가 여럿이면 선택지별 판정을 주고 가장 좋은 쪽을 추천한다', () => {
+  // 내 손(좌석 1): 3m·5m·6m 모양. 좌석 0이 4m를 버리면 3-4-5 / 4-5-6 중 고를 수 있다.
+  const g = setup({
+    hands: { 0: '4m13579p13579s1z', 1: '356m1379p1379s24z', 2: '2468m2468p2468s7z', 3: '3579m3579p3579s1z' },
+    drawn: { seat: 0, kind: 3 },
+  });
+  assert.ok(g.act(0, { type: 'discard', id: g.h.drawn }).ok);
+  const v = g.viewFor(1);
+  assert.ok(v.legal.chi.length >= 2, '치 선택지가 둘 이상이어야 한다');
+  const call = computeHints(v).call;
+  assert.equal(call.opts.length, v.legal.chi.length + (v.legal.pon ? 1 : 0));
+  for (const o of call.opts) assert.ok(['yes', 'maybe', 'no'].includes(o.advice));
+  const RANK = { yes: 0, maybe: 1, no: 2 };
+  const best = call.opts[call.pick];
+  for (const o of call.opts) assert.ok(RANK[best.advice] < RANK[o.advice] || (RANK[best.advice] === RANK[o.advice] && best.after <= o.after));
+  assert.equal(call.advice, best.advice);
+  assert.equal(call.idx, best.idx);
+});
+
 test('암깡: 모양이 나빠지지 않으면 권하고, 리치한 상대가 있으면 상황 봐서로 낮춘다', () => {
   const spec = { hands: { 0: '111m234p567s11z99s' }, drawn: { seat: 0, kind: 0 } };
   const g = setup(spec);
