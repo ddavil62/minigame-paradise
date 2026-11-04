@@ -262,6 +262,14 @@ function riichiPlate(rel, elapsed) {
   if (pl) fx.stagger([pl], [{ transform: 'scale(1.5)', filter: 'brightness(2.2)' }, { transform: 'scale(.95)', filter: 'brightness(1.4)', offset: 0.45 }, { transform: 'none', filter: 'none' }], { dur: 600, easing: 'cubic-bezier(.2,.9,.3,1)', elapsed });
 }
 
+/** 방총: 내 이름판이 맞고 흔들린다 */
+function houjuPlate(elapsed) {
+  const pl = stage.querySelector('.plate.p-me');
+  if (!pl) return;
+  const sh = (x, y, b) => ({ transform: `translate(${x}px,${y}px)`, filter: `brightness(${b})` });
+  fx.stagger([pl], [sh(0, 0, 2), sh(-14, 4, 1.7), sh(12, -3, 1.5), sh(-9, 2, 1.3), sh(6, -1, 1.15), sh(0, 0, 1)], { dur: 560, easing: 'linear', elapsed });
+}
+
 /** 결과/종료 화면 등장: 화료 연출 뒤에 팝업이 뜨고 역·점수가 차례로 나온다 */
 function overlayIn(elapsed, { late = 0, final = false } = {}) {
   const ov = stage.querySelector('.overlay');
@@ -318,6 +326,17 @@ function winTileId(v) {
   const w = r.winners[0];
   if (w.tsumo) return w.seat === v.me ? w.winTile : null;
   return w.winTile;
+}
+
+/** 내가 낸 패로 론당했는가(방총). 쯔모 화료는 해당 없다. */
+function isHouju(v) {
+  const r = v?.result;
+  return !!(r && r.kind === 'agari' && r.winners.some((w) => !w.tsumo && w.from === v.me));
+}
+
+/** 방총한 사람에게만 더해지는 정적 시간(ms): 큰 패일수록 길다. 모션 줄이기면 없다. */
+function houjuExtra(g) {
+  return matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 380 + g * 60;
 }
 
 /** 지금 내가 버릴 패를 골라야 하는 차례인가(리치 후 자동 쯔모기리처럼 고를 게 없으면 아님) */
@@ -449,18 +468,52 @@ function playEvents(events, view, prev) {
         const f = GRADES[g];
         const n = ev.winners.length;
         const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const stop = reduced ? 0 : f.stop;
+        // 방총(내가 낸 패로 론당함): 같은 사건을 이긴 사람과 다르게 보여 준다. 정적이 길고 붉으며 팡파르·색종이가 없다.
+        const houju = !ev.tsumo && ev.from === view.me;
+        const stop = reduced ? 0 : f.stop + (houju ? houjuExtra(g) : 0);
         // ④ 히트 스톱: 터뜨리기 직전에 화면이 잠깐 어두워지며 멈춘다. 이 사이에 ③ 화료패가 먼저 빛난다.
-        fx.dim(stop + 80, 0.5);
+        fx.dim(stop + 80, houju ? 0.72 : 0.5);
         const tileId = winTileId(view);
         const tileEl = tileId != null ? stage.querySelector(`.pond [data-id="${tileId}"], .my-hand [data-id="${tileId}"]`) : null;
+        if (houju && stop) sounds.play('houjuLock', stop / 1000);
         if (tileEl) {
           const p = fx.toStage(tileEl.getBoundingClientRect());
-          fx.ring(p.x, p.y, { r: 46, color: '#ffe27a', width: 4, dur: 520 });
-          fx.ring(p.x, p.y, { r: 70, color: '#ffffff', width: 3, dur: 560, delay: 110 });
-          fx.sparks(p.x, p.y, { n: 10, dist: 60, size: 5, colors: ['#ffe27a', '#fff'] });
+          if (houju) {
+            // ① 내 패가 지목된다: 붉은 조준선이 좁혀 들어와 박힌다.
+            fx.lockOn(p.x, p.y, { dur: Math.max(stop, 500) });
+          } else {
+            fx.ring(p.x, p.y, { r: 46, color: '#ffe27a', width: 4, dur: 520 });
+            fx.ring(p.x, p.y, { r: 70, color: '#ffffff', width: 3, dur: 560, delay: 110 });
+            fx.sparks(p.x, p.y, { n: 10, dist: 60, size: 5, colors: ['#ffe27a', '#fff'] });
+          }
         }
+        const burstHouju = () => {
+          const names = ev.winners.map((w) => seatInfo(w).name).join(' · ');
+          const top = g > 0 ? view.result.winners.find((w) => limitGrade(w.limit) === g)?.limit : null;
+          const title = top ? `${top}!` : `${ev.winners.length > 1 ? '더블 ' : ''}론!`;
+          const tk = tileId != null ? tileId >> 2 : null;
+          sounds.play('houju', g);
+          fx.flash('#ff2a1a', 0.34 + g * 0.04, 520);
+          fx.banner(title, { color: '#ff5a45', sub: `방총${tk != null ? ` · ${kindName(tk)}` : ''} → ${names}`, y: 330, dur: f.dur, size: title.length > 6 ? 72 : title.length > 4 ? 88 : 0 });
+          fx.shake(f.shake * 0.9, 480);
+          fx.gloom(1500 + g * 150);
+          if (tileEl) {
+            const p = fx.toStage(tileEl.getBoundingClientRect());
+            fx.ring(p.x, p.y, { r: 90, color: '#ff3b2f', width: 6, dur: 560 });
+            fx.ring(p.x, p.y, { r: 140, color: '#7a0f08', width: 4, dur: 700, delay: 120 });
+            fx.sparks(p.x, p.y, { n: 14, dist: 90, size: 5, colors: ['#ff3b2f', '#7a0f08', '#fff'], gravity: 60 });
+          }
+          addAnim(600, houjuPlate);
+          // ③ 잃은 점수가 이름판에서 떠오른다.
+          const loss = Math.abs(view.result.deltas?.[view.me] || 0);
+          const pl = stage.querySelector('.plate.p-me');
+          if (loss && pl) {
+            const r = fx.toStage(pl.getBoundingClientRect());
+            fx.pop(`-${loss.toLocaleString()}`, Math.max(r.x, 150), r.y - 20, { color: '#ff6a5a', size: 60 + g * 4, dur: 1700 });
+          }
+        };
         const burst = () => {
+          if (houju) { burstHouju(); return; }
           // ① 등급별 차등: 만관 이상은 한도 이름이 배너 주인공이 된다.
           const kindShort = n > 1 ? `${n === 2 ? '더블' : '트리플'} 론` : (ev.tsumo ? '쯔모' : '론');
           const names = ev.winners.map((w) => seatInfo(w).name).join(' · ');
@@ -609,6 +662,8 @@ function plateHtml(seat, v, posCls) {
   if (p.riichi) badge += '<span class="badge riichi">리치</span>';
   const winner = v.phase === 'ack' && v.result?.kind === 'agari' && v.result.winners.some((w) => w.seat === seat);
   if (winner) badge += '<span class="badge win">화료!</span>';
+  const houju = isMe && v.phase === 'ack' && isHouju(v);
+  if (houju) badge += '<span class="badge houju">방총</span>';
   if (isMe && v.furiten) badge += '<span class="badge furiten">후리텐</span>';
   if (info.away) badge += '<span class="badge away">자동</span>';
   let sub = `${p.score.toLocaleString()}점`;
@@ -616,16 +671,17 @@ function plateHtml(seat, v, posCls) {
   if (info.type === 'human' && !isMe) sub = `<span class="${info.connected ? 'dot-online' : 'dot-offline'}"></span>${info.connected ? '접속 중' : '끊김'} · ${sub}`;
   const timer = isMe && turn ? '<div class="timer" id="my-timer"><span>-</span></div>' : '';
   const phase = p.riichi ? ` style="--ph:-${Math.round(performance.now() % 1400)}ms"` : '';
-  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${!isMe && threatSeat(seat) ? ' threat' : ''}${info.away ? ' away' : ''}${winner ? ' winner' : ''}"${phase}>
+  return `<div class="plate p-${posCls}${turn ? ' turn' : ''}${p.riichi ? ' riichi' : ''}${!isMe && threatSeat(seat) ? ' threat' : ''}${info.away ? ' away' : ''}${winner ? ' winner' : ''}${houju ? ' houju' : ''}"${phase}>
     <div class="avatar ${avatarClass(info, seat)}">${esc(avatarChar(info))}<span class="wind">${WIND_KANJI[p.wind]}</span>${seat === v.dealer ? '<span class="dealer">親</span>' : ''}</div>
     <div><div class="name">${esc(info.name)}${badge}</div><div class="sub">${sub}</div></div>${timer}</div>`;
 }
 
 function pondHtml(p, v) {
   const winId = winTileId(v);
+  const houju = v.phase === 'ack' && isHouju(v); // 내가 낸 패로 론당했으면 화료패를 금빛 대신 붉게 표시한다
   return p.discards.map((d) => {
     const isLast = v.lastDiscard && v.lastDiscard.id === d.id && (v.phase === 'reaction');
-    const cls = `${isLast ? 'last' : ''}${d.called ? ' taken' : ''}${d.id === winId ? ' agari-tile' : ''}`.trim();
+    const cls = `${isLast ? 'last' : ''}${d.called ? ' taken' : ''}${d.id === winId ? (houju ? ' houju-tile' : ' agari-tile') : ''}`.trim();
     if (d.riichi) return sideHtml(code(d.id), 't-pond', cls, '', { id: d.id });
     return tileHtml(code(d.id), 't-pond', cls, '', { id: d.id });
   }).join('');
@@ -1013,7 +1069,7 @@ function renderGame() {
     S.shown = overKey;
     S.resFocus = null;
     S.resTip = null;
-    const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? GRADES[resultGrade(v)].late : 350);
+    const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? GRADES[resultGrade(v)].late + (isHouju(v) ? houjuExtra(resultGrade(v)) : 0) : 350);
     S.anims.push({ at: performance.now(), ttl: late + 3500, run: (el) => overlayIn(el, { late, final: overKey === 'final' }) });
   }
   applyResUi();

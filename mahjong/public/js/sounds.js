@@ -170,6 +170,18 @@ export function createSounds() {
 
   document.addEventListener('visibilitychange', () => (document.hidden ? bgmStop() : bgmStart()));
 
+  // 방총 직전의 정적: BGM을 sec초 동안 거의 꺼 두었다가 서서히 되돌린다.
+  function duckBgm(sec) {
+    if (!bgmBus) return;
+    const g = bgmBus.gain;
+    const t = ctx.currentTime;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(Math.max(g.value, 0.0001), t);
+    g.exponentialRampToValueAtTime(0.03, t + 0.12);
+    g.setValueAtTime(0.03, t + sec);
+    g.exponentialRampToValueAtTime(0.32, t + sec + 1.0);
+  }
+
   const SOUNDS = {
     discard: () => clack(0.4),
     land: () => { clack(0.55); tone(120, 0, 0.12, 'sine', 0.2); },
@@ -198,6 +210,21 @@ export function createSounds() {
     riichi: () => { tone(330, 0, 0.18, 'sawtooth', 0.08); tone(495, 0.12, 0.18, 'sawtooth', 0.08); tone(660, 0.24, 0.3, 'sawtooth', 0.08); },
     win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.35, 'triangle', 0.13)),
     dora: () => tone(880, 0, 0.2, 'sine', 0.08),
+    // 방총 직전의 정적(sec초): BGM이 잦아들고 낮은 심장 박동 두 번과 깔리는 저음만 남는다.
+    houjuLock: (sec = 0.6) => {
+      duckBgm(sec);
+      thud(85, 38, 0.3, 0.6, 0.05);
+      thud(70, 34, 0.34, 0.5, 0.3);
+      tone(49, 0, Math.max(0.4, sec), 'sine', 0.16);
+    },
+    // 방총 순간: 유리 금 가는 소리 + 어긋난 화음이 내려앉는다. 이긴 사람의 팡파르와 정반대의 느낌.
+    houju: (g = 0) => {
+      clack(0.55, null, 5200, 0.12, 'highpass');
+      thud(150, 40, 0.5, Math.min(0.9, 0.6 + g * 0.06));
+      tone(220, 0, 0.5, 'sawtooth', 0.08);
+      tone(233, 0, 0.5, 'sawtooth', 0.07); // 반음 부딪힘
+      [[392, 0.14], [330, 0.32], [262, 0.5]].forEach(([f, t]) => tone(f, t, t === 0.5 ? 0.7 : 0.25, 'triangle', 0.1));
+    },
     // 만관 이상 화료: 등급(1~5)이 높을수록 아르페지오가 길어지고 북 롤·긴 화음이 붙는다.
     winBig: (g = 1) => {
       const notes = [523, 659, 784, 1047, 1319, 1568, 2093];

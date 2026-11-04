@@ -124,6 +124,35 @@ export function createFx(stage) {
     run(e, [{ opacity: 0 }, { opacity: peak, offset: 0.2 }, { opacity: peak, offset: 0.75 }, { opacity: 0 }], { duration: dur });
   }
 
+  /** 방총: 붉은 조준선이 크게 돌며 좁혀 들어와 지목한 패에 박힌다(dur 동안 유지했다가 사라진다). */
+  function lockOn(x, y, { r = 64, dur = 700 } = {}) {
+    if (REDUCED) return;
+    const e = mk('fx-ring fx-lock', { left: `${x - r}px`, top: `${y - r}px`, width: `${r * 2}px`, height: `${r * 2}px`, borderColor: '#ff3b2f', borderWidth: '4px', color: '#ff3b2f' });
+    const hold = Math.max(0.3, 1 - 120 / dur);
+    run(e, [
+      { transform: 'scale(3.6) rotate(50deg)', opacity: 0 },
+      { transform: 'scale(1) rotate(0)', opacity: 1, offset: Math.min(0.7, hold * 0.75) },
+      { transform: 'scale(1)', opacity: 1, offset: hold },
+      { transform: 'scale(1.2)', opacity: 0 },
+    ], { duration: dur, easing: 'cubic-bezier(.2,.8,.3,1)' });
+  }
+
+  /** 방총: 가장자리가 붉게 어두워지고 화면 색이 잠깐 빠졌다가 돌아온다. */
+  function gloom(dur = 1500, peak = 0.7) {
+    if (REDUCED) return;
+    const e = mk('fx-gloom');
+    run(e, [{ opacity: 0 }, { opacity: peak, offset: 0.15 }, { opacity: peak * 0.8, offset: 0.7 }, { opacity: 0 }], { duration: dur });
+    const c = stage.querySelector('#content');
+    if (c) {
+      c.animate([
+        { filter: 'saturate(1)' },
+        { filter: 'saturate(.3) brightness(.9)', offset: 0.15 },
+        { filter: 'saturate(.5) brightness(.95)', offset: 0.7 },
+        { filter: 'saturate(1)' },
+      ], { duration: dur });
+    }
+  }
+
   /** 화면 가운데를 가로지르는 큰 글씨 배너. size로 글자 크기(px)를 줄여 긴 문구를 담는다. */
   function banner(text, { color = '#ffe27a', sub = '', y = 330, dur = 1500, compact = false, size = 0 } = {}) {
     if (REDUCED) return;
@@ -238,6 +267,6 @@ export function createFx(stage) {
 
   return {
     layer, attach, rehide, toStage, pondEl, flyDiscard,
-    ring, sparks, confetti, confettiRain, shake, flash, dim, banner, pop, stagger, countUp, seek,
+    ring, sparks, confetti, confettiRain, shake, flash, dim, lockOn, gloom, banner, pop, stagger, countUp, seek,
   };
 }

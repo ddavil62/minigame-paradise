@@ -407,6 +407,17 @@ button { font: inherit; cursor: pointer; }
 .badge.win { background: #ffd23f; color: #2a1c00; }
 .tile.agari-tile, .rot.agari-tile > .tile { position: relative; z-index: 6; box-shadow: 0 2px 0 var(--tile-side), 0 0 0 3px #ffe27a, 0 0 26px 6px rgba(255,226,122,.95); animation: agari-tile-pulse .6s ease-in-out infinite alternate; }
 @keyframes agari-tile-pulse { to { filter: brightness(1.22); box-shadow: 0 2px 0 var(--tile-side), 0 0 0 4px #fff2b0, 0 0 40px 12px rgba(255,226,122,1); } }
+/* ── 방총: 내가 낸 패로 론당했을 때 ── */
+.fx-lock::before, .fx-lock::after { content: ""; position: absolute; background: #ff3b2f; box-shadow: 0 0 8px #ff3b2f; }
+.fx-lock::before { left: 50%; top: -16px; bottom: -16px; width: 2px; transform: translateX(-50%); }
+.fx-lock::after { top: 50%; left: -16px; right: -16px; height: 2px; transform: translateY(-50%); }
+.fx-gloom { inset: 0; background: radial-gradient(ellipse at center, transparent 38%, rgba(110,8,4,.55) 78%, rgba(40,0,0,.85) 100%); }
+.tile.houju-tile, .rot.houju-tile > .tile { position: relative; z-index: 6; box-shadow: 0 2px 0 var(--tile-side), 0 0 0 3px #ff4a3a, 0 0 26px 6px rgba(255,60,40,.9); animation: houju-tile-pulse 1s ease-in-out infinite alternate; }
+@keyframes houju-tile-pulse { to { filter: brightness(.85) saturate(1.2); box-shadow: 0 2px 0 var(--tile-side), 0 0 0 4px #ff7a6a, 0 0 38px 10px rgba(255,50,30,1); } }
+.plate.houju { border-color: #e2574c; box-shadow: 0 0 0 2px #b3261e, 0 0 26px rgba(226,87,76,.6); }
+.plate.houju::after { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; content: ""; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'><path d='M62 0 L56 9 L66 14 L52 24 L60 28 L48 40' fill='none' stroke='rgba(255,230,220,.75)' stroke-width='1.2'/><path d='M56 9 L44 12' fill='none' stroke='rgba(255,230,220,.55)' stroke-width='.8'/></svg>") center / 100% 100% no-repeat; }
+.badge.houju { background: #e2574c; color: #fff; }
+@media (prefers-reduced-motion: reduce) { .tile.houju-tile, .rot.houju-tile > .tile { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .plate.riichi, .plate.riichi::before, .plate.riichi .avatar, .plate.riichi .badge.riichi, .plate.turn, .my-hand.cue::before, .plate.winner, .tile.agari-tile, .rot.agari-tile > .tile { animation: none; } }
 
 /* ── 룰 가이드(헤더 버튼으로 여는 4탭 오버레이) ── */
