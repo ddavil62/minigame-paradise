@@ -334,9 +334,21 @@ function isHouju(v) {
   return !!(r && r.kind === 'agari' && r.winners.some((w) => !w.tsumo && w.from === v.me));
 }
 
-/** 방총한 사람에게만 더해지는 정적 시간(ms): 큰 패일수록 길다. 모션 줄이기면 없다. */
+/**
+ * 방총한 사람에게만 더해지는 정적 시간(ms): 큰 패일수록 길다. 모션 줄이기면 없다.
+ * 일반 히트 스톱(GRADES.stop)까지 합친 전체 정적이 (stop + 380 + 60g)의 두 배가 되도록 잡았다.
+ */
 function houjuExtra(g) {
-  return matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 380 + g * 60;
+  return matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : GRADES[g].stop + 760 + g * 120;
+}
+
+/** 방총 배너 길이(ms): 이긴 사람 배너의 두 배 */
+const houjuBannerMs = (g) => GRADES[g].dur * 2;
+
+/** 방총일 때 결과창이 뜨기까지(ms): 정적 + 배너가 거의 끝날 때까지. 모션 줄이기면 기존 값. */
+function houjuLate(g) {
+  const extra = houjuExtra(g);
+  return extra ? GRADES[g].stop + extra + houjuBannerMs(g) * 0.8 : GRADES[g].late;
 }
 
 /** 지금 내가 버릴 패를 골라야 하는 차례인가(리치 후 자동 쯔모기리처럼 고를 게 없으면 아님) */
@@ -494,7 +506,7 @@ function playEvents(events, view, prev) {
           const tk = tileId != null ? tileId >> 2 : null;
           sounds.play('houju', g);
           fx.flash('#ff2a1a', 0.34 + g * 0.04, 520);
-          fx.banner(title, { color: '#ff5a45', sub: `방총${tk != null ? ` · ${kindName(tk)}` : ''} → ${names}`, y: 330, dur: f.dur, size: title.length > 6 ? 72 : title.length > 4 ? 88 : 0 });
+          fx.banner(title, { color: '#ff5a45', sub: `방총${tk != null ? ` · ${kindName(tk)}` : ''} → ${names}`, y: 330, dur: houjuBannerMs(g), size: title.length > 6 ? 72 : title.length > 4 ? 88 : 0 });
           fx.shake(f.shake * 0.9, 480);
           fx.gloom(1500 + g * 150);
           if (tileEl) {
@@ -1069,7 +1081,7 @@ function renderGame() {
     S.shown = overKey;
     S.resFocus = null;
     S.resTip = null;
-    const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? GRADES[resultGrade(v)].late + (isHouju(v) ? houjuExtra(resultGrade(v)) : 0) : 350);
+    const late = overKey === 'final' ? 700 : (v.result.kind === 'agari' ? (isHouju(v) ? houjuLate(resultGrade(v)) : GRADES[resultGrade(v)].late) : 350);
     S.anims.push({ at: performance.now(), ttl: late + 3500, run: (el) => overlayIn(el, { late, final: overKey === 'final' }) });
   }
   applyResUi();
